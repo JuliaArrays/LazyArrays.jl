@@ -62,8 +62,29 @@ function _copyto!(::AbstractStridedLayout, dest::AbstractVector,
                          Tuple{Base.OneTo{Int}}, typeof(+),
                          <:Tuple{<:MatrixMulVector{T},<:Vector{T}}}) where T<: BlasFloat
     c = bc.args[2]
-    c !=== dest && copyto!(dest, c)
+    c ≡ dest || copyto!(dest, c)
     BLAS.gemv!('N', one(T), bc.args[1].A, bc.args[1].x, one(T), dest)
+end
+
+function _copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::Broadcasted{<:MatrixMulVectorStyle{<:AbstractColumnMajor,<:AbstractStridedLayout},
+                         Tuple{Base.OneTo{Int}}, typeof(+),
+                         <:Tuple{<:MatrixMulVector{T},
+                                 Broadcasted{DefaultArrayStyle{1},Nothing,typeof(*),Tuple{T,Vector{T}}}}}) where T<: BlasFloat
+    c = bc.args[2].args[2]
+    c ≡ dest || copyto!(dest, c)
+    BLAS.gemv!('N', one(T), bc.args[1].A, bc.args[1].x, bc.args[2].args[1], dest)
+end
+
+function _copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::Broadcasted{<:MatrixMulVectorStyle{<:AbstractColumnMajor,<:AbstractStridedLayout},
+                         Tuple{Base.OneTo{Int}}, typeof(+),
+                         <:Tuple{Broadcasted{<:MatrixMulVectorStyle{<:AbstractColumnMajor,<:AbstractStridedLayout},
+                                             Nothing, typeof(*), <:Tuple{T,<:MatrixMulVector{T}}},
+                                 Broadcasted{DefaultArrayStyle{1},Nothing,typeof(*),Tuple{T,Vector{T}}}}}) where T<: BlasFloat
+    c = bc.args[2].args[2]
+    c ≡ dest || copyto!(dest, c)
+    BLAS.gemv!('N', bc.args[1].args[1], bc.args[1].args[2].A, bc.args[1].args[2].x, bc.args[2].args[1], dest)
 end
 
 end # module
