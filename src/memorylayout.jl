@@ -117,9 +117,9 @@ you define a new `AbstractArray` type, you can choose to override
 For example, if your matrix is column major with `stride(A,2) == size(A,1)`,
 then override as follows:
 
-    Base.MemoryLayout(::MyMatrix) = Base.DenseColumnMajor()
+    MemoryLayout(::MyMatrix) = DenseColumnMajor()
 
-The default is `Base.UnknownLayout()` to indicate that the layout
+The default is `UnknownLayout()` to indicate that the layout
 in memory is unknown.
 
 Julia's internal linear algebra machinery will automatically (and invisibly)
@@ -224,7 +224,7 @@ conjlayout(::Type{<:Complex}, M::AbstractStridedLayout) = ConjLayout(M)
 conjlayout(::Type{<:Real}, M::MemoryLayout) = M
 
 
-Base.subarraylayout(M::ConjLayout, t::Tuple) = ConjLayout(Base.subarraylayout(M.layout, t))
+subarraylayout(M::ConjLayout, t::Tuple) = ConjLayout(subarraylayout(M.layout, t))
 
 MemoryLayout(A::Transpose) = transposelayout(MemoryLayout(parent(A)))
 MemoryLayout(A::Adjoint) = adjointlayout(eltype(A), MemoryLayout(parent(A)))
@@ -290,8 +290,8 @@ symmetriclayout(layout::AbstractRowMajor, uplo) = SymmetricLayout(layout,uplo)
 transposelayout(S::SymmetricLayout) = S
 adjointlayout(::Type{T}, S::SymmetricLayout) where T<:Real = S
 adjointlayout(::Type{T}, S::HermitianLayout) where T = S
-Base.subarraylayout(S::SymmetricLayout, ::Tuple{<:Slice,<:Slice}) = S
-Base.subarraylayout(S::HermitianLayout, ::Tuple{<:Slice,<:Slice}) = S
+subarraylayout(S::SymmetricLayout, ::Tuple{<:Slice,<:Slice}) = S
+subarraylayout(S::HermitianLayout, ::Tuple{<:Slice,<:Slice}) = S
 symmetricdata(V::SubArray{<:Any, 2, <:Any, <:Tuple{<:Slice,<:Slice}}) = symmetricdata(parent(V))
 symmetricdata(V::Adjoint{<:Real}) = symmetricdata(parent(V))
 symmetricdata(V::Transpose) = symmetricdata(parent(V))
@@ -385,7 +385,7 @@ MemoryLayout(A::LowerTriangular) = triangularlayout(LowerTriangularLayout, Memor
 MemoryLayout(A::UnitLowerTriangular) = triangularlayout(UnitLowerTriangularLayout, MemoryLayout(parent(A)))
 triangularlayout(_, ::MemoryLayout) = UnknownLayout()
 triangularlayout(::Type{Tri}, ML::AbstractColumnMajor) where {Tri} = Tri(ML)
-Base.subarraylayout(layout::AbstractTriangularLayout, ::Tuple{<:Union{Slice,Base.OneTo},<:Union{Slice,Base.OneTo}}) = layout
+subarraylayout(layout::AbstractTriangularLayout, ::Tuple{<:Union{Slice,Base.OneTo},<:Union{Slice,Base.OneTo}}) = layout
 
 for (TriLayout, TriLayoutTrans) in ((UpperTriangularLayout,     LowerTriangularLayout),
                                     (UnitUpperTriangularLayout, UnitLowerTriangularLayout),
@@ -401,5 +401,3 @@ triangulardata(A::Adjoint) = Adjoint(triangulardata(parent(A)))
 triangulardata(A::Transpose) = Transpose(triangulardata(parent(A)))
 triangulardata(A::SubArray{<:Any,2,<:Any,<:Tuple{<:Union{Slice,Base.OneTo},<:Union{Slice,Base.OneTo}}}) =
     view(triangulardata(parent(A)), parentindices(A)...)
-
-    

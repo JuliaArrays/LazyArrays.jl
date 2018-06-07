@@ -1,0 +1,7 @@
+authors = ["Sheehan Olver <solver@mac.com>"]
+name = "LazyLinearAlgebra"
+uuid = "de60f5b2-6997-11e8-1d19-0fde115d20c7"
+version = "0.1.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
