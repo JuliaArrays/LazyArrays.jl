@@ -6,7 +6,7 @@ using LinearAlgebra.BLAS
 
 import Base: ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
              RangeIndex, BroadcastStyle, copyto!, length, broadcastable, axes,
-             getindex, eltype
+             getindex, eltype, tail
 import Base.Broadcast: DefaultArrayStyle, Broadcasted
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 export Mul
@@ -82,37 +82,70 @@ copyto!(dest::AbstractVector, bc::Broadcasted{<:MatrixMulVectorStyle}) =
 # Use default
 _copyto!(_, dest, bc) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
 
-_copyto!(::AbstractStridedLayout, dest::AbstractVector,
-         bc::BMatVec{T, <:AbstractColumnMajor, <:AbstractStridedLayout}) where T<: BlasFloat =
-    BLAS.gemv!('N', one(T), bc.args[1].A, bc.args[1].x, zero(T), dest)
+# Matrix * Vector
+
+function _copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::BMatVec{T, <:AbstractColumnMajor, <:AbstractStridedLayout}) where T<: BlasFloat
+    M = bc.args[1]
+    dest .= one(T) .* M .+ zero(T) .* dest
+end
 
 
-
-_copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
-         bc::BConstMatVec{T, <:AbstractColumnMajor,<:AbstractStridedLayout}) where T<: BlasFloat =
-    BLAS.gemv!('N', bc.args[1], bc.args[2].A, bc.args[2].x, zero(T), dest)
+function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
+         bc::BConstMatVec{T, <:AbstractColumnMajor,<:AbstractStridedLayout}) where T<: BlasFloat
+    α,M = bc.args
+    dest .= α .* M .+ zero(T) .* dest
+end
 
 
 function _copyto!(::AbstractStridedLayout, dest::AbstractVector,
          bc::BMatVecPlusVec{T,<:AbstractColumnMajor,<:AbstractStridedLayout}) where T<: BlasFloat
-    c = bc.args[2]
-    c ≡ dest || copyto!(dest, c)
-    BLAS.gemv!('N', one(T), bc.args[1].A, bc.args[1].x, one(T), dest)
+    M,c = bc.args
+    dest .= one(T) .* M .+ one(T) .* dest
 end
 
 function _copyto!(::AbstractStridedLayout, dest::AbstractVector,
          bc::BMatVecPlusConstVec{T,<:AbstractColumnMajor,<:AbstractStridedLayout}) where T<: BlasFloat
-    c = bc.args[2].args[2]
-    c ≡ dest || copyto!(dest, c)
-    BLAS.gemv!('N', one(T), bc.args[1].A, bc.args[1].x, bc.args[2].args[1], dest)
+    M,βc = bc.args
+    β,c = βc.args
+    dest .= one(T) .* M .+  β .* dest
 end
 
 
 function _copyto!(::AbstractStridedLayout, dest::AbstractVector,
          bc::BConstMatVecPlusConstVec{T,<:AbstractColumnMajor,<:AbstractStridedLayout}) where T<: BlasFloat
-    c = bc.args[2].args[2]
+    αM,βc = bc.args
+    α,M = αM.args
+    A,x = M.A, M.x
+    β,c = βc.args
+    x ≡ dest && (x = copy(x))
     c ≡ dest || copyto!(dest, c)
-    BLAS.gemv!('N', bc.args[1].args[1], bc.args[1].args[2].A, bc.args[1].args[2].x, bc.args[2].args[1], dest)
+    BLAS.gemv!('N', α, A, x, β, dest)
 end
+
+# AdjTrans
+
+function _copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::BConstMatVecPlusConstVec{T,<:AbstractRowMajor,<:AbstractStridedLayout}) where T<: BlasReal
+    αM,βc = bc.args
+    α,M = αM.args
+    A,x = M.A, M.x
+    β,c = βc.args
+    x ≡ dest && (x = copy(x))
+    c ≡ dest || copyto!(dest, c)
+    BLAS.gemv!('T', α, transpose(A), x, β, dest)
+end
+
+function _copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::BConstMatVecPlusConstVec{T,<:AbstractRowMajor,<:AbstractStridedLayout}) where T<: BlasComplex
+    αM,βc = bc.args
+    α,M = αM.args
+    A,x = M.A, M.x
+    β,c = βc.args
+    x ≡ dest && (x = copy(x))
+    c ≡ dest || copyto!(dest, c)
+    BLAS.gemv!('C', α, A', x, β, dest)
+end
+
 
 end # module
