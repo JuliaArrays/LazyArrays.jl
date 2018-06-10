@@ -42,3 +42,18 @@ end
     c .= 3.0 .* Mul(transpose(A),b) .+ 2.0 .* c
     @test all(c .=== BLAS.gemv!('T', 3.0, A, b, 2.0, copy(b)))
 end
+
+@testset "no allocation" begin
+    function blasnoalloc(c, α, A, x, β, y)
+        c .= Mul(A,x)
+        c .= α .* Mul(A,x)
+        c .= Mul(A,x) .+ y
+        c .= α .* Mul(A,x) .+ y
+        c .= Mul(A,x) .+ β .* y
+        c .= α .* Mul(A,x) .+ β .* y
+    end
+
+    A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
+    blasnoalloc(c, 2.0, A, x, 3.0, y)
+    @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
+end

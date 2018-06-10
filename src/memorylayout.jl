@@ -125,19 +125,19 @@ in memory is unknown.
 Julia's internal linear algebra machinery will automatically (and invisibly)
 dispatch to BLAS and LAPACK routines if the memory layout is compatible.
 """
-MemoryLayout(A::AbstractArray{T}) where T = UnknownLayout()
-MemoryLayout(A::DenseArray{T}) where T = DenseColumnMajor()
+@inline MemoryLayout(A::AbstractArray{T}) where T = UnknownLayout()
+@inline MemoryLayout(A::DenseArray{T}) where T = DenseColumnMajor()
 
-MemoryLayout(A::ReinterpretArray) = reinterpretedmemorylayout(MemoryLayout(parent(A)))
-reinterpretedmemorylayout(::MemoryLayout) = UnknownLayout()
-reinterpretedmemorylayout(::DenseColumnMajor) = DenseColumnMajor()
+@inline MemoryLayout(A::ReinterpretArray) = reinterpretedmemorylayout(MemoryLayout(parent(A)))
+@inline reinterpretedmemorylayout(::MemoryLayout) = UnknownLayout()
+@inline reinterpretedmemorylayout(::DenseColumnMajor) = DenseColumnMajor()
 
-MemoryLayout(A::ReshapedArray) = reshapedmemorylayout(MemoryLayout(parent(A)))
-reshapedmemorylayout(::MemoryLayout) = UnknownLayout()
-reshapedmemorylayout(::DenseColumnMajor) = DenseColumnMajor()
+@inline MemoryLayout(A::ReshapedArray) = reshapedmemorylayout(MemoryLayout(parent(A)))
+@inline reshapedmemorylayout(::MemoryLayout) = UnknownLayout()
+@inline reshapedmemorylayout(::DenseColumnMajor) = DenseColumnMajor()
 
 
-MemoryLayout(A::SubArray) = subarraylayout(MemoryLayout(parent(A)), parentindices(A))
+@inline MemoryLayout(A::SubArray) = subarraylayout(MemoryLayout(parent(A)), parentindices(A))
 subarraylayout(_1, _2) = UnknownLayout()
 subarraylayout(_1, _2, _3)= UnknownLayout()
 subarraylayout(::DenseColumnMajor, ::Tuple{I}) where I<:Union{AbstractUnitRange{Int},Int,AbstractCartesianIndex} =
