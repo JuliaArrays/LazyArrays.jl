@@ -35,34 +35,34 @@ const MatrixMulVector{T, styleA, styleX, AType<:AbstractMatrix, XType<:AbstractV
     Mul{T, styleA, styleX, AType, XType}
 const BMatVec{T, styleA, styleB} =
     Broadcasted{<:MatrixMulVectorStyle{styleA,styleB},
-                Tuple{Base.OneTo{Int}}, typeof(identity),
+                <:Any, typeof(identity),
                 <:Tuple{<:MatrixMulVector{T}}}
 const BConstMatVec{T,styleA,styleB} =
     Broadcasted{<:MatrixMulVectorStyle{styleA,styleB},
-                    Tuple{Base.OneTo{Int}}, typeof(*),
+                    <:Any, typeof(*),
                     <:Tuple{T,<:MatrixMulVector{T}}}
 const BMatVecPlusVec{T,styleA,styleB} =
     Broadcasted{<:MatrixMulVectorStyle{styleA, styleB},
-                Tuple{Base.OneTo{Int}}, typeof(+),
-                <:Tuple{<:MatrixMulVector{T},<:Vector{T}}}
+                <:Any, typeof(+),
+                <:Tuple{<:MatrixMulVector{T},<:AbstractVector{T}}}
 const BMatVecPlusConstVec{T,styleA,styleB} =
     Broadcasted{<:MatrixMulVectorStyle{styleA,styleB},
-                Tuple{Base.OneTo{Int}}, typeof(+),
+                <:Any, typeof(+),
                 <:Tuple{<:MatrixMulVector{T},
-                        Broadcasted{DefaultArrayStyle{1},Nothing,typeof(*),Tuple{T,Vector{T}}}}}
+                        Broadcasted{DefaultArrayStyle{1},<:Any,typeof(*),<:Tuple{T,<:AbstractVector{T}}}}}
 const BConstMatVecPlusVec{T, styleA, styleB} =
     Broadcasted{<:MatrixMulVectorStyle{styleA,styleB},
-                Tuple{Base.OneTo{Int}}, typeof(+),
+                <:Any, typeof(+),
                 <:Tuple{Broadcasted{<:MatrixMulVectorStyle{styleA,styleB},
-                                    Nothing, typeof(*), <:Tuple{T,<:MatrixMulVector{T}}},
-                        Vector{T}}}
+                                    <:Any, typeof(*), <:Tuple{T,<:MatrixMulVector{T}}},
+                        <:AbstractVector{T}}}
 
 const BConstMatVecPlusConstVec{T, styleA, styleB} =
     Broadcasted{<:MatrixMulVectorStyle{styleA,styleB},
-                Tuple{Base.OneTo{Int}}, typeof(+),
+                <:Any, typeof(+),
                 <:Tuple{Broadcasted{<:MatrixMulVectorStyle{styleA,styleB},
-                                    Nothing, typeof(*), <:Tuple{T,<:MatrixMulVector{T}}},
-                        Broadcasted{DefaultArrayStyle{1},Nothing,typeof(*),Tuple{T,Vector{T}}}}}
+                                    <:Any, typeof(*), <:Tuple{T,<:MatrixMulVector{T}}},
+                        Broadcasted{DefaultArrayStyle{1},Nothing,typeof(*),<:Tuple{T,<:AbstractVector{T}}}}}
 
 
 length(M::MatrixMulVector) = size(M.A,1)
@@ -89,7 +89,7 @@ similar(M::Broadcasted{<:MatrixMulVectorStyle}, ::Type{ElType}) where ElType = V
     _copyto!(MemoryLayout(dest), dest, bc)
 
 # Use default
-# @inline _copyto!(_, dest, bc) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
+@inline _copyto!(_, dest, bc) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
 
 # Matrix * Vector
 
