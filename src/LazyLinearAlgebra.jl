@@ -130,7 +130,7 @@ end
          bc::BMatVecPlusVec{T,<:AbstractColumnMajor,<:AbstractStridedLayout}) where T<: BlasFloat
     M,c = bc.args
     A,x = M.A, M.x
-    _gemv!('N', one(T), A, x, one(T), dest)
+    _gemv!(dest, 'N', one(T), A, x, one(T), c)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector,

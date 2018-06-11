@@ -3,8 +3,9 @@ using Test, LinearAlgebra, LazyLinearAlgebra
 
 @testset "gemv" begin
     for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
-              view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5))
-        b = randn(5); c = similar(b);
+              view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5)),
+        b in (randn(5), view(randn(5),:), view(randn(5),1:5), view(randn(9),1:2:9))
+        c = similar(b);
 
         c .= Mul(A,b)
         @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 0.0, similar(c)))
@@ -24,6 +25,10 @@ using Test, LinearAlgebra, LazyLinearAlgebra
         c .= Mul(A,b) .+ 2.0 .* c
         @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 2.0, copy(b)))
 
+        c = copy(b)
+        c .= 2.0 .* Mul(A,b) .+ c
+        @test all(c .=== BLAS.gemv!('N', 2.0, A, b, 1.0, copy(b)))
+
 
         c = copy(b)
         c .= 3.0 .* Mul(A,b) .+ 2.0 .* c
@@ -34,6 +39,22 @@ using Test, LinearAlgebra, LazyLinearAlgebra
         d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
         @test all(d .=== BLAS.gemv!('N', 3.0, A, b, 2.0, copy(b)))
     end
+
+    # test mixed types
+    let (A, b, c) = (randn(5,5), randn(5), 1.0:5.0)
+        d = similar(b)
+        d .= Mul(A,b) .+ c
+        @test all(d .=== BLAS.gemv!('N', 1.0, A, b, 1.0, Vector{Float64}(c)))
+
+        d .= Mul(A,b) .+ 2.0 .* c
+        @test all(d .=== BLAS.gemv!('N', 1.0, A, b, 2.0, Vector{Float64}(c)))
+
+        d .= 2.0 .* Mul(A,b) .+ c
+        @test all(d .=== BLAS.gemv!('N', 2.0, A, b, 1.0, Vector{Float64}(c)))
+
+        d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
+        @test all(d .=== BLAS.gemv!('N', 3.0, A, b, 2.0, Vector{Float64}(c)))
+end
 end
 
 @testset "adjtrans" begin
