@@ -21,74 +21,81 @@ eltype(::Mul{T}) where T = T
 ####
 
 struct ArrayMulArrayStyle{StyleA, StyleX, p, q} <: BroadcastStyle end
-const ArrayMulArray{T, styleA, styleX, p, q} = Mul{T, styleA, styleX, <:AbstractArray{T,p}, <:AbstractArray{T,q}}
+const ArrayMulArray{T, styleA, styleX, p, q} =
+    Mul{T, styleA, styleX, <:AbstractArray{T,p}, <:AbstractArray{T,q}}
 
 const BArrayMulArray{T, styleA, styleB, p, q} =
-    Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
-                <:Tuple{<:ArrayMulArray{T,p,q}}}
+    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
+                <:Tuple{<:ArrayMulArray{T,styleA,styleB,p,q}}}
 const BConstArrayMulArray{T, styleA, styleB, p, q} =
-    Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
+    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                     <:Any, typeof(*),
-                    <:Tuple{T,<:ArrayMulArray{T,p,q}}}
+                    <:Tuple{T,<:ArrayMulArray{T,styleA,styleB,p,q}}}
 const BArrayMulArrayPlusArray{T, styleA, styleB, p, q} =
-    Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
+    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
-                <:Tuple{<:ArrayMulArray{T,p,q},<:AbstractArray{T,q}}}
+                <:Tuple{<:ArrayMulArray{T,styleA,styleB,p,q},<:AbstractArray{T,q}}}
 const BArrayMulArrayPlusConstArray{T, styleA, styleB, p, q} =
-    Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
+    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
-                <:Tuple{<:ArrayMulArray{T,p,q},
-                Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),<:Tuple{T,<:AbstractArray{T,q}}}}}
+                <:Tuple{<:ArrayMulArray{T,styleA,styleB,p,q},
+                Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),
+                            <:Tuple{T,<:AbstractArray{T,q}}}}}
 const BConstArrayMulArrayPlusArray{T, styleA, styleB, p, q} =
-    Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
+    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
                 <:Tuple{Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
-                                    <:Any, typeof(*), <:Tuple{T,<:ArrayMulArray{T,p,q}}},
+                                    <:Any, typeof(*),
+                                    <:Tuple{T,<:ArrayMulArray{T,styleA,styleB,p,q}}},
                         <:AbstractArray{T,q}}}
 const BConstArrayMulArrayPlusConstArray{T, styleA, styleB, p, q} =
-    Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
+    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
                 <:Tuple{Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
-                                    <:Any, typeof(*), <:Tuple{T,<:ArrayMulArray{T,p,q}}},
+                                    <:Any, typeof(*),
+                                    <:Tuple{T,<:ArrayMulArray{T,styleA,styleB,p,q}}},
                         Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),<:Tuple{T,<:AbstractArray{T,q}}}}}
 ####
 # Matrix * Vector
 ####
 let (p,q) = (2,1)
-    const BMatVec{T, styleA, styleB} = BArrayMulArray{T, styleA, styleB, p, q}
-    const BConstMatVec{T, styleA, styleB} = BConstArrayMulArray{T, styleA, styleB, p, q}
-    const BMatVecPlusVec{T,styleA,styleB} = BArrayMulArrayPlusArray{T, styleA, styleB, p, q}
-    const BMatVecPlusConstVec{T,styleA,styleB} = BArrayMulArrayPlusConstArray{T, styleA, styleB, p, q}
-    const BConstMatVecPlusVec{T, styleA, styleB} = BConstArrayMulArrayPlusArray{T, styleA, styleB, p, q}
-    const BConstMatVecPlusConstVec{T, styleA, styleB} = BConstArrayMulArrayPlusConstArray{T, styleA, styleB, p, q}
+    global const MatMulVecStyle{StyleA, StyleX} = ArrayMulArrayStyle{StyleA, StyleX, p, q}
+    global const MatMulVec{T, styleA, styleX} = ArrayMulArray{T, styleA, styleX, p, q}
+
+    global const BMatVec{T, styleA, styleB} = BArrayMulArray{T, styleA, styleB, p, q}
+    global const BConstMatVec{T, styleA, styleB} = BConstArrayMulArray{T, styleA, styleB, p, q}
+    global const BMatVecPlusVec{T,styleA,styleB} = BArrayMulArrayPlusArray{T, styleA, styleB, p, q}
+    global const BMatVecPlusConstVec{T,styleA,styleB} = BArrayMulArrayPlusConstArray{T, styleA, styleB, p, q}
+    global const BConstMatVecPlusVec{T, styleA, styleB} = BConstArrayMulArrayPlusArray{T, styleA, styleB, p, q}
+    global const BConstMatVecPlusConstVec{T, styleA, styleB} = BConstArrayMulArrayPlusConstArray{T, styleA, styleB, p, q}
 end
 
 
-length(M::MatrixMulVector) = size(M.A,1)
-axes(M::MatrixMulVector) = (Base.OneTo(length(M)),)
-broadcastable(M::MatrixMulVector) = M
-instantiate(bc::Broadcasted{<:MatrixMulVectorStyle}) = bc
+length(M::MatMulVec) = size(M.A,1)
+axes(M::MatMulVec) = (Base.OneTo(length(M)),)
+broadcastable(M::MatMulVec) = M
+instantiate(bc::Broadcasted{<:MatMulVecStyle}) = bc
 
-function getindex(M::MatrixMulVector{T}, k::Int) where T
-    ret = zero(T)
-    for j = 1:size(M.A,2)
-        ret += M.A[k,j] * M.x[j]
-    end
-    ret
-end
+# function getindex(M::MatMulVec{T}, k::Int) where T
+#     ret = zero(T)
+#     for j = 1:size(M.A,2)
+#         ret += M.A[k,j] * M.x[j]
+#     end
+#     ret
+# end
 
-getindex(M::MatrixMulVector, k::CartesianIndex{1}) = M[convert(Int, k)]
+getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 
-BroadcastStyle(::Type{<:MatrixMulVector{<:Any,StyleA,StyleX}}) where {StyleA,StyleX} = MatrixMulVectorStyle{StyleA,StyleX}()
-BroadcastStyle(M::MatrixMulVectorStyle, ::DefaultArrayStyle) = M
-BroadcastStyle(::DefaultArrayStyle, M::MatrixMulVectorStyle) = M
-similar(M::Broadcasted{<:MatrixMulVectorStyle}, ::Type{ElType}) where ElType = Vector{Eltype}(length(M.args[1]))
+BroadcastStyle(::Type{<:MatMulVec{<:Any,StyleA,StyleX}}) where {StyleA,StyleX} = MatMulVecStyle{StyleA,StyleX}()
+BroadcastStyle(M::MatMulVecStyle, ::DefaultArrayStyle) = M
+BroadcastStyle(::DefaultArrayStyle, M::MatMulVecStyle) = M
+similar(M::Broadcasted{<:MatMulVecStyle}, ::Type{ElType}) where ElType = Vector{Eltype}(length(M.args[1]))
 
-@inline copyto!(dest::AbstractVector, bc::Broadcasted{<:MatrixMulVectorStyle}) =
+@inline copyto!(dest::AbstractVector, bc::Broadcasted{<:MatMulVecStyle}) =
     _copyto!(MemoryLayout(dest), dest, bc)
 
 # Use default
-@inline _copyto!(_, dest, bc) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
+# @inline _copyto!(_, dest, bc) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
 
 # Matrix * Vector
 
