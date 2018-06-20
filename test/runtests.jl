@@ -54,7 +54,48 @@ using Test, LinearAlgebra, LazyLinearAlgebra
 
         d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
         @test all(d .=== BLAS.gemv!('N', 3.0, A, b, 2.0, Vector{Float64}(c)))
+    end
 end
+
+@testset "gemm" begin
+    for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
+              view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5)),
+        B in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
+                  view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5))
+        C = similar(B);
+
+        C .= Mul(A,B)
+        @test all(C .=== BLAS.gemm!('N', 'N', 1.0, A, B, 0.0, similar(C)))
+
+        B .= Mul(A,B)
+        @test all(C .=== B)
+
+        C .= 2.0 .* Mul(A,B)
+        @test all(C .=== BLAS.gemm!('N', 'N', 2.0, A, B, 0.0, similar(C)))
+
+        C = copy(B)
+        C .= Mul(A,B) .+ C
+        @test all(C .=== BLAS.gemm!('N', 'N', 1.0, A, B, 1.0, copy(B)))
+
+
+        C = copy(B)
+        C .= Mul(A,B) .+ 2.0 .* C
+        @test all(C .=== BLAS.gemm!('N', 'N', 1.0, A, B, 2.0, copy(B)))
+
+        C = copy(B)
+        C .= 2.0 .* Mul(A,B) .+ C
+        @test all(C .=== BLAS.gemm!('N', 'N', 2.0, A, B, 1.0, copy(B)))
+
+
+        C = copy(B)
+        C .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+        @test all(C .=== BLAS.gemm!('N', 'N', 3.0, A, B, 2.0, copy(B)))
+
+        d = similar(C)
+        C = copy(B)
+        d .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+        @test all(d .=== BLAS.gemm!('N', 'N', 3.0, A, B, 2.0, copy(B)))
+    end
 end
 
 @testset "adjtrans" begin
