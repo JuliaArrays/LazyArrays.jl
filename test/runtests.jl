@@ -119,3 +119,63 @@ end
     blasnoalloc(c, 2.0, A, x, 3.0, y)
     @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
 end
+
+
+
+@testset "concat" begin
+    A = Vcat(1:10, 1:20)
+    @test @inferred(length(A)) == 30
+    @test @inferred(A[5]) == A[15] == 5
+    @test_throws BoundsError A[31]
+    @test reverse(A) == Vcat(reverse(1:20), reverse(1:10))
+
+    A = Vcat(1:10, 1:20)
+    @test @inferred(length(A)) == 30
+    @test @inferred(A[5]) == A[15] == 5
+    @test_throws BoundsError A[31]
+    @test reverse(A) == Vcat(reverse(1:20), reverse(1:10))
+
+    A = Hcat(1:10, 2:11)
+    @test @inferred(size(A)) == (10,2)
+    @test @inferred(A[5]) == @inferred(A[5,1]) == 5
+    @test @inferred(A[11]) == @inferred(A[1,2]) == 2
+
+    A = Hcat(1, zeros(1,5))
+    @test A == hcat(1, zeros(1,5))
+end
+
+
+@testset "BroadcastArray" begin
+    A = randn(6,6)
+    B = BroadcastArray(exp, A)
+    @test Matrix(B) == exp.(A)
+
+    B = BroadcastArray(+, A, 2)
+    @test B == A .+ 2
+end
+
+@testset "Cache" begin
+    A = 1:10
+    C = cache(A)
+    @test size(C) == (10,)
+    @test axes(C) == (Base.OneTo(10),)
+    @test all(Vector(C) .=== Vector(A))
+
+    A = reshape(1:10^2, 10,10)
+    C = cache(A)
+    @test size(C) == (10,10)
+    @test axes(C) == (Base.OneTo(10),Base.OneTo(10))
+    @test all(Array(C) .=== Array(A))
+
+    A = reshape(1:10^3, 10,10,10)
+    C = cache(A)
+    @test size(C) == (10,10,10)
+    @test axes(C) == (Base.OneTo(10),Base.OneTo(10),Base.OneTo(10))
+    @test all(Array(C) .=== Array(A))
+
+    A = reshape(1:10^3, 10,10,10)
+    C = cache(A)
+    LazyLinearAlgebra.resizedata!(C,5,5,5)
+    LazyLinearAlgebra.resizedata!(C,8,8,8)
+    @test all(C.data .=== Array(A)[1:8,1:8,1:8])
+end
