@@ -1,2 +1,2 @@
-# LazyLinearAlgebra.jl
+# LazyArrays.jl
 Experimental lazy linear algebra

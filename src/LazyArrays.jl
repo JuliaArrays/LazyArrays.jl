@@ -1,4 +1,4 @@
-module LazyLinearAlgebra
+module LazyArrays
 using Base
 using Base.Broadcast
 using LinearAlgebra

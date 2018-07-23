@@ -1,4 +1,4 @@
-using Test, LinearAlgebra, LazyLinearAlgebra, BenchmarkTools
+using Test, LinearAlgebra, LazyArrays, BenchmarkTools
 
 
 @testset "gemv" begin
@@ -205,7 +205,7 @@ end
 
     A = reshape(1:10^3, 10,10,10)
     C = cache(A)
-    LazyLinearAlgebra.resizedata!(C,5,5,5)
-    LazyLinearAlgebra.resizedata!(C,8,8,8)
+    LazyArrays.resizedata!(C,5,5,5)
+    LazyArrays.resizedata!(C,8,8,8)
     @test all(C.data .=== Array(A)[1:8,1:8,1:8])
 end

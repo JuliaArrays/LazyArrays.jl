@@ -1,5 +1,5 @@
 authors = ["Sheehan Olver <solver@mac.com>"]
-name = "LazyLinearAlgebra"
+name = "LazyArrays"
 uuid = "de60f5b2-6997-11e8-1d19-0fde115d20c7"
 version = "0.1.0"
 
