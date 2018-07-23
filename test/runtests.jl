@@ -1,4 +1,4 @@
-using Test, LinearAlgebra, LazyLinearAlgebra
+using Test, LinearAlgebra, LazyLinearAlgebra, BenchmarkTools
 
 
 @testset "gemv" begin
@@ -123,22 +123,52 @@ end
 
 
 @testset "concat" begin
-    A = Vcat(1:10, 1:20)
+    A = Vcat(Vector(1:10), Vector(1:20))
     @test @inferred(length(A)) == 30
     @test @inferred(A[5]) == A[15] == 5
     @test_throws BoundsError A[31]
-    @test reverse(A) == Vcat(reverse(1:20), reverse(1:10))
+    @test reverse(A) == Vcat(Vector(reverse(1:20)), Vector(reverse(1:10)))
+    b = Array{Int}(undef, 31)
+    @test_throws DimensionMismatch copyto!(b, A)
+    b = Array{Int}(undef, 30)
+    @test @allocated(copyto!(b, A)) == 0
+    @test b == vcat(A.arrays...)
+    @test @belapsed(copyto!($b,$A)) < @belapsed(vcat($A.arrays...))
 
     A = Vcat(1:10, 1:20)
     @test @inferred(length(A)) == 30
     @test @inferred(A[5]) == A[15] == 5
     @test_throws BoundsError A[31]
     @test reverse(A) == Vcat(reverse(1:20), reverse(1:10))
+    b = Array{Int}(undef, 31)
+    @test_throws DimensionMismatch copyto!(b, A)
+    b = Array{Int}(undef, 30)
+    @test @allocated(copyto!(b, A)) == 0
+    @test b == vcat(A.arrays...)
+    @test @belapsed(copyto!($b,$A)) < @belapsed(vcat($A.arrays...))
+
+    A = Vcat(randn(2,10), randn(4,10))
+    @test @inferred(length(A)) == 60
+    @test @inferred(size(A)) == (6,10)
+    @test_throws BoundsError A[61]
+    @test_throws BoundsError A[7,1]
+    b = Array{Float64}(undef, 7,10)
+    @test_throws DimensionMismatch copyto!(b, A)
+    b = Array{Float64}(undef, 6,10)
+    @test @allocated(copyto!(b, A)) == 0
+    @test b == vcat(A.arrays...)
+    @test @belapsed(copyto!($b,$A)) < @belapsed(vcat($A.arrays...))
 
     A = Hcat(1:10, 2:11)
     @test @inferred(size(A)) == (10,2)
     @test @inferred(A[5]) == @inferred(A[5,1]) == 5
     @test @inferred(A[11]) == @inferred(A[1,2]) == 2
+    b = Array{Int}(undef, 11, 2)
+    @test_throws DimensionMismatch copyto!(b, A)
+    b = Array{Int}(undef, 10, 2)
+    @test @allocated(copyto!(b, A)) == 0
+    @test b == hcat(A.arrays...)
+    @test @belapsed(copyto!($b,$A)) < @belapsed(hcat($A.arrays...))
 
     A = Hcat(1, zeros(1,5))
     @test A == hcat(1, zeros(1,5))

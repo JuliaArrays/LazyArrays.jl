@@ -26,7 +26,7 @@ import Base: *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
       _in_range, _range, _rangestyle, Ordered,
       ArithmeticWraps, floatrange, reverse, unitrange_last,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
-      similar
+      similar, @_gc_preserve_end, @_gc_preserve_begin
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         @nexprs, @ncall, combine_eltypes, DefaultArrayStyle, instantiate
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex

@@ -76,3 +76,132 @@ function getindex(f::Hcat{T}, k::Integer, j::Integer) where T
     end
     throw(BoundsError("attempt to access $(size(f)) Hcat array."))
 end
+
+
+## copyto!
+# based on Base/array.jl, Base/abstractarray.jl
+
+function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
+    arrays = V.arrays
+    nargs = length(arrays)
+    nrows = size(dest,1)
+    nrows == sum(a->size(a, 1), arrays) || throw(DimensionMismatch("sum of rows each matrix must equal $nrows"))
+    ncols = size(dest, 2)
+    for a in arrays
+        if size(a, 2) != ncols
+            throw(DimensionMismatch("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
+        end
+    end
+    pos = 1
+    for a in arrays
+        p1 = pos+size(a,1)-1
+        dest[pos:p1, :] = a
+        pos = p1+1
+    end
+    return dest
+end
+
+function copyto!(arr::AbstractVector, A::Vcat{<:Any,1,<:Tuple{Vararg{<:AbstractVector}}})
+    arrays = A.arrays
+    n = 0
+    for a in arrays
+        n += length(a)
+    end
+    n == length(arr) || throw(DimensionMismatch("destination must have length equal to sums of concatenated vectors"))
+
+    i = 0
+    @inbounds for a in arrays
+        for ai in a
+            i += 1
+            arr[i] = ai
+        end
+    end
+    arr
+end
+
+function copyto!(arr::Vector{T}, A::Vcat{T,1,<:Tuple{Vararg{<:Vector{T}}}}) where T
+    arrays = A.arrays
+    n = 0
+    for a in arrays
+        n += length(a)
+    end
+    n == length(arr) || throw(DimensionMismatch("destination must have length equal to sums of concatenated vectors"))
+
+    ptr = pointer(arr)
+    if isbitstype(T)
+        elsz = Core.sizeof(T)
+    elseif isbitsunion(T)
+        elsz = bitsunionsize(T)
+        selptr = convert(Ptr{UInt8}, ptr) + n * elsz
+    else
+        elsz = Core.sizeof(Ptr{Cvoid})
+    end
+    t = @_gc_preserve_begin arr
+    for a in arrays
+        na = length(a)
+        nba = na * elsz
+        if isbitstype(T)
+            ccall(:memcpy, Ptr{Cvoid}, (Ptr{Cvoid}, Ptr{Cvoid}, UInt),
+                  ptr, a, nba)
+        elseif isbitsunion(T)
+            ccall(:memcpy, Ptr{Cvoid}, (Ptr{Cvoid}, Ptr{Cvoid}, UInt),
+                  ptr, a, nba)
+            # copy selector bytes
+            ccall(:memcpy, Ptr{Cvoid}, (Ptr{Cvoid}, Ptr{Cvoid}, UInt),
+                  selptr, convert(Ptr{UInt8}, pointer(a)) + nba, na)
+            selptr += na
+        else
+            ccall(:jl_array_ptr_copy, Cvoid, (Any, Ptr{Cvoid}, Any, Ptr{Cvoid}, Int),
+                  arr, ptr, a, pointer(a), na)
+        end
+        ptr += nba
+    end
+    @_gc_preserve_end t
+    return arr
+end
+
+function copyto!(dest::AbstractMatrix, H::Hcat)
+    arrays = H.arrays
+    nargs = length(arrays)
+    nrows = size(dest, 1)
+    ncols = 0
+    dense = true
+    for a in arrays
+        dense &= isa(a,Array)
+        nd = ndims(a)
+        ncols += (nd==2 ? size(a,2) : 1)
+    end
+
+    nrows == size(H,1) || throw(DimensionMismatch("Destination rows must match"))
+    ncols == size(dest,2) || throw(DimensionMismatch("Destination columns must match"))
+
+    pos = 1
+    if dense
+        for a in arrays
+            n = length(a)
+            copyto!(dest, pos, a, 1, n)
+            pos += n
+        end
+    else
+        for a in arrays
+            p1 = pos+(isa(a,AbstractMatrix) ? size(a, 2) : 1)-1
+            dest[:, pos:p1] = a
+            pos = p1+1
+        end
+    end
+    return dest
+end
+
+function copyto!(dest::AbstractMatrix, H::Hcat{<:Any,Tuple{Vararg{<:AbstractVector}}})
+    height = size(dest, 1)
+    for j = 1:length(H)
+        if length(H[j]) != height
+            throw(DimensionMismatch("vectors must have same lengths"))
+        end
+    end
+    for j=1:length(H)
+        dest[i,:] .= H[j]
+    end
+
+    dest
+end
