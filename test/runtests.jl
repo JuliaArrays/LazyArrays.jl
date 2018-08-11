@@ -180,8 +180,10 @@ end
     B = BroadcastArray(exp, A)
     @test Matrix(B) == exp.(A)
 
-    B = BroadcastArray(+, A, 2)
-    @test B == A .+ 2
+    C = BroadcastArray(+, A, 2)
+    @test C == A .+ 2
+    D = BroadcastArray(+, A, C)
+    @test D == A + C
 end
 
 @testset "Cache" begin
