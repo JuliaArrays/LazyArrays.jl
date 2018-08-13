@@ -1,6 +1,7 @@
 # LazyArrays.jl
 
 [![Travis](https://travis-ci.org/JuliaArrays/LazyArrays.jl.svg?branch=master)](https://travis-ci.org/JuliaArrays/LazyArrays.jl)
+[![codecov](https://codecov.io/gh/JuliaArrays/LazyArrays.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaArrays/LazyArrays.jl)
 
 Lazy arrays and linear algebra in Julia v0.7
 

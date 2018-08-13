@@ -12,9 +12,8 @@ matrix:
     - julia: nightly
 notifications:
   email: false
-# after_success:
-#   - julia -e 'Pkg.add("Documenter")'
-#   - julia -e 'cd(Pkg.dir("BandedMatrices")); include(joinpath("docs", "make.jl"))'
+after_success:
+  - julia -e 'cd(Pkg.dir("LazyArrays")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
 
 # uncomment the following lines to override the default test script
 #script:
