@@ -155,8 +155,9 @@ end
     b = Array{Float64}(undef, 6,10)
     @test @allocated(copyto!(b, A)) == 0
     @test b == vcat(A.arrays...)
-    
+
     A = Hcat(1:10, 2:11)
+    @test_throws BoundsError A[1,3]
     @test @inferred(size(A)) == (10,2)
     @test @inferred(A[5]) == @inferred(A[5,1]) == 5
     @test @inferred(A[11]) == @inferred(A[1,2]) == 2
@@ -165,6 +166,12 @@ end
     b = Array{Int}(undef, 10, 2)
     @test @allocated(copyto!(b, A)) == 0
     @test b == hcat(A.arrays...)
+
+    A = Hcat(Vector(1:10), Vector(2:11))
+    b = Array{Int}(undef, 10, 2)
+    copyto!(b, A)
+    @test b == hcat(A.arrays...)
+    @test @allocated(copyto!(b, A)) == 0
 
     A = Hcat(1, zeros(1,5))
     @test A == hcat(1, zeros(1,5))

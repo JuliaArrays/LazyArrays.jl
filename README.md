@@ -10,8 +10,10 @@ and multiplication. This helps with the implementation of matrix-free methods
 for iterative solvers.
 
 The package has been designed with high-performance in mind, so should outperform
-the non-lazy analogues from Base. Please file an issue for any example that
-violates this.
+the non-lazy analogues from Base for many operations like `copyto!` and broadcasting.
+Some operations will be inherently slower due to extra computation, like `getindex`.
+Please file an issue for any examples that are significantly slower than their
+the analogue in Base.
 
 ## Concatenation
 

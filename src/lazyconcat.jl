@@ -28,21 +28,23 @@ Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
 function getindex(f::Vcat{T,1}, k::Integer) where T
+    κ = k
     for A in f.arrays
         n = length(A)
-        k ≤ n && return T(A[k])::T
-        k -= n
+        κ ≤ n && return T(A[κ])::T
+        κ -= n
     end
-    throw(BoundsError("attempt to access $length(f) Vcat array."))
+    throw(BoundsError(f, k))
 end
 
 function getindex(f::Vcat{T,2}, k::Integer, j::Integer) where T
+    κ = k
     for A in f.arrays
         n = size(A,1)
-        k ≤ n && return T(A[k,j])::T
-        k -= n
+        κ ≤ n && return T(A[κ,j])::T
+        κ -= n
     end
-    throw(BoundsError("attempt to access $length(f) Vcat array."))
+    throw(BoundsError(f, (k,j)))
 end
 
 reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.arrays))...)
@@ -69,12 +71,13 @@ size(f::Hcat) = (size(f.arrays[1],1), +(map(a -> size(a,2), f.arrays)...))
 Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
 
 function getindex(f::Hcat{T}, k::Integer, j::Integer) where T
+    ξ = j
     for A in f.arrays
         n = size(A,2)
-        j ≤ n && return T(A[k,j])::T
-        j -= n
+        ξ ≤ n && return T(A[k,ξ])::T
+        ξ -= n
     end
-    throw(BoundsError("attempt to access $(size(f)) Hcat array."))
+    throw(BoundsError(f, (k,j)))
 end
 
 
