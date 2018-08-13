@@ -1,4 +1,7 @@
 # LazyArrays.jl
+
+[![Travis](https://travis-ci.org/JuliaArrays/LazyArrays.jl.svg?branch=master)](https://travis-ci.org/JuliaArrays/LazyArrays.jl)
+
 Lazy arrays and linear algebra in Julia v0.7
 
 This package supports lazy analogues of array operations like `vcat`, `hcat`,
