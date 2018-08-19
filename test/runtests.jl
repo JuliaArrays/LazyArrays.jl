@@ -177,6 +177,36 @@ end
     @test A == hcat(1, zeros(1,5))
 end
 
+@testset "Kron"  begin
+    A = [1,2,3]
+    B = [4,5,6,7]
+
+    @test Array(Kron(A)) == A
+    K = Kron(A,B)
+    @test [K[k] for k=1:length(K)] == Array(K) == kron(A,B)
+
+    A = randn(3)
+    K = Kron(A,B)
+    @test K isa Kron{Float64}
+    @test all(isa.(K.arrays, Vector{Float64}))
+    @test [K[k] for k=1:length(K)] == Array(K) == Array(Kron{Float64}(A,B)) == kron(A,B)
+
+    # C = [7,8,9,10,11]
+    # K = Kron(A,B,C)
+    # @time [K[k] for k=1:length(K)] == Array(Kron(A,B)) == kron(A,B)
+
+    A = randn(3,2)
+    B = randn(4,6)
+    K = Kron(A,B)
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == kron(A,B)
+
+
+    A = rand(Int,3,2)
+    K = Kron(A,B)
+    @test K isa Kron{Float64}
+    @test all(isa.(K.arrays, Matrix{Float64}))
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(K) == Array(Kron{Float64}(A,B)) == kron(A,B)
+end
 
 @testset "BroadcastArray" begin
     A = randn(6,6)

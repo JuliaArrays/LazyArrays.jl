@@ -7,10 +7,11 @@ using LinearAlgebra.BLAS
 import Base: ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
              RangeIndex, BroadcastStyle, copyto!, length, broadcastable, axes,
              getindex, eltype, tail
+
 import Base: *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
          fld, cld, div, min, max, minimum, maximum, mod,
          <, ≤, >, ≥, promote_rule, convert, copy,
-         size, step, isempty, length, first, last, 
+         size, step, isempty, length, first, last,
          getindex, setindex!, OneTo, intersect, @_inline_meta,
          sort, sort!, issorted, sortperm, sum, in, broadcast,
          eltype, parent, real, imag,
@@ -26,16 +27,21 @@ import Base: *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
       _in_range, _range, _rangestyle, Ordered,
       ArithmeticWraps, floatrange, reverse, unitrange_last,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
-      similar, @_gc_preserve_end, @_gc_preserve_begin
+      similar, @_gc_preserve_end, @_gc_preserve_begin,
+      has_offset_axes
+
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         @nexprs, @ncall, combine_eltypes, DefaultArrayStyle, instantiate
+
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
-export Mul, Hcat, Vcat, BroadcastArray, cache
+
+export Mul, Hcat, Vcat, Kron, BroadcastArray, cache
 include("memorylayout.jl")
 include("mul.jl")
 # include("ldiv.jl")
 include("cache.jl")
 include("lazybroadcasting.jl")
 include("lazyconcat.jl")
+include("lazykron.jl")
 
 end # module
