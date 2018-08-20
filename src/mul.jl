@@ -106,15 +106,6 @@ getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 #     dest .= one(T) .* M .+ zero(T) .* dest
 # end
 
-# make copy to make sure always works
-@inline function _gemv!(tA, α, A, x, β, y)
-    if x ≡ y
-        BLAS.gemv!(tA, α, A, copy(x), β, y)
-    else
-        BLAS.gemv!(tA, α, A, x, β, y)
-    end
-end
-
 @inline blasmul!(y, A, x, α, β) = blasmul!(y, A, x, α, β, MemoryLayout(y), MemoryLayout(A), MemoryLayout(x))
 
 @inline function blasmul!(dest, A, x, y, α, β)
@@ -226,16 +217,6 @@ getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj...]
 #     dest .= one(T) .* M .+ zero(T) .* dest
 # end
 
-# make copy to make sure always works
-@inline function _gemm!(tA, tB, α, A, B, β, C)
-    if B ≡ C
-        BLAS.gemm!(tA, tB, α, A, copy(B), β, C)
-    else
-        BLAS.gemm!(tA, tB, α, A, B, β, C)
-    end
-end
-
-
 macro blasmatmat(CTyp, ATyp, BTyp)
     esc(quote
         @inline function _copyto!(::$CTyp, dest::AbstractMatrix,
@@ -288,6 +269,24 @@ macro blasmatmat(CTyp, ATyp, BTyp)
     end)
 end
 
+
+# make copy to make sure always works
+@inline function _gemv!(tA, α, A, x, β, y)
+    if x ≡ y
+        BLAS.gemv!(tA, α, A, copy(x), β, y)
+    else
+        BLAS.gemv!(tA, α, A, x, β, y)
+    end
+end
+
+# make copy to make sure always works
+@inline function _gemm!(tA, tB, α, A, B, β, C)
+    if B ≡ C
+        BLAS.gemm!(tA, tB, α, A, copy(B), β, C)
+    else
+        BLAS.gemm!(tA, tB, α, A, B, β, C)
+    end
+end
 
 @blasmatvec AbstractColumnMajor
 
