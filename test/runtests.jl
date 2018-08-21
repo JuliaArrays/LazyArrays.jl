@@ -40,7 +40,7 @@ using Test, LinearAlgebra, LazyArrays
         @test all(d .=== BLAS.gemv!('N', 3.0, A, b, 2.0, copy(b)))
     end
 
-    # test mixed types
+    # test mixed array types
     let (A, b, c) = (randn(5,5), randn(5), 1.0:5.0)
         d = similar(b)
         d .= Mul(A,b) .+ c

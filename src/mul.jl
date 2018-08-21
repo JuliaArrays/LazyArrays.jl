@@ -166,8 +166,8 @@ end
 
 macro blasmatvec(Lay)
     esc(quote
-        @_blasmatvec $Lay BlasFloat
-        @_blasmatvec ConjLayout{<:$Lay} BlasComplex
+        LazyArrays.@_blasmatvec $Lay BlasFloat
+        LazyArrays.@_blasmatvec LazyArrays.ConjLayout{<:$Lay} BlasComplex
     end)
 end
 
@@ -272,14 +272,14 @@ end
 
 macro blasmatmat(ATyp, BTyp, CTyp)
     esc(quote
-        @_blasmatmat $ATyp $BTyp $CTyp BlasFloat
-        @_blasmatmat ConjLayout{<:$ATyp} $BTyp $CTyp BlasComplex
-        @_blasmatmat $ATyp ConjLayout{<:$BTyp} $CTyp BlasComplex
-        @_blasmatmat ConjLayout{<:$ATyp} ConjLayout{<:$BTyp} $CTyp BlasComplex
-        @_blasmatmat $ATyp $BTyp ConjLayout{<:$CTyp} BlasComplex
-        @_blasmatmat ConjLayout{<:$ATyp} $BTyp ConjLayout{<:$CTyp} BlasComplex
-        @_blasmatmat $ATyp ConjLayout{<:$BTyp} ConjLayout{<:$CTyp} BlasComplex
-        @_blasmatmat ConjLayout{<:$ATyp} ConjLayout{<:$BTyp} ConjLayout{<:$CTyp} BlasComplex
+        LazyArrays.@_blasmatmat $ATyp $BTyp $CTyp BlasFloat
+        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{<:$ATyp} $BTyp $CTyp BlasComplex
+        LazyArrays.@_blasmatmat $ATyp LazyArrays.ConjLayout{<:$BTyp} $CTyp BlasComplex
+        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{<:$ATyp} LazyArrays.ConjLayout{<:$BTyp} $CTyp BlasComplex
+        LazyArrays.@_blasmatmat $ATyp $BTyp LazyArrays.ConjLayout{<:$CTyp} BlasComplex
+        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{<:$ATyp} $BTyp LazyArrays.ConjLayout{<:$CTyp} BlasComplex
+        LazyArrays.@_blasmatmat $ATyp LazyArrays.ConjLayout{<:$BTyp} LazyArrays.ConjLayout{<:$CTyp} BlasComplex
+        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{<:$ATyp} LazyArrays.ConjLayout{<:$BTyp} LazyArrays.ConjLayout{<:$CTyp} BlasComplex
     end)
 end
 
