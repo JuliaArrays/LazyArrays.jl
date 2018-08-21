@@ -20,7 +20,6 @@ using Test, LinearAlgebra, LazyArrays
         c .= Mul(A,b) .+ c
         @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 1.0, copy(b)))
 
-
         c = copy(b)
         c .= Mul(A,b) .+ 2.0 .* c
         @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 2.0, copy(b)))
@@ -28,7 +27,6 @@ using Test, LinearAlgebra, LazyArrays
         c = copy(b)
         c .= 2.0 .* Mul(A,b) .+ c
         @test all(c .=== BLAS.gemv!('N', 2.0, A, b, 1.0, copy(b)))
-
 
         c = copy(b)
         c .= 3.0 .* Mul(A,b) .+ 2.0 .* c
@@ -59,7 +57,6 @@ end
 
 
 @testset "gemv Complex" begin
-
     for T in (ComplexF64,),
             A in (randn(T,5,5), view(randn(T,5,5),:,:)),
             b in (randn(T,5), view(randn(T,5),:))
@@ -98,7 +95,6 @@ end
         @test all(d .=== BLAS.gemv!('N', 3one(T), A, b, 2one(T), copy(b)))
     end
 end
-
 
 @testset "gemm" begin
     for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
@@ -389,7 +385,24 @@ end
     end
 end
 
+@testset "Mixed types" begin
+    A = randn(5,5)
+    b = rand(Int,5)
+    c = Array{Float64}(undef, 5)
+    c .= Mul(A,b)
 
+    d = similar(c)
+    mul!(d, A, b)
+    @test all(c .=== d)
+
+    B = rand(Int,5,5)
+    C = Array{Float64}(undef, 5, 5)
+    C .= Mul(A,B)
+
+    D = similar(C)
+    mul!(D, A, B)
+    @test all(C .=== D)
+end
 
 @testset "no allocation" begin
     function blasnoalloc(c, α, A, x, β, y)

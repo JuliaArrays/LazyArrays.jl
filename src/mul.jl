@@ -19,12 +19,17 @@ eltype(::Mul{T}) where T = T
 ####
 
 struct ArrayMulArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
-const ArrayMulArray{T, styleA, styleB, p, q} =
-    Mul{T, styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{T,q}}
+const MixedArrayMulArray{TV, styleA, styleB, p, q, T, V} =
+    Mul{TV, styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
+
+const ArrayMulArray{T, styleA, styleB, p, q} = MixedArrayMulArray{T, styleA, styleB, p, q, T, T}
 
 const BArrayMulArray{T, styleA, styleB, p, q} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
                 <:Tuple{<:ArrayMulArray{T,styleA,styleB,p,q}}}
+const BMixedArrayMulArray{TV, styleA, styleB, p, q, T, V} =
+    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
+                <:Tuple{<:MixedArrayMulArray{TV,styleA,styleB,p,q,T,V}}}
 const BConstArrayMulArray{T, styleA, styleB, p, q} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                     <:Any, typeof(*),
@@ -55,7 +60,7 @@ const BConstArrayMulArrayPlusConstArray{T, styleA, styleB, p, q} =
                         Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),<:Tuple{T,<:AbstractArray{T,q}}}}}
 
 
-BroadcastStyle(::Type{<:ArrayMulArray{<:Any,StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} = ArrayMulArrayStyle{StyleA,StyleB,p,q}()
+BroadcastStyle(::Type{<:MixedArrayMulArray{<:Any,StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} = ArrayMulArrayStyle{StyleA,StyleB,p,q}()
 BroadcastStyle(M::ArrayMulArrayStyle, ::DefaultArrayStyle) = M
 BroadcastStyle(::DefaultArrayStyle, M::ArrayMulArrayStyle) = M
 similar(M::Broadcasted{<:ArrayMulArrayStyle}, ::Type{ElType}) where ElType = Array{Eltype}(undef,size(M.args[1]))
@@ -68,6 +73,7 @@ similar(M::Broadcasted{<:ArrayMulArrayStyle}, ::Type{ElType}) where ElType = Arr
 let (p,q) = (2,1)
     global const MatMulVecStyle{StyleA, StyleB} = ArrayMulArrayStyle{StyleA, StyleB, p, q}
     global const MatMulVec{T, styleA, styleB} = ArrayMulArray{T, styleA, styleB, p, q}
+    global const MixedMatMulVec{TV, styleA, styleB, T, V} = MixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
 
     global const BMatVec{T, styleA, styleB} = BArrayMulArray{T, styleA, styleB, p, q}
     global const BConstMatVec{T, styleA, styleB} = BConstArrayMulArray{T, styleA, styleB, p, q}
@@ -78,9 +84,9 @@ let (p,q) = (2,1)
 end
 
 
-length(M::MatMulVec) = size(M.A,1)
-axes(M::MatMulVec) = (axes(M.A,1),)
-broadcastable(M::MatMulVec) = M
+length(M::MixedMatMulVec) = size(M.A,1)
+axes(M::MixedMatMulVec) = (axes(M.A,1),)
+broadcastable(M::MixedMatMulVec) = M
 instantiate(bc::Broadcasted{<:MatMulVecStyle}) = bc
 
 # function getindex(M::MatMulVec{T}, k::Int) where T
@@ -91,10 +97,10 @@ instantiate(bc::Broadcasted{<:MatMulVecStyle}) = bc
 #     ret
 # end
 
-getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
+getindex(M::MixedMatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 
 # Use default
-# @inline _copyto!(_, dest, bc) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
+@inline _copyto!(_, dest, bc) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
 
 # Matrix * Vector
 
@@ -103,6 +109,13 @@ getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 #     (M,) = bc.args
 #     dest .= one(T) .* M .+ zero(T) .* dest
 # end
+
+# default to Base mul!
+function _copyto!(_, dest::AbstractArray, bc::BMixedArrayMulArray)
+    (M,) = bc.args
+    A,x = M.A, M.B
+    mul!(dest, A, x)
+end
 
 @inline blasmul!(y, A, x, α, β) = blasmul!(y, A, x, α, β, MemoryLayout(y), MemoryLayout(A), MemoryLayout(x))
 
@@ -181,6 +194,7 @@ end
 let (p,q) = (2,2)
     global const MatMulMatStyle{StyleA, StyleB} = ArrayMulArrayStyle{StyleA, StyleB, p, q}
     global const MatMulMat{T, styleA, styleB} = ArrayMulArray{T, styleA, styleB, p, q}
+    global const MixedMatMulMat{TV, styleA, styleB, T, V} = MixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
 
     global const BMatMat{T, styleA, styleB} = BArrayMulArray{T, styleA, styleB, p, q}
     global const BConstMatMat{T, styleA, styleB} = BConstArrayMulArray{T, styleA, styleB, p, q}
@@ -191,9 +205,9 @@ let (p,q) = (2,2)
 end
 
 
-size(M::MatMulMat) = (size(M.A,1),size(M.B,2))
-axes(M::MatMulMat) = (axes(M.A,1),axes(M.B,2))
-broadcastable(M::MatMulMat) = M
+size(M::MixedMatMulMat) = (size(M.A,1),size(M.B,2))
+axes(M::MixedMatMulMat) = (axes(M.A,1),axes(M.B,2))
+broadcastable(M::MixedMatMulMat) = M
 instantiate(bc::Broadcasted{<:MatMulMatStyle}) = bc
 
 # function getindex(M::MatMulVec{T}, k::Int) where T
@@ -204,7 +218,7 @@ instantiate(bc::Broadcasted{<:MatMulMatStyle}) = bc
 #     ret
 # end
 
-getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj...]
+getindex(M::MixedMatMulMat, kj::CartesianIndex{2}) = M[kj...]
 
 
 
