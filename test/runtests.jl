@@ -1,7 +1,7 @@
 using Test, LinearAlgebra, LazyArrays
 
 
-@testset "gemv" begin
+@testset "gemv Float64" begin
     for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
               view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5)),
         b in (randn(5), view(randn(5),:), view(randn(5),1:5), view(randn(9),1:2:9))
@@ -57,6 +57,49 @@ using Test, LinearAlgebra, LazyArrays
     end
 end
 
+
+@testset "gemv Complex" begin
+
+    for T in (ComplexF64,),
+            A in (randn(T,5,5), view(randn(T,5,5),:,:)),
+            b in (randn(T,5), view(randn(T,5),:))
+        c = similar(b);
+
+        c .= Mul(A,b)
+        @test all(c .=== BLAS.gemv!('N', one(T), A, b, zero(T), similar(c)))
+
+        b .= Mul(A,b)
+        @test all(c .=== b)
+
+        c .= 2one(T) .* Mul(A,b)
+        @test all(c .=== BLAS.gemv!('N', 2one(T), A, b, zero(T), similar(c)))
+
+        c = copy(b)
+        c .= Mul(A,b) .+ c
+        @test all(c .=== BLAS.gemv!('N', one(T), A, b, one(T), copy(b)))
+
+
+        c = copy(b)
+        c .= Mul(A,b) .+ 2one(T) .* c
+        @test all(c .=== BLAS.gemv!('N', one(T), A, b, 2one(T), copy(b)))
+
+        c = copy(b)
+        c .= 2one(T) .* Mul(A,b) .+ c
+        @test all(c .=== BLAS.gemv!('N', 2one(T), A, b, one(T), copy(b)))
+
+
+        c = copy(b)
+        c .= 3one(T) .* Mul(A,b) .+ 2one(T) .* c
+        @test all(c .=== BLAS.gemv!('N', 3one(T), A, b, 2one(T), copy(b)))
+
+        d = similar(c)
+        c = copy(b)
+        d .= 3one(T) .* Mul(A,b) .+ 2one(T) .* c
+        @test all(d .=== BLAS.gemv!('N', 3one(T), A, b, 2one(T), copy(b)))
+    end
+end
+
+
 @testset "gemm" begin
     for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
               view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5)),
@@ -95,6 +138,46 @@ end
         C = copy(B)
         d .= 3.0 .* Mul(A,B) .+ 2.0 .* C
         @test all(d .=== BLAS.gemm!('N', 'N', 3.0, A, B, 2.0, copy(B)))
+    end
+end
+
+@testset "gemm Complex" begin
+    for T in (ComplexF64,),
+            A in (randn(T,5,5), view(randn(T,5,5),:,:)),
+            B in (randn(T,5,5), view(randn(T,5,5),:,:))
+        C = similar(B);
+
+        C .= Mul(A,B)
+        @test all(C .=== BLAS.gemm!('N', 'N', one(T), A, B, zero(T), similar(C)))
+
+        B .= Mul(A,B)
+        @test all(C .=== B)
+
+        C .= 2one(T) .* Mul(A,B)
+        @test all(C .=== BLAS.gemm!('N', 'N', 2one(T), A, B, zero(T), similar(C)))
+
+        C = copy(B)
+        C .= Mul(A,B) .+ C
+        @test all(C .=== BLAS.gemm!('N', 'N', one(T), A, B, one(T), copy(B)))
+
+
+        C = copy(B)
+        C .= Mul(A,B) .+ 2one(T) .* C
+        @test all(C .=== BLAS.gemm!('N', 'N', one(T), A, B, 2one(T), copy(B)))
+
+        C = copy(B)
+        C .= 2one(T) .* Mul(A,B) .+ C
+        @test all(C .=== BLAS.gemm!('N', 'N', 2one(T), A, B, one(T), copy(B)))
+
+
+        C = copy(B)
+        C .= 3one(T) .* Mul(A,B) .+ 2one(T) .* C
+        @test all(C .=== BLAS.gemm!('N', 'N', 3one(T), A, B, 2one(T), copy(B)))
+
+        d = similar(C)
+        C = copy(B)
+        d .= 3one(T) .* Mul(A,B) .+ 2one(T) .* C
+        @test all(d .=== BLAS.gemm!('N', 'N', 3one(T), A, B, 2one(T), copy(B)))
     end
 end
 
@@ -154,6 +237,47 @@ end
             d .= 3.0 .* Mul(Ac,b) .+ 2.0 .* c
             @test all(d .=== BLAS.gemv!('T', 3.0, A, b, 2.0, Vector{Float64}(c)))
         end
+    end
+end
+
+@testset "gemv adjtrans Complex" begin
+    for T in (ComplexF64,),
+            A in (randn(T,5,5), view(randn(T,5,5),:,:)),
+            b in (randn(T,5), view(randn(T,5),:)),
+            (Ac,trans) in ((transpose(A),'T'), (A','C'))
+        c = similar(b);
+
+        c .= Mul(Ac,b)
+        @test all(c .=== BLAS.gemv!(trans, one(T), A, b, zero(T), similar(c)))
+
+        b .= Mul(Ac,b)
+        @test all(c .=== b)
+
+        c .= 2one(T) .* Mul(Ac,b)
+        @test all(c .=== BLAS.gemv!(trans, 2one(T), A, b, zero(T), similar(c)))
+
+        c = copy(b)
+        c .= Mul(Ac,b) .+ c
+        @test all(c .=== BLAS.gemv!(trans, one(T), A, b, one(T), copy(b)))
+
+
+        c = copy(b)
+        c .= Mul(Ac,b) .+ 2one(T) .* c
+        @test all(c .=== BLAS.gemv!(trans, one(T), A, b, 2one(T), copy(b)))
+
+        c = copy(b)
+        c .= 2one(T) .* Mul(Ac,b) .+ c
+        @test all(c .=== BLAS.gemv!(trans, 2one(T), A, b, one(T), copy(b)))
+
+
+        c = copy(b)
+        c .= 3one(T) .* Mul(Ac,b) .+ 2one(T) .* c
+        @test all(c .=== BLAS.gemv!(trans, 3one(T), A, b, 2one(T), copy(b)))
+
+        d = similar(c)
+        c = copy(b)
+        d .= 3one(T) .* Mul(Ac,b) .+ 2one(T) .* c
+        @test all(d .=== BLAS.gemv!(trans, 3one(T), A, b, 2one(T), copy(b)))
     end
 end
 
