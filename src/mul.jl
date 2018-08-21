@@ -76,6 +76,7 @@ let (p,q) = (2,1)
     global const MixedMatMulVec{TV, styleA, styleB, T, V} = MixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
 
     global const BMatVec{T, styleA, styleB} = BArrayMulArray{T, styleA, styleB, p, q}
+    global const BMixedMatVec{TV, styleA, styleB, T, V} = BMixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
     global const BConstMatVec{T, styleA, styleB} = BConstArrayMulArray{T, styleA, styleB, p, q}
     global const BMatVecPlusVec{T,styleA,styleB} = BArrayMulArrayPlusArray{T, styleA, styleB, p, q}
     global const BMatVecPlusConstVec{T,styleA,styleB} = BArrayMulArrayPlusConstArray{T, styleA, styleB, p, q}
@@ -197,6 +198,7 @@ let (p,q) = (2,2)
     global const MixedMatMulMat{TV, styleA, styleB, T, V} = MixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
 
     global const BMatMat{T, styleA, styleB} = BArrayMulArray{T, styleA, styleB, p, q}
+    global const BMixedMatMat{TV, styleA, styleB, T, V} = BMixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
     global const BConstMatMat{T, styleA, styleB} = BConstArrayMulArray{T, styleA, styleB, p, q}
     global const BMatMatPlusMat{T,styleA,styleB} = BArrayMulArrayPlusArray{T, styleA, styleB, p, q}
     global const BMatMatPlusConstMat{T,styleA,styleB} = BArrayMulArrayPlusConstArray{T, styleA, styleB, p, q}
