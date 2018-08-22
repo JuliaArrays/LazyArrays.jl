@@ -224,3 +224,24 @@ broadcasted(::LazyArrayStyle, op, c::Number, A::Vcat) =
     _Vcat(broadcast((x,y) -> broadcast(op, x, y), c, A.arrays))
 broadcasted(::LazyArrayStyle, op, A::Vcat) =
     _Vcat(broadcast(x -> broadcast(op, x), A.arrays))
+
+
+
+####
+# Cumsum
+####
+
+sum(V::Vcat) = mapreduce(sum, +, V.arrays)
+
+_dotplus(a,b) = broadcast(+, a, b)
+
+@inline _vcat_cumsum() = ()
+@inline _cumsum(x::Number) = x
+@inline _cumsum(x) = cumsum(x)
+@inline function _vcat_cumsum(a, b...)
+    c = _cumsum(a)
+    t = broadcast(_dotplus, last(c), _vcat_cumsum(b...))
+    tuple(c, t...)
+end
+
+@inline cumsum(V::Vcat{<:Any,1}) = _Vcat(_vcat_cumsum(V.arrays...))

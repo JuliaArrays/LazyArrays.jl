@@ -567,3 +567,11 @@ end
     typeof(Ldiv(A,b))
     @test all(copyto!(similar(b), Ldiv(A,b)) .== (A\b))
 end
+
+
+@testset "Cumsum" begin
+    x = Vcat([3,4], [1,1,1,1,1], 3)
+    y = @inferred(cumsum(x))
+    @test y isa Vcat
+    @test y == cumsum(Vector(x))
+end
