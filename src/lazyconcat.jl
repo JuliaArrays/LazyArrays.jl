@@ -235,13 +235,16 @@ sum(V::Vcat) = mapreduce(sum, +, V.arrays)
 
 _dotplus(a,b) = broadcast(+, a, b)
 
-@inline _vcat_cumsum() = ()
 @inline _cumsum(x::Number) = x
 @inline _cumsum(x) = cumsum(x)
-@inline function _vcat_cumsum(a, b...)
-    c = _cumsum(a)
-    t = broadcast(_dotplus, last(c), _vcat_cumsum(b...))
-    tuple(c, t...)
+@generated function _vcat_cumsum(x...)
+    N = length(x)
+    ret = quote
+        @nexprs $N d->(c_d = _cumsum(x[d]))
+        d_1 = c_1
+        @nexprs $(N-1) k->(d_{k+1} = broadcast(+, last(d_k), c_{k+1}))
+        @ntuple $N d
+    end
 end
 
 @inline cumsum(V::Vcat{<:Any,1}) = _Vcat(_vcat_cumsum(V.arrays...))
