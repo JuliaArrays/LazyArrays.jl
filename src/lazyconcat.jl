@@ -2,8 +2,8 @@
 # Similar to Iterators.Flatten and some code has been reused from julia/base/iterators.jl
 
 function _Vcat end
-
-struct Vcat{T,N,I} <: AbstractArray{T,N}
+abstract type AbstractConcatArray{T,N} <: AbstractArray{T,N} end
+struct Vcat{T,N,I} <: AbstractConcatArray{T,N}
     arrays::I
 
     global function _Vcat(::Type{T}, A::I) where {I<:Tuple,T}
@@ -52,7 +52,7 @@ reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.arrays))...)
 
 function _Hcat end
 
-struct Hcat{T,I} <: AbstractMatrix{T}
+struct Hcat{T,I} <: AbstractConcatArray{T,2}
     arrays::I
 
     global function _Hcat(::Type{T}, A::I) where {I<:Tuple,T}
@@ -208,3 +208,19 @@ function copyto!(dest::AbstractMatrix, H::Hcat{<:Any,Tuple{Vararg{<:AbstractVect
 
     dest
 end
+
+
+#####
+# broadcasting
+#
+# We want broadcasting for numbers with concaenations to pass through
+# to take advantage of special implementations of the sub-components
+######
+
+BroadcastStyle(::Type{<:AbstractConcatArray{<:Any,N}}) where N = LazyArrayStyle{N}()
+broadcasted(::LazyArrayStyle, op, A::Vcat, c::Number) =
+    _Vcat(broadcast((x,y) -> broadcast(op, x, y), A.arrays, c))
+broadcasted(::LazyArrayStyle, op, c::Number, A::Vcat) =
+    _Vcat(broadcast((x,y) -> broadcast(op, x, y), c, A.arrays))
+broadcasted(::LazyArrayStyle, op, A::Vcat) =
+    _Vcat(broadcast(x -> broadcast(op, x), A.arrays))

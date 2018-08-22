@@ -1,7 +1,7 @@
 name = "LazyArrays"
 uuid = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 authors = ["Sheehan Olver <solver@mac.com>"]
-version = "0.1.0"
+version = "0.1.0+"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

@@ -519,6 +519,20 @@ end
     @test C == A .+ 2
     D = BroadcastArray(+, A, C)
     @test D == A + C
+
+    x = Vcat([3,4], [1,1,1,1,1], 1:3)
+    @test x .+ (1:10) isa BroadcastArray
+    @test x .+ (1:10) ==  Vector(x) + (1:10)
+
+
+    @test exp.(x) isa Vcat
+    @test exp.(x) == exp.(Vector(x))
+    @test x .+ 2 isa Vcat
+    @test (x .+ 2).arrays[end] ≡ x.arrays[end] .+ 2 ≡ 3:5
+    @test x .* 2 isa Vcat
+    @test 2 .+ x isa Vcat
+    @test 2 .* x isa Vcat
+
 end
 
 @testset "Cache" begin
