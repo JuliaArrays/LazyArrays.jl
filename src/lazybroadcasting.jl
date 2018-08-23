@@ -31,19 +31,26 @@ copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 # Ranges already support smart broadcasting
 for op in (+, -, big)
     @eval begin
-        broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::Union{AbstractRange,AbstractFill}) =
+        broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::AbstractRange) =
             broadcast(DefaultArrayStyle{1}(), $op, r)
-        broadcasted(::LazyArrayStyle{1}, ::typeof($op), r1::Union{AbstractRange,AbstractFill}, r2::Union{AbstractRange,AbstractFill}) =
-            broadcast(DefaultArrayStyle{1}(), $op, r1, r2)
     end
 end
 
 for op in (-, +, *, /)
-    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::Union{AbstractRange,AbstractFill}, x::Real) =
+    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::AbstractFill, x::Real) =
         broadcast(DefaultArrayStyle{1}(), $op, r, x)
 end
 
 for op in (-, +, *, \)
-    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), x::Real, r::Union{AbstractRange,AbstractFill}) =
+    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), x::Real, r::AbstractFill) =
         broadcast(DefaultArrayStyle{1}(), $op, x, r)
 end
+
+
+broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}) where {T,N} =
+    broadcast(DefaultArrayStyle{N}(), op, r)
+broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Number) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, r, x)
+broadcasted(::LazyArrayStyle{N}, op, x::Number, r::AbstractFill{T,N}) where {T,N} =
+    broadcast(DefaultArrayStyle{N}(), op, x, r)
+broadcasted(::LazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} =
+    broadcast(DefaultArrayStyle{N}(), op, r1, r2)
