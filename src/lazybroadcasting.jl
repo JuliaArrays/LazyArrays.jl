@@ -20,7 +20,7 @@ axes(A::BroadcastArray) = axes(A.broadcasted)
 size(A::BroadcastArray) = map(length, axes(A))
 
 
-@propagate_inbounds getindex(A::BroadcastArray, kj...) = A.broadcasted[kj...]
+@propagate_inbounds getindex(A::BroadcastArray, kj::Int...) = A.broadcasted[kj...]
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
@@ -30,15 +30,19 @@ copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 # Ranges already support smart broadcasting
 for op in (+, -, big)
     @eval begin
-        broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::AbstractRange) = broadcast(DefaultArrayStyle{1}(), $op, r)
-        broadcasted(::LazyArrayStyle{1}, ::typeof($op), r1::AbstractRange, r2::AbstractRange) = broadcast(DefaultArrayStyle{1}(), $op, r1, r2)
+        broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::Union{AbstractRange,AbstractFill}) =
+            broadcast(DefaultArrayStyle{1}(), $op, r)
+        broadcasted(::LazyArrayStyle{1}, ::typeof($op), r1::Union{AbstractRange,AbstractFill}, r2::Union{AbstractRange,AbstractFill}) =
+            broadcast(DefaultArrayStyle{1}(), $op, r1, r2)
     end
 end
 
 for op in (-, +, *, /)
-    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::AbstractRange, x::Real) = broadcast(DefaultArrayStyle{1}(), $op, r, x)
+    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::Union{AbstractRange,AbstractFill}, x::Real) =
+        broadcast(DefaultArrayStyle{1}(), $op, r, x)
 end
 
 for op in (-, +, *, \)
-    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), x::Real, r::AbstractRange) = broadcast(DefaultArrayStyle{1}(), $op, x, r)
+    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), x::Real, r::Union{AbstractRange,AbstractFill}) =
+        broadcast(DefaultArrayStyle{1}(), $op, x, r)
 end

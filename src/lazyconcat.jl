@@ -27,11 +27,11 @@ size(f::Vcat{<:Any,2}) = (+(map(a -> size(a,1), f.arrays)...), size(f.arrays[1],
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
-function getindex(f::Vcat{T,1}, k::Integer) where T
+@propagate_inbounds @inline function getindex(f::Vcat{T,1}, k::Integer) where T
     κ = k
     for A in f.arrays
         n = length(A)
-        κ ≤ n && return T(A[κ])::T
+        κ ≤ n && return convert(T,A[κ])::T
         κ -= n
     end
     throw(BoundsError(f, k))
@@ -225,6 +225,45 @@ broadcasted(::LazyArrayStyle, op, c::Number, A::Vcat) =
 broadcasted(::LazyArrayStyle, op, A::Vcat) =
     _Vcat(broadcast(x -> broadcast(op, x), A.arrays))
 
+# determine indices of components of a vcat
+_vcat_axes(::Tuple{}) = (1,)
+_vcat_axes(a::Tuple{<:AbstractUnitRange}) = (first(a),)
+_vcat_axes(::Tuple{}, b, c...) = tuple(1, broadcast(+, 1, _vcat_axes(b, c...))...)
+_vcat_axes(a::Tuple{OneTo{Int}}, b, c...) = tuple(first(a), broadcast(+, last(first(a)), _vcat_axes(b, c...))...)
+
+_vcat_getindex_eval(y) = ()
+_vcat_getindex_eval(y, a, b...) = tuple(y[a], _vcat_getindex_eval(y, b...)...)
+
+
+function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
+    kr = _vcat_axes(axes.(A.arrays)...)  # determine how to break up B
+    B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
+    _Vcat(broadcast((a,b) -> broadcast(op,a,b), A.arrays, B_arrays))
+end
+
+function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
+    kr = _vcat_axes(axes.(B.arrays)...)
+    A_arrays = _vcat_getindex_eval(A,kr...)
+    _Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.arrays))
+end
+
+# Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) =
+    BroadcastArray(Broadcasted{LazyArrayStyle}(op, (A, B)))
+
+
+function +(A::Vcat, B::Vcat)
+    size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
+    A .+ B
+end
+function +(A::Vcat, B::AbstractArray)
+    size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
+    A .+ B
+end
+function +(A::AbstractArray, B::Vcat)
+    size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
+    A .+ B
+end
 
 
 ####
@@ -248,3 +287,12 @@ _dotplus(a,b) = broadcast(+, a, b)
 end
 
 @inline cumsum(V::Vcat{<:Any,1}) = _Vcat(_vcat_cumsum(V.arrays...))
+
+
+####
+# maximum/minimum
+####
+
+for op in (:maximum, :minimum)
+    @eval $op(V::Vcat) = $op($op.(V.arrays))
+end

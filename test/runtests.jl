@@ -532,7 +532,6 @@ end
     @test x .* 2 isa Vcat
     @test 2 .+ x isa Vcat
     @test 2 .* x isa Vcat
-
 end
 
 @testset "Cache" begin
@@ -573,4 +572,28 @@ end
     y = @inferred(cumsum(x))
     @test y isa Vcat
     @test y == cumsum(Vector(x))
+end
+
+@testset "broadcast Vcat" begin
+    x = Vcat(1:2, [1,1,1,1,1], 3)
+    y = 1:8
+    f = (x,y) -> cos(x*y)
+    @test f.(x,y) isa Vcat
+    @test @inferred(broadcast(f,x,y)) == f.(Vector(x), Vector(y))
+
+    @test (x .+ y) isa Vcat
+    @test (x .+ y).arrays[1] isa Range
+    @test (x .+ y).arrays[end] isa Int
+
+    z = Vcat(1:2, [1,1,1,1,1], 3)
+    (x .+ z)  isa BroadcastArray
+    (x + z) isa BroadcastArray
+    @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
+end
+
+
+@testset "maximum/minimum Vcat" begin
+    x = Vcat(1:2, [1,1,1,1,1], 3)
+    @test maximum(x) == 3
+    @test minimum(x) == 1
 end
