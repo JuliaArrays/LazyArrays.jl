@@ -37,19 +37,20 @@ for op in (+, -, big)
 end
 
 for op in (-, +, *, /)
-    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::AbstractFill, x::Real) =
+    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::AbstractRange, x::Real) =
         broadcast(DefaultArrayStyle{1}(), $op, r, x)
 end
 
 for op in (-, +, *, \)
-    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), x::Real, r::AbstractFill) =
+    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), x::Real, r::AbstractRange) =
         broadcast(DefaultArrayStyle{1}(), $op, x, r)
 end
 
 
 broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}) where {T,N} =
     broadcast(DefaultArrayStyle{N}(), op, r)
-broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Number) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, r, x)
+broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Number) where {T,N} =
+    broadcast(DefaultArrayStyle{N}(), op, r, x)
 broadcasted(::LazyArrayStyle{N}, op, x::Number, r::AbstractFill{T,N}) where {T,N} =
     broadcast(DefaultArrayStyle{N}(), op, x, r)
 broadcasted(::LazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} =
