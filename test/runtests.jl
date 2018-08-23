@@ -521,7 +521,7 @@ end
     @test D == A + C
 
     x = Vcat([3,4], [1,1,1,1,1], 1:3)
-    @test x .+ (1:10) isa BroadcastArray
+    @test x .+ (1:10) isa Vcat
     @test x .+ (1:10) ==  Vector(x) + (1:10)
 
 
@@ -582,7 +582,7 @@ end
     @test @inferred(broadcast(f,x,y)) == f.(Vector(x), Vector(y))
 
     @test (x .+ y) isa Vcat
-    @test (x .+ y).arrays[1] isa Range
+    @test (x .+ y).arrays[1] isa AbstractRange
     @test (x .+ y).arrays[end] isa Int
 
     z = Vcat(1:2, [1,1,1,1,1], 3)

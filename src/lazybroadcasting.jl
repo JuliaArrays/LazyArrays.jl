@@ -19,6 +19,7 @@ BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
 axes(A::BroadcastArray) = axes(A.broadcasted)
 size(A::BroadcastArray) = map(length, axes(A))
 
+IndexStyle(::BroadcastArray{<:Any,1}) = IndexLinear()
 
 @propagate_inbounds getindex(A::BroadcastArray, kj::Int...) = A.broadcasted[kj...]
 
