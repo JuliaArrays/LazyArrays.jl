@@ -228,8 +228,9 @@ broadcasted(::LazyArrayStyle, op, A::Vcat) =
 # determine indices of components of a vcat
 _vcat_axes(::Tuple{}) = (1,)
 _vcat_axes(a::Tuple{<:AbstractUnitRange}) = (first(a),)
-_vcat_axes(::Tuple{}, b, c...) = tuple(1, broadcast(+, 1, _vcat_axes(b, c...))...)
-_vcat_axes(a::Tuple{OneTo{Int}}, b, c...) = tuple(first(a), broadcast(+, last(first(a)), _vcat_axes(b, c...))...)
+_vcat_axes(::Tuple{}, b, c...) = tuple(1, broadcast(x -> broadcast(+, 1, x), _vcat_axes(b, c...))...)
+_vcat_axes(a::Tuple{<:AbstractUnitRange}, b, c...) = tuple(first(a), broadcast((α,x) -> broadcast(+, α, x), last(first(a)),
+                                                            _vcat_axes(b, c...))...)
 
 _vcat_getindex_eval(y) = ()
 _vcat_getindex_eval(y, a, b...) = tuple(y[a], _vcat_getindex_eval(y, b...)...)
