@@ -266,6 +266,15 @@ function +(A::AbstractArray, B::Vcat)
     A .+ B
 end
 
+####
+# getindex on AbstractVector
+####
+
+function getindex(A::Vcat{<:Any,1}, jr::AbstractVector{<:Integer})
+    kr = _vcat_axes(axes.(A.arrays)...)
+    _Vcat(getindex.(A.arrays, intersect.(kr, (jr,))))
+end
+
 
 ####
 # Cumsum

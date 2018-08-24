@@ -10,10 +10,11 @@ end
 BroadcastArray{T,N}(bc::BRD) where {T,N,BRD<:Broadcasted} = BroadcastArray{T,N,BRD}(bc)
 BroadcastArray{T}(bc::Broadcasted{<:Union{Nothing,BroadcastStyle},<:Tuple{Vararg{Any,N}},<:Any,<:Tuple}) where {T,N} =
     BroadcastArray{T,N}(bc)
-BroadcastArray(bc::Broadcasted) =
-    BroadcastArray{combine_eltypes(bc.f, bc.args)}(bc)
+_BroadcastArray(bc::Broadcasted) = BroadcastArray{combine_eltypes(bc.f, bc.args)}(bc)
+BroadcastArray(bc::Broadcasted) = _BroadcastArray(bc)
 BroadcastArray(b::Broadcasted{<:Union{Nothing,BroadcastStyle},Nothing,<:Any,<:Tuple}) =
-    BroadcastArray(instantiate(b))
+    _BroadcastArray(instantiate(b))
+BroadcastArray(b::BroadcastArray) = b    
 BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
 
 axes(A::BroadcastArray) = axes(A.broadcasted)
@@ -23,9 +24,17 @@ IndexStyle(::BroadcastArray{<:Any,1}) = IndexLinear()
 
 @propagate_inbounds getindex(A::BroadcastArray, kj::Int...) = A.broadcasted[kj...]
 
+
+@propagate_inbounds _broadcast_getindex_range(A::Union{Ref,AbstractArray{<:Any,0},Number}, I) = A[] # Scalar-likes can just ignore all indices
+# Everything else falls back to dynamically dropping broadcasted indices based upon its axes
+@propagate_inbounds _broadcast_getindex_range(A, I) = A[I]
+
+getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
+    BroadcastArray(B.broadcasted.f, map(a -> _broadcast_getindex_range(a,kr), B.broadcasted.args)...)
+
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
-
+BroadcastStyle(::Type{<:BroadcastArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting
