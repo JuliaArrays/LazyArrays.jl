@@ -111,6 +111,26 @@ getindex(M::MixedMatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 #     dest .= one(T) .* M .+ zero(T) .* dest
 # end
 
+# support mul! by calling lazy mul
+macro lazymul(Typ)
+    esc(quote
+        mul!(dest::AbstractVector, A::$Typ, x::AbstractVector) =
+            (dest .= Mul(A,x))
+
+        mul!(dest::AbstractMatrix, A::$Typ, x::AbstractMatrix) =
+            (dest .= Mul(A,x))
+        mul!(dest::AbstractMatrix, A::$Typ, x::$Typ) =
+            (dest .= Mul(A,x))
+        mul!(dest::AbstractMatrix, A::$Typ, x::Adjoint{<:Any,<:AbstractMatrix}) =
+            (dest .= Mul(A,x))
+
+        mul!(dest::AbstractVector, A::Adjoint{<:Any,<:$Typ}, b::AbstractVector) =
+            (dest .= Mul(A, b))
+        mul!(dest::AbstractVector, A::Transpose{<:Any,<:$Typ}, b::AbstractVector) =
+            (dest .= Mul(A, b))
+    end)
+end
+
 # default to Base mul!
 function _copyto!(_, dest::AbstractArray, bc::BMixedArrayMulArray)
     (M,) = bc.args
@@ -180,8 +200,8 @@ end
 
 macro blasmatvec(Lay)
     esc(quote
-        LazyArrays.@_blasmatvec $Lay BlasFloat
-        LazyArrays.@_blasmatvec LazyArrays.ConjLayout{<:$Lay} BlasComplex
+        LazyArrays.@_blasmatvec $Lay LinearAlgebra.BLAS.BlasFloat
+        LazyArrays.@_blasmatvec LazyArrays.ConjLayout{<:$Lay} LinearAlgebra.BLAS.BlasComplex
     end)
 end
 
