@@ -1,4 +1,4 @@
-using Test, LinearAlgebra, LazyArrays
+using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 
 
 @testset "gemv Float64" begin
@@ -589,8 +589,17 @@ end
     (x .+ z)  isa BroadcastArray
     (x + z) isa BroadcastArray
     @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
-end
 
+    # Lazy mixed with Static treats as Lazy
+    s = SVector(1,2,3,4,5,6,7,8)
+    @test f.(x , s) isa Vcat
+    @test f.(x , s) == f.(Vector(x), Vector(s))
+
+    # these are special cased
+    @test Vcat(1, Ones(5))  + Vcat(2, Fill(2.0,5)) ≡ Vcat(3, Fill(3.0,5))
+    @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡
+        Vcat(SVector(5,7,9), Fill(3.0,5))
+end
 
 @testset "maximum/minimum Vcat" begin
     x = Vcat(1:2, [1,1,1,1,1], 3)

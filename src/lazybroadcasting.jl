@@ -38,6 +38,8 @@ getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
 BroadcastStyle(::Type{<:BroadcastArray{<:Any,N}}) where N = LazyArrayStyle{N}()
+BroadcastStyle(L::LazyArrayStyle{N}, ::StaticArrayStyle{N}) where N = L
+BroadcastStyle(::StaticArrayStyle{N}, L::LazyArrayStyle{N})  where N = L
 
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting

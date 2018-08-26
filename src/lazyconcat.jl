@@ -266,6 +266,21 @@ function +(A::AbstractArray, B::Vcat)
     A .+ B
 end
 
+######
+# PaddedArrays
+######
+
+# this is a special override that may be generalisable
+# we do this to avoid complicated types
+broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any, 1, <:Tuple{<:Number, <:AbstractVector}},
+                                     B::Vcat{<:Any, 1, <:Tuple{<:Number, <:AbstractVector}}) =
+     Vcat(op(A.arrays[1], B.arrays[1]), op.(A.arrays[2], B.arrays[2]))
+
+broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any, 1, <:Tuple{<:SVector{M}, <:AbstractVector}},
+                                     B::Vcat{<:Any, 1, <:Tuple{<:SVector{M}, <:AbstractVector}}) where M =
+  Vcat(op.(A.arrays[1], B.arrays[1]), op.(A.arrays[2], B.arrays[2]))
+
+
 
 ####
 # Cumsum

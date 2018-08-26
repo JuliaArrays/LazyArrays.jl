@@ -1,5 +1,5 @@
 module LazyArrays
-using Base, Base.Broadcast, LinearAlgebra, FillArrays
+using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays
 import LinearAlgebra.BLAS
 
 import Base: ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
@@ -33,6 +33,8 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
 import FillArrays: AbstractFill
+
+import StaticArrays: StaticArrayStyle
 
 export Mul, Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv
 
