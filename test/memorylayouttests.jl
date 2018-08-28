@@ -105,16 +105,18 @@ using LazyArrays
                               (LowerTriangular, LowerTriangularLayout, UpperTriangularLayout),
                               (UnitLowerTriangular, UnitLowerTriangularLayout, UnitUpperTriangularLayout))
             @test MemoryLayout(TriType(A)) == TriLayout(DenseColumnMajor())
-            @test MemoryLayout(TriType(transpose(A))) == UnknownLayout()
-            @test MemoryLayout(TriType(A')) == UnknownLayout()
+            @test MemoryLayout(TriType(transpose(A))) == TriLayout(DenseRowMajor())
+            @test MemoryLayout(TriType(A')) == TriLayout(DenseRowMajor())
             @test MemoryLayout(transpose(TriType(A))) == TriLayoutTrans(DenseRowMajor())
             @test MemoryLayout(TriType(A)') == TriLayoutTrans(DenseRowMajor())
 
             @test MemoryLayout(TriType(B)) == TriLayout(DenseColumnMajor())
-            @test MemoryLayout(TriType(transpose(B))) == UnknownLayout()
-            @test MemoryLayout(TriType(B')) == UnknownLayout()
+            @test MemoryLayout(TriType(transpose(B))) == TriLayout(DenseRowMajor())
+            @test MemoryLayout(TriType(B')) == TriLayout(ConjLayout(DenseRowMajor()))
             @test MemoryLayout(transpose(TriType(B))) == TriLayoutTrans(DenseRowMajor())
             @test MemoryLayout(TriType(B)') == TriLayoutTrans(ConjLayout(DenseRowMajor()))
         end
+
+        @test LazyArrays.MemoryLayout(UpperTriangular(B)') == LazyArrays.MemoryLayout(LowerTriangular(B'))
     end
 end

@@ -529,7 +529,7 @@ end
     (M,) = bc.args
     A,x = M.A, M.B
     x ≡ dest || copyto!(dest, x)
-    BLAS.trmv!('U', 'T', 'N', triangulardata(A), dest)
+    BLAS.trmv!('U', 'T', 'N', transpose(triangulardata(A)), dest)
 end
 
 @inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
@@ -538,7 +538,7 @@ end
     (M,) = bc.args
     A,x = M.A, M.B
     x ≡ dest || copyto!(dest, x)
-    BLAS.trmv!('U', 'T', 'U', triangulardata(A), dest)
+    BLAS.trmv!('U', 'T', 'U', transpose(triangulardata(A)), dest)
 end
 
 @inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
@@ -547,7 +547,7 @@ end
     (M,) = bc.args
     A,x = M.A, M.B
     x ≡ dest || copyto!(dest, x)
-    BLAS.trmv!('L', 'T', 'N', triangulardata(A), dest)
+    BLAS.trmv!('L', 'T', 'N', transpose(triangulardata(A)), dest)
 end
 
 @inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
@@ -556,5 +556,43 @@ end
     (M,) = bc.args
     A,x = M.A, M.B
     x ≡ dest || copyto!(dest, x)
-    BLAS.trmv!('L', 'T', 'U', triangulardata(A), dest)
+    BLAS.trmv!('L', 'T', 'U', transpose(triangulardata(A)), dest)
+end
+
+
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:UpperTriangularLayout{<:ConjLayout{<:AbstractRowMajor}},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('U', 'C', 'N', triangulardata(A)', dest)
+end
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:UnitUpperTriangularLayout{<:ConjLayout{<:AbstractRowMajor}},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('U', 'C', 'U', triangulardata(A)', dest)
+end
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:LowerTriangularLayout{<:ConjLayout{<:AbstractRowMajor}},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('L', 'C', 'N', triangulardata(A)', dest)
+end
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:UnitLowerTriangularLayout{<:ConjLayout{<:AbstractRowMajor}},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('L', 'C', 'U', triangulardata(A)', dest)
 end

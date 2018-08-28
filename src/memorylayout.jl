@@ -389,6 +389,8 @@ MemoryLayout(A::LowerTriangular) = triangularlayout(LowerTriangularLayout, Memor
 MemoryLayout(A::UnitLowerTriangular) = triangularlayout(UnitLowerTriangularLayout, MemoryLayout(parent(A)))
 triangularlayout(_, ::MemoryLayout) = UnknownLayout()
 triangularlayout(::Type{Tri}, ML::AbstractColumnMajor) where {Tri} = Tri(ML)
+triangularlayout(::Type{Tri}, ML::AbstractRowMajor) where {Tri} = Tri(ML)
+triangularlayout(::Type{Tri}, ML::ConjLayout{<:AbstractRowMajor}) where {Tri} = Tri(ML)
 subarraylayout(layout::AbstractTriangularLayout, ::Tuple{<:Union{Slice,Base.OneTo},<:Union{Slice,Base.OneTo}}) = layout
 
 for (TriLayout, TriLayoutTrans) in ((UpperTriangularLayout,     LowerTriangularLayout),
