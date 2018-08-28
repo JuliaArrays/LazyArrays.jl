@@ -30,6 +30,8 @@ import Base: *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate
 
+import LinearAlgebra: AbstractTriangular
+
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
 import FillArrays: AbstractFill

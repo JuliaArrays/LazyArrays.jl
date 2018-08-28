@@ -128,6 +128,11 @@ macro lazymul(Typ)
             (dest .= Mul(A, b))
         mul!(dest::AbstractVector, A::Transpose{<:Any,<:$Typ}, b::AbstractVector) =
             (dest .= Mul(A, b))
+
+        mul!(dest::AbstractVector, A::Symmetric{<:Any,<:$Typ}, b::AbstractVector) =
+            (dest .= Mul(A, b))
+        mul!(dest::AbstractVector, A::Hermitian{<:Any,<:$Typ}, b::AbstractVector) =
+            (dest .= Mul(A, b))
     end)
 end
 
@@ -425,3 +430,131 @@ end
 @inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α, β,
               ::ConjLayout{<:AbstractRowMajor}, ::ConjLayout{<:AbstractRowMajor}, ::ConjLayout{<:AbstractRowMajor}) where T <: BlasComplex =
     _gemm!('N', 'N', α, x', A', β, y')
+
+
+###
+# Symmetric
+###
+
+# make copy to make sure always works
+@inline function _symv!(tA, α, A, x, β, y)
+    if x ≡ y
+        BLAS.symv!(tA, α, A, copy(x), β, y)
+    else
+        BLAS.symv!(tA, α, A, x, β, y)
+    end
+end
+
+@inline function _hemv!(tA, α, A, x, β, y)
+    if x ≡ y
+        BLAS.hemv!(tA, α, A, copy(x), β, y)
+    else
+        BLAS.hemv!(tA, α, A, x, β, y)
+    end
+end
+
+@blasmatvec SymmetricLayout{<:AbstractColumnMajor}
+
+@inline blasmul!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector, α, β,
+              ::AbstractStridedLayout, S::SymmetricLayout{<:AbstractColumnMajor}, ::AbstractStridedLayout) =
+    _symv!(S.uplo, α, symmetricdata(A), x, β, y)
+
+@blasmatvec SymmetricLayout{<:AbstractRowMajor}
+
+@inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α, β,
+              ::AbstractStridedLayout, S::SymmetricLayout{<:AbstractRowMajor}, ::AbstractStridedLayout) where T<:BlasFloat =
+    _symv!(S.uplo == 'L' ? 'U' : 'L', α, transpose(symmetricdata(A)), x, β, y)
+
+@blasmatvec HermitianLayout{<:AbstractColumnMajor}
+
+@inline blasmul!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector, α, β,
+              ::AbstractStridedLayout, S::HermitianLayout{<:AbstractColumnMajor}, ::AbstractStridedLayout) =
+    _hemv!(S.uplo, α, hermitiandata(A), x, β, y)
+
+@blasmatvec HermitianLayout{<:AbstractRowMajor}
+
+@inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α, β,
+              ::AbstractStridedLayout, ::HermitianLayout{<:AbstractRowMajor}, ::AbstractStridedLayout) where T<:BlasComplex =
+    _hemv!(S.uplo == 'L' ? 'U' : 'L', α, hermitiandata(A)', x, β, y)
+
+
+###
+# Triangular
+###
+
+# make copy to make sure always works
+
+
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:UpperTriangularLayout{<:AbstractColumnMajor},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('U', 'N', 'N', triangulardata(A), dest)
+end
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:UnitUpperTriangularLayout{<:AbstractColumnMajor},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('U', 'N', 'U', triangulardata(A), dest)
+end
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:LowerTriangularLayout{<:AbstractColumnMajor},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('L', 'N', 'N', triangulardata(A), dest)
+end
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:UnitLowerTriangularLayout{<:AbstractColumnMajor},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('L', 'N', 'U', triangulardata(A), dest)
+end
+
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:UpperTriangularLayout{<:AbstractRowMajor},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('U', 'T', 'N', triangulardata(A), dest)
+end
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:UnitUpperTriangularLayout{<:AbstractRowMajor},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('U', 'T', 'U', triangulardata(A), dest)
+end
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:LowerTriangularLayout{<:AbstractRowMajor},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('L', 'T', 'N', triangulardata(A), dest)
+end
+
+@inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector,
+         bc::LazyArrays.BMatVec{T, <:UnitLowerTriangularLayout{<:AbstractRowMajor},
+                                   <:AbstractStridedLayout}) where T <: BlasFloat
+    (M,) = bc.args
+    A,x = M.A, M.B
+    x ≡ dest || copyto!(dest, x)
+    BLAS.trmv!('L', 'T', 'U', triangulardata(A), dest)
+end

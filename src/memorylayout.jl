@@ -292,9 +292,13 @@ adjointlayout(::Type{T}, S::SymmetricLayout) where T<:Real = S
 adjointlayout(::Type{T}, S::HermitianLayout) where T = S
 subarraylayout(S::SymmetricLayout, ::Tuple{<:Slice,<:Slice}) = S
 subarraylayout(S::HermitianLayout, ::Tuple{<:Slice,<:Slice}) = S
+
+symmetricdata(A::Symmetric) = A.data
+symmetricdata(A::Hermitian{<:Real}) = A.data
 symmetricdata(V::SubArray{<:Any, 2, <:Any, <:Tuple{<:Slice,<:Slice}}) = symmetricdata(parent(V))
 symmetricdata(V::Adjoint{<:Real}) = symmetricdata(parent(V))
 symmetricdata(V::Transpose) = symmetricdata(parent(V))
+hermitiandata(A::Hermitian) = A.data
 hermitiandata(V::SubArray{<:Any, 2, <:Any, <:Tuple{<:Slice,<:Slice}}) = hermitiandata(parent(V))
 hermitiandata(V::Adjoint) = hermitiandata(parent(V))
 hermitiandata(V::Transpose{<:Real}) = hermitiandata(parent(V))
@@ -397,6 +401,7 @@ for (TriLayout, TriLayoutTrans) in ((UpperTriangularLayout,     LowerTriangularL
     end
 end
 
+triangulardata(A::AbstractTriangular) = parent(A)
 triangulardata(A::Adjoint) = Adjoint(triangulardata(parent(A)))
 triangulardata(A::Transpose) = Transpose(triangulardata(parent(A)))
 triangulardata(A::SubArray{<:Any,2,<:Any,<:Tuple{<:Union{Slice,Base.OneTo},<:Union{Slice,Base.OneTo}}}) =
