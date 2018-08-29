@@ -19,29 +19,24 @@ eltype(::Mul{T}) where T = T
 ####
 
 struct ArrayMulArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
-const MixedArrayMulArray{TV, styleA, styleB, p, q, T, V} =
+const ArrayMulArray{TV, styleA, styleB, p, q, T, V} =
     Mul{TV, styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 
-const ArrayMulArray{T, styleA, styleB, p, q} = MixedArrayMulArray{T, styleA, styleB, p, q, T, T}
-
-const BArrayMulArray{T, styleA, styleB, p, q} =
+const BArrayMulArray{TV, styleA, styleB, p, q, T, V} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
-                <:Tuple{<:ArrayMulArray{T,styleA,styleB,p,q}}}
-const BMixedArrayMulArray{TV, styleA, styleB, p, q, T, V} =
-    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
-                <:Tuple{<:MixedArrayMulArray{TV,styleA,styleB,p,q,T,V}}}
+                <:Tuple{<:ArrayMulArray{TV,styleA,styleB,p,q,T,V}}}
 const BConstArrayMulArray{T, styleA, styleB, p, q} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                     <:Any, typeof(*),
-                    <:Tuple{T,<:ArrayMulArray{T,styleA,styleB,p,q}}}
+                    <:Tuple{T,<:ArrayMulArray{T,styleA,styleB,p,q,T,T}}}
 const BArrayMulArrayPlusArray{T, styleA, styleB, p, q} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
-                <:Tuple{<:ArrayMulArray{T,styleA,styleB,p,q},<:AbstractArray{T,q}}}
+                <:Tuple{<:ArrayMulArray{T,styleA,styleB,p,q,T,T},<:AbstractArray{T,q}}}
 const BArrayMulArrayPlusConstArray{T, styleA, styleB, p, q} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
-                <:Tuple{<:ArrayMulArray{T,styleA,styleB,p,q},
+                <:Tuple{<:ArrayMulArray{T,styleA,styleB,p,q,T,T},
                 Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),
                             <:Tuple{T,<:AbstractArray{T,q}}}}}
 const BConstArrayMulArrayPlusArray{T, styleA, styleB, p, q} =
@@ -49,25 +44,25 @@ const BConstArrayMulArrayPlusArray{T, styleA, styleB, p, q} =
                 <:Any, typeof(+),
                 <:Tuple{Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
                                     <:Any, typeof(*),
-                                    <:Tuple{T,<:ArrayMulArray{T,styleA,styleB,p,q}}},
+                                    <:Tuple{T,<:ArrayMulArray{T,styleA,styleB,p,q,T,T}}},
                         <:AbstractArray{T,q}}}
 const BConstArrayMulArrayPlusConstArray{T, styleA, styleB, p, q} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
                 <:Tuple{Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
                                     <:Any, typeof(*),
-                                    <:Tuple{T,<:ArrayMulArray{T,styleA,styleB,p,q}}},
+                                    <:Tuple{T,<:ArrayMulArray{T,styleA,styleB,p,q,T,T}}},
                         Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),<:Tuple{T,<:AbstractArray{T,q}}}}}
 
 
-BroadcastStyle(::Type{<:MixedArrayMulArray{<:Any,StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} = ArrayMulArrayStyle{StyleA,StyleB,p,q}()
+BroadcastStyle(::Type{<:ArrayMulArray{<:Any,StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} = ArrayMulArrayStyle{StyleA,StyleB,p,q}()
 BroadcastStyle(M::ArrayMulArrayStyle, ::DefaultArrayStyle) = M
 BroadcastStyle(::DefaultArrayStyle, M::ArrayMulArrayStyle) = M
 similar(M::Broadcasted{<:ArrayMulArrayStyle}, ::Type{ElType}) where ElType = Array{Eltype}(undef,size(M.args[1]))
 
 @inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)
 # default to Base mul!
-function _copyto!(_, dest::AbstractArray, M::MixedArrayMulArray)
+function _copyto!(_, dest::AbstractArray, M::ArrayMulArray)
     A,x = M.A, M.B
     mul!(dest, A, x)
 end
@@ -78,13 +73,10 @@ end
 @inline _copyto!(_, dest, bc::Broadcasted) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
 
 # Use copyto! for y .= Mul(A,b)
-@inline function _copyto!(_, dest::AbstractArray, bc::BMixedArrayMulArray)
+@inline function _copyto!(_, dest::AbstractArray, bc::BArrayMulArray)
     (M,) = bc.args
     copyto!(dest, M)
 end
-
-
-
 
 
 ####
@@ -92,10 +84,8 @@ end
 ####
 let (p,q) = (2,1)
     global const MatMulVecStyle{StyleA, StyleB} = ArrayMulArrayStyle{StyleA, StyleB, p, q}
-    global const MatMulVec{T, styleA, styleB} = ArrayMulArray{T, styleA, styleB, p, q}
-    global const MixedMatMulVec{TV, styleA, styleB, T, V} = MixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
+    global const MatMulVec{TV, styleA, styleB, T, V} = ArrayMulArray{TV, styleA, styleB, p, q, T, V}
 
-    global const BMixedMatVec{TV, styleA, styleB, T, V} = BMixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
     global const BConstMatVec{T, styleA, styleB} = BConstArrayMulArray{T, styleA, styleB, p, q}
     global const BMatVecPlusVec{T,styleA,styleB} = BArrayMulArrayPlusArray{T, styleA, styleB, p, q}
     global const BMatVecPlusConstVec{T,styleA,styleB} = BArrayMulArrayPlusConstArray{T, styleA, styleB, p, q}
@@ -103,10 +93,9 @@ let (p,q) = (2,1)
     global const BConstMatVecPlusConstVec{T, styleA, styleB} = BConstArrayMulArrayPlusConstArray{T, styleA, styleB, p, q}
 end
 
-
-length(M::MixedMatMulVec) = size(M.A,1)
-axes(M::MixedMatMulVec) = (axes(M.A,1),)
-broadcastable(M::MixedMatMulVec) = M
+length(M::MatMulVec) = size(M.A,1)
+axes(M::MatMulVec) = (axes(M.A,1),)
+broadcastable(M::MatMulVec) = M
 instantiate(bc::Broadcasted{<:MatMulVecStyle}) = bc
 
 # function getindex(M::MatMulVec{T}, k::Int) where T
@@ -117,7 +106,7 @@ instantiate(bc::Broadcasted{<:MatMulVecStyle}) = bc
 #     ret
 # end
 
-getindex(M::MixedMatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
+getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 
 # Matrix * Vector
 
@@ -163,7 +152,7 @@ macro _blasmatvec(Lay, Typ)
     esc(quote
         # y .= Mul(A,b) gets lowered here
         @inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
-                                             M::MatMulVec{T, <:$Lay, <:AbstractStridedLayout}) where T<: $Typ
+                                             M::MatMulVec{T, <:$Lay, <:AbstractStridedLayout, T, T}) where T<: $Typ
             A,x = M.A, M.B
             blasmul!(dest, A, x, one(T), zero(T))
         end
@@ -225,10 +214,9 @@ end
 
 let (p,q) = (2,2)
     global const MatMulMatStyle{StyleA, StyleB} = ArrayMulArrayStyle{StyleA, StyleB, p, q}
-    global const MatMulMat{T, styleA, styleB} = ArrayMulArray{T, styleA, styleB, p, q}
-    global const MixedMatMulMat{TV, styleA, styleB, T, V} = MixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
+    global const MatMulMat{TV, styleA, styleB, T, V} = ArrayMulArray{TV, styleA, styleB, p, q, T, V}
 
-    global const BMixedMatMat{TV, styleA, styleB, T, V} = BMixedArrayMulArray{TV, styleA, styleB, p, q, T, V}
+    global const BMatMat{TV, styleA, styleB, T, V} = BArrayMulArray{TV, styleA, styleB, p, q, T, V}
     global const BConstMatMat{T, styleA, styleB} = BConstArrayMulArray{T, styleA, styleB, p, q}
     global const BMatMatPlusMat{T,styleA,styleB} = BArrayMulArrayPlusArray{T, styleA, styleB, p, q}
     global const BMatMatPlusConstMat{T,styleA,styleB} = BArrayMulArrayPlusConstArray{T, styleA, styleB, p, q}
@@ -237,9 +225,9 @@ let (p,q) = (2,2)
 end
 
 
-size(M::MixedMatMulMat) = (size(M.A,1),size(M.B,2))
-axes(M::MixedMatMulMat) = (axes(M.A,1),axes(M.B,2))
-broadcastable(M::MixedMatMulMat) = M
+size(M::MatMulMat) = (size(M.A,1),size(M.B,2))
+axes(M::MatMulMat) = (axes(M.A,1),axes(M.B,2))
+broadcastable(M::MatMulMat) = M
 instantiate(bc::Broadcasted{<:MatMulMatStyle}) = bc
 
 # function getindex(M::MatMulVec{T}, k::Int) where T
@@ -250,7 +238,7 @@ instantiate(bc::Broadcasted{<:MatMulMatStyle}) = bc
 #     ret
 # end
 
-getindex(M::MixedMatMulMat, kj::CartesianIndex{2}) = M[kj...]
+getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj...]
 
 
 # Matrix * Vector
@@ -265,7 +253,7 @@ getindex(M::MixedMatMulMat, kj::CartesianIndex{2}) = M[kj...]
 macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
     esc(quote
         @inline function _copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 M::MatMulMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+                 M::MatMulMat{T,<:$ATyp,<:$BTyp,T,T}) where T<: $Typ
             A,B = M.A, M.B
             blasmul!(dest, A, B, one(T), zero(T))
         end
@@ -485,7 +473,7 @@ end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{T, <:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
-                                   <:AbstractStridedLayout}) where {UPLO,UNIT,T <: BlasFloat}
+                                   <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
     A,x = M.A, M.B
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'N', UNIT, triangulardata(A), dest)
@@ -493,7 +481,7 @@ end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{T, <:TriangularLayout{UPLO,UNIT,<:AbstractRowMajor},
-                                   <:AbstractStridedLayout}) where {UPLO,UNIT,T <: BlasFloat}
+                                   <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
     A,x = M.A, M.B
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'T', UNIT, transpose(triangulardata(A)), dest)
@@ -502,7 +490,7 @@ end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{T, <:TriangularLayout{UPLO,UNIT,<:ConjLayout{<:AbstractRowMajor}},
-                                   <:AbstractStridedLayout}) where {UPLO,UNIT,T <: BlasFloat}
+                                   <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
     A,x = M.A, M.B
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'C', UNIT, triangulardata(A)', dest)
