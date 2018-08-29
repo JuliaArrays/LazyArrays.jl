@@ -2,7 +2,7 @@ using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 
 include("memorylayouttests.jl")
 include("multests.jl")
-
+include("ldivtests.jl")
 
 
 @testset "concat" begin
@@ -139,13 +139,6 @@ end
     LazyArrays.resizedata!(C,5,5,5)
     LazyArrays.resizedata!(C,8,8,8)
     @test all(C.data .=== Array(A)[1:8,1:8,1:8])
-end
-
-@testset "Ldiv" begin
-    A = randn(5,5)
-    b = randn(5)
-    typeof(Ldiv(A,b))
-    @test all(copyto!(similar(b), Ldiv(A,b)) .== (A\b))
 end
 
 @testset "Cumsum" begin
