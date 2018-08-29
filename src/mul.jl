@@ -119,25 +119,34 @@ getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 # support mul! by calling lazy mul
 macro lazymul(Typ)
     esc(quote
-        mul!(dest::AbstractVector, A::$Typ, x::AbstractVector) =
+        LinearAlgebra.mul!(dest::AbstractVector, A::$Typ, x::AbstractVector) =
             (dest .= Mul(A,x))
 
-        mul!(dest::AbstractMatrix, A::$Typ, x::AbstractMatrix) =
+        LinearAlgebra.mul!(dest::AbstractMatrix, A::$Typ, x::AbstractMatrix) =
             (dest .= Mul(A,x))
-        mul!(dest::AbstractMatrix, A::$Typ, x::$Typ) =
+        LinearAlgebra.mul!(dest::AbstractMatrix, A::$Typ, x::$Typ) =
             (dest .= Mul(A,x))
-        mul!(dest::AbstractMatrix, A::$Typ, x::Adjoint{<:Any,<:AbstractMatrix}) =
+        LinearAlgebra.mul!(dest::AbstractMatrix, A::$Typ, x::Adjoint{<:Any,<:AbstractMatrix}) =
             (dest .= Mul(A,x))
 
-        mul!(dest::AbstractVector, A::Adjoint{<:Any,<:$Typ}, b::AbstractVector) =
+        LinearAlgebra.mul!(dest::AbstractVector, A::Adjoint{<:Any,<:$Typ}, b::AbstractVector) =
             (dest .= Mul(A, b))
-        mul!(dest::AbstractVector, A::Transpose{<:Any,<:$Typ}, b::AbstractVector) =
+        LinearAlgebra.mul!(dest::AbstractVector, A::Transpose{<:Any,<:$Typ}, b::AbstractVector) =
             (dest .= Mul(A, b))
 
-        mul!(dest::AbstractVector, A::Symmetric{<:Any,<:$Typ}, b::AbstractVector) =
+        LinearAlgebra.mul!(dest::AbstractVector, A::Symmetric{<:Any,<:$Typ}, b::AbstractVector) =
             (dest .= Mul(A, b))
-        mul!(dest::AbstractVector, A::Hermitian{<:Any,<:$Typ}, b::AbstractVector) =
+        LinearAlgebra.mul!(dest::AbstractVector, A::Hermitian{<:Any,<:$Typ}, b::AbstractVector) =
             (dest .= Mul(A, b))
+    end)
+end
+
+macro lazylmul(Typ)
+    esc(quote
+        LinearAlgebra.lmul!(A::$Typ, x::AbstractVector) = (x .= Mul(A,x))
+        LinearAlgebra.lmul!(A::$Typ, x::AbstractMatrix) = (x .= Mul(A,x))
+        LinearAlgebra.lmul!(A::$Typ, x::StridedVector) = (x .= Mul(A,x))
+        LinearAlgebra.lmul!(A::$Typ, x::StridedMatrix) = (x .= Mul(A,x))
     end)
 end
 
