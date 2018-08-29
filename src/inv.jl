@@ -33,6 +33,15 @@ BroadcastStyle(::Type{<:ArrayLdivArray{<:Any,StyleA,StyleB,p,q}}) where {StyleA,
 
 Ldiv(A, B) = Mul(Inv(A), B)
 
+macro lazyldiv(Typ)
+    esc(quote
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = (x .= Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = (x .= Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = (x .= Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = (x .= Ldiv(A,x))
+    end)
+end
+
 @inline function _copyto!(_, dest::AbstractArray, bc::BArrayLdivArray)
     (M,) = bc.args
     copyto!(dest, M)
