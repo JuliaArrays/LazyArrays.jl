@@ -11,13 +11,18 @@ Inv(A) = Inv(MemoryLayout(A), A)
 eltype(::Inv{T}) where T = T
 eltype(::Type{<:Inv{T}}) where T = T
 
-struct InverseLayout <: MemoryLayout end
-MemoryLayout(::Inv) = InverseLayout()
+struct InverseLayout{ML} <: MemoryLayout
+    layout::ML
+end
+MemoryLayout(Ai::Inv) = InverseLayout(MemoryLayout(Ai.A))
 
 
 const Ldiv{T, StyleA, StyleB, AType, BType} =
-    Mul{T, InverseLayout, StyleB, Inv{T,StyleA,AType}, BType}
+    Mul{T, InverseLayout{StyleA}, StyleB, Inv{T,StyleA,AType}, BType}
+
+const MixedArrayLdivArray{TV, styleA, styleB, p, q, T, V} =
+    Ldiv{TV, styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 
 Ldiv(A, B) = Mul(Inv(A), B)
 
-copyto!(dest::AbstractVector, L::Ldiv) = ldiv!(dest, factorize(L.A.A), L.B)
+_copyto!(_, dest::AbstractVector, L::MixedArrayLdivArray) = ldiv!(dest, factorize(L.A.A), L.B)
