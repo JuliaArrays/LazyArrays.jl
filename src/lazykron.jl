@@ -25,7 +25,7 @@ size(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> size(a, M), Val(N
 getindex(K::Kron{T,1,<:Tuple{<:AbstractVector}}, k::Int) where T =
     first(K.arrays)[k]
 
-function getindex(K::Kron{T,1,<:NTuple{2,<:AbstractVector}}, k::Int) where T
+function getindex(K::Kron{T,1,<:Tuple{<:AbstractVector,<:AbstractVector}}, k::Int) where T
     A,B = K.arrays
     K,κ = divrem(k-1, length(B))
     A[K+1]*B[κ+1]
@@ -34,7 +34,7 @@ end
 getindex(K::Kron{T,2,<:Tuple{<:AbstractMatrix}}, k::Int, j::Int) where T =
     first(K.arrays)[k,j]
 
-function getindex(K::Kron{T,2,<:NTuple{2,<:AbstractMatrix}}, k::Int, j::Int) where T
+function getindex(K::Kron{T,2,<:Tuple{<:AbstractMatrix,<:AbstractMatrix}}, k::Int, j::Int) where T
     A,B = K.arrays
     K,κ = divrem(k-1, size(B,1))
     J,ξ = divrem(j-1, size(B,2))
@@ -56,7 +56,7 @@ function _kron2!(R, K)
     R
 end
 
-copyto!(R::AbstractMatrix, K::Kron{<:Any,2,<:NTuple{2,<:AbstractMatrix}}) =
+copyto!(R::AbstractMatrix, K::Kron{<:Any,2,<:Tuple{<:AbstractMatrix,<:AbstractMatrix}}) =
     _kron2!(R, K)
-copyto!(R::AbstractVector, K::Kron{<:Any,1,<:NTuple{2,<:AbstractVector}}) =
+copyto!(R::AbstractVector, K::Kron{<:Any,1,<:Tuple{<:AbstractVector,<:AbstractVector}}) =
     _kron2!(R, K)

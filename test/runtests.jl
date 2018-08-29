@@ -82,6 +82,12 @@ end
     B = randn(4,6)
     K = Kron(A,B)
     @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == kron(A,B)
+    K = Kron(A,B')
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B')) == kron(A,B')
+    K = Kron(A',B)
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B)) == kron(A',B)
+    K = Kron(A',B')
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B')) == kron(A',B')
 
 
     A = rand(Int,3,2)
