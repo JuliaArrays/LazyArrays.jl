@@ -160,10 +160,10 @@ end
 macro _blasmatvec(Lay, Typ)
     esc(quote
         # y .= Mul(A,b) gets lowered here
-        @inline function LazyArrays._copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
-                                             M::MatMulVec{T, <:$Lay, <:AbstractStridedLayout, T, T}) where T<: $Typ
+        @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
+                                             M::LazyArrays.MatMulVec{T, <:$Lay, <:LazyArrays.AbstractStridedLayout, T, T}) where T<: $Typ
             A,x = M.A, M.B
-            blasmul!(dest, A, x, one(T), zero(T))
+            LazyArrays.blasmul!(dest, A, x, one(T), zero(T))
         end
 
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
@@ -247,7 +247,7 @@ instantiate(bc::Broadcasted{<:MatMulMatStyle}) = bc
 #     ret
 # end
 
-getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj...]
+# getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj...]
 
 
 # Matrix * Vector
@@ -261,49 +261,49 @@ getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj...]
 
 macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
     esc(quote
-        @inline function _copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 M::MatMulMat{T,<:$ATyp,<:$BTyp,T,T}) where T<: $Typ
+        @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
+                 M::LazyArrays.MatMulMat{T,<:$ATyp,<:$BTyp,T,T}) where T<: $Typ
             A,B = M.A, M.B
-            blasmul!(dest, A, B, one(T), zero(T))
+            LazyArrays.blasmul!(dest, A, B, one(T), zero(T))
         end
 
-        @inline function _copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::BConstMatMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+        @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
+                 bc::LazyArrays.BConstMatMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
             α,M = bc.args
             A,B = M.A, M.B
-            blasmul!(dest, A, B, α, zero(T))
+            LazyArrays.blasmul!(dest, A, B, α, zero(T))
         end
 
-        @inline function _copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::BMatMatPlusMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+        @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
+                 bc::LazyArrays.BMatMatPlusMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
             M,C = bc.args
             A,B = M.A, M.B
-            blasmul!(dest, A, B, C, one(T), one(T))
+            LazyArrays.blasmul!(dest, A, B, C, one(T), one(T))
         end
 
-        @inline function _copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::BMatMatPlusConstMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+        @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
+                 bc::LazyArrays.BMatMatPlusConstMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
             M,βc = bc.args
             β,C = βc.args
             A,B = M.A, M.B
-            blasmul!(dest, A, B, C, one(T), β)
+            LazyArrays.blasmul!(dest, A, B, C, one(T), β)
         end
 
-        @inline function _copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::BConstMatMatPlusMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+        @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
+                 bc::LazyArrays.BConstMatMatPlusMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
             αM,C = bc.args
             α,M = αM.args
             A,B = M.A, M.B
-            blasmul!(dest, A, B, C, α, one(T))
+            LazyArrays.blasmul!(dest, A, B, C, α, one(T))
         end
 
-        @inline function _copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::BConstMatMatPlusConstMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+        @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
+                 bc::LazyArrays.BConstMatMatPlusConstMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
             αM,βc = bc.args
             α,M = αM.args
             A,B = M.A, M.B
             β,C = βc.args
-            blasmul!(dest, A, B, C, α, β)
+            LazyArrays.blasmul!(dest, A, B, C, α, β)
         end
     end)
 end
