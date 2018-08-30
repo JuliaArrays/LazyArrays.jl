@@ -392,7 +392,6 @@ using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
     @testset "symv adjtrans" begin
         A = randn(100,100)
         x = randn(100)
-        y = similar(x)
 
         @test all( (similar(x) .= Mul(Symmetric(A),x)) .===
                     (similar(x) .= Mul(Hermitian(A),x)) .===
@@ -401,6 +400,10 @@ using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
                     (similar(x) .= 1.0.*Mul(Symmetric(A),x) .+ 0.0.*similar(x)) .===
                     (similar(x) .= Mul(view(Symmetric(A),:,:),x)) .===
                     BLAS.symv!('U', 1.0, A, x, 0.0, similar(x)) )
+
+        y = copy(x)
+        y .= Mul(Symmetric(A), y)
+        @test all( (similar(x) .= Mul(Symmetric(A),x)) .=== y)
 
         @test all( (similar(x) .= Mul(Symmetric(A,:L),x)) .===
                     (similar(x) .= Mul(Hermitian(A,:L),x)) .===
@@ -437,6 +440,10 @@ using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
                     (similar(x) .= one(T).*Mul(Hermitian(A,:L),x) .+ zero(T).*similar(x)) .===
                     (similar(x) .= Mul(view(Hermitian(A,:L),:,:),x)) .===
                     BLAS.hemv!('L', one(T), A, x, zero(T), similar(x)) )
+
+        y = copy(x)
+        y .= Mul(Hermitian(A), y)
+        @test all( (similar(x) .= Mul(Hermitian(A),x)) .=== y)                    
     end
 
     @testset "tri" begin

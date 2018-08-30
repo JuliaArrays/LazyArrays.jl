@@ -58,6 +58,12 @@ include("ldivtests.jl")
 
     A = Hcat(1, zeros(1,5))
     @test A == hcat(1, zeros(1,5))
+
+    A = Hcat(Vector(1:10), randn(10, 2))
+    b = Array{Float64}(undef, 10, 3)
+    copyto!(b, A)
+    @test b == hcat(A.arrays...)
+    @test @allocated(copyto!(b, A)) == 0
 end
 
 @testset "Kron"  begin
