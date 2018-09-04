@@ -95,6 +95,13 @@ end
     K = Kron(A',B')
     @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B')) == kron(A',B')
 
+    A = randn(3,2)
+    B = randn(4,6)
+    K = Kron(A,B)
+    C = similar(K)
+    copyto!(C, K)
+    @test C == kron(A,B)
+    @test_throws DimensionMismatch randn(2,2) .= K
 
     A = rand(Int,3,2)
     K = Kron(A,B)

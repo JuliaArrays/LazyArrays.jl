@@ -3,7 +3,7 @@
 [![Travis](https://travis-ci.org/JuliaArrays/LazyArrays.jl.svg?branch=master)](https://travis-ci.org/JuliaArrays/LazyArrays.jl)
 [![codecov](https://codecov.io/gh/JuliaArrays/LazyArrays.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaArrays/LazyArrays.jl)
 
-Lazy arrays and linear algebra in Julia v0.7
+Lazy arrays and linear algebra in Julia
 
 This package supports lazy analogues of array operations like `vcat`, `hcat`,
 and multiplication. This helps with the implementation of matrix-free methods
@@ -125,4 +125,52 @@ julia> @btime mymul(A, b, c, d) # calls gemv!
 
 julia> @btime 2*(A*b) + 3c; # does not call gemv!
   241.659 ns (4 allocations: 512 bytes)
+```
+
+## Inverses
+
+We also have lazy inverses `Inv(A)`, designed to work alongside `Mul` to
+ to lower to BLAS calls whenever possible:
+```julia
+julia> A = randn(5,5); b = randn(5); c = similar(b);
+
+julia> c .= Mul(Inv(A), b)
+5-element Array{Float64,1}:
+ -2.5366335879717514
+ -5.305097174484744  
+ -9.818431932350942  
+  2.421562605495651  
+  0.26792916096572983
+
+julia> c .= Ldiv(A, b) # shorthand for above
+5-element Array{Float64,1}:
+ -2.5366335879717514
+ -5.305097174484744  
+ -9.818431932350942  
+  2.421562605495651  
+  0.26792916096572983
+```
+
+## Kronecker products
+
+We can represent Kronecker products of arrays without constructing the full
+array.
+
+```julia
+julia> A = randn(2,2); B = randn(3,3);
+
+julia> K = Kron(A,B)
+6×6 Kron{Float64,2,Tuple{Array{Float64,2},Array{Float64,2}}}:
+  1.99255  -1.45132    0.864789  -0.785538   0.572163  -0.340932
+ -2.7016    0.360785  -1.78671    1.06507   -0.142235   0.70439
+  1.89938  -2.69996    0.200992  -0.748806   1.06443   -0.0792386
+ -1.84225   1.34184   -0.799557  -2.45355    1.7871    -1.06487
+  2.49782  -0.333571   1.65194    3.32665   -0.444258   2.20009
+ -1.75611   2.4963    -0.185831  -2.33883    3.32464   -0.247494
+
+julia> C = Matrix{Float64}(undef, 6, 6); @btime copyto!(C, K);
+  61.528 ns (0 allocations: 0 bytes)
+
+julia> C == kron(A,B)
+true
 ```
