@@ -1,5 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 
+
 @testset "Mul" begin
     @testset "gemv Float64" begin
         for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
@@ -41,22 +42,26 @@ using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
             d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
             @test all(d .=== BLAS.gemv!('N', 3.0, A, b, 2.0, copy(b)))
         end
+    end
 
-        # test mixed array types
-        let (A, b, c) = (randn(5,5), randn(5), 1.0:5.0)
-            d = similar(b)
-            d .= Mul(A,b) .+ c
-            @test all(d .=== BLAS.gemv!('N', 1.0, A, b, 1.0, Vector{Float64}(c)))
+    @testset "gemv mixed array types" begin
+        (A, b, c) = (randn(5,5), randn(5), 1.0:5.0)
+        d = similar(b)
+        d .= Mul(A,b) .+ c
+        @test all(d .=== BLAS.gemv!('N', 1.0, A, b, 1.0, Vector{Float64}(c)))
 
-            d .= Mul(A,b) .+ 2.0 .* c
-            @test all(d .=== BLAS.gemv!('N', 1.0, A, b, 2.0, Vector{Float64}(c)))
+        d .= Mul(A,b) .+ 2.0 .* c
+        @test all(d .=== BLAS.gemv!('N', 1.0, A, b, 2.0, Vector{Float64}(c)))
 
-            d .= 2.0 .* Mul(A,b) .+ c
-            @test all(d .=== BLAS.gemv!('N', 2.0, A, b, 1.0, Vector{Float64}(c)))
+        d .= 2.0 .* Mul(A,b) .+ c
+        @test all(d .=== BLAS.gemv!('N', 2.0, A, b, 1.0, Vector{Float64}(c)))
 
-            d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
-            @test all(d .=== BLAS.gemv!('N', 3.0, A, b, 2.0, Vector{Float64}(c)))
-        end
+        d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
+        @test all(d .=== BLAS.gemv!('N', 3.0, A, b, 2.0, Vector{Float64}(c)))
+
+        @test (similar(b) .= 1 .* Mul(A,b)) ≈
+            (similar(b) .= 1 .* Mul(A,b) .+ 0 .* b) ≈
+            A*b
     end
 
 
@@ -181,6 +186,26 @@ using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
         end
     end
 
+    @testset "gemv mixed array types" begin
+        (A, B, C) = (randn(5,5), randn(5,5), reshape(1.0:25.0,5,5))
+        D = similar(B)
+        D .= Mul(A,B) .+ C
+        @test all(D .=== BLAS.gemm!('N', 'N', 1.0, A, B, 1.0, Matrix{Float64}(C)))
+
+        D .= Mul(A,B) .+ 2.0 .* C
+        @test all(D .=== BLAS.gemm!('N', 'N', 1.0, A, B, 2.0, Matrix{Float64}(C)))
+
+        D .= 2.0 .* Mul(A,B) .+ C
+        @test all(D .=== BLAS.gemm!('N', 'N', 2.0, A, B, 1.0, Matrix{Float64}(C)))
+
+        D .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+        @test all(D .=== BLAS.gemm!('N', 'N', 3.0, A, B, 2.0, Matrix{Float64}(C)))
+
+        @test (similar(B) .= 1 .* Mul(A,B)) ≈
+            (similar(B) .= 1 .* Mul(A,B) .+ 0 .* B) ≈
+            A*B
+    end
+
     @testset "gemv adjtrans" begin
         for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
                   view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5)),
@@ -220,23 +245,23 @@ using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
             d .= 3.0 .* Mul(Ac,b) .+ 2.0 .* c
             @test all(d .=== BLAS.gemv!('T', 3.0, A, b, 2.0, copy(b)))
         end
+    end
 
-        # test mixed types
-        let (A, b, c) = (randn(5,5), randn(5), 1.0:5.0)
-            for Ac in (transpose(A), A')
-                d = similar(b)
-                d .= Mul(Ac,b) .+ c
-                @test all(d .=== BLAS.gemv!('T', 1.0, A, b, 1.0, Vector{Float64}(c)))
+    @testset "gemv adjtrans mixed types" begin
+        (A, b, c) = (randn(5,5), randn(5), 1.0:5.0)
+        for Ac in (transpose(A), A')
+            d = similar(b)
+            d .= Mul(Ac,b) .+ c
+            @test all(d .=== BLAS.gemv!('T', 1.0, A, b, 1.0, Vector{Float64}(c)))
 
-                d .= Mul(Ac,b) .+ 2.0 .* c
-                @test all(d .=== BLAS.gemv!('T', 1.0, A, b, 2.0, Vector{Float64}(c)))
+            d .= Mul(Ac,b) .+ 2.0 .* c
+            @test all(d .=== BLAS.gemv!('T', 1.0, A, b, 2.0, Vector{Float64}(c)))
 
-                d .= 2.0 .* Mul(Ac,b) .+ c
-                @test all(d .=== BLAS.gemv!('T', 2.0, A, b, 1.0, Vector{Float64}(c)))
+            d .= 2.0 .* Mul(Ac,b) .+ c
+            @test all(d .=== BLAS.gemv!('T', 2.0, A, b, 1.0, Vector{Float64}(c)))
 
-                d .= 3.0 .* Mul(Ac,b) .+ 2.0 .* c
-                @test all(d .=== BLAS.gemv!('T', 3.0, A, b, 2.0, Vector{Float64}(c)))
-            end
+            d .= 3.0 .* Mul(Ac,b) .+ 2.0 .* c
+            @test all(d .=== BLAS.gemv!('T', 3.0, A, b, 2.0, Vector{Float64}(c)))
         end
     end
 
@@ -443,7 +468,7 @@ using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 
         y = copy(x)
         y .= Mul(Hermitian(A), y)
-        @test all( (similar(x) .= Mul(Hermitian(A),x)) .=== y)                    
+        @test all( (similar(x) .= Mul(Hermitian(A),x)) .=== y)
     end
 
     @testset "tri" begin

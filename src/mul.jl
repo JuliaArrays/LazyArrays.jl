@@ -98,13 +98,13 @@ axes(M::MatMulVec) = (axes(M.A,1),)
 broadcastable(M::MatMulVec) = M
 instantiate(bc::Broadcasted{<:MatMulVecStyle}) = bc
 
-# function getindex(M::MatMulVec{T}, k::Int) where T
-#     ret = zero(T)
-#     for j = 1:size(M.A,2)
-#         ret += M.A[k,j] * M.B[j]
-#     end
-#     ret
-# end
+function getindex(M::MatMulVec{T}, k::Integer) where T
+    ret = zero(T)
+    for j = 1:size(M.A,2)
+        ret += M.A[k,j] * M.B[j]
+    end
+    ret
+end
 
 getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 
@@ -161,27 +161,27 @@ macro _blasmatvec(Lay, Typ)
     esc(quote
         # y .= Mul(A,b) gets lowered here
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
-                                             M::LazyArrays.MatMulVec{T, <:$Lay, <:LazyArrays.AbstractStridedLayout, T, T}) where T<: $Typ
+                                             M::LazyArrays.MatMulVec{T, $Lay, <:LazyArrays.AbstractStridedLayout, T, T}) where T<: $Typ
             A,x = M.A, M.B
             LazyArrays.blasmul!(dest, A, x, one(T), zero(T))
         end
 
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
-                 bc::LazyArrays.BConstMatVec{T, <:$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
+                 bc::LazyArrays.BConstMatVec{T, $Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             α,M = bc.args
             A,x = M.A, M.B
             LazyArrays.blasmul!(dest, A, x, α, zero(T))
         end
 
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
-                 bc::LazyArrays.BMatVecPlusVec{T,<:$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
+                 bc::LazyArrays.BMatVecPlusVec{T,$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             M,y = bc.args
             A,x = M.A, M.B
             LazyArrays.blasmul!(dest, A, x, y, one(T), one(T))
         end
 
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
-                 bc::LazyArrays.BMatVecPlusConstVec{T,<:$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
+                 bc::LazyArrays.BMatVecPlusConstVec{T,$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             M,βc = bc.args
             β,y = βc.args
             A,x = M.A, M.B
@@ -189,7 +189,7 @@ macro _blasmatvec(Lay, Typ)
         end
 
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
-                 bc::LazyArrays.BConstMatVecPlusVec{T,<:$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
+                 bc::LazyArrays.BConstMatVecPlusVec{T,$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             αM,y = bc.args
             α,M = αM.args
             A,x = M.A, M.B
@@ -197,7 +197,7 @@ macro _blasmatvec(Lay, Typ)
         end
 
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
-                 bc::LazyArrays.BConstMatVecPlusConstVec{T,<:$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
+                 bc::LazyArrays.BConstMatVecPlusConstVec{T,$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             αM,βc = bc.args
             α,M = αM.args
             A,x = M.A, M.B
@@ -210,7 +210,7 @@ end
 macro blasmatvec(Lay)
     esc(quote
         LazyArrays.@_blasmatvec $Lay LinearAlgebra.BLAS.BlasFloat
-        LazyArrays.@_blasmatvec LazyArrays.ConjLayout{<:$Lay} LinearAlgebra.BLAS.BlasComplex
+        LazyArrays.@_blasmatvec LazyArrays.ConjLayout{$Lay} LinearAlgebra.BLAS.BlasComplex
     end)
 end
 
@@ -239,15 +239,15 @@ axes(M::MatMulMat) = (axes(M.A,1),axes(M.B,2))
 broadcastable(M::MatMulMat) = M
 instantiate(bc::Broadcasted{<:MatMulMatStyle}) = bc
 
-# function getindex(M::MatMulVec{T}, k::Int) where T
-#     ret = zero(T)
-#     for ℓ in axes(M.A,2)
-#         ret += M.A[k,ℓ] * M.B[ℓ,j]
-#     end
-#     ret
-# end
+function getindex(M::MatMulMat{T}, k::Integer, j::Integer) where T
+    ret = zero(T)
+    for ℓ in axes(M.A,2)
+        ret += M.A[k,ℓ] * M.B[ℓ,j]
+    end
+    ret
+end
 
-# getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj...]
+getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 
 
 # Matrix * Vector
@@ -262,27 +262,27 @@ instantiate(bc::Broadcasted{<:MatMulMatStyle}) = bc
 macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
     esc(quote
         @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 M::LazyArrays.MatMulMat{T,<:$ATyp,<:$BTyp,T,T}) where T<: $Typ
+                 M::LazyArrays.MatMulMat{T,$ATyp,$BTyp,T,T}) where T<: $Typ
             A,B = M.A, M.B
             LazyArrays.blasmul!(dest, A, B, one(T), zero(T))
         end
 
         @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::LazyArrays.BConstMatMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+                 bc::LazyArrays.BConstMatMat{T,$ATyp,$BTyp}) where T<: $Typ
             α,M = bc.args
             A,B = M.A, M.B
             LazyArrays.blasmul!(dest, A, B, α, zero(T))
         end
 
         @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::LazyArrays.BMatMatPlusMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+                 bc::LazyArrays.BMatMatPlusMat{T,$ATyp,$BTyp}) where T<: $Typ
             M,C = bc.args
             A,B = M.A, M.B
             LazyArrays.blasmul!(dest, A, B, C, one(T), one(T))
         end
 
         @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::LazyArrays.BMatMatPlusConstMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+                 bc::LazyArrays.BMatMatPlusConstMat{T,$ATyp,$BTyp}) where T<: $Typ
             M,βc = bc.args
             β,C = βc.args
             A,B = M.A, M.B
@@ -290,7 +290,7 @@ macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
         end
 
         @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::LazyArrays.BConstMatMatPlusMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+                 bc::LazyArrays.BConstMatMatPlusMat{T,$ATyp,$BTyp}) where T<: $Typ
             αM,C = bc.args
             α,M = αM.args
             A,B = M.A, M.B
@@ -298,7 +298,7 @@ macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
         end
 
         @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
-                 bc::LazyArrays.BConstMatMatPlusConstMat{T,<:$ATyp,<:$BTyp}) where T<: $Typ
+                 bc::LazyArrays.BConstMatMatPlusConstMat{T,$ATyp,$BTyp}) where T<: $Typ
             αM,βc = bc.args
             α,M = αM.args
             A,B = M.A, M.B
@@ -308,20 +308,18 @@ macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
     end)
 end
 
-
 macro blasmatmat(ATyp, BTyp, CTyp)
     esc(quote
         LazyArrays.@_blasmatmat $ATyp $BTyp $CTyp BlasFloat
-        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{<:$ATyp} $BTyp $CTyp BlasComplex
-        LazyArrays.@_blasmatmat $ATyp LazyArrays.ConjLayout{<:$BTyp} $CTyp BlasComplex
-        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{<:$ATyp} LazyArrays.ConjLayout{<:$BTyp} $CTyp BlasComplex
-        LazyArrays.@_blasmatmat $ATyp $BTyp LazyArrays.ConjLayout{<:$CTyp} BlasComplex
-        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{<:$ATyp} $BTyp LazyArrays.ConjLayout{<:$CTyp} BlasComplex
-        LazyArrays.@_blasmatmat $ATyp LazyArrays.ConjLayout{<:$BTyp} LazyArrays.ConjLayout{<:$CTyp} BlasComplex
-        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{<:$ATyp} LazyArrays.ConjLayout{<:$BTyp} LazyArrays.ConjLayout{<:$CTyp} BlasComplex
+        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{$ATyp} $BTyp $CTyp BlasComplex
+        LazyArrays.@_blasmatmat $ATyp LazyArrays.ConjLayout{$BTyp} $CTyp BlasComplex
+        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{$ATyp} LazyArrays.ConjLayout{$BTyp} $CTyp BlasComplex
+        LazyArrays.@_blasmatmat $ATyp $BTyp LazyArrays.ConjLayout{$CTyp} BlasComplex
+        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{$ATyp} $BTyp LazyArrays.ConjLayout{$CTyp} BlasComplex
+        LazyArrays.@_blasmatmat $ATyp LazyArrays.ConjLayout{$BTyp} LazyArrays.ConjLayout{$CTyp} BlasComplex
+        LazyArrays.@_blasmatmat LazyArrays.ConjLayout{$ATyp} LazyArrays.ConjLayout{$BTyp} LazyArrays.ConjLayout{$CTyp} BlasComplex
     end)
 end
-
 
 # make copy to make sure always works
 @inline function _gemv!(tA, α, A, x, β, y)
@@ -341,13 +339,51 @@ end
     end
 end
 
-@blasmatvec AbstractColumnMajor
+@blasmatvec ColumnMajor
+@blasmatvec DenseColumnMajor
+@blasmatvec RowMajor
+@blasmatvec DenseRowMajor
+
+
+@blasmatmat AbstractColumnMajor DenseColumnMajor DenseColumnMajor
+@blasmatmat AbstractColumnMajor DenseColumnMajor ColumnMajor
+@blasmatmat AbstractColumnMajor DenseColumnMajor DenseRowMajor
+@blasmatmat AbstractColumnMajor DenseColumnMajor RowMajor
+@blasmatmat AbstractColumnMajor ColumnMajor DenseColumnMajor
+@blasmatmat AbstractColumnMajor ColumnMajor ColumnMajor
+@blasmatmat AbstractColumnMajor ColumnMajor DenseRowMajor
+@blasmatmat AbstractColumnMajor ColumnMajor RowMajor
+@blasmatmat AbstractColumnMajor DenseRowMajor DenseColumnMajor
+@blasmatmat AbstractColumnMajor DenseRowMajor ColumnMajor
+@blasmatmat AbstractColumnMajor DenseRowMajor DenseRowMajor
+@blasmatmat AbstractColumnMajor DenseRowMajor RowMajor
+@blasmatmat AbstractColumnMajor RowMajor DenseColumnMajor
+@blasmatmat AbstractColumnMajor RowMajor ColumnMajor
+@blasmatmat AbstractColumnMajor RowMajor DenseRowMajor
+@blasmatmat AbstractColumnMajor RowMajor RowMajor
+
+@blasmatmat AbstractRowMajor DenseColumnMajor DenseColumnMajor
+@blasmatmat AbstractRowMajor DenseColumnMajor ColumnMajor
+@blasmatmat AbstractRowMajor DenseColumnMajor DenseRowMajor
+@blasmatmat AbstractRowMajor DenseColumnMajor RowMajor
+@blasmatmat AbstractRowMajor ColumnMajor DenseColumnMajor
+@blasmatmat AbstractRowMajor ColumnMajor ColumnMajor
+@blasmatmat AbstractRowMajor ColumnMajor DenseRowMajor
+@blasmatmat AbstractRowMajor ColumnMajor RowMajor
+@blasmatmat AbstractRowMajor DenseRowMajor DenseColumnMajor
+@blasmatmat AbstractRowMajor DenseRowMajor ColumnMajor
+@blasmatmat AbstractRowMajor DenseRowMajor DenseRowMajor
+@blasmatmat AbstractRowMajor DenseRowMajor RowMajor
+@blasmatmat AbstractRowMajor RowMajor DenseColumnMajor
+@blasmatmat AbstractRowMajor RowMajor ColumnMajor
+@blasmatmat AbstractRowMajor RowMajor DenseRowMajor
+@blasmatmat AbstractRowMajor RowMajor RowMajor
+
 
 @inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
               ::AbstractStridedLayout, ::AbstractColumnMajor, ::AbstractStridedLayout) where T<:BlasFloat =
     _gemv!('N', α, A, x, β, y)
 
-@blasmatvec AbstractRowMajor
 
 @inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
               ::AbstractStridedLayout, ::AbstractRowMajor, ::AbstractStridedLayout) where T<:BlasFloat =
@@ -358,12 +394,11 @@ end
     _gemv!('C', α, A', x, β, y)
 
 
-@blasmatmat AbstractColumnMajor AbstractColumnMajor AbstractColumnMajor
+
 @inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
               ::AbstractColumnMajor, ::AbstractColumnMajor, ::AbstractColumnMajor) where T<:BlasFloat =
     _gemm!('N', 'N', α, A, x, β, y)
 
-@blasmatmat AbstractColumnMajor AbstractColumnMajor AbstractRowMajor
 @inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
               ::AbstractColumnMajor, ::AbstractColumnMajor, ::AbstractRowMajor) where T <: BlasFloat =
     _gemm!('N', 'T', α, A, transpose(x), β, y)
@@ -371,7 +406,6 @@ end
               ::AbstractColumnMajor, ::AbstractColumnMajor, ::ConjLayout{<:AbstractRowMajor}) where T <: BlasComplex =
     _gemm!('N', 'C', α, A, x', β, y)
 
-@blasmatmat AbstractColumnMajor AbstractRowMajor AbstractColumnMajor
 @inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
               ::AbstractColumnMajor, ::AbstractRowMajor, ::AbstractColumnMajor) where T <: BlasFloat =
     _gemm!('T', 'N', α, transpose(A), x, β, y)
@@ -379,7 +413,7 @@ end
               ::AbstractColumnMajor, ::ConjLayout{<:AbstractRowMajor}, ::AbstractColumnMajor) where T <: BlasComplex =
     _gemm!('C', 'N', α, A', x, β, y)
 
-@blasmatmat AbstractColumnMajor AbstractRowMajor AbstractRowMajor
+
 @inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
               ::AbstractColumnMajor, ::AbstractRowMajor, ::AbstractRowMajor) where T <: BlasFloat =
     _gemm!('T', 'T', α, transpose(A), transpose(x), β, y)
@@ -394,7 +428,7 @@ end
     _gemm!('C', 'C', α, A', x', β, y)
 
 
-@blasmatmat AbstractRowMajor AbstractColumnMajor AbstractColumnMajor
+
 @inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
               ::AbstractRowMajor, ::AbstractColumnMajor, ::AbstractColumnMajor) where T <: BlasFloat =
     _gemm!('T', 'T', α, x, A, β, transpose(y))
@@ -402,7 +436,6 @@ end
               ::ConjLayout{<:AbstractRowMajor}, ::AbstractColumnMajor, ::AbstractColumnMajor) where T <: BlasComplex =
     _gemm!('C', 'C', α, x, A, β, y')
 
-@blasmatmat AbstractRowMajor AbstractColumnMajor AbstractRowMajor
 @inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
               ::AbstractRowMajor, ::AbstractColumnMajor, ::AbstractRowMajor) where T <: BlasFloat =
     _gemm!('N', 'T', α, transpose(x), A, β, transpose(y))
@@ -413,7 +446,6 @@ end
               ::ConjLayout{<:AbstractRowMajor}, ::AbstractColumnMajor, ::ConjLayout{<:AbstractRowMajor}) where T <: BlasComplex =
     _gemm!('N', 'C', α, x', A, β, y')
 
-@blasmatmat AbstractRowMajor AbstractRowMajor AbstractColumnMajor
 @inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
               ::AbstractRowMajor, ::AbstractRowMajor, ::AbstractColumnMajor) where T <: BlasFloat =
     _gemm!('T', 'N', α, x, transpose(A), β, transpose(y))
@@ -421,7 +453,6 @@ end
               ::ConjLayout{<:AbstractRowMajor}, ::ConjLayout{<:AbstractRowMajor}, ::AbstractColumnMajor) where T <: BlasComplex =
     _gemm!('C', 'N', α, x, A', β, y')
 
-@blasmatmat AbstractRowMajor AbstractRowMajor AbstractRowMajor
 @inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
               ::AbstractRowMajor, ::AbstractRowMajor, ::AbstractRowMajor) where T <: BlasFloat =
     _gemm!('N', 'N', α, transpose(x), transpose(A), β, transpose(y))
@@ -451,25 +482,29 @@ end
     end
 end
 
-@blasmatvec SymmetricLayout{<:AbstractColumnMajor}
+@blasmatvec SymmetricLayout{ColumnMajor}
+@blasmatvec SymmetricLayout{DenseColumnMajor}
 
 @inline blasmul!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector, α::T, β::T,
               ::AbstractStridedLayout, S::SymmetricLayout{<:AbstractColumnMajor}, ::AbstractStridedLayout) where T<:BlasFloat =
     _symv!(S.uplo, α, symmetricdata(A), x, β, y)
 
-@blasmatvec SymmetricLayout{<:AbstractRowMajor}
+@blasmatvec SymmetricLayout{RowMajor}
+@blasmatvec SymmetricLayout{DenseRowMajor}
 
 @inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
               ::AbstractStridedLayout, S::SymmetricLayout{<:AbstractRowMajor}, ::AbstractStridedLayout) where T<:BlasFloat =
     _symv!(S.uplo == 'L' ? 'U' : 'L', α, transpose(symmetricdata(A)), x, β, y)
 
-@blasmatvec HermitianLayout{<:AbstractColumnMajor}
+@blasmatvec HermitianLayout{ColumnMajor}
+@blasmatvec HermitianLayout{DenseColumnMajor}
 
 @inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
               ::AbstractStridedLayout, S::HermitianLayout{<:AbstractColumnMajor}, ::AbstractStridedLayout) where T<:BlasFloat =
     _hemv!(S.uplo, α, hermitiandata(A), x, β, y)
 
-@blasmatvec HermitianLayout{<:AbstractRowMajor}
+@blasmatvec HermitianLayout{RowMajor}
+@blasmatvec HermitianLayout{DenseRowMajor}
 
 @inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
               ::AbstractStridedLayout, ::HermitianLayout{<:AbstractRowMajor}, ::AbstractStridedLayout) where T<:BlasComplex =
