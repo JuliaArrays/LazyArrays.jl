@@ -46,6 +46,7 @@ include("inv.jl")
 include("cache.jl")
 include("lazybroadcasting.jl")
 include("lazyconcat.jl")
+include("lazysetoperations.jl")
 include("lazykron.jl")
 
 end # module
