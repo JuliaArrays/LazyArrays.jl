@@ -41,11 +41,10 @@ import StaticArrays: StaticArrayStyle
 export Mul, Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv
 
 include("memorylayout.jl")
-include("mul.jl")
-include("inv.jl")
 include("cache.jl")
 include("lazybroadcasting.jl")
 include("lazyconcat.jl")
 include("lazykron.jl")
+include("linalg/linalg.jl")
 
 end # module
