@@ -7,7 +7,7 @@ end
 """
  Mul(A1, A2, …, AN)
 
-represents lazy multiplication A1*A2*…*AN.
+represents lazy multiplication A1*A2*…*AN. The factors must have compatible axes.
 """
 Mul(A...) = Mul(MemoryLayout.(A), A)
 
@@ -26,6 +26,9 @@ _mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)
 _mul_axes(ax1, (_,ax2)::Tuple{<:Any,<:Any}) = (ax1,ax2)
 axes(M::Mul) = _mul_axes(axes(first(M.factors),1), axes(last(M.factors)))
 
+similar(M::Mul) = similar(M, eltype(M))
+
+
 
 ####
 # Matrix * Array
@@ -33,6 +36,10 @@ axes(M::Mul) = _mul_axes(axes(first(M.factors),1), axes(last(M.factors)))
 
 const ArrayMulArray{styleA, styleB, p, q, T, V} =
     Mul2{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
+
+# the default is always Array
+similar(M::ArrayMulArray, ::Type{T}) where T = Array{T}(undef, size(M))
+materialize(M::ArrayMulArray) = copyto!(similar(M), M)
 
 @inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)
 # default to Base mul!

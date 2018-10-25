@@ -34,10 +34,10 @@ Ldiv(A, B) = Mul(Inv(A), B)
 
 macro lazyldiv(Typ)
     esc(quote
-        LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = (x .= Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = (x .= Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = (x .= Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = (x .= Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = (x .= LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = (x .= LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = (x .= LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = (x .= LazyArrays.Ldiv(A,x))
     end)
 end
 

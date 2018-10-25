@@ -1,5 +1,5 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-
+import Base.Broadcast: materialize
 
 @testset "Mul" begin
     @testset "eltype" begin
@@ -12,6 +12,10 @@ using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
         @test @inferred(size(v)) == (@inferred(size(v,1)),) == (2,)
         @test @inferred(axes(A)) == (@inferred(axes(A,1)),@inferred(axes(A,2))) == (Base.OneTo(2),Base.OneTo(2))
         @test @inferred(size(A)) == (@inferred(size(A,1)),size(A,2)) == (2,2)
+
+        Ã = materialize(A)
+        @test Ã isa Matrix{Float64}
+        @test Ã == zeros(2,2)
     end
 
     @testset "gemv Float64" begin
