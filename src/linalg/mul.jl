@@ -16,6 +16,16 @@ const Mul2{StyleA, StyleB, AType, BType} = Mul{<:Tuple{StyleA,StyleB}, <:Tuple{A
 _mul_eltype(a) = eltype(a)
 _mul_eltype(a, b...) = Base.promote_op(*, eltype(a), _mul_eltype(b...))
 eltype(M::Mul) = _mul_eltype(M.factors...)
+size(M::Mul, p::Int) = size(M)[p]
+axes(M::Mul, p::Int) = axes(M)[p]
+
+length(M::Mul) = prod(size(M))
+size(M::Mul) = length.(axes(M))
+
+_mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)
+_mul_axes(ax1, (_,ax2)::Tuple{<:Any,<:Any}) = (ax1,ax2)
+axes(M::Mul) = _mul_axes(axes(first(M.factors),1), axes(last(M.factors)))
+
 
 ####
 # Matrix * Array
@@ -37,9 +47,6 @@ end
 ####
 const MatMulVec{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 1, T, V}
 
-length(M::MatMulVec) = size(first(M.factors),1)
-axes(M::MatMulVec) = (axes(first(M.factors),1),)
-
 function getindex(M::MatMulVec, k::Integer)
     A,B = M.factors
     ret = zero(eltype(M))
@@ -57,12 +64,7 @@ getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 # Matrix * Matrix
 ####
 
-MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V}
-
-
-
-size(M::MatMulMat) = size.(M.factors,(1,2))
-axes(M::MatMulMat) = axes.(M.factors,(1,2))
+const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V}
 
 function getindex(M::MatMulMat, k::Integer, j::Integer)
     A,B = M.factors
