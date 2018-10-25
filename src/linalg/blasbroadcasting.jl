@@ -1,3 +1,12 @@
+#########
+# This file is to add support for lowering broadcast notation
+#       y .= α .* Mul(A,x) .+ β .* y
+# to
+#       materialize!(BLASMul(α, A, x, β, y))
+# which then becomes a blas call.
+#########
+
+
 struct ArrayMulArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
 
 @inline copyto!(dest::AbstractArray, bc::Broadcasted{<:ArrayMulArrayStyle}) =
@@ -102,21 +111,21 @@ macro _blasmatvec(Lay, Typ)
         # y .= Mul(A,b) gets lowered here
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
                                              M::LazyArrays.MatMulVec{$Lay, <:LazyArrays.AbstractStridedLayout, T, T}) where T<: $Typ
-            A,B = M.A, M.B
+            A,B = M.factors
             materialize!(BLASMul(one(T), A, B, zero(T), dest))
         end
 
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
                  bc::LazyArrays.BConstMatVec{T, $Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             α,M = bc.args
-            A,B = M.A, M.B
+            A,B = M.factors
             materialize!(BLASMul(α, A, B, zero(T), dest))
         end
 
         @inline function LazyArrays._copyto!(::LazyArrays.AbstractStridedLayout, dest::AbstractVector{T},
                  bc::LazyArrays.BMatVecPlusVec{T,$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             M,C = bc.args
-            A,B = M.A, M.B
+            A,B = M.factors
             copyto!(dest, BLASMul(one(T), A, B, one(T), C))
         end
 
@@ -124,7 +133,7 @@ macro _blasmatvec(Lay, Typ)
                  bc::LazyArrays.BMatVecPlusConstVec{T,$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             M,βc = bc.args
             β,C = βc.args
-            A,B = M.A, M.B
+            A,B = M.factors
             copyto!(dest, BLASMul(one(T), A, B, β, C))
         end
 
@@ -132,7 +141,7 @@ macro _blasmatvec(Lay, Typ)
                  bc::LazyArrays.BConstMatVecPlusVec{T,$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             αM,C = bc.args
             α,M = αM.args
-            A,B = M.A, M.B
+            A,B = M.factors
             copyto!(dest, BLASMul(α, A, B, one(T), C))
         end
 
@@ -140,7 +149,7 @@ macro _blasmatvec(Lay, Typ)
                  bc::LazyArrays.BConstMatVecPlusConstVec{T,$Lay,<:LazyArrays.AbstractStridedLayout}) where T<: $Typ
             αM,βc = bc.args
             α,M = αM.args
-            A,B = M.A, M.B
+            A,B = M.factors
             β,C = βc.args
             copyto!(dest, BLASMul(α, A, B, β, C))
         end
@@ -168,21 +177,21 @@ macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
     esc(quote
         @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
                  M::LazyArrays.MatMulMat{$ATyp,$BTyp,T,T}) where T<: $Typ
-            A,B = M.A, M.B
+            A,B = M.factors
             materialize!(BLASMul(one(T), A, B, zero(T), dest))
         end
 
         @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
                  bc::LazyArrays.BConstMatMat{T,$ATyp,$BTyp}) where T<: $Typ
             α,M = bc.args
-            A,B = M.A, M.B
+            A,B = M.factors
             materialize!(BLASMul(α, A, B, zero(T), dest))
         end
 
         @inline function LazyArrays._copyto!(::$CTyp, dest::AbstractMatrix{T},
                  bc::LazyArrays.BMatMatPlusMat{T,$ATyp,$BTyp}) where T<: $Typ
             M,C = bc.args
-            A,B = M.A, M.B
+            A,B = M.factors
             copyto!(dest, BLASMul(one(T), A, B, one(T), C))
         end
 
@@ -190,7 +199,7 @@ macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
                  bc::LazyArrays.BMatMatPlusConstMat{T,$ATyp,$BTyp}) where T<: $Typ
             M,βc = bc.args
             β,C = βc.args
-            A,B = M.A, M.B
+            A,B = M.factors
             copyto!(dest, BLASMul(one(T), A, B, β, C))
         end
 
@@ -198,7 +207,7 @@ macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
                  bc::LazyArrays.BConstMatMatPlusMat{T,$ATyp,$BTyp}) where T<: $Typ
             αM,C = bc.args
             α,M = αM.args
-            A,B = M.A, M.B
+            A,B = M.factors
             copyto!(dest, BLASMul(α, A, B, one(T), C))
         end
 
@@ -206,7 +215,7 @@ macro _blasmatmat(CTyp, ATyp, BTyp, Typ)
                  bc::LazyArrays.BConstMatMatPlusConstMat{T,$ATyp,$BTyp}) where T<: $Typ
             αM,βc = bc.args
             α,M = αM.args
-            A,B = M.A, M.B
+            A,B = M.factors
             β,C = βc.args
             copyto!(dest, BLASMul(α, A, B, β, C))
         end

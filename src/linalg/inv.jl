@@ -18,7 +18,7 @@ MemoryLayout(Ai::Inv) = InverseLayout(MemoryLayout(Ai.A))
 
 
 const Ldiv{StyleA, StyleB, AType, BType} =
-    Mul{InverseLayout{StyleA}, StyleB, <:Inv{StyleA,AType}, BType}
+    Mul2{<:InverseLayout{StyleA}, StyleB, <:Inv{StyleA,AType}, BType}
 const ArrayLdivArray{styleA, styleB, p, q, T, V} =
     Ldiv{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 const ArrayLdivArrayStyle{StyleA,StyleB,p,q} = ArrayMulArrayStyle{InverseLayout{StyleA}, StyleB, p, q}
@@ -47,13 +47,11 @@ end
 end
 
 function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray)
-    A,x = inv(M.A), M.B
-    ldiv!(dest, factorize(A), x)
+    Ai, B = M.factors
+    ldiv!(dest, factorize(inv(Ai)), B)
 end
 
-let (p,q) = (2,1)
-    global const MatLdivVec{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, p, q, T, V}
-end
+const MatLdivVec{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, 2, 1, T, V}
 
 broadcastable(M::MatLdivVec) = M
 
@@ -65,40 +63,40 @@ broadcastable(M::MatLdivVec) = M
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = inv(M.A), M.B
-    x ≡ dest || copyto!(dest, x)
-    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(A), dest)
+    Ai,B = M.factors
+    B ≡ dest || copyto!(dest, B)
+    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(inv(Ai)), dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{'U',UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    A,x = inv(M.A), M.B
-    x ≡ dest || copyto!(dest, x)
-    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(A)), dest)
+    Ai,B = M.factors
+    B ≡ dest || copyto!(dest, B)
+    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(inv(Ai))), dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    A,x = inv(M.A), M.B
-    x ≡ dest || copyto!(dest, x)
-    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(A)), dest)
+    Ai,B = M.factors
+    B ≡ dest || copyto!(dest, B)
+    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(inv(Ai))), dest)
 end
 
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{T, <:TriangularLayout{'U',UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    A,x = inv(M.A), M.B
-    x ≡ dest || copyto!(dest, x)
-    BLAS.trsv!('L', 'C', UNIT, triangulardata(A)', dest)
+    Ai,B = M.factors
+    B ≡ dest || copyto!(dest, B)
+    BLAS.trsv!('L', 'C', UNIT, triangulardata(inv(Ai))', dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    A,x = inv(M.A), M.B
-    x ≡ dest || copyto!(dest, x)
-    BLAS.trsv!('U', 'C', UNIT, triangulardata(A)', dest)
+    Ai,B = M.factors
+    B ≡ dest || copyto!(dest, B)
+    BLAS.trsv!('U', 'C', UNIT, triangulardata(inv(Ai))', dest)
 end

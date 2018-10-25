@@ -183,7 +183,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.A, M.B
+    A,x = M.factors
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'N', UNIT, triangulardata(A), dest)
 end
@@ -191,7 +191,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.A, M.B
+    A,x = M.factors
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'T', UNIT, transpose(triangulardata(A)), dest)
 end
@@ -200,7 +200,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.A, M.B
+    A,x = M.factors
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'C', UNIT, triangulardata(A)', dest)
 end
