@@ -38,7 +38,7 @@ import FillArrays: AbstractFill
 
 import StaticArrays: StaticArrayStyle
 
-export Mul, Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv
+export Mul, Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, Diff, Cumsum
 
 include("memorylayout.jl")
 include("mul.jl")
@@ -47,6 +47,6 @@ include("cache.jl")
 include("lazybroadcasting.jl")
 include("lazyconcat.jl")
 include("lazysetoperations.jl")
-include("lazykron.jl")
+include("lazyoperations.jl")
 
 end # module

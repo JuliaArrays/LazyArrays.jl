@@ -61,3 +61,63 @@ copyto!(R::AbstractMatrix, K::Kron{<:Any,2,<:Tuple{<:AbstractMatrix,<:AbstractMa
     _kron2!(R, K)
 copyto!(R::AbstractVector, K::Kron{<:Any,1,<:Tuple{<:AbstractVector,<:AbstractVector}}) =
     _kron2!(R, K)
+
+
+struct Diff{T, N, Arr} <: AbstractArray{T, N}
+    v::Arr
+    dims::Int
+end
+
+Diff(v::AbstractVector{T}) where T = Diff{T,1,typeof(v)}(v, 1)
+
+function Diff(A::AbstractMatrix{T}; dims::Integer) where T
+    dims == 1 || dims == 2 || throw(ArgumentError("dimension must be 1 or 2, got $dims"))
+    Diff{T,2,typeof(A)}(A, dims)
+end
+
+IndexStyle(::Type{<:Diff{<:Any,1}}) = IndexLinear()
+IndexStyle(::Type{<:Diff{<:Any,2}}) = IndexCartesian()
+
+size(D::Diff{<:Any,1}) = (length(D.v)-1,)
+function size(D::Diff{<:Any,2})
+    if D.dims == 1
+        (size(D.v,1)-1,size(D.v,2))
+    else #dims == 2
+        (size(D.v,1),size(D.v,2)-1)
+    end
+end
+
+getindex(D::Diff{<:Any, 1}, k::Integer) = D.v[k+1] - D.v[k]
+function getindex(D::Diff, k::Integer, j::Integer)
+    if D.dims == 1
+        D.v[k+1,j] - D.v[k,j]
+    else # dims == 2
+        D.v[k,j+1] - D.v[k,j]
+    end
+end
+
+struct Cumsum{T, N, Arr} <: AbstractArray{T, N}
+    v::Arr
+    dims::Int
+end
+
+Cumsum(v::AbstractVector{T}) where T = Cumsum{T,1,typeof(v)}(v, 1)
+
+function Cumsum(A::AbstractMatrix{T}; dims::Integer) where T
+    dims == 1 || dims == 2 || throw(ArgumentError("dimension must be 1 or 2, got $dims"))
+    Cumsum{T,2,typeof(A)}(A, dims)
+end
+
+IndexStyle(::Type{<:Cumsum{<:Any,1}}) = IndexLinear()
+IndexStyle(::Type{<:Cumsum{<:Any,2}}) = IndexCartesian()
+
+size(Q::Cumsum) = size(Q.v)
+
+getindex(Q::Cumsum{<:Any, 1}, k::Integer) = k == 1 ? Q.v[1] : Q.v[k] + Q[k-1]
+function getindex(Q::Cumsum, k::Integer, j::Integer)
+    if Q.dims == 1
+        k == 1 ? Q.v[1,j] : Q.v[k,j] + Q[k-1,j]
+    else # dims == 2
+        j == 1 ? Q.v[k,1] : Q.v[k,j] + Q[k,j-1]
+    end
+end

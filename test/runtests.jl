@@ -160,11 +160,18 @@ end
     @test all(C.data .=== Array(A)[1:8,1:8,1:8])
 end
 
-@testset "Cumsum" begin
+@testset "Diff and Cumsum" begin
     x = Vcat([3,4], [1,1,1,1,1], 3)
     y = @inferred(cumsum(x))
     @test y isa Vcat
-    @test y == cumsum(Vector(x))
+    @test y == cumsum(Vector(x)) == Cumsum(x)
+    @test @inferred(diff(x)) == diff(Vector(x)) == Diff(x)
+
+    A = randn(3,4)
+    @test Cumsum(A; dims=1) == cumsum(A; dims=1)
+    @test Cumsum(A; dims=2) == cumsum(A; dims=2)
+    @test Diff(A; dims=1) == diff(A; dims=1)
+    @test Diff(A; dims=2) == diff(A; dims=2)
 end
 
 @testset "broadcast Vcat" begin
