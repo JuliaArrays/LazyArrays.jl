@@ -12,6 +12,7 @@ struct DenseRowMajor <: AbstractRowMajor end
 struct RowMajor <: AbstractRowMajor end
 struct DecreasingStrides <: AbstractIncreasingStrides end
 struct StridedLayout <: AbstractStridedLayout end
+struct ScalarLayout <: MemoryLayout end
 
 """
     UnknownLayout()
@@ -109,6 +110,13 @@ offsets in memory. `Array`s with `StridedLayout` must conform to the `DenseArray
 StridedLayout
 
 """
+    ScalarLayout()
+
+is returned by `MemoryLayout(A)` if A is a scalar, which does not live in memory
+"""
+ScalarLayout
+
+"""
     MemoryLayout(A)
 
 specifies the layout in memory for an array `A`. When
@@ -125,8 +133,10 @@ in memory is unknown.
 Julia's internal linear algebra machinery will automatically (and invisibly)
 dispatch to BLAS and LAPACK routines if the memory layout is compatible.
 """
-@inline MemoryLayout(A::AbstractArray{T}) where T = UnknownLayout()
-@inline MemoryLayout(A::DenseArray{T}) where T = DenseColumnMajor()
+@inline MemoryLayout(_) = UnknownLayout()
+
+@inline MemoryLayout(::Number) = ScalarLayout()
+@inline MemoryLayout(::DenseArray) = DenseColumnMajor()
 
 @inline MemoryLayout(A::ReinterpretArray) = reinterpretedmemorylayout(MemoryLayout(parent(A)))
 @inline reinterpretedmemorylayout(::MemoryLayout) = UnknownLayout()

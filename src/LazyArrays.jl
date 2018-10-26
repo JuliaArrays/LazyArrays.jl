@@ -28,7 +28,7 @@ import Base: *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
       has_offset_axes, @nexprs, @ncall, @ntuple
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
-                        combine_eltypes, DefaultArrayStyle, instantiate
+                        combine_eltypes, DefaultArrayStyle, instantiate, materialize
 
 import LinearAlgebra: AbstractTriangular
 
@@ -41,11 +41,10 @@ import StaticArrays: StaticArrayStyle
 export Mul, Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, Diff, Cumsum
 
 include("memorylayout.jl")
-include("mul.jl")
-include("inv.jl")
 include("cache.jl")
 include("lazybroadcasting.jl")
 include("lazyconcat.jl")
+include("linalg/linalg.jl")
 include("lazysetoperations.jl")
 include("lazyoperations.jl")
 

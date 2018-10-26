@@ -1,7 +1,23 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-
+import Base.Broadcast: materialize
 
 @testset "Mul" begin
+    @testset "eltype" begin
+        @inferred(eltype(Mul(zeros(Int,2,2), zeros(Float64,2)))) == Float64
+        @inferred(eltype(Mul(zeros(ComplexF16,2,2),zeros(Int,2,2),zeros(Float64,2)))) == ComplexF64
+
+        v = Mul(zeros(Int,2,2), zeros(Float64,2))
+        A = Mul(zeros(Int,2,2), zeros(Float64,2,2))
+        @test @inferred(axes(v)) == (@inferred(axes(v,1)),) == (Base.OneTo(2),)
+        @test @inferred(size(v)) == (@inferred(size(v,1)),) == (2,)
+        @test @inferred(axes(A)) == (@inferred(axes(A,1)),@inferred(axes(A,2))) == (Base.OneTo(2),Base.OneTo(2))
+        @test @inferred(size(A)) == (@inferred(size(A,1)),size(A,2)) == (2,2)
+
+        Ã = materialize(A)
+        @test Ã isa Matrix{Float64}
+        @test Ã == zeros(2,2)
+    end
+
     @testset "gemv Float64" begin
         for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
                   view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5)),

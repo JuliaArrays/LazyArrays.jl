@@ -3,9 +3,18 @@ using LazyArrays
                             ConjLayout, RowMajor, ColumnMajor, UnknownLayout,
                             SymmetricLayout, HermitianLayout, UpperTriangularLayout,
                             UnitUpperTriangularLayout, LowerTriangularLayout,
-                            UnitLowerTriangularLayout,
+                            UnitLowerTriangularLayout, ScalarLayout,
                             hermitiandata, symmetricdata
+
+struct FooBar end
+struct FooNumber <: Number end
+
 @testset "MemoryLayout" begin
+    @testset "Trivial" begin
+        @test MemoryLayout(1.0) == MemoryLayout(1) == MemoryLayout(FooNumber()) == ScalarLayout()
+        @test MemoryLayout(FooBar()) == UnknownLayout()
+    end
+
     @testset "adjoint and transpose MemoryLayout" begin
         A = [1.0 2; 3 4]
         @test MemoryLayout(A') == DenseRowMajor()
