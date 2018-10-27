@@ -9,6 +9,7 @@ macro lazymul(Typ)
         LinearAlgebra.mul!(dest::AbstractVector, A::$Typ, b::AbstractVector) =
             copyto!(dest, LazyArrays.Mul(A,b))
 
+
         LinearAlgebra.mul!(dest::AbstractMatrix, A::$Typ, b::AbstractMatrix) =
             copyto!(dest, LazyArrays.Mul(A,b))
         LinearAlgebra.mul!(dest::AbstractMatrix, A::$Typ, b::$Typ) =
@@ -25,6 +26,26 @@ macro lazymul(Typ)
             copyto!(dest, LazyArrays.Mul(A,b))
         LinearAlgebra.mul!(dest::AbstractVector, A::Hermitian{<:Any,<:$Typ}, b::AbstractVector) =
             copyto!(dest, LazyArrays.Mul(A,b))
+
+        LazyArrays._mul!(dest::AbstractVector, A::$Typ, b::AbstractVector) =
+            error("Override _copyto!(::$(MemoryLayout(dest)), ::Mul{$(MemoryLayout(A)), $(MemoryLayout(b))})")
+
+        LazyArrays._mul!(dest::AbstractMatrix, A::$Typ, b::AbstractMatrix) =
+            error("Override _copyto!(::$(MemoryLayout(dest)), ::Mul{$(MemoryLayout(A)), $(MemoryLayout(b))})")
+        LazyArrays._mul!(dest::AbstractMatrix, A::$Typ, b::$Typ) =
+            error("Override _copyto!(::$(MemoryLayout(dest)), ::Mul{$(MemoryLayout(A)), $(MemoryLayout(b))})")
+        LazyArrays._mul!(dest::AbstractMatrix, A::$Typ, b::Adjoint{<:Any,<:AbstractMatrix}) =
+            error("Override _copyto!(::$(MemoryLayout(dest)), ::Mul{$(MemoryLayout(A)), $(MemoryLayout(b))})")
+
+        LazyArrays._mul!(dest::AbstractVector, A::Adjoint{<:Any,<:$Typ}, b::AbstractVector) =
+            error("Override _copyto!(::$(MemoryLayout(dest)), ::Mul{$(MemoryLayout(A)), $(MemoryLayout(b))})")
+        LazyArrays._mul!(dest::AbstractVector, A::Transpose{<:Any,<:$Typ}, b::AbstractVector) =
+            error("Override _copyto!(::$(MemoryLayout(dest)), ::Mul{$(MemoryLayout(A)), $(MemoryLayout(b))})")
+
+        LazyArrays._mul!(dest::AbstractVector, A::Symmetric{<:Any,<:$Typ}, b::AbstractVector) =
+            error("Override _copyto!(::$(MemoryLayout(dest)), ::Mul{$(MemoryLayout(A)), $(MemoryLayout(b))})")
+        LazyArrays._mul!(dest::AbstractVector, A::Hermitian{<:Any,<:$Typ}, b::AbstractVector) =
+            error("Override _copyto!(::$(MemoryLayout(dest)), ::Mul{$(MemoryLayout(A)), $(MemoryLayout(b))})")
     end)
 end
 
