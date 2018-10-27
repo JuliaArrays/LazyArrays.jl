@@ -15,7 +15,24 @@ struct BLASMul{StyleA, StyleB, StyleC, T, AA, BB, CC}
     C::CC
 end
 
+function BLASMul(styleA::StyleA, styleB::StyleB, styleC::StyleC, α::T, A::AA, B::BB, β::V, C::CC) where {StyleA,StyleB,StyleC,T,V,AA,BB,CC}
+    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
+    axes(A,1) == axes(C,1) || throw(DimensionMismatch())
+    axes(B,2) == axes(C,2) || throw(DimensionMismatch())
+    BLASMul{StyleA,StyleB,StyleC,promote_type(T,V),AA,BB,CC}(styleA, styleB, styleC, α, A, B, β, C)
+end
+
 @inline BLASMul(α, A, B, β, C) = BLASMul(MemoryLayout(A), MemoryLayout(B), MemoryLayout(C), α, A, B, β, C)
+
+eltype(::BLASMul{StyleA,StyleB,StyleC,T,AA,BB,CC}) where {StyleA,StyleB,StyleC,T,AA,BB,CC} =
+     promote_type(T, eltype(AA), eltype(BB), eltype(CC))
+
+size(M::BLASMul, p::Int) = size(M)[p]
+axes(M::BLASMul, p::Int) = axes(M)[p]
+length(M::BLASMul) = prod(size(M))
+size(M::BLASMul) = length.(axes(M))
+axes(M::BLASMul) = axes(M.C)
+
 
 const BLASMatMulVec{StyleA,StyleB,StyleC,T} = BLASMul{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractVector{T},<:AbstractVector{T}}
 const BLASMatMulMat{StyleA,StyleB,StyleC,T} = BLASMul{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
@@ -23,6 +40,18 @@ const BLASMatMulMat{StyleA,StyleB,StyleC,T} = BLASMul{StyleA,StyleB,StyleC,T,<:A
 @inline function copyto!(dest::AbstractArray, M::BLASMul)
     M.C ≡ dest || copyto!(dest, M.C)
     materialize!(BLASMul(M.α, M.A, M.B, M.β, dest))
+end
+
+function materialize!(M::BLASMul)
+    α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
+    @inbounds for k = 1:size(A,1), j = 1:size(B,2)
+        Ctmp = iszero(β) ? zero(C[k,j]) : β*C[k,j]
+        for ν = 1:size(A,2)
+            Ctmp += α*A[k, ν]*B[ν, j]
+        end
+        C[k,j] = Ctmp
+    end
+    C
 end
 
 # make copy to make sure always works
