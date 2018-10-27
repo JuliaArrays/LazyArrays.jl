@@ -17,6 +17,9 @@ end
 
 @inline BLASMul(α, A, B, β, C) = BLASMul(MemoryLayout(A), MemoryLayout(B), MemoryLayout(C), α, A, B, β, C)
 
+const BLASMatMulVec{StyleA,StyleB,StyleC,T} = BLASMul{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractVector{T},<:AbstractVector{T}}
+const BLASMatMulMat{StyleA,StyleB,StyleC,T} = BLASMul{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
+
 @inline function copyto!(dest::AbstractArray, M::BLASMul)
     M.C ≡ dest || copyto!(dest, M.C)
     materialize!(BLASMul(M.α, M.A, M.B, M.β, dest))
@@ -41,89 +44,57 @@ end
 end
 
 
-# TODO: the blasmul! commands are extraneous
-@inline materialize!(M::BLASMul) = blasmul!(M.C, M.A, M.B, M.α, M.β,
-                                            M.style_C, M.style_A, M.style_B)
+@inline materialize!(M::BLASMatMulVec{<:AbstractColumnMajor,<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasFloat}) =
+    _gemv!('N', M.α, M.A, M.B, M.β, M.C)
+@inline materialize!(M::BLASMatMulVec{<:AbstractRowMajor,<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasFloat}) =
+    _gemv!('T', M.α, transpose(M.A), M.B, M.β, M.C)
+@inline materialize!(M::BLASMatMulVec{<:ConjLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
+    _gemv!('C', M.α, M.A', M.B, M.β, M.C)
 
-@inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
-              ::AbstractStridedLayout, ::AbstractColumnMajor, ::AbstractStridedLayout) where T<:BlasFloat =
-    _gemv!('N', α, A, x, β, y)
+@inline materialize!(M::BLASMatMulMat{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractColumnMajor,<:BlasFloat}) =
+    _gemm!('N', 'N', M.α, M.A, M.B, M.β, M.C)
+@inline materialize!(M::BLASMatMulMat{<:AbstractColumnMajor,<:AbstractRowMajor,<:AbstractColumnMajor,<:BlasFloat}) =
+    _gemm!('N', 'T', M.α, M.A, transpose(M.B), M.β, M.C)
+@inline materialize!(M::BLASMatMulMat{<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
+    _gemm!('N', 'C', M.α, M.A, M.B', M.β, M.C)
 
+@inline materialize!(M::BLASMatMulMat{<:AbstractRowMajor,<:AbstractColumnMajor,<:AbstractColumnMajor,<:BlasFloat}) =
+    _gemm!('T', 'N', M.α, transpose(M.A), M.B, M.β, M.C)
+@inline materialize!(M::BLASMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:AbstractColumnMajor,<:BlasComplex}) =
+    _gemm!('C', 'N', M.α, M.A', M.B, M.β, M.C)
 
-@inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
-              ::AbstractStridedLayout, ::AbstractRowMajor, ::AbstractStridedLayout) where T<:BlasFloat =
-    _gemv!('T', α, transpose(A), x, β, y)
+@inline materialize!(M::BLASMatMulMat{<:AbstractRowMajor,<:AbstractRowMajor,<:AbstractColumnMajor,<:BlasFloat}) =
+    _gemm!('T', 'T', M.α, transpose(M.A), transpose(M.B), M.β, M.C)
+@inline materialize!(M::BLASMatMulMat{<:AbstractRowMajor,<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
+    _gemm!('T', 'C', M.α, transpose(M.A), M.B', M.β, M.C)
 
-@inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
-              ::AbstractStridedLayout, ::ConjLayout{<:AbstractRowMajor}, ::AbstractStridedLayout) where T<:BlasComplex =
-    _gemv!('C', α, A', x, β, y)
+@inline materialize!(M::BLASMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:AbstractRowMajor,<:AbstractColumnMajor,<:BlasComplex}) =
+    _gemm!('C', 'T', M.α, M.A', M.B', M.β, M.C)
+@inline materialize!(M::BLASMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
+    _gemm!('C', 'C', M.α, M.A', M.B', M.β, M.C)
 
+@inline materialize!(M::BLASMatMulMat{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractRowMajor,<:BlasFloat}) =
+    _gemm!('T', 'T', M.α, M.B, M.A, M.β, transpose(M.C))
+@inline materialize!(M::BLASMatMulMat{<:AbstractColumnMajor,<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+    _gemm!('C', 'C', M.α, M.B, M.A, M.β, M.C')
 
+@inline materialize!(M::BLASMatMulMat{<:AbstractColumnMajor,<:AbstractRowMajor,<:AbstractRowMajor,<:BlasFloat}) =
+    _gemm!('N', 'T', M.α, transpose(M.B), M.A, M.β, transpose(M.C))
+@inline materialize!(M::BLASMatMulMat{<:AbstractColumnMajor,<:AbstractRowMajor,<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+    _gemm!('N', 'T', M.α, transpose(M.B), M.A, M.β, M.C')
+@inline materialize!(M::BLASMatMulMat{<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+    _gemm!('N', 'C', M.α, M.B', M.A, M.β, M.C')
 
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractColumnMajor, ::AbstractColumnMajor, ::AbstractColumnMajor) where T<:BlasFloat =
-    _gemm!('N', 'N', α, A, x, β, y)
-
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractColumnMajor, ::AbstractColumnMajor, ::AbstractRowMajor) where T <: BlasFloat =
-    _gemm!('N', 'T', α, A, transpose(x), β, y)
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractColumnMajor, ::AbstractColumnMajor, ::ConjLayout{<:AbstractRowMajor}) where T <: BlasComplex =
-    _gemm!('N', 'C', α, A, x', β, y)
-
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractColumnMajor, ::AbstractRowMajor, ::AbstractColumnMajor) where T <: BlasFloat =
-    _gemm!('T', 'N', α, transpose(A), x, β, y)
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractColumnMajor, ::ConjLayout{<:AbstractRowMajor}, ::AbstractColumnMajor) where T <: BlasComplex =
-    _gemm!('C', 'N', α, A', x, β, y)
-
-
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractColumnMajor, ::AbstractRowMajor, ::AbstractRowMajor) where T <: BlasFloat =
-    _gemm!('T', 'T', α, transpose(A), transpose(x), β, y)
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractColumnMajor, ::AbstractRowMajor, ::ConjLayout{<:AbstractRowMajor}) where T <: BlasComplex =
-    _gemm!('T', 'C', α, transpose(A), x', β, y)
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractColumnMajor, ::ConjLayout{<:AbstractRowMajor}, ::AbstractRowMajor) where T <: BlasComplex =
-    _gemm!('C', 'T', α, A', x', β, y)
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractColumnMajor, ::ConjLayout{<:AbstractRowMajor}, ::ConjLayout{<:AbstractRowMajor}) where T <: BlasComplex =
-    _gemm!('C', 'C', α, A', x', β, y)
+@inline materialize!(M::BLASMatMulMat{<:AbstractRowMajor,<:AbstractColumnMajor,<:AbstractRowMajor,<:BlasFloat}) =
+    _gemm!('T', 'N', M.α, M.B, transpose(M.A), M.β, transpose(M.C))
+@inline materialize!(M::BLASMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+    _gemm!('C', 'N', M.α, M.B, M.A', M.β, M.C')
 
 
-
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractRowMajor, ::AbstractColumnMajor, ::AbstractColumnMajor) where T <: BlasFloat =
-    _gemm!('T', 'T', α, x, A, β, transpose(y))
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::ConjLayout{<:AbstractRowMajor}, ::AbstractColumnMajor, ::AbstractColumnMajor) where T <: BlasComplex =
-    _gemm!('C', 'C', α, x, A, β, y')
-
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractRowMajor, ::AbstractColumnMajor, ::AbstractRowMajor) where T <: BlasFloat =
-    _gemm!('N', 'T', α, transpose(x), A, β, transpose(y))
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::ConjLayout{<:AbstractRowMajor}, ::AbstractColumnMajor, ::AbstractRowMajor) where T <: BlasComplex =
-    _gemm!('N', 'T', α, transpose(x), A, β, y')
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::ConjLayout{<:AbstractRowMajor}, ::AbstractColumnMajor, ::ConjLayout{<:AbstractRowMajor}) where T <: BlasComplex =
-    _gemm!('N', 'C', α, x', A, β, y')
-
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractRowMajor, ::AbstractRowMajor, ::AbstractColumnMajor) where T <: BlasFloat =
-    _gemm!('T', 'N', α, x, transpose(A), β, transpose(y))
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::ConjLayout{<:AbstractRowMajor}, ::ConjLayout{<:AbstractRowMajor}, ::AbstractColumnMajor) where T <: BlasComplex =
-    _gemm!('C', 'N', α, x, A', β, y')
-
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::AbstractRowMajor, ::AbstractRowMajor, ::AbstractRowMajor) where T <: BlasFloat =
-    _gemm!('N', 'N', α, transpose(x), transpose(A), β, transpose(y))
-@inline blasmul!(y::AbstractMatrix{T}, A::AbstractMatrix{T}, x::AbstractMatrix{T}, α::T, β::T,
-              ::ConjLayout{<:AbstractRowMajor}, ::ConjLayout{<:AbstractRowMajor}, ::ConjLayout{<:AbstractRowMajor}) where T <: BlasComplex =
-    _gemm!('N', 'N', α, x', A', β, y')
+@inline materialize!(M::BLASMatMulMat{<:AbstractRowMajor,<:AbstractRowMajor,<:AbstractRowMajor,<:BlasFloat}) =
+    _gemm!('N', 'N', M.α, transpose(M.B), transpose(M.A), M.β, transpose(M.C))
+@inline materialize!(M::BLASMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+    _gemm!('N', 'N', M.α, M.B', M.A', M.β, M.C')
 
 
 ###
@@ -150,30 +121,27 @@ end
 @blasmatvec SymmetricLayout{ColumnMajor}
 @blasmatvec SymmetricLayout{DenseColumnMajor}
 
-@inline blasmul!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector, α::T, β::T,
-              ::AbstractStridedLayout, S::SymmetricLayout{<:AbstractColumnMajor}, ::AbstractStridedLayout) where T<:BlasFloat =
-    _symv!(S.uplo, α, symmetricdata(A), x, β, y)
+
+materialize!(M::BLASMatMulVec{<:SymmetricLayout{<:AbstractColumnMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasFloat}) =
+    _symv!(M.style_A.uplo, M.α, symmetricdata(M.A), M.B, M.β, M.C)
 
 @blasmatvec SymmetricLayout{RowMajor}
 @blasmatvec SymmetricLayout{DenseRowMajor}
 
-@inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
-              ::AbstractStridedLayout, S::SymmetricLayout{<:AbstractRowMajor}, ::AbstractStridedLayout) where T<:BlasFloat =
-    _symv!(S.uplo == 'L' ? 'U' : 'L', α, transpose(symmetricdata(A)), x, β, y)
+materialize!(M::BLASMatMulVec{<:SymmetricLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasFloat}) =
+    _symv!(M.style_A.uplo == 'L' ? 'U' : 'L', M.α, transpose(symmetricdata(M.A)), M.B, M.β, M.C)
 
 @blasmatvec HermitianLayout{ColumnMajor}
 @blasmatvec HermitianLayout{DenseColumnMajor}
 
-@inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
-              ::AbstractStridedLayout, S::HermitianLayout{<:AbstractColumnMajor}, ::AbstractStridedLayout) where T<:BlasFloat =
-    _hemv!(S.uplo, α, hermitiandata(A), x, β, y)
+materialize!(M::BLASMatMulVec{<:HermitianLayout{<:AbstractColumnMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
+    _hemv!(M.style_A.uplo, M.α, hermitiandata(M.A), M.B, M.β, M.C)
 
 @blasmatvec HermitianLayout{RowMajor}
 @blasmatvec HermitianLayout{DenseRowMajor}
 
-@inline blasmul!(y::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, α::T, β::T,
-              ::AbstractStridedLayout, ::HermitianLayout{<:AbstractRowMajor}, ::AbstractStridedLayout) where T<:BlasComplex =
-    _hemv!(S.uplo == 'L' ? 'U' : 'L', α, hermitiandata(A)', x, β, y)
+materialize!(M::BLASMatMulVec{<:HermitianLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
+    _hemv!(M.style_A.uplo == 'L' ? 'U' : 'L', M.α, hermitiandata(M.A)', M.B, M.β, M.C)
 
 
 ###

@@ -42,10 +42,11 @@ similar(M::ArrayMulArray, ::Type{T}) where T = Array{T}(undef, size(M))
 materialize(M::ArrayMulArray) = copyto!(similar(M), M)
 
 @inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)
-# default to Base mul!
+# default to Base mul!. Go through _mul! to avoid inf-loop in lazymuls
+_mul!(dest, A, x) = mul!(dest, A, x)
 function _copyto!(_, dest::AbstractArray, M::ArrayMulArray)
     A,x = M.factors
-    mul!(dest, A, x)
+    _mul!(dest, A, x)
 end
 
 
@@ -76,7 +77,7 @@ const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V
 function getindex(M::MatMulMat, k::Integer, j::Integer)
     A,B = M.factors
     ret = zero(eltype(M))
-    for ℓ in axes(A,2)
+    @inbounds for ℓ in axes(A,2)
         ret += A[k,ℓ] * B[ℓ,j]
     end
     ret
