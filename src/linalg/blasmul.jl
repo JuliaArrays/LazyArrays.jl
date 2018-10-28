@@ -33,15 +33,35 @@ length(M::MulAdd) = prod(size(M))
 size(M::MulAdd) = length.(axes(M))
 axes(M::MulAdd) = axes(M.C)
 
+const ArrayMulArrayAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray}
 const MatMulVecAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractMatrix,<:AbstractVector,<:AbstractVector}
 const MatMulMatAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractMatrix,<:AbstractMatrix,<:AbstractMatrix}
+
+BroadcastStyle(::Type{<:MatMulVecAdd{StyleA,StyleB,StyleC}}) where {StyleA,StyleB,StyleC} =
+    ArrayMulArrayStyle{StyleA,StyleB,2,1}()
+BroadcastStyle(::Type{<:MatMulMatAdd{StyleA,StyleB,StyleC}}) where {StyleA,StyleB,StyleC} =
+    ArrayMulArrayStyle{StyleA,StyleB,2,2}()
+
+broadcastable(M::MatMulMatAdd) = M
+broadcastable(M::MatMulVecAdd) = M
 
 const BlasMatMulVec{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractVector{T},<:AbstractVector{T}}
 const BlasMatMulMat{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
 
-@inline function copyto!(dest::AbstractArray, M::MulAdd)
+@inline function _copyto!(_, dest::AbstractArray, M::MulAdd)
     M.C ≡ dest || copyto!(dest, M.C)
     materialize!(MulAdd(M.α, M.A, M.B, M.β, dest))
+end
+
+@inline copyto!(dest::AbstractArray, M::MulAdd) = _copyto!(MemoryLayout(dest), dest, M)
+
+const BArrayMulArrayAdd{styleA, styleB, styleC, p, q} =
+    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
+                <:Tuple{<:ArrayMulArrayAdd{styleA,styleB,styleC}}}
+
+@inline function _copyto!(_, dest::AbstractArray, bc::BArrayMulArrayAdd)
+    (M,) = bc.args
+    copyto!(dest, M)
 end
 
 import LinearAlgebra: tilebufsize, Abuf, Bbuf, Cbuf
