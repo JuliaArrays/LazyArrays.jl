@@ -286,27 +286,17 @@ end
     end
 end
 
-@blasmatvec SymmetricLayout{ColumnMajor}
-@blasmatvec SymmetricLayout{DenseColumnMajor}
-
 
 materialize!(M::BlasMatMulVec{<:SymmetricLayout{<:AbstractColumnMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasFloat}) =
     _symv!(M.style_A.uplo, M.α, symmetricdata(M.A), M.B, M.β, M.C)
 
-@blasmatvec SymmetricLayout{RowMajor}
-@blasmatvec SymmetricLayout{DenseRowMajor}
 
 materialize!(M::BlasMatMulVec{<:SymmetricLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasFloat}) =
     _symv!(M.style_A.uplo == 'L' ? 'U' : 'L', M.α, transpose(symmetricdata(M.A)), M.B, M.β, M.C)
 
-@blasmatvec HermitianLayout{ColumnMajor}
-@blasmatvec HermitianLayout{DenseColumnMajor}
 
 materialize!(M::BlasMatMulVec{<:HermitianLayout{<:AbstractColumnMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
     _hemv!(M.style_A.uplo, M.α, hermitiandata(M.A), M.B, M.β, M.C)
-
-@blasmatvec HermitianLayout{RowMajor}
-@blasmatvec HermitianLayout{DenseRowMajor}
 
 materialize!(M::BlasMatMulVec{<:HermitianLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
     _hemv!(M.style_A.uplo == 'L' ? 'U' : 'L', M.α, hermitiandata(M.A)', M.B, M.β, M.C)

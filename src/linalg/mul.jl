@@ -42,12 +42,6 @@ similar(M::ArrayMulArray, ::Type{T}) where T = Array{T}(undef, size(M))
 materialize(M::ArrayMulArray) = copyto!(similar(M), M)
 
 @inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)
-# default to Base mul!. Go through _mul! to avoid inf-loop in lazymuls
-_mul!(dest, A, x) = mul!(dest, A, x)
-function _copyto!(_, dest::AbstractArray, M::ArrayMulArray)
-    A,x = M.factors
-    _mul!(dest, A, x)
-end
 
 
 ####
