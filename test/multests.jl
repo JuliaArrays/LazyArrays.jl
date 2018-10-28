@@ -1,5 +1,5 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: BLASMul
+import LazyArrays: MulAdd
 import Base.Broadcast: materialize
 
 @testset "Mul" begin
@@ -586,11 +586,11 @@ import Base.Broadcast: materialize
         mul!(d, A, b)
         @test all(c .=== d)
 
-        copyto!(d, BLASMul(1, A, b, 0.0, d))
-        @test d == copyto!(similar(d), BLASMul(1, A, b, 0.0, d)) ≈ A*b
-        @test copyto!(similar(d), BLASMul(1, A, b, 1.0, d)) ≈ A*b + d
+        copyto!(d, MulAdd(1, A, b, 0.0, d))
+        @test d == copyto!(similar(d), MulAdd(1, A, b, 0.0, d)) ≈ A*b
+        @test copyto!(similar(d), MulAdd(1, A, b, 1.0, d)) ≈ A*b + d
 
-        @test all((similar(d) .= BLASMul(1, A, b, 1.0, d)) .=== copyto!(similar(d), BLASMul(1, A, b, 1.0, d)))
+        @test all((similar(d) .= MulAdd(1, A, b, 1.0, d)) .=== copyto!(similar(d), MulAdd(1, A, b, 1.0, d)))
 
         B = rand(Int,5,5)
         C = Array{Float64}(undef, 5, 5)
@@ -603,7 +603,7 @@ import Base.Broadcast: materialize
         A = randn(Float64,20,20)
         B = randn(ComplexF64,20,20)
         C = similar(B)
-        @test all((C .= Mul(A,B)  ) .=== copyto!(similar(C), BLASMul(1.0, A, B, 0.0, C)) .=== A*B)
+        @test all((C .= Mul(A,B)  ) .=== copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)) .=== A*B)
     end
 
     @testset "no allocation" begin
