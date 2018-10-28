@@ -42,16 +42,113 @@ const BLASMatMulMat{StyleA,StyleB,StyleC,T} = BLASMul{StyleA,StyleB,StyleC,T,<:A
     materialize!(BLASMul(M.α, M.A, M.B, M.β, dest))
 end
 
-function materialize!(M::BLASMul)
-    α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
-    @inbounds for k = 1:size(A,1), j = 1:size(B,2)
-        Ctmp = iszero(β) ? zero(C[k,j]) : β*C[k,j]
-        for ν = 1:size(A,2)
-            Ctmp += α*A[k, ν]*B[ν, j]
+@assert !has_offset_axes(C, A, B)
+mA, nA = lapack_size(tA, A)
+mB, nB = lapack_size(tB, B)
+if mB != nA
+    throw(DimensionMismatch("matrix A has dimensions ($mA,$nA), matrix B has dimensions ($mB,$nB)"))
+end
+if size(C,1) != mA || size(C,2) != nB
+    throw(DimensionMismatch("result C has dimensions $(size(C)), needs ($mA,$nB)"))
+end
+if isempty(A) || isempty(B)
+    return fill!(C, zero(R))
+end
+
+import LinearAlgebra: tilebufsize, Abuf, Bbuf, Cbuf
+
+# Modified from LinearAlgebra._generic_matmatmul!
+function tile_size(T, S, R)
+    tile_size = 0
+    if isbitstype(R) && isbitstype(T) && isbitstype(S)
+        tile_size = floor(Int, sqrt(tilebufsize / max(sizeof(R), sizeof(S), sizeof(T))))
+    end
+    tile_size
+end
+
+function tiled_blasmul!(tile_size, α, A::AbstractMatrix{T}, B::AbstractMatrix{S}, β, C::AbstractMatrix{R}) where {S,T,R}
+    mA, nA = size(A)
+    mB, nB = size(B)
+    @inbounds begin
+        sz = (tile_size, tile_size)
+        # FIXME: This code is completely invalid!!!
+        Atile = unsafe_wrap(Array, convert(Ptr{T}, pointer(Abuf[Threads.threadid()])), sz)
+        Btile = unsafe_wrap(Array, convert(Ptr{S}, pointer(Bbuf[Threads.threadid()])), sz)
+
+        z1 = zero(A[1, 1]*B[1, 1] + A[1, 1]*B[1, 1])
+        z = convert(promote_type(typeof(z1), R), z1)
+
+        if mA < tile_size && nA < tile_size && nB < tile_size
+            copy_transpose!(Atile, 1:nA, 1:mA, tA, A, 1:mA, 1:nA)
+            copyto!(Btile, 1:mB, 1:nB, tB, B, 1:mB, 1:nB)
+            for j = 1:nB
+                boff = (j-1)*tile_size
+                for i = 1:mA
+                    aoff = (i-1)*tile_size
+                    s = z
+                    for k = 1:nA
+                        s += Atile[aoff+k] * Btile[boff+k]
+                    end
+                    C[i,j] = α*s + β*C[i,j]
+                end
+            end
+        else
+            # FIXME: This code is completely invalid!!!
+            Ctile = unsafe_wrap(Array, convert(Ptr{R}, pointer(Cbuf[Threads.threadid()])), sz)
+            for jb = 1:tile_size:nB
+                jlim = min(jb+tile_size-1,nB)
+                jlen = jlim-jb+1
+                for ib = 1:tile_size:mA
+                    ilim = min(ib+tile_size-1,mA)
+                    ilen = ilim-ib+1
+                    copyto!(Ctile, 1:ilen, 1:jlen, C, ib:ilim, jb:jlim)
+                    lmul!(β,Ctile)
+                    for kb = 1:tile_size:nA
+                        klim = min(kb+tile_size-1,mB)
+                        klen = klim-kb+1
+                        copy_transpose!(Atile, 1:klen, 1:ilen, 'N', A, ib:ilim, kb:klim)
+                        copyto!(Btile, 1:klen, 1:jlen, 'N', B, kb:klim, jb:jlim)
+                        for j=1:jlen
+                            bcoff = (j-1)*tile_size
+                            for i = 1:ilen
+                                aoff = (i-1)*tile_size
+                                s = z
+                                for k = 1:klen
+                                    s += Atile[aoff+k] * Btile[bcoff+k]
+                                end
+                                Ctile[bcoff+i] += α*s
+                            end
+                        end
+                    end
+                    copyto!(C, ib:ilim, jb:jlim, Ctile, 1:ilen, 1:jlen)
+                end
+            end
         end
-        C[k,j] = Ctmp
+    end
+
+    C
+end
+
+function default_blasmul!(α, A::AbstractMatrix, B::AbstractMatrix, β, C::AbstractMatrix)
+    @inbounds for k = 1:size(A,1), j = 1:size(B,2)
+        z2 = zero(A[k, 1]*B[1, j] + A[k, 1]*B[1, j])
+        Ctmp = convert(promote_type(eltype(C), typeof(z2)), z2)
+        @simd for ν = 1:size(A,2)
+            Ctmp = muladd(A[k, ν],B[ν, j],Ctmp)
+        end
+        C[k,j] = α*Ctmp + β*C[k,j]
     end
     C
+end
+
+function materialize!(M::BLASMul)
+    α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
+    ts = tile_size(eltype(A), eltype(B), eltype(C))
+    if iszero(β) # false is a "strong" zero to wipe out NaNs
+        ts == 0 ? default_blasmul!(α, A, B, false, C) : tiled_blasmul!(ts, α, A, B, false, C)
+    else
+        ts == 0 ? default_blasmul!(α, A, B, β, C) : tiled_blasmul!(ts, α, A, B, β, C)
+    end
 end
 
 # make copy to make sure always works

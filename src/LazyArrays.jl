@@ -28,7 +28,8 @@ import Base: *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
       has_offset_axes, @nexprs, @ncall, @ntuple
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
-                        combine_eltypes, DefaultArrayStyle, instantiate, materialize
+                        combine_eltypes, DefaultArrayStyle, instantiate, materialize,
+                        materialize!
 
 import LinearAlgebra: AbstractTriangular
 
