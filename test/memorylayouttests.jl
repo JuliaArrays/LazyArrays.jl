@@ -13,6 +13,11 @@ struct FooNumber <: Number end
     @testset "Trivial" begin
         @test MemoryLayout(1.0) == MemoryLayout(1) == MemoryLayout(FooNumber()) == ScalarLayout()
         @test MemoryLayout(FooBar()) == UnknownLayout()
+
+        A = randn(6)
+        @test MemoryLayout(A) == MemoryLayout(Base.ReshapedArray(A,(2,3),())) == MemoryLayout(reinterpret(Float32,A)) ==
+            DenseColumnMajor()
+
     end
 
     @testset "adjoint and transpose MemoryLayout" begin

@@ -64,7 +64,11 @@ include("ldivtests.jl")
     copyto!(b, A)
     @test b == hcat(A.arrays...)
     @test @allocated(copyto!(b, A)) == 0
+
+    @test_throws ArgumentError Vcat()
 end
+
+
 
 @testset "Kron"  begin
     A = [1,2,3]
@@ -122,8 +126,10 @@ end
 
     x = Vcat([3,4], [1,1,1,1,1], 1:3)
     @test x .+ (1:10) isa Vcat
-    @test x .+ (1:10) ==  Vector(x) + (1:10)
-
+    @test (1:10) .+ x isa Vcat
+    @test x + (1:10) isa Vcat
+    @test (1:10) + x isa Vcat
+    @test x .+ (1:10) == (1:10) .+ x == (1:10) + x == x + (1:10) == Vector(x) + (1:10)
 
     @test exp.(x) isa Vcat
     @test exp.(x) == exp.(Vector(x))
@@ -167,12 +173,17 @@ end
     @test y == cumsum(Vector(x)) == Cumsum(x)
     @test @inferred(diff(x)) == diff(Vector(x)) == Diff(x)
 
+    @test sum(x) == sum(Vector(x)) == last(y)
+    @test cumsum(Vcat(4)) === Vcat(4)
+
     A = randn(3,4)
     @test Cumsum(A; dims=1) == cumsum(A; dims=1)
     @test Cumsum(A; dims=2) == cumsum(A; dims=2)
     @test Diff(A; dims=1) == diff(A; dims=1)
     @test Diff(A; dims=2) == diff(A; dims=2)
 end
+
+
 
 @testset "broadcast Vcat" begin
     x = Vcat(1:2, [1,1,1,1,1], 3)
