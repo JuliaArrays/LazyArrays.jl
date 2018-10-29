@@ -78,6 +78,10 @@ end
 function tiled_blasmul!(tile_size, α, A::AbstractMatrix{T}, B::AbstractMatrix{S}, β, C::AbstractMatrix{R}) where {S,T,R}
     mA, nA = size(A)
     mB, nB = size(B)
+    nA == mB || throw(DimensionMismatch("Dimensions must match"))
+    size(C) == (mA, nB) || throw(DimensionMismatch("Dimensions must match"))
+
+
     @inbounds begin
         sz = (tile_size, tile_size)
         # FIXME: This code is completely invalid!!!
@@ -159,7 +163,7 @@ function default_blasmul!(α, A::AbstractMatrix, B::AbstractVector, β, C::Abstr
     mA, nA = size(A)
     mB = length(B)
     nA == mB || throw(DimensionMismatch("Dimensions must match"))
-    length(C) == nA || throw(DimensionMismatch("Dimensions must match"))
+    length(C) == mA || throw(DimensionMismatch("Dimensions must match"))
 
     lmul!(β, C)
     (nA == 0 || mB == 0)  && return C

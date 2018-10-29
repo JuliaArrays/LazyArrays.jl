@@ -1,6 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd
-import Base.Broadcast: materialize
+import Base.Broadcast: materialize, materialize!
 
 @testset "Mul" begin
     @testset "eltype" begin
@@ -577,10 +577,13 @@ import Base.Broadcast: materialize
     end
 
     @testset "Mixed types" begin
-        A = randn(5,5)
-        b = rand(Int,5)
+        A = randn(5,6)
+        b = rand(Int,6)
         c = Array{Float64}(undef, 5)
         c .= Mul(A,b)
+
+        @test_throws DimensionMismatch (similar(c,3) .= Mul(A,b))
+        @test_throws DimensionMismatch (c .= Mul(A,similar(b,2)))
 
         d = similar(c)
         mul!(d, A, b)
@@ -592,17 +595,21 @@ import Base.Broadcast: materialize
 
         @test all((similar(d) .= MulAdd(1, A, b, 1.0, d)) .=== copyto!(similar(d), MulAdd(1, A, b, 1.0, d)))
 
-        B = rand(Int,5,5)
-        C = Array{Float64}(undef, 5, 5)
+        B = rand(Int,6,4)
+        C = Array{Float64}(undef, 5, 4)
         C .= Mul(A,B)
+
+        @test_throws DimensionMismatch materialize!(MulAdd(1,A,B,0,similar(C,4,4)))
+        @test_throws DimensionMismatch (similar(C,4,4) .= Mul(A,B))
+        @test_throws DimensionMismatch (C .= Mul(A,similar(B,2,2)))
 
         D = similar(C)
         mul!(D, A, B)
         @test all(C .=== D)
 
-        A = randn(Float64,20,20)
-        B = randn(ComplexF64,20,20)
-        C = similar(B)
+        A = randn(Float64,20,22)
+        B = randn(ComplexF64,22,24)
+        C = similar(B,20,24)
         @test all((C .= Mul(A,B)  ) .=== copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)) .=== A*B)
     end
 
