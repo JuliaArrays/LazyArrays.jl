@@ -32,6 +32,10 @@ import Base.Broadcast: materialize
                         (similar(b) .= Ldiv(transpose(UpperTriangular(A)),b)) .===
                 BLAS.trsv('U', 'T', 'N', A, b))
 
+    b = randn(5) + im*randn(5)
+    @test Inv(A) * b ≈ Matrix(A) \ b
+
+
     T = ComplexF64
     A = randn(T,5,5)
     b = randn(T,5)
@@ -54,4 +58,7 @@ import Base.Broadcast: materialize
     @test all(copyto!(similar(b), Ldiv(transpose(UpperTriangular(A)) , b)) .===
                         (similar(b) .= Ldiv(transpose(UpperTriangular(A)),b)) .===
                 BLAS.trsv('U', 'T', 'N', A, b))
+
+    b = randn(5)
+    @test Inv(A) * b ≈ A \ b
 end

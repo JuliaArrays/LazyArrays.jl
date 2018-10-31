@@ -78,6 +78,12 @@ broadcastable(M::MatLdivVec) = M
 # Triangular
 ###
 
+function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray{<:TriangularLayout})
+    Ai, B = M.factors
+    dest .= B
+    ldiv!(inv(Ai), dest)
+end
+
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
