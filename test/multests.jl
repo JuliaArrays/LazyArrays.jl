@@ -630,4 +630,14 @@ import Base.Broadcast: materialize, materialize!
         blasnoalloc(c, 2.0, Ac, x, 3.0, y)
         @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
     end
+
+    @testset "3-argument mul" begin
+        A = randn(5,5)
+        B = materialize(Mul(A,A,A))
+        @test B isa Matrix{Float64}
+        @test all(B .=== (A*A)*A)
+
+        @test all((Mul(A,A) * A).factors .== (A * Mul(A,A)).factors .== (Mul(A) * Mul(A,A)).factors .== [A,A,A])
+        @test all((Mul(A,A) * Mul(A,A)).factors .== [A,A,A,A])
+    end
 end

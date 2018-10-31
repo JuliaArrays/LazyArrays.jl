@@ -29,6 +29,21 @@ axes(M::Mul) = _mul_axes(axes(first(M.factors),1), axes(last(M.factors)))
 similar(M::Mul) = similar(M, eltype(M))
 
 
+# default is to stay Lazy
+materialize(M::Mul2) = M
+
+
+_materialize2(A...) = _materialize(A...)
+_materialize2(A::Mul, B...) = A * _materialize(B...)
+_materialize(A) = materialize(A)
+_materialize(A, B) = materialize(Mul(A,B))
+_materialize(A, B, C, D...) = _materialize2(materialize(Mul(A,B)), C, D...)
+materialize(M::Mul) = _materialize(M.factors...)
+
+*(A::Mul, B::Mul) = Mul(A.factors..., B.factors...)
+*(A::Mul, B) = Mul(A.factors..., B)
+*(A, B::Mul) = Mul(A, B.factors...)
+
 
 ####
 # Matrix * Array
