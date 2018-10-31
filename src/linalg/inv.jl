@@ -11,6 +11,14 @@ inv(A::Inv) = A.A
 eltype(::Inv{<:Any,Typ}) where Typ = eltype(Typ)
 eltype(::Type{<:Inv{<:Any,Typ}}) where Typ = eltype(Typ)
 
+parent(A::Inv) = A.A
+
+size(A::Inv) = reverse(size(parent(A)))
+axes(A::Inv) = reverse(axes(parent(A)))
+size(A::Inv,k) = size(A)[k]
+axes(A::Inv,k) = axes(A)[k]
+
+
 struct InverseLayout{ML} <: MemoryLayout
     layout::ML
 end
@@ -38,8 +46,18 @@ macro lazyldiv(Typ)
         LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = (x .= LazyArrays.Ldiv(A,x))
         LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = (x .= LazyArrays.Ldiv(A,x))
         LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = (x .= LazyArrays.Ldiv(A,x))
+
+        Base.:\(A::$Typ, x::AbstractVector) = Inv(A) * x
+        Base.:\(A::$Typ, x::AbstractMatrix) = Inv(A) * x
     end)
 end
+
+*(A::Inv, B) = materialize(Mul(A,B))
+
+similar(A::Inv, ::Type{T}) where T = Array{T}(undef, size(A))
+similar(M::ArrayLdivArray, ::Type{T}) where T = Array{T}(undef, size(M))
+
+materialize(M::ArrayLdivArray) = copyto!(similar(M), M)
 
 @inline function _copyto!(_, dest::AbstractArray, bc::BArrayLdivArray)
     (M,) = bc.args

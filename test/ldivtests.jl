@@ -1,17 +1,27 @@
 using LazyArrays, LinearAlgebra,  Test
 import LazyArrays: ArrayLdivArrayStyle
+import Base.Broadcast: materialize
+
 @testset "Ldiv" begin
     A = randn(5,5)
     b = randn(5)
+    M = Mul(Inv(A),b)
+
+    @test size(M) == (5,)
+    @test similar(M) isa Vector{Float64}
+    @test materialize(M) isa Vector{Float64}
+    @test all(materialize(M) .=== (A\b))
+
     @test Base.BroadcastStyle(typeof(Ldiv(A,b))) isa ArrayLdivArrayStyle
     @test all(copyto!(similar(b), Ldiv(A,b)) .===
-                (similar(b) .= Ldiv(A,b)) .===
+                (similar(b) .= Ldiv(A,b)) .=== Inv(A) * b .===
+                materialize(Ldiv(A,b)) .===
               (A\b) .=== (b̃ =  copy(b); LAPACK.gesv!(copy(A), b̃); b̃))
 
 
     @test copyto!(similar(b), Ldiv(UpperTriangular(A) , b)) ≈ UpperTriangular(A) \ b
     @test all(copyto!(similar(b), Ldiv(UpperTriangular(A) , b)) .===
-                (similar(b) .= Ldiv(UpperTriangular(A),b)) .===
+                (similar(b) .= Ldiv(UpperTriangular(A),b)) .=== Inv(UpperTriangular(A))*b .===
                 BLAS.trsv('U', 'N', 'N', A, b) )
 
 
@@ -43,5 +53,5 @@ import LazyArrays: ArrayLdivArrayStyle
     @test copyto!(similar(b), Ldiv(transpose(UpperTriangular(A)) , b)) ≈ transpose(UpperTriangular(A)) \ b
     @test all(copyto!(similar(b), Ldiv(transpose(UpperTriangular(A)) , b)) .===
                         (similar(b) .= Ldiv(transpose(UpperTriangular(A)),b)) .===
-                BLAS.trsv('U', 'T', 'N', A, b))                
+                BLAS.trsv('U', 'T', 'N', A, b))
 end
