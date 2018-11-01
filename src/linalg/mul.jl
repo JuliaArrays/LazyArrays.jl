@@ -11,6 +11,7 @@ represents lazy multiplication A1*A2*…*AN. The factors must have compatible ax
 """
 Mul(A...) = Mul(MemoryLayout.(A), A)
 
+
 const Mul2{StyleA, StyleB, AType, BType} = Mul{<:Tuple{StyleA,StyleB}, <:Tuple{AType,BType}}
 
 _mul_eltype(a) = eltype(a)
@@ -33,12 +34,12 @@ similar(M::Mul) = similar(M, eltype(M))
 materialize(M::Mul2) = M
 
 
-_flatten_materialize(A...) = _materialize(A...)
-
-_materialize_if_changed(::S, A, B::S, C...) where S = A * Mul(B, C...)
+_materialize_if_changed(::S, A, B::S, C...) where S = Mul(A, B, C...)
+_materialize_if_changed(::S, A::Mul, B::S, C...) where S = Mul(A.factors..., B, C...)
 _materialize_if_changed(_, A, B, C...) = _materialize(A, B, C...)
 _materialize_if_changed(B_old, A, M::Mul) = _materialize_if_changed(B_old, A, M.factors...)
 
+_flatten_materialize(A...) = _materialize(A...)
 function _flatten_materialize(A::Mul, B...)
     tl = tail(A.factors)
     _materialize_if_changed(first(tl), first(A.factors), _materialize(tl..., B...))
@@ -49,9 +50,9 @@ _materialize(A, B) = materialize(Mul(A,B))
 _materialize(A, B, C, D...) = _flatten_materialize(materialize(Mul(A,B)), C, D...)
 materialize(M::Mul) = _materialize(M.factors...)
 
-*(A::Mul, B::Mul) = Mul(A.factors..., B.factors...)
-*(A::Mul, B) = Mul(A.factors..., B)
-*(A, B::Mul) = Mul(A, B.factors...)
+*(A::Mul, B::Mul) = materialize(Mul(A.factors..., B.factors...))
+*(A::Mul, B) = materialize(Mul(A.factors..., B))
+*(A, B::Mul) = materialize(Mul(A, B.factors...))
 
 
 ####
