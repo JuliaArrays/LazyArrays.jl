@@ -33,11 +33,20 @@ similar(M::Mul) = similar(M, eltype(M))
 materialize(M::Mul2) = M
 
 
-_materialize2(A...) = _materialize(A...)
-_materialize2(A::Mul, B...) = A * _materialize(B...)
+_flatten_materialize(A...) = _materialize(A...)
+
+_materialize_if_changed(::S, A, B::S, C...) where S = A * Mul(B, C...)
+_materialize_if_changed(_, A, B, C...) = _materialize(A, B, C...)
+_materialize_if_changed(B_old, A, M::Mul) = _materialize_if_changed(B_old, A, M.factors...)
+
+function _flatten_materialize(A::Mul, B...)
+    tl = tail(A.factors)
+    _materialize_if_changed(first(tl), first(A.factors), _materialize(tl..., B...))
+end
+
 _materialize(A) = materialize(A)
 _materialize(A, B) = materialize(Mul(A,B))
-_materialize(A, B, C, D...) = _materialize2(materialize(Mul(A,B)), C, D...)
+_materialize(A, B, C, D...) = _flatten_materialize(materialize(Mul(A,B)), C, D...)
 materialize(M::Mul) = _materialize(M.factors...)
 
 *(A::Mul, B::Mul) = Mul(A.factors..., B.factors...)

@@ -18,9 +18,14 @@ macro lazymul(Typ)
         Base.:*(A::$Typ, B::AbstractMatrix) = LazyArrays.materialize(LazyArrays.Mul(A,B))
         Base.:*(A::$Typ, B::AbstractVector) = LazyArrays.materialize(LazyArrays.Mul(A,B))
         Base.:*(A::AbstractMatrix, B::$Typ) = LazyArrays.materialize(LazyArrays.Mul(A,B))
+    end
+    for Struc in (:AbstractTriangular, :Diagonal)
+        ret = quote
+            $ret
 
-        Base.:*(A::AbstractTriangular, B::$Typ) = LazyArrays.materialize(LazyArrays.Mul(A,B))
-        Base.:*(A::$Typ, B::AbstractTriangular) = LazyArrays.materialize(LazyArrays.Mul(A,B))
+            Base.:*(A::$Struc, B::$Typ) = LazyArrays.materialize(LazyArrays.Mul(A,B))
+            Base.:*(A::$Typ, B::$Struc) = LazyArrays.materialize(LazyArrays.Mul(A,B))
+        end
     end
     for Mod in (:Adjoint, :Transpose, :Symmetric, :Hermitian)
         ret = quote

@@ -414,3 +414,11 @@ triangulardata(A::Adjoint) = Adjoint(triangulardata(parent(A)))
 triangulardata(A::Transpose) = Transpose(triangulardata(parent(A)))
 triangulardata(A::SubArray{<:Any,2,<:Any,<:Tuple{<:Union{Slice,Base.OneTo},<:Union{Slice,Base.OneTo}}}) =
     view(triangulardata(parent(A)), parentindices(A)...)
+
+
+struct DiagonalLayout{ML} <: MemoryLayout
+    layout::ML
+end
+
+MemoryLayout(D::Diagonal) = DiagonalLayout(MemoryLayout(parent(D)))
+diagonaldata(D::Diagonal) = parent(D)

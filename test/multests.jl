@@ -1,5 +1,5 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: MulAdd
+import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout
 import Base.Broadcast: materialize, materialize!
 
 @testset "Mul" begin
@@ -639,5 +639,12 @@ import Base.Broadcast: materialize, materialize!
 
         @test all((Mul(A,A) * A).factors .== (A * Mul(A,A)).factors .== (Mul(A) * Mul(A,A)).factors .== [A,A,A])
         @test all((Mul(A,A) * Mul(A,A)).factors .== [A,A,A,A])
+    end
+
+    @testset "Diagonal" begin
+        A = randn(5,5)
+        B = Diagonal(randn(5))
+        @test MemoryLayout(B) == DiagonalLayout(DenseColumnMajor())
+        @test materialize(Mul(A,B)) == A*B
     end
 end
