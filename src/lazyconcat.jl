@@ -242,6 +242,9 @@ function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
     _Vcat(broadcast((a,b) -> broadcast(op,a,b), A.arrays, B_arrays))
 end
 
+
+
+
 function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
     kr = _vcat_axes(axes.(B.arrays)...)
     A_arrays = _vcat_getindex_eval(A,kr...)
@@ -267,18 +270,49 @@ function +(A::AbstractArray, B::Vcat)
 end
 
 ######
-# PaddedArrays
+# Special Vcat broadcasts
+#
+# We use Vcat for infinite padded vectors, so we need to special case
+# two arrays. This may be generalisable in the future
 ######
 
-# this is a special override that may be generalisable
-# we do this to avoid complicated types
-broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any, 1, <:Tuple{<:Number, <:AbstractVector}},
-                                     B::Vcat{<:Any, 1, <:Tuple{<:Number, <:AbstractVector}}) =
-     Vcat(op(A.arrays[1], B.arrays[1]), op.(A.arrays[2], B.arrays[2]))
+function _vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:AbstractVector,<:AbstractFill},
+                               (Bhead, Btail)::Tuple{<:AbstractVector,<:AbstractFill}) where T
+    if length(Ahead) ≥ length(Bhead)
+        M,m = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
+        view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
 
-broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any, 1, <:Tuple{<:SVector{M}, <:AbstractVector}},
-                                     B::Vcat{<:Any, 1, <:Tuple{<:SVector{M}, <:AbstractVector}}) where M =
-  Vcat(op.(A.arrays[1], B.arrays[1]), op.(A.arrays[2], B.arrays[2]))
+        Ctail = op.(Atail, Btail[M-m+1:end])
+    else
+        m,M = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
+        view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
+
+        Ctail = op.(Atail[M-m+1:end], Btail)
+    end
+
+    _Vcat((Chead, Ctail))
+end
+
+_vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:Number,<:AbstractFill},
+                           (Bhead, Btail)::Tuple{<:Number,<:AbstractFill}) where {M,T} =
+   _Vcat((op.(Ahead,Bhead), op.(Atail,Btail)))
+
+_vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:SVector{M},<:AbstractFill},
+                           (Bhead, Btail)::Tuple{<:SVector{M},<:AbstractFill}) where {M,T} =
+   _Vcat((op.(Ahead,Bhead), op.(Atail,Btail)))
+
+# default is BroadcastArray
+_vcat_broadcasted(::Type{T}, op, A, B) where T =
+    BroadcastArray(Broadcasted{LazyArrayStyle}(op, (_Vcat(A), _Vcat(B))))
+
+
+broadcasted(::LazyArrayStyle{1}, op, A::Vcat{T, 1, <:Tuple{<:Any,<:Any}},
+                                     B::Vcat{V, 1, <:Tuple{<:Any,<:Any}}) where {T,V} =
+  _vcat_broadcasted(promote_type(T,V), op, A.arrays, B.arrays)
 
 
 
