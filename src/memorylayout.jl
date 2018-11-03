@@ -433,8 +433,8 @@ MemoryLayout(D::SymTridiagonal) = SymTridiagonalLayout(MemoryLayout(D.dv))
 diagonaldata(D::SymTridiagonal) = D.dv
 offdiagonaldata(D::SymTridiagonal) = D.ev
 
-transposelayout(ml::Diagonal) = ml
-transposelayout(ml::SymTridiagonal{<:Real}) = ml
+transposelayout(ml::DiagonalLayout) = ml
+transposelayout(ml::SymTridiagonalLayout) = ml
 
-transposelayout(ml::Diagonal) = ml
-transposelayout(ml::SymTridiagonal{<:Real}) = ml
+adjointlayout(_, ml::DiagonalLayout) = ml
+adjointlayout(::Type{<:Real}, ml::SymTridiagonal) = ml
