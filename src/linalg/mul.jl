@@ -23,6 +23,7 @@ axes(M::Mul, p::Int) = axes(M)[p]
 length(M::Mul) = prod(size(M))
 size(M::Mul) = length.(axes(M))
 
+_mul_axes(ax1, ::Tuple{}) = (ax1,)
 _mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)
 _mul_axes(ax1, (_,ax2)::Tuple{<:Any,<:Any}) = (ax1,ax2)
 axes(M::Mul) = _mul_axes(axes(first(M.factors),1), axes(last(M.factors)))

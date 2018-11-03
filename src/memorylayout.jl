@@ -416,9 +416,25 @@ triangulardata(A::SubArray{<:Any,2,<:Any,<:Tuple{<:Union{Slice,Base.OneTo},<:Uni
     view(triangulardata(parent(A)), parentindices(A)...)
 
 
-struct DiagonalLayout{ML} <: MemoryLayout
+abstract type AbstractBandedLayout <: MemoryLayout end
+
+struct DiagonalLayout{ML} <: AbstractBandedLayout
+    layout::ML
+end
+
+struct SymTridiagonalLayout{ML} <: AbstractBandedLayout
     layout::ML
 end
 
 MemoryLayout(D::Diagonal) = DiagonalLayout(MemoryLayout(parent(D)))
 diagonaldata(D::Diagonal) = parent(D)
+
+MemoryLayout(D::SymTridiagonal) = SymTridiagonalLayout(MemoryLayout(D.dv))
+diagonaldata(D::SymTridiagonal) = D.dv
+offdiagonaldata(D::SymTridiagonal) = D.ev
+
+transposelayout(ml::Diagonal) = ml
+transposelayout(ml::SymTridiagonal{<:Real}) = ml
+
+transposelayout(ml::Diagonal) = ml
+transposelayout(ml::SymTridiagonal{<:Real}) = ml

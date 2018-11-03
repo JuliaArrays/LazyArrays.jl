@@ -1,5 +1,5 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout
+import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout
 import Base.Broadcast: materialize, materialize!
 
 @testset "Mul" begin
@@ -631,20 +631,25 @@ import Base.Broadcast: materialize, materialize!
         @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
     end
 
-    @testset "3-argument mul" begin
+    @testset "multi-argument mul" begin
         A = randn(5,5)
         B = materialize(Mul(A,A,A))
         @test B isa Matrix{Float64}
         @test all(B .=== (A*A)*A)
 
-        @test all((Mul(A,A) * A).factors .== (A * Mul(A,A)).factors .== (Mul(A) * Mul(A,A)).factors .== [A,A,A])
-        @test all((Mul(A,A) * Mul(A,A)).factors .== [A,A,A,A])
+        @test Mul(A,A) * A ≈ A * Mul(A,A) ≈ Mul(A) * Mul(A,A) ≈ A^3
+        @test Mul(A,A) * Mul(A,A) ≈ Mul(A) * Mul(A,A,A) ≈ A^4
     end
 
-    @testset "Diagonal" begin
+    @testset "Diagonal and SymTridiagonal" begin
         A = randn(5,5)
         B = Diagonal(randn(5))
         @test MemoryLayout(B) == DiagonalLayout(DenseColumnMajor())
+        @test materialize(Mul(A,B)) == A*B
+
+        A = randn(5,5)
+        B = SymTridiagonal(randn(5),randn(4))
+        @test MemoryLayout(B) == SymTridiagonalLayout(DenseColumnMajor())
         @test materialize(Mul(A,B)) == A*B
     end
 end
