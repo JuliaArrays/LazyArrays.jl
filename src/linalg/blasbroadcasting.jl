@@ -17,34 +17,34 @@ struct ArrayMulArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
 const BArrayMulArray{styleA, styleB, p, q, T, V} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
                 <:Tuple{<:ArrayMulArray{styleA,styleB,p,q,T,V}}}
-const BConstArrayMulArray{T, styleA, styleB, p, q} =
+const BConstArrayMulArray{styleA, styleB, p, q, T, U, V} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                     <:Any, typeof(*),
-                    <:Tuple{T,<:ArrayMulArray{styleA,styleB,p,q,T,T}}}
-const BArrayMulArrayPlusArray{T, styleA, styleB, p, q} =
+                    <:Tuple{T,<:ArrayMulArray{styleA,styleB,p,q,U,V}}}
+const BArrayMulArrayPlusArray{styleA, styleB, p, q, T, U, V} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
-                <:Tuple{<:ArrayMulArray{styleA,styleB,p,q,T,T},<:AbstractArray{T,q}}}
-const BArrayMulArrayPlusConstArray{T, styleA, styleB, p, q} =
+                <:Tuple{<:ArrayMulArray{styleA,styleB,p,q,T,U},<:AbstractArray{V,q}}}
+const BArrayMulArrayPlusConstArray{styleA, styleB, p, q, T, U, V, W} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
-                <:Tuple{<:ArrayMulArray{styleA,styleB,p,q,T,T},
+                <:Tuple{<:ArrayMulArray{styleA,styleB,p,q,T,U},
                 Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),
-                            <:Tuple{T,<:AbstractArray{T,q}}}}}
-const BConstArrayMulArrayPlusArray{T, styleA, styleB, p, q} =
+                            <:Tuple{V,<:AbstractArray{W,q}}}}}
+const BConstArrayMulArrayPlusArray{styleA, styleB, p, q, T, U, V, W} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
                 <:Tuple{Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
                                     <:Any, typeof(*),
-                                    <:Tuple{T,<:ArrayMulArray{styleA,styleB,p,q,T,T}}},
-                        <:AbstractArray{T,q}}}
-const BConstArrayMulArrayPlusConstArray{T, styleA, styleB, p, q} =
+                                    <:Tuple{T,<:ArrayMulArray{styleA,styleB,p,q,U,V}}},
+                        <:AbstractArray{W,q}}}
+const BConstArrayMulArrayPlusConstArray{styleA, styleB, p, q, T, U, V, W, X} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
                 <:Tuple{Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
                                     <:Any, typeof(*),
-                                    <:Tuple{T,<:ArrayMulArray{styleA,styleB,p,q,T,T}}},
-                        Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),<:Tuple{T,<:AbstractArray{T,q}}}}}
+                                    <:Tuple{T,<:ArrayMulArray{styleA,styleB,p,q,U,V}}},
+                        Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),<:Tuple{W,<:AbstractArray{X,q}}}}}
 
 
 BroadcastStyle(::Type{<:ArrayMulArray{StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} =
