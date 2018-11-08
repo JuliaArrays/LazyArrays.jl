@@ -52,7 +52,7 @@ BroadcastStyle(::Type{<:ArrayMulArray{StyleA,StyleB,p,q}}) where {StyleA,StyleB,
 BroadcastStyle(M::ArrayMulArrayStyle, ::DefaultArrayStyle) = M
 BroadcastStyle(::DefaultArrayStyle, M::ArrayMulArrayStyle) = M
 similar(M::Broadcasted{<:ArrayMulArrayStyle}, ::Type{ElType}) where ElType =
-    Array{Eltype}(undef,size(M.args[1]))
+    Array{ElType}(undef,size(M.args[1]))
 
 
 

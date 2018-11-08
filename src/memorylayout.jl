@@ -414,3 +414,27 @@ triangulardata(A::Adjoint) = Adjoint(triangulardata(parent(A)))
 triangulardata(A::Transpose) = Transpose(triangulardata(parent(A)))
 triangulardata(A::SubArray{<:Any,2,<:Any,<:Tuple{<:Union{Slice,Base.OneTo},<:Union{Slice,Base.OneTo}}}) =
     view(triangulardata(parent(A)), parentindices(A)...)
+
+
+abstract type AbstractBandedLayout <: MemoryLayout end
+
+struct DiagonalLayout{ML} <: AbstractBandedLayout
+    layout::ML
+end
+
+struct SymTridiagonalLayout{ML} <: AbstractBandedLayout
+    layout::ML
+end
+
+MemoryLayout(D::Diagonal) = DiagonalLayout(MemoryLayout(parent(D)))
+diagonaldata(D::Diagonal) = parent(D)
+
+MemoryLayout(D::SymTridiagonal) = SymTridiagonalLayout(MemoryLayout(D.dv))
+diagonaldata(D::SymTridiagonal) = D.dv
+offdiagonaldata(D::SymTridiagonal) = D.ev
+
+transposelayout(ml::DiagonalLayout) = ml
+transposelayout(ml::SymTridiagonalLayout) = ml
+
+adjointlayout(_, ml::DiagonalLayout) = ml
+adjointlayout(::Type{<:Real}, ml::SymTridiagonal) = ml

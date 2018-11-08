@@ -4,9 +4,8 @@ import LinearAlgebra.BLAS
 
 import Base: ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
              RangeIndex, BroadcastStyle, copyto!, length, broadcastable, axes,
-             getindex, eltype, tail, IndexStyle, IndexLinear
-
-import Base: *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
+             getindex, eltype, tail, IndexStyle, IndexLinear,
+             *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
          fld, cld, div, min, max, minimum, maximum, mod,
          <, ≤, >, ≥, promote_rule, convert, copy,
          size, step, isempty, length, first, last,
