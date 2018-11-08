@@ -24,8 +24,14 @@ Inv(A) = Inv(MemoryLayout(A), A)
 
 
 pinv(A::PInv) = A.A
+function inv(A::PInv)
+    checksquare(A.A)
+    A.A
+end
+
 inv(A::Inv) = A.A
 pinv(A::Inv) = inv(A)
+
 
 parent(A::AbstractPInv) = A.A
 

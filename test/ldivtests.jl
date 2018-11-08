@@ -75,4 +75,12 @@ import Base.Broadcast: materialize
         @test PInv(A) * b == (A\b)
         @test all(b .=== b_orig)
     end
+
+    @testset "inv and pinv"  begin
+        A = randn(5,5)
+        @test inv(Inv(A)) === inv(PInv(A)) === pinv(Inv(A)) === pinv(PInv(A)) === A
+        A = randn(5,3)
+        @test_throws DimensionMismatch inv(PInv(A))
+        @test pinv(PInv(A)) === A
+    end
 end

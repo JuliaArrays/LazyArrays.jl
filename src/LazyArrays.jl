@@ -30,7 +30,7 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!
 
-import LinearAlgebra: AbstractTriangular, checksquare
+import LinearAlgebra: AbstractTriangular, checksquare, pinv
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
