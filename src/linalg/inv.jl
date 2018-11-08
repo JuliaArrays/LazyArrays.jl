@@ -1,35 +1,60 @@
+abstract type AbstractPInv{Style, Typ} end
 
+eltype(::AbstractPInv{<:Any,Typ}) where Typ = eltype(Typ)
+eltype(::Type{<:AbstractPInv{<:Any,Typ}}) where Typ = eltype(Typ)
 
-struct Inv{Style, Typ}
+struct PInv{Style, Typ} <: AbstractPInv{Style, Typ}
     style::Style
     A::Typ
 end
+struct Inv{Style, Typ} <: AbstractPInv{Style, Typ}
+    style::Style
+    A::Typ
+    function Inv{Style,Typ}(style::Style, A::Typ) where {Style,Typ}
+        checksquare(A)
+        new{Style,Typ}(style,A)
+    end
+end
 
+Inv(style::Style, A::Typ) where {Style,Typ} = Inv{Style,Typ}(style, A)
+
+PInv(A) = PInv(MemoryLayout(A), A)
 Inv(A) = Inv(MemoryLayout(A), A)
+
+
+
+pinv(A::PInv) = A.A
 inv(A::Inv) = A.A
+pinv(A::Inv) = inv(A)
 
-eltype(::Inv{<:Any,Typ}) where Typ = eltype(Typ)
-eltype(::Type{<:Inv{<:Any,Typ}}) where Typ = eltype(Typ)
-
-parent(A::Inv) = A.A
-
-size(A::Inv) = reverse(size(parent(A)))
-axes(A::Inv) = reverse(axes(parent(A)))
-size(A::Inv,k) = size(A)[k]
-axes(A::Inv,k) = axes(A)[k]
+parent(A::AbstractPInv) = A.A
 
 
-struct InverseLayout{ML} <: MemoryLayout
+size(A::AbstractPInv) = reverse(size(parent(A)))
+axes(A::AbstractPInv) = reverse(axes(parent(A)))
+size(A::AbstractPInv, k) = size(A)[k]
+axes(A::AbstractPInv, k) = axes(A)[k]
+
+
+abstract type AbstractPInverseLayout{ML} <: MemoryLayout end
+
+# struct InverseLayout{ML} <: AbstractPInverseLayout{ML}
+#     layout::ML
+# end
+
+struct PInverseLayout{ML} <: AbstractPInverseLayout{ML}
     layout::ML
 end
-MemoryLayout(Ai::Inv) = InverseLayout(MemoryLayout(Ai.A))
+
+MemoryLayout(Ai::AbstractPInv) = PInverseLayout(MemoryLayout(Ai.A))
 
 
 const Ldiv{StyleA, StyleB, AType, BType} =
-    Mul2{<:InverseLayout{StyleA}, StyleB, <:Inv{StyleA,AType}, BType}
+    Mul2{<:AbstractPInverseLayout{StyleA}, StyleB, <:AbstractPInv{StyleA,AType}, BType}
 const ArrayLdivArray{styleA, styleB, p, q, T, V} =
     Ldiv{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
-const ArrayLdivArrayStyle{StyleA,StyleB,p,q} = ArrayMulArrayStyle{InverseLayout{StyleA}, StyleB, p, q}
+const ArrayLdivArrayStyle{StyleA,StyleB,p,q} =
+    ArrayMulArrayStyle{PInverseLayout{StyleA}, StyleB, p, q}
 const BArrayLdivArray{styleA, styleB, p, q, T, V} =
     Broadcasted{ArrayLdivArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
                 <:Tuple{<:ArrayLdivArray{styleA,styleB,p,q,T,V}}}
@@ -38,7 +63,7 @@ const BArrayLdivArray{styleA, styleB, p, q, T, V} =
 BroadcastStyle(::Type{<:ArrayLdivArray{StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} =
     ArrayLdivArrayStyle{StyleA,StyleB,p,q}()
 
-Ldiv(A, B) = Mul(Inv(A), B)
+Ldiv(A, B) = Mul(PInv(A), B)
 
 macro lazyldiv(Typ)
     esc(quote
@@ -47,14 +72,14 @@ macro lazyldiv(Typ)
         LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = (x .= LazyArrays.Ldiv(A,x))
         LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = (x .= LazyArrays.Ldiv(A,x))
 
-        Base.:\(A::$Typ, x::AbstractVector) = Inv(A) * x
-        Base.:\(A::$Typ, x::AbstractMatrix) = Inv(A) * x
+        Base.:\(A::$Typ, x::AbstractVector) = PInv(A) * x
+        Base.:\(A::$Typ, x::AbstractMatrix) = PInv(A) * x
     end)
 end
 
-*(A::Inv, B) = materialize(Mul(A,B))
+*(A::AbstractPInv, B) = materialize(Mul(A,B))
 
-similar(A::Inv, ::Type{T}) where T = Array{T}(undef, size(A))
+similar(A::AbstractPInv, ::Type{T}) where T = Array{T}(undef, size(A))
 similar(M::ArrayLdivArray, ::Type{T}) where T = Array{T}(undef, size(M))
 
 materialize(M::ArrayLdivArray) = copyto!(similar(M), M)
@@ -64,9 +89,16 @@ materialize(M::ArrayLdivArray) = copyto!(similar(M), M)
     copyto!(dest, M)
 end
 
-function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray)
-    Ai, B = M.factors
-    ldiv!(dest, factorize(inv(Ai)), B)
+if VERSION ≥ v"1.1-pre"
+    function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray)
+        Ai, B = M.factors
+        ldiv!(dest, factorize(pinv(Ai)), B)
+    end
+else
+    function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray)
+        Ai, B = M.factors
+        ldiv!(dest, factorize(pinv(Ai)), copy(B))
+    end
 end
 
 const MatLdivVec{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, 2, 1, T, V}
@@ -81,7 +113,7 @@ broadcastable(M::MatLdivVec) = M
 function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray{<:TriangularLayout})
     Ai, B = M.factors
     dest .= B
-    ldiv!(inv(Ai), dest)
+    ldiv!(pinv(Ai), dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
@@ -89,7 +121,7 @@ end
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
     Ai,B = M.factors
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(inv(Ai)), dest)
+    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(pinv(Ai)), dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
@@ -97,7 +129,7 @@ end
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
     Ai,B = M.factors
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(inv(Ai))), dest)
+    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(pinv(Ai))), dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
@@ -105,7 +137,7 @@ end
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
     Ai,B = M.factors
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(inv(Ai))), dest)
+    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(pinv(Ai))), dest)
 end
 
 
@@ -114,7 +146,7 @@ end
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
     Ai,B = M.factors
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('L', 'C', UNIT, triangulardata(inv(Ai))', dest)
+    BLAS.trsv!('L', 'C', UNIT, triangulardata(pinv(Ai))', dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
@@ -122,5 +154,5 @@ end
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
     Ai,B = M.factors
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('U', 'C', UNIT, triangulardata(inv(Ai))', dest)
+    BLAS.trsv!('U', 'C', UNIT, triangulardata(pinv(Ai))', dest)
 end

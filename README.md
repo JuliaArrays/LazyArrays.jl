@@ -129,12 +129,12 @@ julia> @btime 2*(A*b) + 3c; # does not call gemv!
 
 ## Inverses
 
-We also have lazy inverses `Inv(A)`, designed to work alongside `Mul` to
+We also have lazy inverses `PInv(A)`, designed to work alongside `Mul` to
  to lower to BLAS calls whenever possible:
 ```julia
 julia> A = randn(5,5); b = randn(5); c = similar(b);
 
-julia> c .= Mul(Inv(A), b)
+julia> c .= Mul(PInv(A), b)
 5-element Array{Float64,1}:
  -2.5366335879717514
  -5.305097174484744  

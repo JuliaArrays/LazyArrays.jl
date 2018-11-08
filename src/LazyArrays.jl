@@ -30,7 +30,7 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!
 
-import LinearAlgebra: AbstractTriangular
+import LinearAlgebra: AbstractTriangular, checksquare
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
@@ -38,7 +38,7 @@ import FillArrays: AbstractFill
 
 import StaticArrays: StaticArrayStyle
 
-export Mul, Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, Diff, Cumsum
+export Mul, Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum
 
 include("memorylayout.jl")
 include("cache.jl")
