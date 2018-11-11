@@ -1,10 +1,11 @@
-using LazyArrays
+using LazyArrays, LinearAlgebra, FillArrays, Test
     import LazyArrays: MemoryLayout, DenseRowMajor, DenseColumnMajor, StridedLayout,
                             ConjLayout, RowMajor, ColumnMajor, UnknownLayout,
                             SymmetricLayout, HermitianLayout, UpperTriangularLayout,
                             UnitUpperTriangularLayout, LowerTriangularLayout,
                             UnitLowerTriangularLayout, ScalarLayout,
-                            hermitiandata, symmetricdata
+                            hermitiandata, symmetricdata, FillLayout, ZerosLayout,
+                            VcatLayout
 
 struct FooBar end
 struct FooNumber <: Number end
@@ -131,6 +132,14 @@ struct FooNumber <: Number end
             @test MemoryLayout(TriType(B)') == TriLayoutTrans(ConjLayout(DenseRowMajor()))
         end
 
-        @test LazyArrays.MemoryLayout(UpperTriangular(B)') == LazyArrays.MemoryLayout(LowerTriangular(B'))
+        @test MemoryLayout(UpperTriangular(B)') == MemoryLayout(LowerTriangular(B'))
+    end
+
+    @testset "Fill and Vcat" begin
+        @test MemoryLayout(Fill(1,10)) == FillLayout()
+        @test MemoryLayout(Ones(10)) == FillLayout()
+        @test MemoryLayout(Zeros(10)) == ZerosLayout()
+        @test MemoryLayout(Vcat(Ones(10),Zeros(10))) == VcatLayout((FillLayout(), ZerosLayout()))
+        @test MemoryLayout(Vcat([1.],Zeros(10))) == VcatLayout((DenseColumnMajor(), ZerosLayout()))
     end
 end

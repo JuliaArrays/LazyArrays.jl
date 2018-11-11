@@ -64,7 +64,8 @@ const ArrayMulArray{styleA, styleB, p, q, T, V} =
     Mul2{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 
 # the default is always Array
-similar(M::ArrayMulArray, ::Type{T}) where T = Array{T}(undef, size(M))
+similar(M::ArrayMulArray, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
+similar(M::ArrayMulArray, ::Type{T}) where T = similar(M, T, axes(M))
 materialize(M::ArrayMulArray) = copyto!(similar(M), M)
 
 @inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)

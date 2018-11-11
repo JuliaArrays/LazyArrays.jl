@@ -27,6 +27,12 @@ size(f::Vcat{<:Any,2}) = (+(map(a -> size(a,1), f.arrays)...), size(f.arrays[1],
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
+struct VcatLayout{Lays} <: MemoryLayout
+    layouts::Lays
+end
+
+MemoryLayout(V::Vcat) = VcatLayout(MemoryLayout.(V.arrays))
+
 @propagate_inbounds @inline function getindex(f::Vcat{T,1}, k::Integer) where T
     κ = k
     for A in f.arrays

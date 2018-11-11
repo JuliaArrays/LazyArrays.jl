@@ -438,3 +438,14 @@ transposelayout(ml::SymTridiagonalLayout) = ml
 
 adjointlayout(_, ml::DiagonalLayout) = ml
 adjointlayout(::Type{<:Real}, ml::SymTridiagonal) = ml
+
+
+###
+# Fill
+####
+abstract type AbstractFillLayout <: MemoryLayout end
+struct FillLayout <: AbstractFillLayout end
+struct ZerosLayout <: AbstractFillLayout end
+
+MemoryLayout(::AbstractFill) = FillLayout()
+MemoryLayout(::Zeros) = ZerosLayout()
