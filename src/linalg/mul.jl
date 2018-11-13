@@ -35,21 +35,24 @@ similar(M::Mul) = similar(M, eltype(M))
 materialize(M::Mul2) = M
 
 
-_materialize_if_changed(::S, A, B::S, C...) where S = Mul(A, B, C...)
-_materialize_if_changed(::S, A::Mul, B::S, C...) where S = Mul(A.factors..., B, C...)
-_materialize_if_changed(_, A, B, C...) = _materialize(A, B, C...)
-_materialize_if_changed(B_old, A, M::Mul) = _materialize_if_changed(B_old, A, M.factors...)
+# re-materialize if the mul actually changed the type of Y, otherwise leave as a Mul
+_materialize_if_changed(::S, Z, Y::S, X...) where S = Mul(reverse(X)..., Y, Z)
+_materialize_if_changed(::S, Z::Mul, Y::S, X...) where S = Mul(reverse(X)..., Y, Z.factors...)
+_materialize_if_changed(_, Z, Y, X...) = _materialize(Z, Y, X...)
+_materialize_if_changed(Y_old, Z, Y_new::Mul) = _materialize_if_changed(Y_old, Z, reverse(Y_new.factors)...)
 
+# materialize but get rid of Muls
 _flatten_materialize(A...) = _materialize(A...)
-function _flatten_materialize(A::Mul, B...)
-    tl = tail(A.factors)
-    _materialize_if_changed(first(tl), first(A.factors), _materialize(tl..., B...))
+function _flatten_materialize(Z::Mul, Y...)
+    tl = tail(reverse(Z.factors))
+    _materialize_if_changed(first(tl), last(Z.factors), _materialize(tl..., Y...))
 end
 
-_materialize(A) = materialize(A)
-_materialize(A, B) = materialize(Mul(A,B))
-_materialize(A, B, C, D...) = _flatten_materialize(materialize(Mul(A,B)), C, D...)
-materialize(M::Mul) = _materialize(M.factors...)
+# repeatedly try to materialize two terms at a time
+_materialize(Z) = materialize(Z)
+_materialize(Z,Y) = Y*Z
+_materialize(Z, Y, X, W...) = _flatten_materialize(Y*Z, X, W...)
+materialize(M::Mul) = _materialize(reverse(M.factors)...)
 
 *(A::Mul, B::Mul) = materialize(Mul(A.factors..., B.factors...))
 *(A::Mul, B) = materialize(Mul(A.factors..., B))
