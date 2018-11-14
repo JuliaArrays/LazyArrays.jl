@@ -45,6 +45,9 @@ macro lazymul(Typ)
             Base.:*(A::$Mod{<:Any,<:$Typ}, B::$Typ) = LazyArrays.materialize(LazyArrays.Mul(A,B))
             Base.:*(A::$Typ, B::$Mod{<:Any,<:$Typ}) = LazyArrays.materialize(LazyArrays.Mul(A,B))
 
+            Base.:*(A::$Mod{<:Any,<:$Typ}, B::Diagonal) = LazyArrays.materialize(LazyArrays.Mul(A,B))
+            Base.:*(A::Diagonal, B::$Mod{<:Any,<:$Typ}) = LazyArrays.materialize(LazyArrays.Mul(A,B))                        
+
             Base.:*(A::AbstractTriangular, B::$Mod{<:Any,<:$Typ}) = LazyArrays.materialize(LazyArrays.Mul(A,B))
             Base.:*(A::$Mod{<:Any,<:$Typ}, B::AbstractTriangular) = LazyArrays.materialize(LazyArrays.Mul(A,B))
         end

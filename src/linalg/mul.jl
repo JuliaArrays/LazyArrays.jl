@@ -38,21 +38,21 @@ materialize(M::Mul2) = M
 # re-materialize if the mul actually changed the type of Y, otherwise leave as a Mul
 _materialize_if_changed(::S, Z, Y::S, X...) where S = Mul(reverse(X)..., Y, Z)
 _materialize_if_changed(::S, Z::Mul, Y::S, X...) where S = Mul(reverse(X)..., Y, Z.factors...)
-_materialize_if_changed(_, Z, Y, X...) = _materialize(Z, Y, X...)
+_materialize_if_changed(_, Z, Y, X...) = _recursive_materialize(Z, Y, X...)
 _materialize_if_changed(Y_old, Z, Y_new::Mul) = _materialize_if_changed(Y_old, Z, reverse(Y_new.factors)...)
 
 # materialize but get rid of Muls
-_flatten_materialize(A...) = _materialize(A...)
+_flatten_materialize(A...) = _recursive_materialize(A...)
 function _flatten_materialize(Z::Mul, Y...)
     tl = tail(reverse(Z.factors))
-    _materialize_if_changed(first(tl), last(Z.factors), _materialize(tl..., Y...))
+    _materialize_if_changed(first(tl), last(Z.factors), _recursive_materialize(tl..., Y...))
 end
 
 # repeatedly try to materialize two terms at a time
-_materialize(Z) = materialize(Z)
-_materialize(Z,Y) = Y*Z
-_materialize(Z, Y, X, W...) = _flatten_materialize(Y*Z, X, W...)
-materialize(M::Mul) = _materialize(reverse(M.factors)...)
+_recursive_materialize(Z) = materialize(Z)
+_recursive_materialize(Z,Y) = Y*Z
+_recursive_materialize(Z, Y, X, W...) = _flatten_materialize(Y*Z, X, W...)
+materialize(M::Mul) = _recursive_materialize(reverse(M.factors)...)
 
 *(A::Mul, B::Mul) = materialize(Mul(A.factors..., B.factors...))
 *(A::Mul, B) = materialize(Mul(A.factors..., B))
@@ -69,7 +69,8 @@ const ArrayMulArray{styleA, styleB, p, q, T, V} =
 # the default is always Array
 similar(M::ArrayMulArray, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
 similar(M::ArrayMulArray, ::Type{T}) where T = similar(M, T, axes(M))
-materialize(M::ArrayMulArray) = copyto!(similar(M), M)
+_materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
+materialize(M::ArrayMulArray) = _materialize(M, axes(M))
 
 @inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)
 

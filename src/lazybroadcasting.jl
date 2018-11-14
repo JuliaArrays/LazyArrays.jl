@@ -69,3 +69,10 @@ broadcasted(::LazyArrayStyle{N}, op, x::Number, r::AbstractFill{T,N}) where {T,N
     broadcast(DefaultArrayStyle{N}(), op, x, r)
 broadcasted(::LazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} =
     broadcast(DefaultArrayStyle{N}(), op, r1, r2)
+
+broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::Zeros{V,N}) where {T,V,N} =
+    broadcast(DefaultArrayStyle{N}(), *, a, b)
+broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::AbstractArray{T,N}, b::Zeros{V,N}) where {T,V,N} =
+    broadcast(DefaultArrayStyle{N}(), *, a, b)
+broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::AbstractArray{V,N}) where {T,V,N} =
+    broadcast(DefaultArrayStyle{N}(), *, a, b)
