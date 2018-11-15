@@ -652,4 +652,10 @@ import Base.Broadcast: materialize, materialize!
         @test MemoryLayout(B) == SymTridiagonalLayout(DenseColumnMajor())
         @test materialize(Mul(A,B)) == A*B
     end
+
+    @testset "MulArray" begin
+        A = randn(5,5)
+        M = MulArray(A,A)
+        @test Matrix(M) ≈ A^2
+    end
 end

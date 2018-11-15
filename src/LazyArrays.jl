@@ -38,7 +38,8 @@ import FillArrays: AbstractFill
 
 import StaticArrays: StaticArrayStyle
 
-export Mul, Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum
+export Mul, MulArray, MulVector, MulMatrix,
+        Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum
 
 include("memorylayout.jl")
 include("cache.jl")

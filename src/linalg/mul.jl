@@ -36,23 +36,32 @@ materialize(M::Mul2) = M
 
 
 # re-materialize if the mul actually changed the type of Y, otherwise leave as a Mul
-_materialize_if_changed(::S, Z, Y::S, X...) where S = Mul(reverse(X)..., Y, Z)
-_materialize_if_changed(::S, Z::Mul, Y::S, X...) where S = Mul(reverse(X)..., Y, Z.factors...)
-_materialize_if_changed(_, Z, Y, X...) = _recursive_materialize(Z, Y, X...)
-_materialize_if_changed(Y_old, Z, Y_new::Mul) = _materialize_if_changed(Y_old, Z, reverse(Y_new.factors)...)
+_rmaterialize_if_changed(::S, Z, Y::S, X...) where S = Mul(reverse(X)..., Y, Z)
+_rmaterialize_if_changed(::S, Z::Mul, Y::S, X...) where S = Mul(reverse(X)..., Y, Z.factors...)
+_rmaterialize_if_changed(_, Z, Y, X...) = _recursive_rmaterialize(Z, Y, X...)
+_rmaterialize_if_changed(Y_old, Z, Y_new::Mul) = _rmaterialize_if_changed(Y_old, Z, reverse(Y_new.factors)...)
 
 # materialize but get rid of Muls
-_flatten_materialize(A...) = _recursive_materialize(A...)
-function _flatten_materialize(Z::Mul, Y...)
+_flatten_rmaterialize(A...) = _recursive_rmaterialize(A...)
+function _flatten_rmaterialize(Z::Mul, Y...)
     tl = tail(reverse(Z.factors))
-    _materialize_if_changed(first(tl), last(Z.factors), _recursive_materialize(tl..., Y...))
+    _rmaterialize_if_changed(first(tl), last(Z.factors), _recursive_rmaterialize(tl..., Y...))
 end
 
 # repeatedly try to materialize two terms at a time
-_recursive_materialize(Z) = materialize(Z)
-_recursive_materialize(Z,Y) = Y*Z
-_recursive_materialize(Z, Y, X, W...) = _flatten_materialize(Y*Z, X, W...)
-materialize(M::Mul) = _recursive_materialize(reverse(M.factors)...)
+_recursive_rmaterialize(Z) = materialize(Z)
+_recursive_rmaterialize(Z, Y) = Y*Z
+_recursive_rmaterialize(Z, Y, X, W...) = _flatten_rmaterialize(Y*Z, X, W...)
+
+"""
+   rmaterialize(M::Mul)
+
+materializes arrays iteratively, right-to-left.
+"""
+
+rmaterialize(M::Mul) = _recursive_rmaterialize(reverse(M.factors)...)
+
+materialize(M::Mul) = rmaterialize(M)
 
 *(A::Mul, B::Mul) = materialize(Mul(A.factors..., B.factors...))
 *(A::Mul, B) = materialize(Mul(A.factors..., B))
@@ -109,3 +118,32 @@ function getindex(M::MatMulMat, k::Integer, j::Integer)
 end
 
 getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
+
+
+####
+# MulArray
+#####
+
+struct MulArray{T, N, MUL<:Mul} <: AbstractArray{T,N}
+    mul::MUL
+end
+
+const MulVector{T, MUL<:Mul} = MulArray{T, 1, MUL}
+const MulMatrix{T, MUL<:Mul} = MulArray{T, 2, MUL}
+
+
+MulArray{T,N}(bc::MUL) where {T,N,MUL<:Mul} = MulArray{T,N,MUL}(bc)
+MulArray{T}(bc::MatMulVec) where {T} = MulArray{T,1}(bc)
+MulArray{T}(bc::MatMulMat) where {T} = MulArray{T,2}(bc)
+MulArray(M::Mul) = MulArray{eltype(M)}(M)
+
+MulArray(factors...) = MulArray(Mul(factors...))
+
+axes(A::MulArray) = axes(A.mul)
+size(A::MulArray) = map(length, axes(A))
+
+IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
+
+@propagate_inbounds getindex(A::MulArray, kj::Int...) = A.mul[kj...]
+
+*(A::MulArray, B::MulArray) = A.mul * B.mul
