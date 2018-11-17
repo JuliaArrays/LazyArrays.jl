@@ -104,7 +104,9 @@ const ArrayMuls = Mul{<:Tuple, <:Tuple{Vararg{<:AbstractArray}}}
 # the default is always Array
 similar(M::ArrayMuls, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
 similar(M::ArrayMuls, ::Type{T}) where T = similar(M, T, axes(M))
-_materialize(M::ArrayMuls, _) = copyto!(similar(M), M)
+_materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
+_materialize(M::ArrayMuls, _) = rmaterialize(M)
+materialize(M::ArrayMulArray) = _materialize(M, axes(M))
 materialize(M::ArrayMuls) = _materialize(M, axes(M))
 
 @inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)
@@ -114,6 +116,8 @@ materialize(M::ArrayMuls) = _materialize(M, axes(M))
 # Matrix * Vector
 ####
 const MatMulVec{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 1, T, V}
+
+
 
 function getindex(M::MatMulVec, k::Integer)
     A,B = M.factors
