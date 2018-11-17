@@ -77,6 +77,7 @@ _recursive_rmaterialize(Z) = materialize(Z)
 _recursive_rmaterialize(Z, Y) = Y*Z
 _recursive_rmaterialize(Z, Y, X, W...) = _flatten_rmaterialize(Y*Z, X, W...)
 
+
 """
    rmaterialize(M::Mul)
 
@@ -118,11 +119,28 @@ materialize(M::ArrayMuls) = _materialize(M, axes(M))
 const MatMulVec{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 1, T, V}
 
 
+rowsupport(_, A, k) = axes(A,2)
+""""
+    rowsupport(A, k)
+
+gives an iterator containing the possible non-zero entries in the k-th row of A.
+"""
+rowsupport(A, k) = rowsupport(MemoryLayout(A), A, k)
+
+colsupport(_, A, j) = axes(A,1)
+
+""""
+    colsupport(A, j)
+
+gives an iterator containing the possible non-zero entries in the j-th column of A.
+"""
+colsupport(A, j) = colsupport(MemoryLayout(A), A, j)
+
 
 function getindex(M::MatMulVec, k::Integer)
     A,B = M.factors
     ret = zero(eltype(M))
-    for j = 1:size(A,2)
+    for j = rowsupport(A, k)
         ret += A[k,j] * B[j]
     end
     ret
@@ -141,7 +159,7 @@ const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V
 function getindex(M::MatMulMat, k::Integer, j::Integer)
     A,B = M.factors
     ret = zero(eltype(M))
-    @inbounds for ℓ in axes(A,2)
+    @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
         ret += A[k,ℓ] * B[ℓ,j]
     end
     ret
@@ -182,6 +200,8 @@ IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 @propagate_inbounds getindex(A::MulArray, kj::Int...) = A.mul[kj...]
 
 *(A::MulArray, B::MulArray) = A.mul * B.mul
+*(A::MulArray, B::Mul) = A.mul * B
+*(A::Mul, B::MulArray) = A * B.mul
 
 
 struct MulLayout{LAY} <: MemoryLayout
