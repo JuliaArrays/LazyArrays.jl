@@ -1,15 +1,38 @@
+
+checkdimensions() = nothing
+checkdimensions(_) = nothing
+
+function checkdimensions(A, B, C...)
+    axes(A,2) == axes(B,1) || throw(DimensionMismatch(""))
+    checkdimensions(B, C...)
+end
+
 struct Mul{Styles<:Tuple, Factors<:Tuple}
     styles::Styles
     factors::Factors
+    function Mul{S,F}(styles::S, factors::F) where {S,F}
+        checkdimensions(factors...)
+        new{S,F}(styles,factors)
+    end
 end
 
+Mul(styles::S, factors::F) where {S<:Tuple,F<:Tuple} = Mul{S,F}(styles, factors)
+
+Mul(A::Tuple) = Mul(MemoryLayout.(A), A)
 
 """
  Mul(A1, A2, …, AN)
 
 represents lazy multiplication A1*A2*…*AN. The factors must have compatible axes.
+If any argument is itself a Mul, it automatically gets flatten. That is,
+we assume associativity. Use Mul((A, B, C)) to stop flattening
 """
-Mul(A...) = Mul(MemoryLayout.(A), A)
+Mul(A...) = flatten(Mul(A))
+
+_flatten() = ()
+_flatten(A, B...) = (A, _flatten(B...)...)
+_flatten(A::Mul, B...) = _flatten(A.factors..., B...)
+flatten(A::Mul) = Mul(_flatten(A.factors...))
 
 
 const Mul2{StyleA, StyleB, AType, BType} = Mul{<:Tuple{StyleA,StyleB}, <:Tuple{AType,BType}}
@@ -19,6 +42,7 @@ _mul_eltype(a, b...) = Base.promote_op(*, eltype(a), _mul_eltype(b...))
 eltype(M::Mul) = _mul_eltype(M.factors...)
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
+ndims(M::Mul) = ndims(last(M.factors))
 
 length(M::Mul) = prod(size(M))
 size(M::Mul) = length.(axes(M))
@@ -75,11 +99,13 @@ materialize(M::Mul) = rmaterialize(M)
 const ArrayMulArray{styleA, styleB, p, q, T, V} =
     Mul2{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 
+const ArrayMuls = Mul{<:Tuple, <:Tuple{Vararg{<:AbstractArray}}}
+
 # the default is always Array
-similar(M::ArrayMulArray, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
-similar(M::ArrayMulArray, ::Type{T}) where T = similar(M, T, axes(M))
-_materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
-materialize(M::ArrayMulArray) = _materialize(M, axes(M))
+similar(M::ArrayMuls, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
+similar(M::ArrayMuls, ::Type{T}) where T = similar(M, T, axes(M))
+_materialize(M::ArrayMuls, _) = copyto!(similar(M), M)
+materialize(M::ArrayMuls) = _materialize(M, axes(M))
 
 @inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)
 
@@ -132,12 +158,17 @@ const MulVector{T, MUL<:Mul} = MulArray{T, 1, MUL}
 const MulMatrix{T, MUL<:Mul} = MulArray{T, 2, MUL}
 
 
-MulArray{T,N}(bc::MUL) where {T,N,MUL<:Mul} = MulArray{T,N,MUL}(bc)
-MulArray{T}(bc::MatMulVec) where {T} = MulArray{T,1}(bc)
-MulArray{T}(bc::MatMulMat) where {T} = MulArray{T,2}(bc)
+MulArray{T,N}(M::MUL) where {T,N,MUL<:Mul} = MulArray{T,N,MUL}(M)
+MulArray{T}(M::Mul) where {T} = MulArray{T,ndims(M)}(M)
 MulArray(M::Mul) = MulArray{eltype(M)}(M)
+MulVector(M::Mul) = MulVector{eltype(M)}(M)
+MulMatrix(M::Mul) = MulMatrix{eltype(M)}(M)
 
 MulArray(factors...) = MulArray(Mul(factors...))
+MulArray{T}(factors...) where T = MulArray{T}(Mul(factors...))
+MulArray{T,N}(factors...) where {T,N} = MulArray{T,N}(Mul(factors...))
+MulVector(factors...) = MulVector(Mul(factors...))
+MulMatrix(factors...) = MulMatrix(Mul(factors...))
 
 axes(A::MulArray) = axes(A.mul)
 size(A::MulArray) = map(length, axes(A))
@@ -147,3 +178,10 @@ IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 @propagate_inbounds getindex(A::MulArray, kj::Int...) = A.mul[kj...]
 
 *(A::MulArray, B::MulArray) = A.mul * B.mul
+
+
+struct MulLayout{LAY} <: MemoryLayout
+    layouts::LAY
+end
+
+MemoryLayout(M::MulArray) = MulLayout(MemoryLayout.(M.mul.factors))
