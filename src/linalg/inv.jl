@@ -68,6 +68,7 @@ const BArrayLdivArray{styleA, styleB, p, q, T, V} =
 
 BroadcastStyle(::Type{<:ArrayLdivArray{StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} =
     ArrayLdivArrayStyle{StyleA,StyleB,p,q}()
+broadcastable(M::ArrayLdivArray) = M
 
 Ldiv(A, B) = Mul(PInv(A), B)
 
@@ -108,6 +109,7 @@ else
 end
 
 const MatLdivVec{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, 2, 1, T, V}
+const MatLdivMat{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, 2, 2, T, V}
 
 broadcastable(M::MatLdivVec) = M
 
@@ -118,7 +120,7 @@ broadcastable(M::MatLdivVec) = M
 
 function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray{<:TriangularLayout})
     Ai, B = M.factors
-    dest .= B
+    dest ≡ B || (dest .= B)
     ldiv!(pinv(Ai), dest)
 end
 
@@ -161,4 +163,13 @@ end
     Ai,B = M.factors
     B ≡ dest || copyto!(dest, B)
     BLAS.trsv!('U', 'C', UNIT, triangulardata(pinv(Ai))', dest)
+end
+
+function _copyto!(_, dest::AbstractMatrix, M::MatLdivMat{<:TriangularLayout})
+    A,X = M.factors
+    size(dest,2) == size(X,2) || thow(DimensionMismatch("Dimensions must match"))
+    @views for j in axes(dest,2)
+        dest[:,j] .= Mul(A, X[:,j])
+    end
+    dest
 end

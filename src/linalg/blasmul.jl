@@ -334,3 +334,16 @@ end
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'C', UNIT, triangulardata(A)', dest)
 end
+
+# Triangular *\ Matrix
+
+
+
+function _copyto!(_, dest::AbstractMatrix, M::MatMulMat{<:TriangularLayout})
+    A,X = M.factors
+    size(dest,2) == size(X,2) || thow(DimensionMismatch("Dimensions must match"))
+    @views for j in axes(dest,2)
+        dest[:,j] .= Mul(A, X[:,j])
+    end
+    dest
+end

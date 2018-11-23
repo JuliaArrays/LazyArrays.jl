@@ -66,6 +66,12 @@ import Base.Broadcast: materialize
         @test Inv(A) * b ≈ A \ b
     end
 
+    @testset "Triangular \\ matrix" begin
+        A = randn(5,5)
+        b = randn(5,5)
+        @test UpperTriangular(A) \ b ≈ (similar(b) .= Ldiv(UpperTriangular(A), b))
+    end
+
     @testset "Rectangle PInv" begin
         A = randn(5,3)
         A_orig = copy(A)
@@ -84,3 +90,10 @@ import Base.Broadcast: materialize
         @test pinv(PInv(A)) === A
     end
 end
+
+
+A = randn(5,5)
+    b = randn(5,5)
+    copyto!(similar(b) , Ldiv(UpperTriangular(A), b))
+
+b .= Ldiv(UpperTriangular(A), b)
