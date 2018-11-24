@@ -640,6 +640,9 @@ import Base.Broadcast: materialize, materialize!
         Ac = A'
         blasnoalloc(c, 2.0, Ac, x, 3.0, y)
         @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
+        Aa = Add(A, Ac)
+        blasnoalloc(c, 2.0, Aa, x, 3.0, y)
+        @test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
     end
 
     @testset "multi-argument mul" begin
@@ -668,5 +671,95 @@ import Base.Broadcast: materialize, materialize!
         A = randn(5,5)
         M = MulArray(A,A)
         @test Matrix(M) ≈ A^2
+    end
+end
+
+
+@testset "Add" begin
+    @testset "gemv Float64" begin
+        for A in (Add(randn(5,5), randn(5,5)),
+                  Add(randn(5,5), view(randn(9, 5), 1:2:9, :))),
+            b in (randn(5), view(randn(5),:), view(randn(5),1:5), view(randn(9),1:2:9))
+
+            Ã = copy(A)
+            c = similar(b)
+
+            c .= Mul(A,b)
+            @test c ≈ Ã*b ≈ BLAS.gemv!('N', 1.0, Ã, b, 0.0, similar(c))
+
+            copyto!(c, Mul(A,b))
+            @test c ≈ Ã*b ≈ BLAS.gemv!('N', 1.0, Ã, b, 0.0, similar(c))
+
+            b̃ = copy(b)
+            copyto!(b̃, Mul(A,b̃))
+            @test_broken c ≈ b̃
+
+            c .= 2.0 .* Mul(A,b)
+            @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 0.0, similar(c))
+
+            c = copy(b)
+            c .= Mul(A,b) .+ c
+            @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 1.0, copy(b))
+
+            c = copy(b)
+            c .= Mul(A,b) .+ 2.0 .* c
+            @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 2.0, copy(b))
+
+            c = copy(b)
+            c .= 2.0 .* Mul(A,b) .+ c
+            @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 1.0, copy(b))
+
+            c = copy(b)
+            c .= 3.0 .* Mul(A,b) .+ 2.0 .* c
+            @test c ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, copy(b))
+
+            d = similar(c)
+            c = copy(b)
+            d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
+            @test d ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, copy(b))
+        end
+    end
+
+    @testset "gemm" begin
+        for A in (Add(randn(5,5), randn(5,5)),
+                  Add(randn(5,5), view(randn(9, 5), 1:2:9, :))),
+            B in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
+                  view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5))
+
+            Ã = copy(A)
+            C = similar(B)
+
+            C .= Mul(A,B)
+            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 0.0, similar(C))
+
+            B .= Mul(A,B)
+            @test_broken C ≈ B
+
+            C .= 2.0 .* Mul(A,B)
+            @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 0.0, similar(C))
+
+            C = copy(B)
+            C .= Mul(A,B) .+ C
+            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 1.0, copy(B))
+
+
+            C = copy(B)
+            C .= Mul(A,B) .+ 2.0 .* C
+            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 2.0, copy(B))
+
+            C = copy(B)
+            C .= 2.0 .* Mul(A,B) .+ C
+            @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 1.0, copy(B))
+
+
+            C = copy(B)
+            C .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+            @test C ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, copy(B))
+
+            d = similar(C)
+            C = copy(B)
+            d .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+            @test d ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, copy(B))
+        end
     end
 end
