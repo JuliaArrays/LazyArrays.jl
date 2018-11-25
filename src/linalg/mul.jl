@@ -55,42 +55,28 @@ axes(M::Mul) = _mul_axes(axes(first(M.factors),1), axes(last(M.factors)))
 similar(M::Mul) = similar(M, eltype(M))
 
 
-# default is to stay Lazy
-materialize(M::Mul2) = M
-
-
-# re-materialize if the mul actually changed the type of Y, otherwise leave as a Mul
-_rmaterialize_if_changed(::S, Z, Y::S, X...) where S = Mul(reverse(X)..., Y, Z)
-_rmaterialize_if_changed(::S, Z::Mul, Y::S, X...) where S = Mul(reverse(X)..., Y, Z.factors...)
-_rmaterialize_if_changed(_, Z, Y, X...) = _recursive_rmaterialize(Z, Y, X...)
-_rmaterialize_if_changed(Y_old, Z, Y_new::Mul) = _rmaterialize_if_changed(Y_old, Z, reverse(Y_new.factors)...)
-
-# materialize but get rid of Muls
-_flatten_rmaterialize(A...) = _recursive_rmaterialize(A...)
-function _flatten_rmaterialize(Z::Mul, Y...)
-    tl = tail(reverse(Z.factors))
-    _rmaterialize_if_changed(first(tl), last(Z.factors), _recursive_rmaterialize(tl..., Y...))
-end
-
-# repeatedly try to materialize two terms at a time
-_recursive_rmaterialize(Z) = materialize(Z)
-_recursive_rmaterialize(Z, Y) = Y*Z
-_recursive_rmaterialize(Z, Y, X, W...) = _flatten_rmaterialize(Y*Z, X, W...)
-
 
 """
-   rmaterialize(M::Mul)
+   lmaterialize(M::Mul)
 
-materializes arrays iteratively, right-to-left.
+materializes arrays iteratively, left-to-right.
 """
 
-rmaterialize(M::Mul) = _recursive_rmaterialize(reverse(M.factors)...)
+_lmaterialize(A, B) = materialize(Mul(A,B))
+_lmaterialize(A, B, C, D...) = _lmaterialize(materialize(Mul(A,B)), C, D...)
 
-materialize(M::Mul) = rmaterialize(M)
+lmaterialize(M::Mul) = _lmaterialize(M.factors...)
+
+_rmaterialize(Z, Y) = materialize(Mul(Y,Z))
+_rmaterialize(Z, Y, X, W...) = _rmaterialize(materialize(Mul(Y,Z)), X, W...)
+
+rmaterialize(M::Mul) = _rmaterialize(reverse(M.factors)...)
+
 
 *(A::Mul, B::Mul) = materialize(Mul(A.factors..., B.factors...))
 *(A::Mul, B) = materialize(Mul(A.factors..., B))
 *(A, B::Mul) = materialize(Mul(A, B.factors...))
+⋆(A...) = rmaterialize(Mul(A...))
 
 
 ####
@@ -106,9 +92,10 @@ const ArrayMuls = Mul{<:Tuple, <:Tuple{Vararg{<:AbstractArray}}}
 similar(M::ArrayMuls, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
 similar(M::ArrayMuls, ::Type{T}) where T = similar(M, T, axes(M))
 _materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
-_materialize(M::ArrayMuls, _) = rmaterialize(M)
-materialize(M::ArrayMulArray) = _materialize(M, axes(M))
-materialize(M::ArrayMuls) = _materialize(M, axes(M))
+_materialize(M::ArrayMuls, _) = lmaterialize(M)
+_materialize(M::Mul, _) = lmaterialize(M)
+_materialize(M::Mul2, _) = error("Cannot materialize $M")
+materialize(M::Mul) = _materialize(M, axes(M))
 
 @inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)
 
@@ -154,6 +141,8 @@ getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 # Matrix * Matrix
 ####
 
+
+
 const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V}
 
 function getindex(M::MatMulMat, k::Integer, j::Integer)
@@ -171,6 +160,27 @@ getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 ####
 # MulArray
 #####
+
+function getindex(M::Mul, k)
+    A,Bs = first(M.factors), tail(M.factors)
+    B = Mul(Bs)
+    ret = zero(eltype(M))
+    for j = rowsupport(A, k)
+        ret += A[k,j] * B[j]
+    end
+    ret
+end
+
+function getindex(M::Mul, k, j)
+    A,Bs = first(M.factors), tail(M.factors)
+    B = Mul(Bs)
+    ret = zero(eltype(M))
+    @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
+        ret += A[k,ℓ] * B[ℓ,j]
+    end
+    ret
+end
+
 
 struct MulArray{T, N, MUL<:Mul} <: AbstractArray{T,N}
     mul::MUL
@@ -203,9 +213,16 @@ IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 *(A::MulArray, B::Mul) = A.mul * B
 *(A::Mul, B::MulArray) = A * B.mul
 
+adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.mul.factors))...)
+transpose(A::MulArray) = MulArray(reverse(transpose.(A.mul.factors))...)
+
 
 struct MulLayout{LAY} <: MemoryLayout
     layouts::LAY
 end
 
 MemoryLayout(M::MulArray) = MulLayout(MemoryLayout.(M.mul.factors))
+
+
+_flatten(A::MulArray, B...) = _flatten(A.mul.factors..., B...)
+flatten(A::MulArray) = MulArray(Mul(_flatten(A.mul.factors...)))
