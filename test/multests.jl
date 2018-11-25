@@ -692,7 +692,7 @@ end
 
             b̃ = copy(b)
             copyto!(b̃, Mul(A,b̃))
-            @test_broken c ≈ b̃
+            @test c ≈ b̃
 
             c .= 2.0 .* Mul(A,b)
             @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 0.0, similar(c))
@@ -733,7 +733,7 @@ end
             @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 0.0, similar(C))
 
             B .= Mul(A,B)
-            @test_broken C ≈ B
+            @test C ≈ B
 
             C .= 2.0 .* Mul(A,B)
             @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 0.0, similar(C))

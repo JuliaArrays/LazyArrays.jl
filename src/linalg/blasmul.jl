@@ -202,6 +202,9 @@ for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
     # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:
     @eval function materialize!(M::$MulAdd_{<:BroadcastLayout{typeof(+)}})
         α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
+        if C ≡ B
+            B = copy(B)
+        end
         lmul!(β, C)
         for A in A.broadcasted.args
             C .= α .* Mul(A, B) .+ C
