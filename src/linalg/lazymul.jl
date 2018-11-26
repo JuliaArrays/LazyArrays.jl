@@ -64,3 +64,6 @@ macro lazylmul(Typ)
         LinearAlgebra.lmul!(A::$Typ, x::StridedMatrix) = copyto!(x, LazyArrays.Mul(A,x))
     end)
 end
+
+
+@lazymul AddMatrix
