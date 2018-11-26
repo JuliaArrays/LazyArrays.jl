@@ -1,5 +1,5 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout
+import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add
 import Base.Broadcast: materialize, materialize!
 
 @testset "Mul" begin

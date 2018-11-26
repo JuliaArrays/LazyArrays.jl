@@ -5,7 +5,7 @@ using LazyArrays, LinearAlgebra, FillArrays, Test
                             UnitUpperTriangularLayout, LowerTriangularLayout,
                             UnitLowerTriangularLayout, ScalarLayout,
                             hermitiandata, symmetricdata, FillLayout, ZerosLayout,
-                            VcatLayout, BroadcastLayout
+                            VcatLayout, BroadcastLayout, Add
 
 struct FooBar end
 struct FooNumber <: Number end
