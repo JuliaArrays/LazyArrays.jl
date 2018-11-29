@@ -76,7 +76,7 @@ rmaterialize(M::Mul) = _rmaterialize(reverse(M.factors)...)
 *(A::Mul, B::Mul) = materialize(Mul(A.factors..., B.factors...))
 *(A::Mul, B) = materialize(Mul(A.factors..., B))
 *(A, B::Mul) = materialize(Mul(A, B.factors...))
-⋆(A...) = rmaterialize(Mul(A...))
+⋆(A...) = Mul(A...)
 
 
 ####
