@@ -84,7 +84,8 @@ macro lazyldiv(Typ)
     end)
 end
 
-*(A::AbstractPInv, B) = materialize(Mul(A,B))
+*(A::AbstractPInv, B, C...) = materialize(Mul(A,B, C...))
+*(A::AbstractPInv, B::Mul) = materialize(Mul(A, B.factors...))
 
 similar(A::AbstractPInv, ::Type{T}) where T = Array{T}(undef, size(A))
 similar(M::ArrayLdivArray, ::Type{T}) where T = Array{T}(undef, size(M))

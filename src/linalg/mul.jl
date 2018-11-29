@@ -51,6 +51,7 @@ _mul_axes(ax1, ::Tuple{}) = (ax1,)
 _mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)
 _mul_axes(ax1, (_,ax2)::Tuple{<:Any,<:Any}) = (ax1,ax2)
 axes(M::Mul) = _mul_axes(axes(first(M.factors),1), axes(last(M.factors)))
+axes(M::Mul{Tuple{}}) = ()
 
 similar(M::Mul) = similar(M, eltype(M))
 
@@ -62,13 +63,13 @@ similar(M::Mul) = similar(M, eltype(M))
 materializes arrays iteratively, left-to-right.
 """
 
-_lmaterialize(A, B) = materialize(Mul(A,B))
-_lmaterialize(A, B, C, D...) = _lmaterialize(materialize(Mul(A,B)), C, D...)
+_lmaterialize(A, B) = materialize(Mul((A,B)))
+_lmaterialize(A, B, C, D...) = _lmaterialize(materialize(Mul((A,B))), C, D...)
 
 lmaterialize(M::Mul) = _lmaterialize(M.factors...)
 
-_rmaterialize(Z, Y) = materialize(Mul(Y,Z))
-_rmaterialize(Z, Y, X, W...) = _rmaterialize(materialize(Mul(Y,Z)), X, W...)
+_rmaterialize(Z, Y) = materialize(Mul((Y,Z)))
+_rmaterialize(Z, Y, X, W...) = _rmaterialize(materialize(Mul((Y,Z))), X, W...)
 
 rmaterialize(M::Mul) = _rmaterialize(reverse(M.factors)...)
 
