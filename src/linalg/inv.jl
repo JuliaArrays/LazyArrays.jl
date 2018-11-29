@@ -42,25 +42,25 @@ size(A::AbstractPInv, k) = size(A)[k]
 axes(A::AbstractPInv, k) = axes(A)[k]
 
 
-abstract type AbstractPInverseLayout{ML} <: MemoryLayout end
+abstract type AbstractPInvLayout{ML} <: MemoryLayout end
 
-# struct InverseLayout{ML} <: AbstractPInverseLayout{ML}
+# struct InverseLayout{ML} <: AbstractPInvLayout{ML}
 #     layout::ML
 # end
 
-struct PInverseLayout{ML} <: AbstractPInverseLayout{ML}
+struct PInvLayout{ML} <: AbstractPInvLayout{ML}
     layout::ML
 end
 
-MemoryLayout(Ai::AbstractPInv) = PInverseLayout(MemoryLayout(Ai.A))
+MemoryLayout(Ai::AbstractPInv) = PInvLayout(MemoryLayout(Ai.A))
 
 
 const Ldiv{StyleA, StyleB, AType, BType} =
-    Mul2{<:AbstractPInverseLayout{StyleA}, StyleB, <:AbstractPInv{StyleA,AType}, BType}
+    Mul2{<:AbstractPInvLayout{StyleA}, StyleB, <:AbstractPInv{StyleA,AType}, BType}
 const ArrayLdivArray{styleA, styleB, p, q, T, V} =
     Ldiv{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 const ArrayLdivArrayStyle{StyleA,StyleB,p,q} =
-    ArrayMulArrayStyle{PInverseLayout{StyleA}, StyleB, p, q}
+    ArrayMulArrayStyle{PInvLayout{StyleA}, StyleB, p, q}
 const BArrayLdivArray{styleA, styleB, p, q, T, V} =
     Broadcasted{ArrayLdivArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
                 <:Tuple{<:ArrayLdivArray{styleA,styleB,p,q,T,V}}}
@@ -173,3 +173,24 @@ function _copyto!(_, dest::AbstractMatrix, M::MatLdivMat{<:TriangularLayout})
     end
     dest
 end
+
+
+function _PInvMatrix end
+
+struct PInvMatrix{T, PINV<:AbstractPInv} <: AbstractMatrix{T}
+    pinv::PINV
+    global _PInvMatrix(pinv::PINV) where PINV = new{eltype(pinv), PINV}(pinv)
+end
+
+const InvMatrix{T, INV<:Inv} = PInvMatrix{T,INV}
+
+PInvMatrix(M) = _PInvMatrix(PInv(M))
+InvMatrix(M) = _PInvMatrix(Inv(M))
+
+axes(A::PInvMatrix) = axes(A.pinv)
+size(A::PInvMatrix) = map(length, axes(A))
+
+@propagate_inbounds getindex(A::PInvMatrix{T}, k::Int, j::Int) where T =
+    (A.pinv*[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
+
+MemoryLayout(M::PInvMatrix) = MemoryLayout(M.pinv)

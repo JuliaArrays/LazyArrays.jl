@@ -88,8 +88,25 @@ import Base.Broadcast: materialize
     @testset "inv and pinv"  begin
         A = randn(5,5)
         @test inv(Inv(A)) === inv(PInv(A)) === pinv(Inv(A)) === pinv(PInv(A)) === A
+
+        Ai = PInvMatrix(A)
+        @test Matrix(Ai) ≈ inv(A)
+        Ai = InvMatrix(A)
+        @test Matrix(Ai) ≈ inv(A)
+
+
         A = randn(5,3)
-        @test_throws DimensionMismatch inv(PInv(A))
         @test pinv(PInv(A)) === A
+        Ai = PInvMatrix(A)
+        @test Ai ≈ pinv(A)
+        @test_throws DimensionMismatch inv(PInv(A))
+        @test_throws DimensionMismatch InvMatrix(A)
+
+        A = randn(3,5)
+        @test pinv(PInv(A)) === A
+        Ai = PInvMatrix(A)
+        @test Ai ≈ pinv(A)
+        @test_throws DimensionMismatch inv(PInv(A))
+        @test_throws DimensionMismatch InvMatrix(A)
     end
 end
