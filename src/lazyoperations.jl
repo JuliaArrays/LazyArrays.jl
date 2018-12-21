@@ -1,20 +1,17 @@
-
-
-function _Kron end
-
 struct Kron{T,N,I} <: AbstractArray{T,N}
     arrays::I
-    global function _Kron(A::I) where I<:Tuple{Vararg{<:AbstractArray{T,N}}} where {T,N}
+    function Kron{T,N,I}(A::I) where {T,N,I}
         isempty(A) && throw(ArgumentError("Cannot take kronecker product of empty vectors"))
         new{T,N,I}(A)
     end
 end
 
-Kron{T,N}(A::AbstractArray{T,N}...) where {T,N} = _Kron(A)
-Kron{T}(A::AbstractArray{T,N}...) where {T,N} = Kron{T,N}(A...)
-Kron{T}(A::AbstractArray{<:Any}...) where T = Kron{T}(convert.(AbstractArray{T}, A)...)
-Kron(A...) = Kron{mapreduce(eltype, promote_type, A)}(A...)
+_kron_dims() = 0
+_kron_dims(A, B...) = max(ndims(A), _kron_dims(B...))
 
+Kron{T,N}(A::AbstractArray...) where {T,N} = Kron{T,N,typeof(A)}(A)
+Kron{T}(A::AbstractArray...) where {T} = Kron{T,_kron_dims(A...)}(A...)
+Kron(A...) = Kron{promote_type(eltype.(A)...)}(A...)
 
 
 size(K::Kron, j::Int) = prod(size.(K.arrays, j))
@@ -34,7 +31,7 @@ end
 getindex(K::Kron{T,2,<:Tuple{<:AbstractMatrix}}, k::Int, j::Int) where T =
     first(K.arrays)[k,j]
 
-function getindex(K::Kron{T,2,<:Tuple{<:AbstractMatrix,<:AbstractMatrix}}, k::Int, j::Int) where T
+function getindex(K::Kron{T,2,<:Tuple{<:AbstractArray,<:AbstractArray}}, k::Int, j::Int) where T
     A,B = K.arrays
     K,κ = divrem(k-1, size(B,1))
     J,ξ = divrem(j-1, size(B,2))

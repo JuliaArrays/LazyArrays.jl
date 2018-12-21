@@ -119,14 +119,14 @@ end
     A = [1,2,3]
     B = [4,5,6,7]
 
-    @test Array(Kron(A)) == A
-    K = Kron(A,B)
+    @test Array(@inferred(Kron(A))) == A
+    K = @inferred(Kron(A,B))
     @test [K[k] for k=1:length(K)] == Array(K) == kron(A,B)
 
     A = randn(3)
-    K = Kron(A,B)
+    K = @inferred(Kron(A,B))
     @test K isa Kron{Float64}
-    @test all(isa.(K.arrays, Vector{Float64}))
+    @test all(K.arrays .=== (A,B))
     @test [K[k] for k=1:length(K)] == Array(K) == Array(Kron{Float64}(A,B)) == kron(A,B)
 
     # C = [7,8,9,10,11]
@@ -155,8 +155,11 @@ end
     A = rand(Int,3,2)
     K = Kron(A,B)
     @test K isa Kron{Float64}
-    @test all(isa.(K.arrays, Matrix{Float64}))
+    @test all(K.arrays .=== (A,B))
     @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(K) == Array(Kron{Float64}(A,B)) == kron(A,B)
+
+    K = @inferred(Kron{Float64}(Eye{Float64}(1), zeros(4)))
+    @test Array(K) == zeros(4,1)
 end
 
 @testset "BroadcastArray" begin
