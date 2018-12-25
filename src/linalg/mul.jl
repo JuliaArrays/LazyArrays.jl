@@ -62,16 +62,20 @@ similar(M::Mul) = similar(M, eltype(M))
 
 materializes arrays iteratively, left-to-right.
 """
+lmaterialize(M::Mul) = _lmaterialize(M.factors...)
 
 _lmaterialize(A, B) = materialize(Mul((A,B)))
 _lmaterialize(A, B, C, D...) = _lmaterialize(materialize(Mul((A,B))), C, D...)
 
-lmaterialize(M::Mul) = _lmaterialize(M.factors...)
+"""
+   rmaterialize(M::Mul)
+
+materializes arrays iteratively, right-to-left.
+"""
+rmaterialize(M::Mul) = _rmaterialize(reverse(M.factors)...)
 
 _rmaterialize(Z, Y) = materialize(Mul((Y,Z)))
 _rmaterialize(Z, Y, X, W...) = _rmaterialize(materialize(Mul((Y,Z))), X, W...)
-
-rmaterialize(M::Mul) = _rmaterialize(reverse(M.factors)...)
 
 
 *(A::Mul, B::Mul) = materialize(Mul(A.factors..., B.factors...))
