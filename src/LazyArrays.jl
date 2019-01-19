@@ -39,10 +39,12 @@ import FillArrays: AbstractFill
 import StaticArrays: StaticArrayStyle
 
 export Mul, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
-        Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum
+        Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum,
+        applied
 
 include("memorylayout.jl")
 include("cache.jl")
+include("lazyapplying.jl")
 include("lazybroadcasting.jl")
 include("lazyconcat.jl")
 include("linalg/linalg.jl")

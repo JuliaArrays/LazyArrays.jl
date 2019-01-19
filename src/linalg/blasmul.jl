@@ -329,7 +329,7 @@ materialize!(M::BlasMatMulVec{<:HermitianLayout{<:AbstractRowMajor},<:AbstractSt
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.factors
+    A,x = M.args
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'N', UNIT, triangulardata(A), dest)
 end
@@ -337,7 +337,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.factors
+    A,x = M.args
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'T', UNIT, transpose(triangulardata(A)), dest)
 end
@@ -346,7 +346,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.factors
+    A,x = M.args
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'C', UNIT, triangulardata(A)', dest)
 end
@@ -356,7 +356,7 @@ end
 
 
 function _copyto!(_, dest::AbstractMatrix, M::MatMulMat{<:TriangularLayout})
-    A,X = M.factors
+    A,X = M.args
     size(dest,2) == size(X,2) || thow(DimensionMismatch("Dimensions must match"))
     @views for j in axes(dest,2)
         dest[:,j] .= Mul(A, X[:,j])

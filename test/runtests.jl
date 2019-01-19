@@ -1,6 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 
 include("memorylayouttests.jl")
+include("applytests.jl")
 include("multests.jl")
 include("ldivtests.jl")
 

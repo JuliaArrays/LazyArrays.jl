@@ -61,7 +61,7 @@ instantiate(bc::Broadcasted{<:ArrayMulArrayStyle}) = bc
 
 
 @inline function _copyto!(_, dest::AbstractArray{T}, M::ArrayMulArray) where T
-    A,B = M.factors
+    A,B = M.args
     materialize!(MulAdd(one(T), A, B, zero(T), dest))
 end
 
@@ -73,34 +73,34 @@ end
 
 @inline function _copyto!(_, dest::AbstractArray{T}, bc::BConstArrayMulArray) where T
     α,M = bc.args
-    A,B = M.factors
+    A,B = M.args
     materialize!(MulAdd(α, A, B, zero(T), dest))
 end
 
 @inline function _copyto!(_, dest::AbstractArray{T}, bc::BArrayMulArrayPlusArray) where T
     M,C = bc.args
-    A,B = M.factors
+    A,B = M.args
     copyto!(dest, MulAdd(one(T), A, B, one(T), C))
 end
 
 @inline function _copyto!(_, dest::AbstractArray{T}, bc::BArrayMulArrayPlusConstArray) where T
     M,βc = bc.args
     β,C = βc.args
-    A,B = M.factors
+    A,B = M.args
     copyto!(dest, MulAdd(one(T), A, B, β, C))
 end
 
 @inline function _copyto!(_, dest::AbstractArray{T}, bc::BConstArrayMulArrayPlusArray) where T
     αM,C = bc.args
     α,M = αM.args
-    A,B = M.factors
+    A,B = M.args
     copyto!(dest, MulAdd(α, A, B, one(T), C))
 end
 
 @inline function _copyto!(_, dest::AbstractArray, bc::BConstArrayMulArrayPlusConstArray)
     αM,βc = bc.args
     α,M = αM.args
-    A,B = M.factors
+    A,B = M.args
     β,C = βc.args
     copyto!(dest, MulAdd(α, A, B, β, C))
 end

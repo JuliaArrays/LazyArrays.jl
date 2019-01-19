@@ -85,7 +85,7 @@ macro lazyldiv(Typ)
 end
 
 *(A::AbstractPInv, B, C...) = materialize(Mul(A,B, C...))
-*(A::AbstractPInv, B::Mul) = materialize(Mul(A, B.factors...))
+*(A::AbstractPInv, B::Mul) = materialize(Mul(A, B.args...))
 
 similar(A::AbstractPInv, ::Type{T}) where T = Array{T}(undef, size(A))
 similar(M::ArrayLdivArray, ::Type{T}) where T = Array{T}(undef, size(M))
@@ -99,12 +99,12 @@ end
 
 if VERSION ≥ v"1.1-pre"
     function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray)
-        Ai, B = M.factors
+        Ai, B = M.args
         ldiv!(dest, factorize(pinv(Ai)), B)
     end
 else
     function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray)
-        Ai, B = M.factors
+        Ai, B = M.args
         ldiv!(dest, factorize(pinv(Ai)), copy(B))
     end
 end
@@ -120,7 +120,7 @@ broadcastable(M::MatLdivVec) = M
 ###
 
 function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray{<:TriangularLayout})
-    Ai, B = M.factors
+    Ai, B = M.args
     dest ≡ B || (dest .= B)
     ldiv!(pinv(Ai), dest)
 end
@@ -128,7 +128,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    Ai,B = M.args
     B ≡ dest || copyto!(dest, B)
     BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(pinv(Ai)), dest)
 end
@@ -136,7 +136,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{'U',UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    Ai,B = M.args
     B ≡ dest || copyto!(dest, B)
     BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(pinv(Ai))), dest)
 end
@@ -144,7 +144,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    Ai,B = M.args
     B ≡ dest || copyto!(dest, B)
     BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(pinv(Ai))), dest)
 end
@@ -153,7 +153,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{T, <:TriangularLayout{'U',UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    Ai,B = M.args
     B ≡ dest || copyto!(dest, B)
     BLAS.trsv!('L', 'C', UNIT, triangulardata(pinv(Ai))', dest)
 end
@@ -161,13 +161,13 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    Ai,B = M.args
     B ≡ dest || copyto!(dest, B)
     BLAS.trsv!('U', 'C', UNIT, triangulardata(pinv(Ai))', dest)
 end
 
 function _copyto!(_, dest::AbstractMatrix, M::MatLdivMat{<:TriangularLayout})
-    A,X = M.factors
+    A,X = M.args
     size(dest,2) == size(X,2) || thow(DimensionMismatch("Dimensions must match"))
     @views for j in axes(dest,2)
         dest[:,j] .= Mul(A, X[:,j])

@@ -650,9 +650,6 @@ import Base.Broadcast: materialize, materialize!
         B = materialize(Mul(A,A,A))
         @test B isa Matrix{Float64}
         @test all(B .=== (A*A)*A)
-
-        @test Mul(A,A) * A ≈ A * Mul(A,A) ≈ Mul(A) * Mul(A,A) ≈ A^3
-        @test Mul(A,A) * Mul(A,A) ≈ Mul(A) * Mul(A,A,A) ≈ A^4
     end
 
     @testset "Diagonal and SymTridiagonal" begin

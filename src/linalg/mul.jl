@@ -7,42 +7,20 @@ function checkdimensions(A, B, C...)
     checkdimensions(B, C...)
 end
 
-struct Mul{Styles<:Tuple, Factors<:Tuple}
-    styles::Styles
-    factors::Factors
-    function Mul{S,F}(styles::S, factors::F) where {S,F}
-        checkdimensions(factors...)
-        new{S,F}(styles,factors)
-    end
-end
+const Mul{Styles<:Tuple, Factors<:Tuple} = Applied{<:LayoutApplyStyle{Styles}, typeof(*), Factors}
 
-Mul(styles::S, factors::F) where {S<:Tuple,F<:Tuple} = Mul{S,F}(styles, factors)
+ApplyStyle(::typeof(*), args::AbstractArray...) = LayoutApplyStyle(MemoryLayout.(args))
 
-Mul(A::Tuple) = Mul(MemoryLayout.(A), A)
-
-"""
- Mul(A1, A2, …, AN)
-
-represents lazy multiplication A1*A2*…*AN. The factors must have compatible axes.
-If any argument is itself a Mul, it automatically gets flatten. That is,
-we assume associativity. Use Mul((A, B, C)) to stop flattening
-"""
-Mul(A...) = flatten(Mul(A))
-
-_flatten() = ()
-_flatten(A, B...) = (A, _flatten(B...)...)
-_flatten(A::Mul, B...) = _flatten(A.factors..., B...)
-flatten(A::Mul) = Mul(_flatten(A.factors...))
-
+Mul(A...) = applied(*, A...)
 
 const Mul2{StyleA, StyleB, AType, BType} = Mul{<:Tuple{StyleA,StyleB}, <:Tuple{AType,BType}}
 
 _mul_eltype(a) = eltype(a)
 _mul_eltype(a, b...) = Base.promote_op(*, eltype(a), _mul_eltype(b...))
-eltype(M::Mul) = _mul_eltype(M.factors...)
+eltype(M::Mul) = _mul_eltype(M.args...)
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
-ndims(M::Mul) = ndims(last(M.factors))
+ndims(M::Mul) = ndims(last(M.args))
 
 length(M::Mul) = prod(size(M))
 size(M::Mul) = length.(axes(M))
@@ -50,7 +28,7 @@ size(M::Mul) = length.(axes(M))
 _mul_axes(ax1, ::Tuple{}) = (ax1,)
 _mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)
 _mul_axes(ax1, (_,ax2)::Tuple{<:Any,<:Any}) = (ax1,ax2)
-axes(M::Mul) = _mul_axes(axes(first(M.factors),1), axes(last(M.factors)))
+axes(M::Mul) = _mul_axes(axes(first(M.args),1), axes(last(M.args)))
 axes(M::Mul{Tuple{}}) = ()
 
 similar(M::Mul) = similar(M, eltype(M))
@@ -62,25 +40,25 @@ similar(M::Mul) = similar(M, eltype(M))
 
 materializes arrays iteratively, left-to-right.
 """
-lmaterialize(M::Mul) = _lmaterialize(M.factors...)
+lmaterialize(M::Mul) = _lmaterialize(M.args...)
 
-_lmaterialize(A, B) = materialize(Mul((A,B)))
-_lmaterialize(A, B, C, D...) = _lmaterialize(materialize(Mul((A,B))), C, D...)
+_lmaterialize(A, B) = materialize(Mul(A,B))
+_lmaterialize(A, B, C, D...) = _lmaterialize(materialize(Mul(A,B)), C, D...)
 
 """
    rmaterialize(M::Mul)
 
 materializes arrays iteratively, right-to-left.
 """
-rmaterialize(M::Mul) = _rmaterialize(reverse(M.factors)...)
+rmaterialize(M::Mul) = _rmaterialize(reverse(M.args)...)
 
-_rmaterialize(Z, Y) = materialize(Mul((Y,Z)))
-_rmaterialize(Z, Y, X, W...) = _rmaterialize(materialize(Mul((Y,Z))), X, W...)
+_rmaterialize(Z, Y) = materialize(Mul(Y,Z))
+_rmaterialize(Z, Y, X, W...) = _rmaterialize(materialize(Mul(Y,Z)), X, W...)
 
 
-*(A::Mul, B::Mul) = materialize(Mul(A.factors..., B.factors...))
-*(A::Mul, B) = materialize(Mul(A.factors..., B))
-*(A, B::Mul) = materialize(Mul(A, B.factors...))
+# *(A::Mul, B::Mul) = materialize(Mul(A.args..., B.args...))
+# *(A::Mul, B) = materialize(Mul(A.args..., B))
+# *(A, B::Mul) = materialize(Mul(A, B.args...))
 ⋆(A...) = Mul(A...)
 
 
@@ -130,7 +108,7 @@ colsupport(A, j) = colsupport(MemoryLayout(A), A, j)
 
 
 function getindex(M::MatMulVec, k::Integer)
-    A,B = M.factors
+    A,B = M.args
     ret = zero(eltype(M))
     for j = rowsupport(A, k)
         ret += A[k,j] * B[j]
@@ -151,7 +129,7 @@ getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V}
 
 function getindex(M::MatMulMat, k::Integer, j::Integer)
-    A,B = M.factors
+    A,B = M.args
     ret = zero(eltype(M))
     @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
         ret += A[k,ℓ] * B[ℓ,j]
@@ -167,7 +145,7 @@ getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 #####
 
 function getindex(M::Mul, k)
-    A,Bs = first(M.factors), tail(M.factors)
+    A,Bs = first(M.args), tail(M.args)
     B = Mul(Bs)
     ret = zero(eltype(M))
     for j = rowsupport(A, k)
@@ -177,7 +155,7 @@ function getindex(M::Mul, k)
 end
 
 function getindex(M::Mul, k, j)
-    A,Bs = first(M.factors), tail(M.factors)
+    A,Bs = first(M.args), tail(M.args)
     B = Mul(Bs)
     ret = zero(eltype(M))
     @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
@@ -218,16 +196,16 @@ IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 *(A::MulArray, B::Mul) = A.mul * B
 *(A::Mul, B::MulArray) = A * B.mul
 
-adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.mul.factors))...)
-transpose(A::MulArray) = MulArray(reverse(transpose.(A.mul.factors))...)
+adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.mul.args))...)
+transpose(A::MulArray) = MulArray(reverse(transpose.(A.mul.args))...)
 
 
 struct MulLayout{LAY} <: MemoryLayout
     layouts::LAY
 end
 
-MemoryLayout(M::MulArray) = MulLayout(MemoryLayout.(M.mul.factors))
+MemoryLayout(M::MulArray) = MulLayout(MemoryLayout.(M.mul.args))
 
 
-_flatten(A::MulArray, B...) = _flatten(A.mul.factors..., B...)
-flatten(A::MulArray) = MulArray(Mul(_flatten(A.mul.factors...)))
+_flatten(A::MulArray, B...) = _flatten(A.mul.args..., B...)
+flatten(A::MulArray) = MulArray(Mul(_flatten(A.mul.args...)))
