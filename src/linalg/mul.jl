@@ -161,9 +161,7 @@ function getindex(M::Mul, k, j)
 end
 
 
-struct MulArray{T, N, MUL<:Mul} <: AbstractArray{T,N}
-    mul::MUL
-end
+const MulArray{T, N, MUL<:Mul} = ApplyArray{T, N, MUL}
 
 const MulVector{T, MUL<:Mul} = MulArray{T, 1, MUL}
 const MulMatrix{T, MUL<:Mul} = MulArray{T, 2, MUL}
@@ -181,26 +179,14 @@ MulArray{T,N}(factors...) where {T,N} = MulArray{T,N}(Mul(factors...))
 MulVector(factors...) = MulVector(Mul(factors...))
 MulMatrix(factors...) = MulMatrix(Mul(factors...))
 
-axes(A::MulArray) = axes(A.mul)
-size(A::MulArray) = map(length, axes(A))
-
 IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 
-@propagate_inbounds getindex(A::MulArray, kj::Int...) = A.mul[kj...]
+@propagate_inbounds getindex(A::MulArray, kj::Int...) = A.applied[kj...]
 
-*(A::MulArray, B::MulArray) = A.mul * B.mul
-*(A::MulArray, B::Mul) = A.mul * B
-*(A::Mul, B::MulArray) = A * B.mul
+*(A::MulArray, B::MulArray) = MulArray(A, B)
 
-adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.mul.args))...)
-transpose(A::MulArray) = MulArray(reverse(transpose.(A.mul.args))...)
-
-
-struct MulLayout{LAY} <: MemoryLayout
-    layouts::LAY
-end
-
-MemoryLayout(M::MulArray) = MulLayout(MemoryLayout.(M.mul.args))
+adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.applied.args))...)
+transpose(A::MulArray) = MulArray(reverse(transpose.(A.applied.args))...)
 
 
 _flatten(A::MulArray, B...) = _flatten(A.mul.args..., B...)
