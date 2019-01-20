@@ -1,12 +1,12 @@
 using LazyArrays, LinearAlgebra,  Test
-import LazyArrays: ArrayLdivArrayStyle
+import LazyArrays: ArrayLdivArrayStyle, InvMatrix
 import Base.Broadcast: materialize
 
 @testset "Ldiv" begin
     @testset "Float64 \\ *" begin
         A = randn(5,5)
         b = randn(5)
-        M = Mul(Inv(A),b)
+        M = Ldiv(A,b)
 
         @test size(M) == (5,)
         @test similar(M) isa Vector{Float64}
@@ -15,14 +15,15 @@ import Base.Broadcast: materialize
 
         @test Base.BroadcastStyle(typeof(Ldiv(A,b))) isa ArrayLdivArrayStyle
         @test all(copyto!(similar(b), Ldiv(A,b)) .===
-                    (similar(b) .= Ldiv(A,b)) .=== Inv(A) * b .===
+                    (similar(b) .= Ldiv(A,b)) .=== InvMatrix(A) * b .===
                     materialize(Ldiv(A,b)) .===
                   (A\b) .=== (b̃ =  copy(b); LAPACK.gesv!(copy(A), b̃); b̃))
 
 
         @test copyto!(similar(b), Ldiv(UpperTriangular(A) , b)) ≈ UpperTriangular(A) \ b
         @test all(copyto!(similar(b), Ldiv(UpperTriangular(A) , b)) .===
-                    (similar(b) .= Ldiv(UpperTriangular(A),b)) .=== Inv(UpperTriangular(A))*b .===
+                    (similar(b) .= Ldiv(UpperTriangular(A),b)) .===
+                    InvMatrix(UpperTriangular(A))*b .===
                     BLAS.trsv('U', 'N', 'N', A, b) )
 
 
@@ -34,7 +35,7 @@ import Base.Broadcast: materialize
                     BLAS.trsv('U', 'T', 'N', A, b))
 
         b = randn(5) + im*randn(5)
-        @test Inv(A) * b ≈ Matrix(A) \ b
+        @test InvMatrix(A) * b ≈ Matrix(A) \ b
     end
 
 
@@ -63,7 +64,7 @@ import Base.Broadcast: materialize
                     BLAS.trsv('U', 'T', 'N', A, b))
 
         b = randn(5)
-        @test Inv(A) * b ≈ A \ b
+        @test InvMatrix(A) * b ≈ A \ b
     end
 
     @testset "Triangular \\ matrix" begin
@@ -80,8 +81,8 @@ import Base.Broadcast: materialize
         A_orig = copy(A)
         b = randn(5)
         b_orig = copy(b)
-        @test_throws DimensionMismatch Inv(A)
-        @test PInv(A) * b == (A\b)
+        @test_throws DimensionMismatch InvMatrix(A)
+        @test PInvMatrix(A) * b == (A\b)
         @test all(b .=== b_orig)
     end
 

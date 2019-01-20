@@ -15,9 +15,6 @@ Mul(A...) = applied(*, A...)
 
 const Mul2{StyleA, StyleB, AType, BType} = Mul{<:Tuple{StyleA,StyleB}, <:Tuple{AType,BType}}
 
-_mul_eltype(a) = eltype(a)
-_mul_eltype(a, b...) = Base.promote_op(*, eltype(a), _mul_eltype(b...))
-eltype(M::Mul) = _mul_eltype(M.args...)
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
 ndims(M::Mul) = ndims(last(M.args))
@@ -31,7 +28,7 @@ _mul_axes(ax1, (_,ax2)::Tuple{<:Any,<:Any}) = (ax1,ax2)
 axes(M::Mul) = _mul_axes(axes(first(M.args),1), axes(last(M.args)))
 axes(M::Mul{Tuple{}}) = ()
 
-similar(M::Mul) = similar(M, eltype(M))
+
 
 
 
@@ -79,8 +76,6 @@ _materialize(M::ArrayMuls, _) = lmaterialize(M)
 _materialize(M::Mul, _) = lmaterialize(M)
 _materialize(M::Mul2, _) = error("Cannot materialize $M")
 materialize(M::Mul) = _materialize(M, axes(M))
-
-@inline copyto!(dest::AbstractArray, M::Mul) = _copyto!(MemoryLayout(dest), dest, M)
 
 
 ####

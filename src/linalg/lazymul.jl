@@ -65,5 +65,21 @@ macro lazylmul(Typ)
     end)
 end
 
+macro lazyldiv(Typ)
+    esc(quote
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = (x .= LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = (x .= LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = (x .= LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = (x .= LazyArrays.Ldiv(A,x))
 
-@lazymul AddMatrix
+        Base.:\(A::$Typ, x::AbstractVector) = LazyArrays.materialize(LazyArrays.Ldiv(A,x))
+        Base.:\(A::$Typ, x::AbstractMatrix) = LazyArrays.materialize(LazyArrays.Ldiv(A,x))
+    end)
+end
+
+@lazymul ApplyArray
+@lazylmul ApplyArray
+@lazyldiv ApplyArray
+@lazymul BroadcastArray
+@lazylmul BroadcastArray
+@lazyldiv BroadcastArray
