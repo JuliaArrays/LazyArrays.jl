@@ -30,6 +30,7 @@ size(A::InvOrPInv) = reverse(size(parent(A)))
 axes(A::InvOrPInv) = reverse(axes(parent(A)))
 size(A::InvOrPInv, k) = size(A)[k]
 axes(A::InvOrPInv, k) = axes(A)[k]
+eltype(A::InvOrPInv) = eltype(parent(A))
 
 
 
@@ -47,6 +48,7 @@ size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
     (size(L.args[1], 2),)
 length(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
     size(L.args[1], 2)
+eltype(M::Ldiv) = promote_type(eltype.(M.args)...)
 
 struct ArrayLdivArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
 

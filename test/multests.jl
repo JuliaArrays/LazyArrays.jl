@@ -1,6 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add
+import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray
 import Base.Broadcast: materialize, materialize!
+
 
 @testset "Mul" begin
     @testset "eltype" begin
@@ -640,7 +641,7 @@ import Base.Broadcast: materialize, materialize!
         Ac = A'
         blasnoalloc(c, 2.0, Ac, x, 3.0, y)
         @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
-        Aa = Add(A, Ac)
+        Aa = AddArray(A, Ac)
         blasnoalloc(c, 2.0, Aa, x, 3.0, y)
         @test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
     end
@@ -674,8 +675,8 @@ end
 
 @testset "Add" begin
     @testset "gemv Float64" begin
-        for A in (Add(randn(5,5), randn(5,5)),
-                  Add(randn(5,5), view(randn(9, 5), 1:2:9, :))),
+        for A in (AddArray(randn(5,5), randn(5,5)),
+                  AddArray(randn(5,5), view(randn(9, 5), 1:2:9, :))),
             b in (randn(5), view(randn(5),:), view(randn(5),1:5), view(randn(9),1:2:9))
 
             Ã = copy(A)
@@ -718,8 +719,8 @@ end
     end
 
     @testset "gemm" begin
-        for A in (Add(randn(5,5), randn(5,5)),
-                  Add(randn(5,5), view(randn(9, 5), 1:2:9, :))),
+        for A in (AddArray(randn(5,5), randn(5,5)),
+                  AddArray(randn(5,5), view(randn(9, 5), 1:2:9, :))),
             B in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
                   view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5))
 

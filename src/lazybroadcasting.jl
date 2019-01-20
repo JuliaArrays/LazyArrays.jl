@@ -90,14 +90,3 @@ broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::AbstractArray{T,N}, b::Zeros{V,
     broadcast(DefaultArrayStyle{N}(), *, a, b)
 broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::AbstractArray{V,N}) where {T,V,N} =
     broadcast(DefaultArrayStyle{N}(), *, a, b)
-
-const Add = BroadcastArray{<:Any, <:Any, <:Broadcasted{<:Any, <:Any, typeof(+)}}
-const AddVector = Add{<:Any, 1}
-const AddMatrix = Add{<:Any, 2}
-
-"""
-    Add(A1, A2, …, AN)
-
-A lazy representation of `A1 .+ A2 .+ … .+ AN`; i.e., a shorthand for `BroadcastArray(+, A1, A2, …, AN)`.
-"""
-Add(As...) = BroadcastArray(+, As...)

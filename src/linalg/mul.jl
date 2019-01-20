@@ -21,6 +21,7 @@ ndims(M::Mul) = ndims(last(M.args))
 
 length(M::Mul) = prod(size(M))
 size(M::Mul) = length.(axes(M))
+eltype(M::Mul) = Base.promote_op(*, eltype.(M.args)...)
 
 _mul_axes(ax1, ::Tuple{}) = (ax1,)
 _mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)

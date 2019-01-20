@@ -184,6 +184,9 @@ end
 
 function materialize!(M::MatMulMatAdd)
     α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
+    if C ≡ B
+        B = copy(B)
+    end
     ts = tile_size(eltype(A), eltype(B), eltype(C))
     if iszero(β) # false is a "strong" zero to wipe out NaNs
         ts == 0 ? default_blasmul!(α, A, B, false, C) : tiled_blasmul!(ts, α, A, B, false, C)
@@ -194,19 +197,22 @@ end
 
 function materialize!(M::MatMulVecAdd)
     α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
+    if C ≡ B
+        B = copy(B)
+    end
     default_blasmul!(α, A, B, iszero(β) ? false : β, C)
 end
 
 for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
     # `MulAdd{<:BroadcastLayout{typeof(+)}}` cannot "win" against
     # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:
-    @eval function materialize!(M::$MulAdd_{<:BroadcastLayout{typeof(+)}})
+    @eval function materialize!(M::$MulAdd_{<:ApplyLayout{typeof(+)}})
         α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
         if C ≡ B
             B = copy(B)
         end
         lmul!(β, C)
-        for A in A.broadcasted.args
+        for A in A.applied.args
             C .= α .* Mul(A, B) .+ C
         end
         C

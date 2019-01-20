@@ -5,7 +5,7 @@ using LazyArrays, LinearAlgebra, FillArrays, Test
                             UnitUpperTriangularLayout, LowerTriangularLayout,
                             UnitLowerTriangularLayout, ScalarLayout,
                             hermitiandata, symmetricdata, FillLayout, ZerosLayout,
-                            VcatLayout, BroadcastLayout, Add
+                            VcatLayout, BroadcastLayout, Add, AddArray, ApplyLayout
 
 struct FooBar end
 struct FooNumber <: Number end
@@ -145,7 +145,14 @@ struct FooNumber <: Number end
 
     @testset "BroadcastArray" begin
         A = [1.0 2; 3 4]
-        @test MemoryLayout(Add(A, Fill(0, (2, 2)), Zeros(2, 2))) ==
+        @test MemoryLayout(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2))) ==
             BroadcastLayout(+, (DenseColumnMajor(), FillLayout(), ZerosLayout()))
+    end
+
+    @testset "ApplyArray" begin
+        A = [1.0 2; 3 4]
+        @test eltype(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))) == Float64
+        @test MemoryLayout(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))) ==
+            ApplyLayout(+, (DenseColumnMajor(), FillLayout(), ZerosLayout()))
     end
 end

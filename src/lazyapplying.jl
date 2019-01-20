@@ -21,8 +21,7 @@ materialize(A::Applied{DefaultApplyStyle,<:Any,<:Tuple{<:Any}}) =
     A.f(materialize(first(A.args)))
 materialize(A::Applied{DefaultApplyStyle}) = A.f(materialize.(A.args)...)
 
-_apply_eltype(f, a...) = Base.promote_op(f, eltype.(a)...)
-eltype(M::Applied) = _apply_eltype(M.f, M.args...)
+
 
 similar(M::Applied) = similar(M, eltype(M))
 
@@ -44,6 +43,7 @@ ApplyMatrix(M::Applied) = ApplyMatrix{eltype(M)}(M)
 ApplyArray(f, factors...) = ApplyArray(applied(f, factors...))
 ApplyArray{T}(f, factors...) where T = ApplyArray{T}(applied(f, factors...))
 ApplyArray{T,N}(f, factors...) where {T,N} = ApplyArray{T,N}(applied(f, factors...))
+
 ApplyVector(f, factors...) = ApplyVector(applied(f, factors...))
 ApplyMatrix(f, factors...) = ApplyMatrix(applied(f, factors...))
 
@@ -72,3 +72,31 @@ MemoryLayout(M::ApplyArray) = ApplyLayout(M.applied.f, MemoryLayout.(M.applied.a
 
 # _flatten(A::ApplyArray, B...) = _flatten(A.mul.args..., B...)
 # flatten(A::MulArray) = MulArray(Mul(_flatten(A.mul.args...)))
+
+
+
+const Add{Factors<:Tuple} = Applied{<:Any, typeof(+), Factors}
+
+size(M::Add, p::Int) = size(M)[p]
+axes(M::Add, p::Int) = axes(M)[p]
+ndims(M::Add) = ndims(first(M.args))
+
+length(M::Add) = prod(size(M))
+size(M::Add) = length.(axes(M))
+axes(M::Add) = axes(first(M.args))
+
+
+eltype(M::Add) = Base._return_type(+, eltype.(M.args))
+
+const AddArray{T,N,Factors<:Tuple} = ApplyArray{T,N,<:Add{Factors}}
+const AddVector{T,Factors<:Tuple} = AddArray{T,1,Factors}
+const AddMatrix{T,Factors<:Tuple} = AddArray{T,2,Factors}
+
+AddArray(factors...) = ApplyArray(+, factors...)
+
+"""
+    Add(A1, A2, …, AN)
+
+A lazy representation of `A1 + A2 + … + AN`; i.e., a shorthand for `applied(+, A1, A2, …, AN)`.
+"""
+Add(As...) = applied(+, As...)
