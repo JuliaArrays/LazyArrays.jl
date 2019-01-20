@@ -26,6 +26,23 @@ materialize(A::Applied{DefaultApplyStyle}) = A.f(materialize.(A.args)...)
 similar(M::Applied) = similar(M, eltype(M))
 
 
+struct MatrixFunctionStyle{F} <: ApplyStyle end
+
+for f in (:exp, :sin, :cos, :sqrt)
+    @eval ApplyStyle(::typeof($f), ::AbstractMatrix) = MatrixFunctionStyle{typeof($f)}()
+end
+
+materialize(A::Applied{<:MatrixFunctionStyle,<:Any,<:Tuple{<:Any}}) =
+    A.f(materialize(first(A.args)))
+
+axes(A::Applied{<:MatrixFunctionStyle}) = axes(first(A.args))
+size(A::Applied{<:MatrixFunctionStyle}) = size(first(A.args))
+eltype(A::Applied{<:MatrixFunctionStyle}) = eltype(first(A.args))
+
+getindex(A::Applied{<:MatrixFunctionStyle}, k::Int, j::Int) =
+    materialize(A)[k,j]
+
+
 struct ApplyArray{T, N, App<:Applied} <: AbstractArray{T,N}
     applied::App
 end

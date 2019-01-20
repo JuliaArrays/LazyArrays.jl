@@ -150,9 +150,12 @@ function getindex(M::Mul, k)
     ret
 end
 
+_mul(A) = A
+_mul(A,B,C...) = Mul(A,B,C...)
+
 function getindex(M::Mul, k, j)
     A,Bs = first(M.args), tail(M.args)
-    B = Mul(Bs)
+    B = _mul(Bs...)
     ret = zero(eltype(M))
     @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
         ret += A[k,ℓ] * B[ℓ,j]
