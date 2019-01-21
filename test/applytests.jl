@@ -26,7 +26,7 @@ end
     @test axes(c) == (Base.OneTo(2),)
 
     @test c[1] == c[1,1]
-    @test exp(A)*b == c
+    @test exp(A)*b ≈ c
 
     @test ApplyArray(+,[1,2],[3,4]) == ApplyVector(+,[1,2],[3,4]) ==
             ApplyArray(+,[1,2],[3,4])

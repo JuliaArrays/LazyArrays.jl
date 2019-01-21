@@ -670,6 +670,15 @@ import Base.Broadcast: materialize, materialize!
         M = MulArray(A,A)
         @test Matrix(M) ≈ A^2
     end
+
+    @testset "#14" begin
+        A = ones(1,1) * 1e200
+        B = ones(1,1) * 1e150
+        C = ones(1,1) * 1e-300
+
+        @test materialize(Mul(A, Mul(B,C))) == A*(B*C)
+        @test materialize(Mul(A , Mul(B , C), C)) == A * (B*C) * C
+    end
 end
 
 
@@ -761,3 +770,11 @@ end
         end
     end
 end
+
+
+N = 2
+A = randn(N,N); B = randn(N,N); C = randn(N,N); R1 = similar(A); R2 = similar(A)
+
+Mul(A, Mul(B, C))
+
+R2 .= Mul(A, Mul(B, C))
