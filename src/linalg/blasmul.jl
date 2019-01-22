@@ -202,22 +202,6 @@ function materialize!(M::MatMulVecAdd)
     default_blasmul!(α, A, B, iszero(β) ? false : β, C)
 end
 
-for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
-    # `MulAdd{<:BroadcastLayout{typeof(+)}}` cannot "win" against
-    # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:
-    @eval function materialize!(M::$MulAdd_{<:ApplyLayout{typeof(+)}})
-        α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
-        if C ≡ B
-            B = copy(B)
-        end
-        lmul!(β, C)
-        for A in A.applied.args
-            C .= α .* Mul(A, B) .+ C
-        end
-        C
-    end
-end
-
 # make copy to make sure always works
 @inline function _gemv!(tA, α, A, x, β, y)
     if x ≡ y
