@@ -64,7 +64,6 @@ const BArrayLdivArray{styleA, styleB, p, q, T, V} =
 
 BroadcastStyle(::Type{<:ArrayLdivArray{StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} =
     ArrayLdivArrayStyle{StyleA,StyleB,p,q}()
-broadcastable(M::ArrayLdivArray) = M
 
 
 similar(A::InvOrPInv, ::Type{T}) where T = Array{T}(undef, size(A))
@@ -93,7 +92,6 @@ end
 const MatLdivVec{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, 2, 1, T, V}
 const MatLdivMat{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, 2, 2, T, V}
 
-broadcastable(M::MatLdivVec) = M
 
 
 ###

@@ -42,8 +42,7 @@ BroadcastStyle(::Type{<:MatMulVecAdd{StyleA,StyleB,StyleC}}) where {StyleA,Style
 BroadcastStyle(::Type{<:MatMulMatAdd{StyleA,StyleB,StyleC}}) where {StyleA,StyleB,StyleC} =
     ArrayMulArrayStyle{StyleA,StyleB,2,2}()
 
-broadcastable(M::MatMulMatAdd) = M
-broadcastable(M::MatMulVecAdd) = M
+broadcastable(M::MulAdd) = M
 
 const BlasMatMulVec{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractVector{T},<:AbstractVector{T}}
 const BlasMatMulMat{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}

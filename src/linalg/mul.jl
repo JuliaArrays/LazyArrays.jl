@@ -11,13 +11,18 @@ const Mul{Styles<:Tuple, Factors<:Tuple} = Applied{<:LayoutApplyStyle{Styles}, t
 
 ApplyStyle(::typeof(*), args::AbstractArray...) = LayoutApplyStyle(MemoryLayout.(args))
 
-Mul(A...) = applied(*, A...)
+Mul(args...) = Applied(LayoutApplyStyle(MemoryLayout.(args)), *, args)
 
 const Mul2{StyleA, StyleB, AType, BType} = Mul{<:Tuple{StyleA,StyleB}, <:Tuple{AType,BType}}
 
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
 ndims(M::Mul) = ndims(last(M.args))
+
+_mul_ndims(::Type{Tuple{A}}) where A = ndims(A)
+_mul_ndims(::Type{Tuple{A,B}}) where {A,B} = ndims(B)
+ndims(::Type{<:Mul{<:Any,Args}}) where Args = _mul_ndims(Args)
+
 
 length(M::Mul) = prod(size(M))
 size(M::Mul) = length.(axes(M))
@@ -75,7 +80,7 @@ similar(M::ArrayMuls, ::Type{T}) where T = similar(M, T, axes(M))
 _materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
 _materialize(M::ArrayMuls, _) = lmaterialize(M)
 _materialize(M::Mul, _) = lmaterialize(M)
-_materialize(M::Mul2, _) = error("Cannot materialize $M")
+_materialize(M::Mul2, _) = *(materialize.(M.args)...)
 materialize(M::Mul) = _materialize(M, axes(M))
 
 
@@ -140,7 +145,7 @@ getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 # MulArray
 #####
 
-function getindex(M::Mul, k)
+function getindex(M::Mul, k::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = Mul(Bs)
     ret = zero(eltype(M))
@@ -153,7 +158,7 @@ end
 _mul(A) = A
 _mul(A,B,C...) = Mul(A,B,C...)
 
-function getindex(M::Mul, k, j)
+function getindex(M::Mul, k::Integer, j::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
     ret = zero(eltype(M))

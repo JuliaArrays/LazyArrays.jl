@@ -73,7 +73,9 @@ IndexStyle(::ApplyArray{<:Any,1}) = IndexLinear()
     materialize(A.applied)[kj...]
 
 @inline copyto!(dest::AbstractArray, M::Applied) = _copyto!(MemoryLayout(dest), dest, M)
+@inline _copyto!(_, dest::AbstractArray, M::Applied) = copyto!(dest, materialize(M))
 
+broadcastable(M::Applied) = M
 
 # adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.mul.args))...)
 # transpose(A::MulArray) = MulArray(reverse(transpose.(A.mul.args))...)

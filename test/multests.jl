@@ -679,6 +679,15 @@ import Base.Broadcast: materialize, materialize!
         @test materialize(Mul(A, Mul(B,C))) == A*(B*C)
         @test materialize(Mul(A , Mul(B , C), C)) == A * (B*C) * C
     end
+
+    @testset "#15" begin
+        N = 2
+        A = randn(N,N); B = randn(N,N); C = randn(N,N); R1 = similar(A); R2 = similar(A)
+        M = Mul(A, Mul(B, C))
+        @test ndims(M) == ndims(typeof(M)) == 2
+        @test eltype(M) == Float64
+        @test_broken all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
+    end
 end
 
 
@@ -770,11 +779,3 @@ end
         end
     end
 end
-
-
-N = 2
-A = randn(N,N); B = randn(N,N); C = randn(N,N); R1 = similar(A); R2 = similar(A)
-
-Mul(A, Mul(B, C))
-
-R2 .= Mul(A, Mul(B, C))

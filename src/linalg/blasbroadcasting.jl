@@ -55,8 +55,6 @@ similar(M::Broadcasted{<:ArrayMulArrayStyle}, ::Type{ElType}) where ElType =
     Array{ElType}(undef,size(M.args[1]))
 
 
-
-broadcastable(M::ArrayMulArray) = M
 instantiate(bc::Broadcasted{<:ArrayMulArrayStyle}) = bc
 
 
