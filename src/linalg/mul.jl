@@ -164,6 +164,7 @@ const MulArray{T, N, MUL<:Mul} = ApplyArray{T, N, MUL}
 const MulVector{T, MUL<:Mul} = MulArray{T, 1, MUL}
 const MulMatrix{T, MUL<:Mul} = MulArray{T, 2, MUL}
 
+const MulLayout{LAY} = ApplyLayout{typeof(*),LAY}
 
 MulArray{T,N}(M::MUL) where {T,N,MUL<:Mul} = MulArray{T,N,MUL}(M)
 MulArray{T}(M::Mul) where {T} = MulArray{T,ndims(M)}(M)
@@ -171,7 +172,10 @@ MulArray(M::Mul) = MulArray{eltype(M)}(M)
 MulVector(M::Mul) = MulVector{eltype(M)}(M)
 MulMatrix(M::Mul) = MulMatrix{eltype(M)}(M)
 
-MulArray(factors...) = MulArray(Mul(factors...))
+function MulArray(factors...)
+    checkdimensions(factors...)
+    MulArray(Mul(factors...))
+end
 MulArray{T}(factors...) where T = MulArray{T}(Mul(factors...))
 MulArray{T,N}(factors...) where {T,N} = MulArray{T,N}(Mul(factors...))
 MulVector(factors...) = MulVector(Mul(factors...))

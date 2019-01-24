@@ -669,6 +669,7 @@ import Base.Broadcast: materialize, materialize!
         A = randn(5,5)
         M = MulArray(A,A)
         @test Matrix(M) ≈ A^2
+        @test_throws DimensionMismatch MulArray(randn(5,5), randn(4))
     end
 
     @testset "#14" begin
