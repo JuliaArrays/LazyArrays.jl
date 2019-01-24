@@ -26,7 +26,15 @@ ndims(::Type{<:Mul{<:Any,Args}}) where Args = _mul_ndims(Args)
 
 length(M::Mul) = prod(size(M))
 size(M::Mul) = length.(axes(M))
-eltype(M::Mul) = Base.promote_op(*, eltype.(M.args)...)
+
+@inline _mul_eltype(A) = A
+@inline _mul_eltype(A, B) = Base.promote_op(*, A, B)
+@inline _mul_eltype(A, B, C, D...) = _mul_eltype(Base.promote_op(*, A, B), C, D...)
+
+@inline _eltypes() = tuple()
+@inline _eltypes(A, B...) = tuple(eltype(A), _eltypes(B...)...)
+
+@inline eltype(M::Mul) = _mul_eltype(_eltypes(M.args...)...)
 
 _mul_axes(ax1, ::Tuple{}) = (ax1,)
 _mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)

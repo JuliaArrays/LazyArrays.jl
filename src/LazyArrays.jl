@@ -28,7 +28,7 @@ import Base: ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
-                        materialize!
+                        materialize!, eltypes
 
 import LinearAlgebra: AbstractTriangular, checksquare, pinv
 

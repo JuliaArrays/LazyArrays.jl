@@ -3,10 +3,11 @@ import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTr
 import Base.Broadcast: materialize, materialize!
 
 
+
 @testset "Mul" begin
     @testset "eltype" begin
-        @inferred(eltype(Mul(zeros(Int,2,2), zeros(Float64,2)))) == Float64
-        @inferred(eltype(Mul(zeros(ComplexF16,2,2),zeros(Int,2,2),zeros(Float64,2)))) == ComplexF64
+        @test @inferred(eltype(Mul(zeros(Int,2,2), zeros(Float64,2)))) == Float64
+        @test @inferred(eltype(Mul(zeros(ComplexF16,2,2),zeros(Int,2,2),zeros(Float64,2)))) == ComplexF64
 
         v = Mul(zeros(Int,2,2), zeros(Float64,2))
         A = Mul(zeros(Int,2,2), zeros(Float64,2,2))
@@ -18,6 +19,10 @@ import Base.Broadcast: materialize, materialize!
         Ã = materialize(A)
         @test Ã isa Matrix{Float64}
         @test Ã == zeros(2,2)
+
+        A = randn(6,5); B = randn(5,5); C = randn(5,6)
+        M = Mul(A,B,C)
+        @test @inferred(eltype(M)) == Float64
     end
 
     @testset "gemv Float64" begin
