@@ -31,6 +31,11 @@ A lazy representation of `A1 + A2 + … + AN`; i.e., a shorthand for `applied(+,
 Add(As...) = applied(+, As...)
 
 
+getindex(M::Add, k::Integer) = sum(getindex.(M.args, k))
+getindex(M::Add, k::Integer, j::Integer) = sum(getindex.(M.args, k, j))
+getindex(M::Add, k::CartesianIndex{1}) = M[convert(Int, k)]
+getindex(M::Add, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
+
 for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
     # `MulAdd{<:ApplyLayout{typeof(+)}}` cannot "win" against
     # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:

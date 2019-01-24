@@ -12,7 +12,6 @@ struct ArrayMulArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
 @inline copyto!(dest::AbstractArray, bc::Broadcasted{<:ArrayMulArrayStyle}) =
     _copyto!(MemoryLayout(dest), dest, bc)
 # Use default broacasting in general
-@inline _copyto!(_, dest, bc::Broadcasted) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
 
 const BArrayMulArray{styleA, styleB, p, q, T, V} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),

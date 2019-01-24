@@ -108,16 +108,9 @@ gives an iterator containing the possible non-zero entries in the j-th column of
 colsupport(A, j) = colsupport(MemoryLayout(A), A, j)
 
 
-function getindex(M::MatMulVec, k::Integer)
-    A,B = M.args
-    ret = zero(eltype(M))
-    for j = rowsupport(A, k)
-        ret += A[k,j] * B[j]
-    end
-    ret
-end
 
-getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
+
+
 
 
 
@@ -129,25 +122,18 @@ getindex(M::MatMulVec, k::CartesianIndex{1}) = M[convert(Int, k)]
 
 const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V}
 
-function getindex(M::MatMulMat, k::Integer, j::Integer)
-    A,B = M.args
-    ret = zero(eltype(M))
-    @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
-        ret += A[k,ℓ] * B[ℓ,j]
-    end
-    ret
-end
-
-getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 
 
 ####
 # MulArray
 #####
 
+_mul(A) = A
+_mul(A,B,C...) = Mul(A,B,C...)
+
 function getindex(M::Mul, k::Integer)
     A,Bs = first(M.args), tail(M.args)
-    B = Mul(Bs)
+    B = _mul(Bs...)
     ret = zero(eltype(M))
     for j = rowsupport(A, k)
         ret += A[k,j] * B[j]
@@ -155,8 +141,12 @@ function getindex(M::Mul, k::Integer)
     ret
 end
 
-_mul(A) = A
-_mul(A,B,C...) = Mul(A,B,C...)
+
+getindex(M::Mul, k::CartesianIndex{1}) = M[convert(Int, k)]
+getindex(M::Mul, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
+
+
+
 
 function getindex(M::Mul, k::Integer, j::Integer)
     A,Bs = first(M.args), tail(M.args)

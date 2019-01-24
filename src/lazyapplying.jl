@@ -1,7 +1,5 @@
 
 
-
-
 abstract type ApplyStyle end
 struct DefaultApplyStyle <: ApplyStyle end
 struct LayoutApplyStyle{Layouts<:Tuple} <: ApplyStyle
@@ -24,6 +22,15 @@ materialize(A::Applied{DefaultApplyStyle}) = A.f(materialize.(A.args)...)
 
 
 similar(M::Applied) = similar(M, eltype(M))
+
+struct ApplyBroadcastStyle <: BroadcastStyle end
+
+@inline copyto!(dest::AbstractArray, bc::Broadcasted{ApplyBroadcastStyle}) =
+    _copyto!(MemoryLayout(dest), dest, bc)
+# Use default broacasting in general
+@inline _copyto!(_, dest, bc::Broadcasted) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
+
+BroadcastStyle(::Type{<:Applied}) = ApplyBroadcastStyle()
 
 
 struct MatrixFunctionStyle{F} <: ApplyStyle end
