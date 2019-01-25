@@ -1,7 +1,7 @@
 
 
-const PInv{Style, Typ} = Applied{<:LayoutApplyStyle{Style}, typeof(pinv), Tuple{Typ}}
-const Inv{Style, Typ} = Applied{<:LayoutApplyStyle{Style}, typeof(inv), Tuple{Typ}}
+const PInv{Style, Typ} = Applied{<:LayoutApplyStyle{<:Tuple{Style}}, typeof(pinv), <:Tuple{Typ}}
+const Inv{Style, Typ} = Applied{<:LayoutApplyStyle{<:Tuple{Style}}, typeof(inv), <:Tuple{Typ}}
 
 Inv(A) = applied(inv, A)
 PInv(A) = applied(pinv, A)
