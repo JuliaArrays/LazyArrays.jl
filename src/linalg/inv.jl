@@ -1,7 +1,7 @@
 
 
-const PInv{Style, Typ} = Applied{<:LayoutApplyStyle{<:Tuple{Style}}, typeof(pinv), <:Tuple{Typ}}
-const Inv{Style, Typ} = Applied{<:LayoutApplyStyle{<:Tuple{Style}}, typeof(inv), <:Tuple{Typ}}
+const PInv{Style, Typ} = Applied{LayoutApplyStyle{Tuple{Style}}, typeof(pinv), <:Tuple{Typ}}
+const Inv{Style, Typ} = Applied{LayoutApplyStyle{Tuple{Style}}, typeof(inv), <:Tuple{Typ}}
 
 Inv(A) = applied(inv, A)
 PInv(A) = applied(pinv, A)
@@ -37,7 +37,7 @@ eltype(A::InvOrPInv) = eltype(parent(A))
 
 
 const Ldiv{StyleA, StyleB, AType, BType} =
-    Applied{<:LayoutApplyStyle{<:Tuple{StyleA, StyleB}}, typeof(\), <:Tuple{AType, BType}}
+    Applied{LayoutApplyStyle{Tuple{StyleA, StyleB}}, typeof(\), <:Tuple{AType, BType}}
 
 Ldiv(A, B) = applied(\, A, B)
 

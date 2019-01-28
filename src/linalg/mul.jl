@@ -7,7 +7,7 @@ function checkdimensions(A, B, C...)
     checkdimensions(B, C...)
 end
 
-const Mul{Styles<:Tuple, Factors<:Tuple} = Applied{<:LayoutApplyStyle{Styles}, typeof(*), Factors}
+const Mul{Styles<:Tuple, Factors<:Tuple} = Applied{LayoutApplyStyle{Styles}, typeof(*), Factors}
 
 ApplyStyle(::typeof(*), args::AbstractArray...) = LayoutApplyStyle(MemoryLayout.(args))
 
