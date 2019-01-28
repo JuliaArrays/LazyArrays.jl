@@ -173,6 +173,7 @@ const MulVector{T, MUL<:Mul} = MulArray{T, 1, MUL}
 const MulMatrix{T, MUL<:Mul} = MulArray{T, 2, MUL}
 
 const MulLayout{LAY} = ApplyLayout{typeof(*),LAY}
+MulLayout(layouts) = ApplyLayout(*, layouts)
 
 MulArray{T,N}(M::MUL) where {T,N,MUL<:Mul} = MulArray{T,N,MUL}(M)
 MulArray{T}(M::Mul) where {T} = MulArray{T,ndims(M)}(M)
@@ -198,6 +199,8 @@ IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.applied.args))...)
 transpose(A::MulArray) = MulArray(reverse(transpose.(A.applied.args))...)
 
-
-_flatten(A::MulArray, B...) = _flatten(A.mul.args..., B...)
-flatten(A::MulArray) = MulArray(Mul(_flatten(A.mul.args...)))
+_flatten() = ()
+_flatten(A, B...) = (A, _flatten(B...)...)
+_flatten(A::Mul, B...) = _flatten(A.args..., B...)
+_flatten(A::MulArray, B...) = _flatten(A.applied.args..., B...)
+flatten(A::MulArray) = MulArray(Mul(_flatten(A.applied.args...)...))

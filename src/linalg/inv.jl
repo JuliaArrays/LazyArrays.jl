@@ -23,6 +23,8 @@ end
 inv(A::Inv) = parent(A)
 pinv(A::Inv) = inv(A)
 
+ndims(A::InvOrPInv) = ndims(parent(A))
+
 
 
 
@@ -48,7 +50,10 @@ size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
     (size(L.args[1], 2),)
 length(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
     size(L.args[1], 2)
-eltype(M::Ldiv) = promote_type(eltype.(M.args)...)
+
+ndims(L::Applied{<:Any, typeof(\)}) = ndims(last(L.args))
+eltype(M::Applied{<:Any, typeof(\)}) = promote_type(Base.promote_op(inv, eltype(first(M.args))),
+                                                    eltype(last(M.args)))
 
 struct ArrayLdivArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
 

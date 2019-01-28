@@ -6,6 +6,9 @@ struct LayoutApplyStyle{Layouts<:Tuple} <: ApplyStyle
     layouts::Layouts
 end
 
+# Used for when a lazy version should be constructed on materialize
+struct LazyArrayApplyStyle <: ApplyStyle end
+
 ApplyStyle(f, args...) = DefaultApplyStyle()
 
 struct Applied{Style<:ApplyStyle, F, Args<:Tuple}
@@ -78,6 +81,8 @@ IndexStyle(::ApplyArray{<:Any,1}) = IndexLinear()
 
 @propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Int,N}) where {T,N} =
     materialize(A.applied)[kj...]
+
+materialize(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 @inline copyto!(dest::AbstractArray, M::Applied) = _copyto!(MemoryLayout(dest), dest, M)
 @inline _copyto!(_, dest::AbstractArray, M::Applied) = copyto!(dest, materialize(M))
