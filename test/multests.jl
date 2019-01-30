@@ -672,7 +672,16 @@ import Base.Broadcast: materialize, materialize!
         M = MulArray(A,A)
         @test Matrix(M) ≈ A^2
     end
+
+    @testset "Bug in getindex" begin
+        M = MulArray([1,2,3],Ones(1,20))
+        @test M[1,1] == 1
+        @test M[2,1] == 2
+    end
 end
+
+
+
 
 
 @testset "Add" begin

@@ -166,9 +166,12 @@ getindex(M::MatMulMat, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 # MulArray
 #####
 
+_mul(A) = A
+_mul(A,B,C...) = Mul(A,B,C...)
+
 function getindex(M::Mul, k)
     A,Bs = first(M.factors), tail(M.factors)
-    B = Mul(Bs)
+    B = _mul(Bs...)
     ret = zero(eltype(M))
     for j = rowsupport(A, k)
         ret += A[k,j] * B[j]
@@ -178,7 +181,7 @@ end
 
 function getindex(M::Mul, k, j)
     A,Bs = first(M.factors), tail(M.factors)
-    B = Mul(Bs)
+    B = _mul(Bs...)
     ret = zero(eltype(M))
     @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
         ret += A[k,ℓ] * B[ℓ,j]
