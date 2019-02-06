@@ -61,7 +61,7 @@ function Base._prod(f, A::BroadcastArray, ::Colon)
 	out
 end
 
-# Macros for lazy broadcasting
+# Macros for lazy broadcasting, #21 WIP
 # based on @dawbarton  https://discourse.julialang.org/t/19641/20
 # and @tkf            https://github.com/JuliaLang/julia/issues/19198#issuecomment-457967851
 # and @chethega      https://github.com/JuliaLang/julia/pull/30939
@@ -73,7 +73,7 @@ struct LazyCast{T}
     value::T
 end
 Broadcast.broadcasted(::typeof(lazy), x) = LazyCast(x)
-Base.materialize(x::LazyCast) = BroadcastArray(x.value)
+Broadcast.materialize(x::LazyCast) = BroadcastArray(x.value)
 
 lazyhelp = """
 	@lazy A .+ B     == @□ A .+ B
