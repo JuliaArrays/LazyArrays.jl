@@ -43,22 +43,22 @@ copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 #                     (:maximum, :max), (:minimum, :min),
 #                     (:all, :&),       (:any, :|)]
 function Base._sum(f, A::BroadcastArray, ::Colon)
-	bc = A.broadcasted
-	T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
-	out = zero(T)
-	@simd for I in eachindex(bc)
-	    @inbounds out += f(bc[I])
-	end
-	out
+    bc = A.broadcasted
+    T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
+    out = zero(T)
+    @simd for I in eachindex(bc)
+        @inbounds out += f(bc[I])
+    end
+    out
 end
 function Base._prod(f, A::BroadcastArray, ::Colon)
-	bc = A.broadcasted
-	T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
-	out = one(T)
-	@simd for I in eachindex(bc)
-	    @inbounds out *= f(bc[I])
-	end
-	out
+    bc = A.broadcasted
+    T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
+    out = one(T)
+    @simd for I in eachindex(bc)
+        @inbounds out *= f(bc[I])
+    end
+    out
 end
 
 # Macros for lazy broadcasting, #21 WIP
@@ -76,8 +76,8 @@ Broadcast.broadcasted(::typeof(lazy), x) = LazyCast(x)
 Broadcast.materialize(x::LazyCast) = BroadcastArray(x.value)
 
 lazyhelp = """
-	@lazy A .+ B     == @□ A .+ B
-	@lazydot A + B   == @⊡ A + B
+    @lazy A .+ B     == @□ A .+ B
+    @lazydot A + B   == @⊡ A + B
 
 Macros for creating lazy `BroadcastArray`s: `@lazy` expects a broadcasting expression, 
 while `@lazydot` applies `@.` first. Short forms are typed `@\\square` and `@\\boxdot` 
@@ -86,40 +86,40 @@ while `@lazydot` applies `@.` first. Short forms are typed `@\\square` and `@\\b
 
 @doc lazyhelp
 macro lazy(ex)
-	checkex(ex)
+    checkex(ex)
     :( lazy.($(esc(ex))) )
 end
 @doc lazyhelp
 macro □(ex)
-	checkex(ex)
+    checkex(ex)
     :( lazy.($(esc(ex))) )
 end
 
 @doc lazyhelp
 macro lazydot(ex)
-	checkex(ex, "@lazydot")
+    checkex(ex, "@lazydot")
     :( @. lazy($(esc(ex))) )
 end
 @doc lazyhelp
 macro ⊡(ex)
-	checkex(ex, "@lazydot")
+    checkex(ex, "@lazydot")
     :( @. lazy($(esc(ex))) )
 end
 
 using MacroTools 
 
 function checkex(ex, name="@lazy")
-	if @capture(ex, (arg__,) = val_ ) 
-		if arg[2]==:dims
-			throw(ArgumentError("$name is capturing keyword arguments, try with `; dims = $val` instead of a comma"))
-		else
-			throw(ArgumentError("$name is probably capturing capturing keyword arguments, needs a single expression"))
-		end
-	end
-	if @capture(ex, (arg_,rest__) ) 
-		throw(ArgumentError("$name is capturing more than one expression, try $name($arg) with brackets"))
-	end
-	ex
+    if @capture(ex, (arg__,) = val_ ) 
+        if arg[2]==:dims
+            throw(ArgumentError("$name is capturing keyword arguments, try with `; dims = $val` instead of a comma"))
+        else
+            throw(ArgumentError("$name is probably capturing capturing keyword arguments, needs a single expression"))
+        end
+    end
+    if @capture(ex, (arg_,rest__) ) 
+        throw(ArgumentError("$name is capturing more than one expression, try $name($arg) with brackets"))
+    end
+    ex
 end
 
 
