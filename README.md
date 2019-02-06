@@ -81,16 +81,16 @@ julia> B = BroadcastArray(+, A, 2);
 julia> B == A .+ 2
 true
 ```
-Such arrays can also be created using the macro `@lazy` which acts on ordinary 
-broadcasting expressions, or the macro `@lazydot` which applies `@.` to add dots first: 
+Such arrays can also be created using the macro `@~` which acts on ordinary 
+broadcasting expressions: 
 ```julia
 julia> C = rand(1000)';
 
-julia> D = @lazy exp.(C)
+julia> D = @~ exp.(C)
 
-julia> E = @lazydot 2 + log(C)
+julia> E = @~ @. 2 + log(C)
 
-julia> @btime sum(@lazy C .* C'; dims=1) #  1.438 ms (5 allocations: 7.64 MiB) without @lazy
+julia> @btime sum(@~ C .* C'; dims=1) # without `@~`, 1.438 ms (5 allocations: 7.64 MiB) 
   74.425 μs (7 allocations: 8.08 KiB)
 ```
 
