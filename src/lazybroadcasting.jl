@@ -66,58 +66,43 @@ end
 # and @tkf            https://github.com/JuliaLang/julia/issues/19198#issuecomment-457967851
 # and @chethega      https://github.com/JuliaLang/julia/pull/30939
 
-export @lazy, @lazydot, @□, @⊡
+export @~
 
-lazy(::Any) = error("function `lazy` must be called with a dot")
+lazy(::Any) = throw(ArgumentError("function `lazy` exists only for its effect on broadcasting, see the macro @~"))
 struct LazyCast{T}
     value::T
 end
 Broadcast.broadcasted(::typeof(lazy), x) = LazyCast(x)
 Broadcast.materialize(x::LazyCast) = BroadcastArray(x.value)
 
-lazyhelp = """
-    @lazy A .+ B     == @□ A .+ B
-    @lazydot A + B   == @⊡ A + B
-
-Macros for creating lazy `BroadcastArray`s: `@lazy` expects a broadcasting expression, 
-while `@lazydot` applies `@.` first. Short forms are typed `@\\square` and `@\\boxdot` 
-(or perhaps `@z` & `@ż` except that `ż` seems hard to enter at the REPL).
 """
+    @~ expr
 
-@doc lazyhelp
-macro lazy(ex)
-    checkex(ex)
-    :( lazy.($(esc(ex))) )
-end
-@doc lazyhelp
-macro □(ex)
-    checkex(ex)
-    :( lazy.($(esc(ex))) )
-end
+Macro for creating lazy `BroadcastArray`s. 
+Expects a broadcasting expression, possibly created by the `@.` macro:
+```
+julia> @~ A .+ B ./ 2
 
-@doc lazyhelp
-macro lazydot(ex)
-    checkex(ex, "@lazydot")
-    :( @. lazy($(esc(ex))) )
-end
-@doc lazyhelp
-macro ⊡(ex)
-    checkex(ex, "@lazydot")
-    :( @. lazy($(esc(ex))) )
+julia> @~ @. A + B / 2
+```
+"""
+macro ~(ex)
+    checkex(ex)
+    esc( :( $lazy.($ex) ) )
 end
 
 using MacroTools 
 
-function checkex(ex, name="@lazy")
+function checkex(ex)
     if @capture(ex, (arg__,) = val_ ) 
         if arg[2]==:dims
-            throw(ArgumentError("$name is capturing keyword arguments, try with `; dims = $val` instead of a comma"))
+            throw(ArgumentError("@~ is capturing keyword arguments, try with `; dims = $val` instead of a comma"))
         else
-            throw(ArgumentError("$name is probably capturing capturing keyword arguments, needs a single expression"))
+            throw(ArgumentError("@~ is probably capturing capturing keyword arguments, try with ; or brackets"))
         end
     end
     if @capture(ex, (arg_,rest__) ) 
-        throw(ArgumentError("$name is capturing more than one expression, try $name($arg) with brackets"))
+        throw(ArgumentError("@~ is capturing more than one expression, try $name($arg) with brackets"))
     end
     ex
 end
