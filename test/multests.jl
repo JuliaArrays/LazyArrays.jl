@@ -677,6 +677,8 @@ import Base.Broadcast: materialize, materialize!
         M = MulArray([1,2,3],Ones(1,20))
         @test M[1,1] == 1
         @test M[2,1] == 2
+        M = Mul([1 2; 3 4], [1 2; 3 4])
+        @test M[1] == 7
     end
 end
 
