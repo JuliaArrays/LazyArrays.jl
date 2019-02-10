@@ -43,30 +43,6 @@ axes(M::Mul) = _mul_axes(axes(first(M.args),1), axes(last(M.args)))
 axes(M::Mul{Tuple{}}) = ()
 
 
-
-
-
-"""
-   lmaterialize(M::Mul)
-
-materializes arrays iteratively, left-to-right.
-"""
-lmaterialize(M::Mul) = _lmaterialize(M.args...)
-
-_lmaterialize(A, B) = materialize(Mul(A,B))
-_lmaterialize(A, B, C, D...) = _lmaterialize(materialize(Mul(A,B)), C, D...)
-
-"""
-   rmaterialize(M::Mul)
-
-materializes arrays iteratively, right-to-left.
-"""
-rmaterialize(M::Mul) = _rmaterialize(reverse(M.args)...)
-
-_rmaterialize(Z, Y) = materialize(Mul(Y,Z))
-_rmaterialize(Z, Y, X, W...) = _rmaterialize(materialize(Mul(Y,Z)), X, W...)
-
-
 # *(A::Mul, B::Mul) = materialize(Mul(A.args..., B.args...))
 # *(A::Mul, B) = materialize(Mul(A.args..., B))
 # *(A, B::Mul) = materialize(Mul(A, B.args...))
@@ -86,10 +62,7 @@ const ArrayMuls = Mul{<:Tuple, <:Tuple{Vararg{<:AbstractArray}}}
 similar(M::ArrayMuls, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
 similar(M::ArrayMuls, ::Type{T}) where T = similar(M, T, axes(M))
 _materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
-_materialize(M::ArrayMuls, _) = lmaterialize(M)
-_materialize(M::Mul, _) = lmaterialize(M)
-_materialize(M::Mul2, _) = *(materialize.(M.args)...)
-materialize(M::Mul) = _materialize(M, axes(M))
+
 
 
 ####
@@ -198,9 +171,3 @@ IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 
 adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.applied.args))...)
 transpose(A::MulArray) = MulArray(reverse(transpose.(A.applied.args))...)
-
-_flatten() = ()
-_flatten(A, B...) = (A, _flatten(B...)...)
-_flatten(A::Mul, B...) = _flatten(A.args..., B...)
-_flatten(A::MulArray, B...) = _flatten(A.applied.args..., B...)
-flatten(A::MulArray) = MulArray(Mul(_flatten(A.applied.args...)...))

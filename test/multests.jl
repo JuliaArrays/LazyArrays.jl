@@ -692,6 +692,7 @@ import Base.Broadcast: materialize, materialize!
         M = Mul(A, Mul(B, C))
         @test ndims(M) == ndims(typeof(M)) == 2
         @test eltype(M) == Float64
-        @test all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
+        @test_skip all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
+        @test copyto!(R1, M) == A*(B*C) == (R2 .= M)
     end
 end

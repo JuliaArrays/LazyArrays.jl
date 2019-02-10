@@ -18,9 +18,9 @@ struct Applied{Style<:ApplyStyle, F, Args<:Tuple}
 end
 
 applied(f, args...) = Applied(ApplyStyle(f, args...), f, args)
-materialize(A::Applied{DefaultApplyStyle,<:Any,<:Tuple{<:Any}}) =
-    A.f(materialize(first(A.args)))
-materialize(A::Applied{DefaultApplyStyle}) = A.f(materialize.(A.args)...)
+_materialize(A::Applied, _) = A.f(materialize.(A.args)...)
+materialize(M::Applied{<:LayoutApplyStyle}) = _materialize(M, axes(M))
+materialize(A::Applied) = A.f(materialize.(A.args)...)
 
 
 
@@ -89,8 +89,8 @@ materialize(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 broadcastable(M::Applied) = M
 
-# adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.mul.args))...)
-# transpose(A::MulArray) = MulArray(reverse(transpose.(A.mul.args))...)
+# adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.applied.args))...)
+# transpose(A::MulArray) = MulArray(reverse(transpose.(A.applied.args))...)
 
 
 struct  ApplyLayout{F, LAY} <: MemoryLayout
@@ -101,5 +101,5 @@ end
 MemoryLayout(M::ApplyArray) = ApplyLayout(M.applied.f, MemoryLayout.(M.applied.args))
 
 
-# _flatten(A::ApplyArray, B...) = _flatten(A.mul.args..., B...)
-# flatten(A::MulArray) = MulArray(Mul(_flatten(A.mul.args...)))
+# _flatten(A::ApplyArray, B...) = _flatten(A.applied.args..., B...)
+# flatten(A::MulArray) = MulArray(Mul(_flatten(A.applied.args...)))
