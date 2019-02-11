@@ -1,8 +1,11 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 
 include("memorylayouttests.jl")
+include("applytests.jl")
 include("multests.jl")
 include("ldivtests.jl")
+include("addtests.jl")
+include("setoptests.jl")
 
 
 @testset "concat" begin

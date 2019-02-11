@@ -42,8 +42,7 @@ BroadcastStyle(::Type{<:MatMulVecAdd{StyleA,StyleB,StyleC}}) where {StyleA,Style
 BroadcastStyle(::Type{<:MatMulMatAdd{StyleA,StyleB,StyleC}}) where {StyleA,StyleB,StyleC} =
     ArrayMulArrayStyle{StyleA,StyleB,2,2}()
 
-broadcastable(M::MatMulMatAdd) = M
-broadcastable(M::MatMulVecAdd) = M
+broadcastable(M::MulAdd) = M
 
 const BlasMatMulVec{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractVector{T},<:AbstractVector{T}}
 const BlasMatMulMat{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
@@ -184,6 +183,9 @@ end
 
 function materialize!(M::MatMulMatAdd)
     α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
+    if C ≡ B
+        B = copy(B)
+    end
     ts = tile_size(eltype(A), eltype(B), eltype(C))
     if iszero(β) # false is a "strong" zero to wipe out NaNs
         ts == 0 ? default_blasmul!(α, A, B, false, C) : tiled_blasmul!(ts, α, A, B, false, C)
@@ -194,23 +196,10 @@ end
 
 function materialize!(M::MatMulVecAdd)
     α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
-    default_blasmul!(α, A, B, iszero(β) ? false : β, C)
-end
-
-for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
-    # `MulAdd{<:BroadcastLayout{typeof(+)}}` cannot "win" against
-    # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:
-    @eval function materialize!(M::$MulAdd_{<:BroadcastLayout{typeof(+)}})
-        α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
-        if C ≡ B
-            B = copy(B)
-        end
-        lmul!(β, C)
-        for A in A.broadcasted.args
-            C .= α .* Mul(A, B) .+ C
-        end
-        C
+    if C ≡ B
+        B = copy(B)
     end
+    default_blasmul!(α, A, B, iszero(β) ? false : β, C)
 end
 
 # make copy to make sure always works
@@ -329,7 +318,7 @@ materialize!(M::BlasMatMulVec{<:HermitianLayout{<:AbstractRowMajor},<:AbstractSt
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.factors
+    A,x = M.args
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'N', UNIT, triangulardata(A), dest)
 end
@@ -337,7 +326,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.factors
+    A,x = M.args
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'T', UNIT, transpose(triangulardata(A)), dest)
 end
@@ -346,7 +335,7 @@ end
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.factors
+    A,x = M.args
     x ≡ dest || copyto!(dest, x)
     BLAS.trmv!(UPLO, 'C', UNIT, triangulardata(A)', dest)
 end
@@ -356,7 +345,7 @@ end
 
 
 function _copyto!(_, dest::AbstractMatrix, M::MatMulMat{<:TriangularLayout})
-    A,X = M.factors
+    A,X = M.args
     size(dest,2) == size(X,2) || thow(DimensionMismatch("Dimensions must match"))
     @views for j in axes(dest,2)
         dest[:,j] .= Mul(A, X[:,j])

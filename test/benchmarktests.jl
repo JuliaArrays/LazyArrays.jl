@@ -3,6 +3,10 @@
 
 using LazyArrays, BenchmarkTools
 
+@testset "Applied" begin
+    @test @belapsed(materialize(applied(exp, $x))) ≤ 2(@belapsed exp($x))
+end
+
 @testset "concat" begin
     A = Vcat(Vector(1:10), Vector(1:20))
     b = Array{Int}(undef, 30)
@@ -19,4 +23,4 @@ using LazyArrays, BenchmarkTools
     A = Hcat(1:10, 2:11)
     b = Array{Int}(undef, 10, 2)
     @test @belapsed(copyto!($b,$A)) < @belapsed(hcat($A.arrays...))
-end
+en

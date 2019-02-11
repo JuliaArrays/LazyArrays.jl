@@ -1,66 +1,67 @@
-abstract type AbstractPInv{Style, Typ} end
-
-eltype(::AbstractPInv{<:Any,Typ}) where Typ = eltype(Typ)
-eltype(::Type{<:AbstractPInv{<:Any,Typ}}) where Typ = eltype(Typ)
-
-struct PInv{Style, Typ} <: AbstractPInv{Style, Typ}
-    style::Style
-    A::Typ
-end
-struct Inv{Style, Typ} <: AbstractPInv{Style, Typ}
-    style::Style
-    A::Typ
-    function Inv{Style,Typ}(style::Style, A::Typ) where {Style,Typ}
-        checksquare(A)
-        new{Style,Typ}(style,A)
-    end
-end
-
-Inv(style::Style, A::Typ) where {Style,Typ} = Inv{Style,Typ}(style, A)
-
-PInv(A) = PInv(MemoryLayout(A), A)
-Inv(A) = Inv(MemoryLayout(A), A)
 
 
+const PInv{Style, Typ} = Applied{LayoutApplyStyle{Tuple{Style}}, typeof(pinv), <:Tuple{Typ}}
+const Inv{Style, Typ} = Applied{LayoutApplyStyle{Tuple{Style}}, typeof(inv), <:Tuple{Typ}}
 
-pinv(A::PInv) = A.A
+Inv(A) = applied(inv, A)
+PInv(A) = applied(pinv, A)
+
+ApplyStyle(::typeof(inv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
+ApplyStyle(::typeof(pinv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
+
+const InvOrPInv = Union{Inv, PInv}
+
+parent(A::PInv) = first(A.args)
+parent(A::Inv) = first(A.args)
+
+pinv(A::PInv) = parent(A)
 function inv(A::PInv)
-    checksquare(A.A)
-    A.A
+    checksquare(parent(A))
+    parent(A)
 end
 
-inv(A::Inv) = A.A
+inv(A::Inv) = parent(A)
 pinv(A::Inv) = inv(A)
 
-
-parent(A::AbstractPInv) = A.A
-
-
-size(A::AbstractPInv) = reverse(size(parent(A)))
-axes(A::AbstractPInv) = reverse(axes(parent(A)))
-size(A::AbstractPInv, k) = size(A)[k]
-axes(A::AbstractPInv, k) = axes(A)[k]
+ndims(A::InvOrPInv) = ndims(parent(A))
 
 
-abstract type AbstractPInvLayout{ML} <: MemoryLayout end
 
-# struct InverseLayout{ML} <: AbstractPInvLayout{ML}
-#     layout::ML
-# end
 
-struct PInvLayout{ML} <: AbstractPInvLayout{ML}
-    layout::ML
-end
+size(A::InvOrPInv) = reverse(size(parent(A)))
+axes(A::InvOrPInv) = reverse(axes(parent(A)))
+size(A::InvOrPInv, k) = size(A)[k]
+axes(A::InvOrPInv, k) = axes(A)[k]
+eltype(A::InvOrPInv) = eltype(parent(A))
 
-MemoryLayout(Ai::AbstractPInv) = PInvLayout(MemoryLayout(Ai.A))
 
 
 const Ldiv{StyleA, StyleB, AType, BType} =
-    Mul2{<:AbstractPInvLayout{StyleA}, StyleB, <:AbstractPInv{StyleA,AType}, BType}
+    Applied{LayoutApplyStyle{Tuple{StyleA, StyleB}}, typeof(\), <:Tuple{AType, BType}}
+
+Ldiv(A, B) = applied(\, A, B)
+
+ApplyStyle(::typeof(\), A::AbstractArray, B::AbstractArray) =
+    LayoutApplyStyle((MemoryLayout(A), MemoryLayout(B)))
+
+size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractMatrix}) =
+    (size(L.args[1], 2),size(L.args[2],2))
+size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
+    (size(L.args[1], 2),)
+length(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
+    size(L.args[1], 2)
+
+ndims(L::Applied{<:Any, typeof(\)}) = ndims(last(L.args))
+eltype(M::Applied{<:Any, typeof(\)}) = promote_type(Base.promote_op(inv, eltype(first(M.args))),
+                                                    eltype(last(M.args)))
+
+struct ArrayLdivArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
+
+@inline copyto!(dest::AbstractArray, bc::Broadcasted{<:ArrayLdivArrayStyle}) =
+    _copyto!(MemoryLayout(dest), dest, bc)
+
 const ArrayLdivArray{styleA, styleB, p, q, T, V} =
     Ldiv{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
-const ArrayLdivArrayStyle{StyleA,StyleB,p,q} =
-    ArrayMulArrayStyle{PInvLayout{StyleA}, StyleB, p, q}
 const BArrayLdivArray{styleA, styleB, p, q, T, V} =
     Broadcasted{ArrayLdivArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
                 <:Tuple{<:ArrayLdivArray{styleA,styleB,p,q,T,V}}}
@@ -68,26 +69,10 @@ const BArrayLdivArray{styleA, styleB, p, q, T, V} =
 
 BroadcastStyle(::Type{<:ArrayLdivArray{StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} =
     ArrayLdivArrayStyle{StyleA,StyleB,p,q}()
-broadcastable(M::ArrayLdivArray) = M
 
-Ldiv(A, B) = Mul(PInv(A), B)
 
-macro lazyldiv(Typ)
-    esc(quote
-        LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = (x .= LazyArrays.Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = (x .= LazyArrays.Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = (x .= LazyArrays.Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = (x .= LazyArrays.Ldiv(A,x))
-
-        Base.:\(A::$Typ, x::AbstractVector) = PInv(A) * x
-        Base.:\(A::$Typ, x::AbstractMatrix) = PInv(A) * x
-    end)
-end
-
-*(A::AbstractPInv, B, C...) = materialize(Mul(A,B, C...))
-*(A::AbstractPInv, B::Mul) = materialize(Mul(A, B.factors...))
-
-similar(A::AbstractPInv, ::Type{T}) where T = Array{T}(undef, size(A))
+similar(A::InvOrPInv, ::Type{T}) where T = Array{T}(undef, size(A))
+similar(A::Ldiv, ::Type{T}) where T = Array{T}(undef, size(A))
 similar(M::ArrayLdivArray, ::Type{T}) where T = Array{T}(undef, size(M))
 
 materialize(M::ArrayLdivArray) = copyto!(similar(M), M)
@@ -99,20 +84,19 @@ end
 
 if VERSION ≥ v"1.1-pre"
     function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray)
-        Ai, B = M.factors
-        ldiv!(dest, factorize(pinv(Ai)), B)
+        A, B = M.args
+        ldiv!(dest, factorize(A), B)
     end
 else
     function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray)
-        Ai, B = M.factors
-        ldiv!(dest, factorize(pinv(Ai)), copy(B))
+        A, B = M.args
+        ldiv!(dest, factorize(A), copy(B))
     end
 end
 
 const MatLdivVec{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, 2, 1, T, V}
 const MatLdivMat{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, 2, 2, T, V}
 
-broadcastable(M::MatLdivVec) = M
 
 
 ###
@@ -120,78 +104,87 @@ broadcastable(M::MatLdivVec) = M
 ###
 
 function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray{<:TriangularLayout})
-    Ai, B = M.factors
+    A, B = M.args
     dest ≡ B || (dest .= B)
-    ldiv!(pinv(Ai), dest)
+    ldiv!(A, dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    A,B = M.args
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(pinv(Ai)), dest)
+    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(A), dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{'U',UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    A,B = M.args
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(pinv(Ai))), dest)
+    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(A)), dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    A,B = M.args
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(pinv(Ai))), dest)
+    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(A)), dest)
 end
 
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{T, <:TriangularLayout{'U',UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    A,B = M.args
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('L', 'C', UNIT, triangulardata(pinv(Ai))', dest)
+    BLAS.trsv!('L', 'C', UNIT, triangulardata(A)', dest)
 end
 
 @inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
          M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
-    Ai,B = M.factors
+    A,B = M.args
     B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('U', 'C', UNIT, triangulardata(pinv(Ai))', dest)
+    BLAS.trsv!('U', 'C', UNIT, triangulardata(A)', dest)
 end
 
 function _copyto!(_, dest::AbstractMatrix, M::MatLdivMat{<:TriangularLayout})
-    A,X = M.factors
+    A,X = M.args
     size(dest,2) == size(X,2) || thow(DimensionMismatch("Dimensions must match"))
     @views for j in axes(dest,2)
-        dest[:,j] .= Mul(A, X[:,j])
+        dest[:,j] .= Ldiv(A, X[:,j])
     end
     dest
 end
 
 
-function _PInvMatrix end
+const PInvMatrix{T,App<:PInv} = ApplyMatrix{T,App}
+const InvMatrix{T,App<:Inv} = ApplyMatrix{T,App}
 
-struct PInvMatrix{T, PINV<:AbstractPInv} <: AbstractMatrix{T}
-    pinv::PINV
-    global _PInvMatrix(pinv::PINV) where PINV = new{eltype(pinv), PINV}(pinv)
+PInvMatrix(A) = ApplyMatrix(pinv, A)
+function InvMatrix(A)
+    checksquare(A)
+    ApplyMatrix(inv, A)
 end
 
-const InvMatrix{T, INV<:Inv} = PInvMatrix{T,INV}
-
-PInvMatrix(M) = _PInvMatrix(PInv(M))
-InvMatrix(M) = _PInvMatrix(Inv(M))
-
-axes(A::PInvMatrix) = axes(A.pinv)
+axes(A::PInvMatrix) = reverse(axes(parent(A.applied)))
 size(A::PInvMatrix) = map(length, axes(A))
 
 @propagate_inbounds getindex(A::PInvMatrix{T}, k::Int, j::Int) where T =
-    (A.pinv*[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
+    (parent(A.applied)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
-MemoryLayout(M::PInvMatrix) = MemoryLayout(M.pinv)
+@propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
+    (parent(A.applied)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
+
+
+@inline function _copyto!(_, dest::AbstractArray, M::MatMulVec{<:ApplyLayout{typeof(inv)}})
+    Ai,b = M.args
+    dest .= Ldiv(parent(Ai.applied), b)
+end
+
+@inline function _copyto!(_, dest::AbstractArray, M::MatMulVec{<:ApplyLayout{typeof(pinv)}})
+    Ai,b = M.args
+    dest .= Ldiv(parent(Ai.applied), b)
+end

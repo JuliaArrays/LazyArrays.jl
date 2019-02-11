@@ -1,11 +1,13 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add
+import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray
 import Base.Broadcast: materialize, materialize!
+
+
 
 @testset "Mul" begin
     @testset "eltype" begin
-        @inferred(eltype(Mul(zeros(Int,2,2), zeros(Float64,2)))) == Float64
-        @inferred(eltype(Mul(zeros(ComplexF16,2,2),zeros(Int,2,2),zeros(Float64,2)))) == ComplexF64
+        @test @inferred(eltype(Mul(zeros(Int,2,2), zeros(Float64,2)))) == Float64
+        @test @inferred(eltype(Mul(zeros(ComplexF16,2,2),zeros(Int,2,2),zeros(Float64,2)))) == ComplexF64
 
         v = Mul(zeros(Int,2,2), zeros(Float64,2))
         A = Mul(zeros(Int,2,2), zeros(Float64,2,2))
@@ -17,6 +19,10 @@ import Base.Broadcast: materialize, materialize!
         Ã = materialize(A)
         @test Ã isa Matrix{Float64}
         @test Ã == zeros(2,2)
+
+        A = randn(6,5); B = randn(5,5); C = randn(5,6)
+        M = Mul(A,B,C)
+        @test @inferred(eltype(M)) == Float64
     end
 
     @testset "gemv Float64" begin
@@ -640,7 +646,7 @@ import Base.Broadcast: materialize, materialize!
         Ac = A'
         blasnoalloc(c, 2.0, Ac, x, 3.0, y)
         @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
-        Aa = Add(A, Ac)
+        Aa = AddArray(A, Ac)
         blasnoalloc(c, 2.0, Aa, x, 3.0, y)
         @test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
     end
@@ -650,9 +656,6 @@ import Base.Broadcast: materialize, materialize!
         B = materialize(Mul(A,A,A))
         @test B isa Matrix{Float64}
         @test all(B .=== (A*A)*A)
-
-        @test Mul(A,A) * A ≈ A * Mul(A,A) ≈ Mul(A) * Mul(A,A) ≈ A^3
-        @test Mul(A,A) * Mul(A,A) ≈ Mul(A) * Mul(A,A,A) ≈ A^4
     end
 
     @testset "Diagonal and SymTridiagonal" begin
@@ -671,6 +674,7 @@ import Base.Broadcast: materialize, materialize!
         A = randn(5,5)
         M = MulArray(A,A)
         @test Matrix(M) ≈ A^2
+        @test_throws DimensionMismatch MulArray(randn(5,5), randn(4))
     end
 
     @testset "Bug in getindex" begin
@@ -680,97 +684,23 @@ import Base.Broadcast: materialize, materialize!
         M = Mul([1 2; 3 4], [1 2; 3 4])
         @test M[1] == 7
     end
-end
 
+    @testset "#14" begin
+        A = ones(1,1) * 1e200
+        B = ones(1,1) * 1e150
+        C = ones(1,1) * 1e-300
 
-
-
-
-@testset "Add" begin
-    @testset "gemv Float64" begin
-        for A in (Add(randn(5,5), randn(5,5)),
-                  Add(randn(5,5), view(randn(9, 5), 1:2:9, :))),
-            b in (randn(5), view(randn(5),:), view(randn(5),1:5), view(randn(9),1:2:9))
-
-            Ã = copy(A)
-            c = similar(b)
-
-            c .= Mul(A,b)
-            @test c ≈ Ã*b ≈ BLAS.gemv!('N', 1.0, Ã, b, 0.0, similar(c))
-
-            copyto!(c, Mul(A,b))
-            @test c ≈ Ã*b ≈ BLAS.gemv!('N', 1.0, Ã, b, 0.0, similar(c))
-
-            b̃ = copy(b)
-            copyto!(b̃, Mul(A,b̃))
-            @test c ≈ b̃
-
-            c .= 2.0 .* Mul(A,b)
-            @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 0.0, similar(c))
-
-            c = copy(b)
-            c .= Mul(A,b) .+ c
-            @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 1.0, copy(b))
-
-            c = copy(b)
-            c .= Mul(A,b) .+ 2.0 .* c
-            @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 2.0, copy(b))
-
-            c = copy(b)
-            c .= 2.0 .* Mul(A,b) .+ c
-            @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 1.0, copy(b))
-
-            c = copy(b)
-            c .= 3.0 .* Mul(A,b) .+ 2.0 .* c
-            @test c ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, copy(b))
-
-            d = similar(c)
-            c = copy(b)
-            d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
-            @test d ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, copy(b))
-        end
+        @test materialize(Mul(A, Mul(B,C))) == A*(B*C)
+        @test materialize(Mul(A , Mul(B , C), C)) == A * (B*C) * C
     end
 
-    @testset "gemm" begin
-        for A in (Add(randn(5,5), randn(5,5)),
-                  Add(randn(5,5), view(randn(9, 5), 1:2:9, :))),
-            B in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
-                  view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5))
-
-            Ã = copy(A)
-            C = similar(B)
-
-            C .= Mul(A,B)
-            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 0.0, similar(C))
-
-            B .= Mul(A,B)
-            @test C ≈ B
-
-            C .= 2.0 .* Mul(A,B)
-            @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 0.0, similar(C))
-
-            C = copy(B)
-            C .= Mul(A,B) .+ C
-            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 1.0, copy(B))
-
-
-            C = copy(B)
-            C .= Mul(A,B) .+ 2.0 .* C
-            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 2.0, copy(B))
-
-            C = copy(B)
-            C .= 2.0 .* Mul(A,B) .+ C
-            @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 1.0, copy(B))
-
-
-            C = copy(B)
-            C .= 3.0 .* Mul(A,B) .+ 2.0 .* C
-            @test C ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, copy(B))
-
-            d = similar(C)
-            C = copy(B)
-            d .= 3.0 .* Mul(A,B) .+ 2.0 .* C
-            @test d ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, copy(B))
-        end
+    @testset "#15" begin
+        N = 2
+        A = randn(N,N); B = randn(N,N); C = randn(N,N); R1 = similar(A); R2 = similar(A)
+        M = Mul(A, Mul(B, C))
+        @test ndims(M) == ndims(typeof(M)) == 2
+        @test eltype(M) == Float64
+        @test_skip all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
+        @test copyto!(R1, M) == A*(B*C) == (R2 .= M)
     end
 end

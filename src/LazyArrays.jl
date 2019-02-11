@@ -28,7 +28,7 @@ import Base: ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
-                        materialize!
+                        materialize!, eltypes
 
 import LinearAlgebra: AbstractTriangular, checksquare, pinv
 
@@ -39,10 +39,12 @@ import FillArrays: AbstractFill
 import StaticArrays: StaticArrayStyle
 
 export Mul, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
-        Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum
+        Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum,
+        applied
 
 include("memorylayout.jl")
 include("cache.jl")
+include("lazyapplying.jl")
 include("lazybroadcasting.jl")
 include("lazyconcat.jl")
 include("linalg/linalg.jl")
