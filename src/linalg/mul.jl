@@ -112,6 +112,7 @@ const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V
 _mul(A) = A
 _mul(A,B,C...) = Mul(A,B,C...)
 
+
 function getindex(M::Mul, k::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)

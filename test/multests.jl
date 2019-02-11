@@ -677,6 +677,14 @@ import Base.Broadcast: materialize, materialize!
         @test_throws DimensionMismatch MulArray(randn(5,5), randn(4))
     end
 
+    @testset "Bug in getindex" begin
+        M = MulArray([1,2,3],Ones(1,20))
+        @test M[1,1] == 1
+        @test M[2,1] == 2
+        M = Mul([1 2; 3 4], [1 2; 3 4])
+        @test M[1] == 7
+    end
+
     @testset "#14" begin
         A = ones(1,1) * 1e200
         B = ones(1,1) * 1e150

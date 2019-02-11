@@ -37,6 +37,10 @@ getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
+# issue 16: sum(b, dims=(1,2,3)) faster than sum(b)
+Base._sum(b::BroadcastArray{T,N}, ::Colon) where {T,N} = first(Base._sum(b, ntuple(identity, N)))
+Base._prod(b::BroadcastArray{T,N}, ::Colon) where {T,N} = first(Base._prod(b, ntuple(identity, N)))
+
 BroadcastStyle(::Type{<:BroadcastArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 BroadcastStyle(L::LazyArrayStyle{N}, ::StaticArrayStyle{N}) where N = L
 BroadcastStyle(::StaticArrayStyle{N}, L::LazyArrayStyle{N})  where N = L

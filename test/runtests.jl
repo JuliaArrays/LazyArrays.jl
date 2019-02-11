@@ -174,6 +174,9 @@ end
     @test C == A .+ 2
     D = BroadcastArray(+, A, C)
     @test D == A + C
+    
+    @test sum(B) ≈ sum(exp, A)
+    @test sum(C) ≈ sum(A .+ 2)
 
     x = Vcat([3,4], [1,1,1,1,1], 1:3)
     @test x .+ (1:10) isa Vcat
