@@ -56,12 +56,25 @@ axes(M::Mul{Tuple{}}) = ()
 const ArrayMulArray{styleA, styleB, p, q, T, V} =
     Mul2{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 
-const ArrayMuls = Mul{<:Tuple, <:Tuple{Vararg{<:AbstractArray}}}
+const ArrayMuls = Applied{<:Any, typeof(*), <:Tuple{Vararg{<:AbstractArray}}}
 
 # the default is always Array
-similar(M::ArrayMuls, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
-similar(M::ArrayMuls, ::Type{T}) where T = similar(M, T, axes(M))
 _materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
+
+
+"""
+   lmaterialize(M::Mul)
+
+materializes arrays iteratively, left-to-right.
+"""
+lmaterialize(M::Mul) = _lmaterialize(M.args...)
+
+_lmaterialize(A, B) = materialize(Mul(A,B))
+_lmaterialize(A, B, C, D...) = _lmaterialize(materialize(Mul(A,B)), C, D...)
+
+_materialize(M::ArrayMuls, _) = lmaterialize(M)
+
+
 
 
 

@@ -1,13 +1,11 @@
 
 
 abstract type ApplyStyle end
+abstract type AbstractArrayApplyStyle <: ApplyStyle end
 struct DefaultApplyStyle <: ApplyStyle end
-struct LayoutApplyStyle{Layouts<:Tuple} <: ApplyStyle
+struct LayoutApplyStyle{Layouts<:Tuple} <: AbstractArrayApplyStyle
     layouts::Layouts
 end
-
-# Used for when a lazy version should be constructed on materialize
-struct LazyArrayApplyStyle <: ApplyStyle end
 
 ApplyStyle(f, args...) = DefaultApplyStyle()
 
@@ -18,11 +16,31 @@ struct Applied{Style<:ApplyStyle, F, Args<:Tuple}
 end
 
 applied(f, args...) = Applied(ApplyStyle(f, args...), f, args)
-_materialize(A::Applied, _) = A.f(materialize.(A.args)...)
-materialize(M::Applied{<:LayoutApplyStyle}) = _materialize(M, axes(M))
-materialize(A::Applied) = A.f(materialize.(A.args)...)
+
+materialize(A::Applied) = _default_materialize(A)
+materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
+
+# the following materialzes the args and calls materialize again, unless it hasn't
+# changed in which case it falls back to the default
+__default_materialize(A::App, ::App) where App = A.f(A.args...)
+__default_materialize(A, _) where App = materialize(A)
+_default_materialize(A::Applied) = __default_materialize(materializeargs(A), A)
 
 
+# _materialize is for applied with axes, which defaults to using copyto!
+materialize(M::Applied{<:AbstractArrayApplyStyle}) = _materialize(M, axes(M))
+_materialize(A::Applied, _) = _default_materialize(A)
+@inline copyto!(dest::AbstractArray, M::Applied{<:LayoutApplyStyle}) =
+    _copyto!(MemoryLayout(dest), dest, materializeargs(M))
+
+# Used for when a lazy version should be constructed on materialize
+struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
+broadcastable(M::Applied) = M
+
+
+
+similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
+similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 
 similar(M::Applied) = similar(M, eltype(M))
 
@@ -36,14 +54,14 @@ struct ApplyBroadcastStyle <: BroadcastStyle end
 BroadcastStyle(::Type{<:Applied}) = ApplyBroadcastStyle()
 
 
-struct MatrixFunctionStyle{F} <: ApplyStyle end
+struct MatrixFunctionStyle{F} <: AbstractArrayApplyStyle end
 
 for f in (:exp, :sin, :cos, :sqrt)
     @eval ApplyStyle(::typeof($f), ::AbstractMatrix) = MatrixFunctionStyle{typeof($f)}()
 end
 
 materialize(A::Applied{<:MatrixFunctionStyle,<:Any,<:Tuple{<:Any}}) =
-    A.f(materialize(first(A.args)))
+    _default_materialize(A)
 
 axes(A::Applied{<:MatrixFunctionStyle}) = axes(first(A.args))
 size(A::Applied{<:MatrixFunctionStyle}) = size(first(A.args))
@@ -84,10 +102,6 @@ IndexStyle(::ApplyArray{<:Any,1}) = IndexLinear()
 
 materialize(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
-@inline copyto!(dest::AbstractArray, M::Applied) = _copyto!(MemoryLayout(dest), dest, M)
-@inline _copyto!(_, dest::AbstractArray, M::Applied) = copyto!(dest, materialize(M))
-
-broadcastable(M::Applied) = M
 
 # adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.applied.args))...)
 # transpose(A::MulArray) = MulArray(reverse(transpose.(A.applied.args))...)
