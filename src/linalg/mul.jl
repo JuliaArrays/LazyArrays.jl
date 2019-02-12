@@ -11,7 +11,7 @@ const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
 
 ApplyStyle(::typeof(*), args::AbstractArray...) = LayoutApplyStyle(MemoryLayout.(args))
 
-Mul(args...) = Applied(LayoutApplyStyle(MemoryLayout.(args)), *, args)
+Mul(args...) = Applied(ApplyStyle(*, args...), *, args)
 
 const Mul2{StyleA, StyleB, AType, BType} = Mul{LayoutApplyStyle{Tuple{StyleA,StyleB}}, <:Tuple{AType,BType}}
 
