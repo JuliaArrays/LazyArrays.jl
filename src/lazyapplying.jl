@@ -9,7 +9,7 @@ end
 
 ApplyStyle(f, args...) = DefaultApplyStyle()
 
-struct Applied{Style<:ApplyStyle, F, Args<:Tuple}
+struct Applied{Style, F, Args<:Tuple}
     style::Style
     f::F
     args::Args

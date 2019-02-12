@@ -7,13 +7,13 @@ function checkdimensions(A, B, C...)
     checkdimensions(B, C...)
 end
 
-const Mul{Styles<:Tuple, Factors<:Tuple} = Applied{LayoutApplyStyle{Styles}, typeof(*), Factors}
+const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
 
 ApplyStyle(::typeof(*), args::AbstractArray...) = LayoutApplyStyle(MemoryLayout.(args))
 
 Mul(args...) = Applied(LayoutApplyStyle(MemoryLayout.(args)), *, args)
 
-const Mul2{StyleA, StyleB, AType, BType} = Mul{<:Tuple{StyleA,StyleB}, <:Tuple{AType,BType}}
+const Mul2{StyleA, StyleB, AType, BType} = Mul{LayoutApplyStyle{Tuple{StyleA,StyleB}}, <:Tuple{AType,BType}}
 
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
@@ -40,7 +40,7 @@ _mul_axes(ax1, ::Tuple{}) = (ax1,)
 _mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)
 _mul_axes(ax1, (_,ax2)::Tuple{<:Any,<:Any}) = (ax1,ax2)
 axes(M::Mul) = _mul_axes(axes(first(M.args),1), axes(last(M.args)))
-axes(M::Mul{Tuple{}}) = ()
+axes(M::Mul{<:Any, Tuple{}}) = ()
 
 
 # *(A::Mul, B::Mul) = materialize(Mul(A.args..., B.args...))
@@ -56,7 +56,7 @@ axes(M::Mul{Tuple{}}) = ()
 const ArrayMulArray{styleA, styleB, p, q, T, V} =
     Mul2{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 
-const ArrayMuls = Applied{<:Any, typeof(*), <:Tuple{Vararg{<:AbstractArray}}}
+const ArrayMuls = Mul{<:Any, <:Tuple{Vararg{<:AbstractArray}}}
 
 # the default is always Array
 _materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
@@ -179,7 +179,9 @@ MulMatrix(factors...) = MulMatrix(Mul(factors...))
 
 IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 
-@propagate_inbounds getindex(A::MulArray, kj::Int...) = A.applied[kj...]
+@propagate_inbounds getindex(A::MulArray, k::Int) = A.applied[k]
+@propagate_inbounds getindex(A::MulArray{T,N}, kj::Vararg{Int,N}) where {T,N} =
+    A.applied[kj...]
 
 *(A::MulArray, B::MulArray) = MulArray(A, B)
 
