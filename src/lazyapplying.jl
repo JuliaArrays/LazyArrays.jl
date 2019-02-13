@@ -51,7 +51,7 @@ similar(M::Applied) = similar(M, eltype(M))
 struct ApplyBroadcastStyle <: BroadcastStyle end
 
 @inline copyto!(dest::AbstractArray, bc::Broadcasted{ApplyBroadcastStyle}) =
-    _copyto!(MemoryLayout(dest), dest, bc)
+    copyto!(dest, first(bc.args))
 # Use default broacasting in general
 @inline _copyto!(_, dest, bc::Broadcasted) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
 

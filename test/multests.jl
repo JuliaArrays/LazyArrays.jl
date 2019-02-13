@@ -695,12 +695,11 @@ import Base.Broadcast: materialize, materialize!
     end
 
     @testset "#15" begin
-        N = 2
+        N = 10
         A = randn(N,N); B = randn(N,N); C = randn(N,N); R1 = similar(A); R2 = similar(A)
         M = Mul(A, Mul(B, C))
         @test ndims(M) == ndims(typeof(M)) == 2
         @test eltype(M) == Float64
-        @test_skip all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
-        @test copyto!(R1, M) == A*(B*C) == (R2 .= M)
+        @test all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
     end
 end
