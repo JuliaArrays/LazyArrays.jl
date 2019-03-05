@@ -6,10 +6,8 @@ abstract type AbstractConcatArray{T,N} <: AbstractArray{T,N} end
 struct Vcat{T,N,I} <: AbstractConcatArray{T,N}
     arrays::I
 
-    global function _Vcat(::Type{T}, A::I) where {I<:Tuple,T}
-        isempty(A) && throw(ArgumentError("Cannot concatenate empty vectors"))
-        new{T,1,I}(A)
-    end
+    _Vcat(::Type{T}, A::Tuple{}) where {T} = new{T,1,Tuple{}}(A)
+    global _Vcat(::Type{T}, A::I) where {I<:Tuple,T} = new{T,1,I}(A)
     global function _Vcat(::Type{T}, A::I) where I<:Tuple{Vararg{<:AbstractMatrix}} where T
         isempty(A) && throw(ArgumentError("Cannot concatenate empty vectors"))
         m = size(A[1],2)
@@ -22,6 +20,9 @@ end
 
 _Vcat(A) = _Vcat(promote_eltypeof(A...), A)
 Vcat(args...) = _Vcat(args)
+Vcat{T}(args...) where T = _Vcat(T, args)
+Vcat() = Vcat{Any}()
+size(f::Vcat{<:Any,1,Tuple{}}) = (0,)
 size(f::Vcat{<:Any,1}) = tuple(+(length.(f.arrays)...))
 size(f::Vcat{<:Any,2}) = (+(map(a -> size(a,1), f.arrays)...), size(f.arrays[1],2))
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
@@ -344,6 +345,13 @@ end
 
 @inline cumsum(V::Vcat{<:Any,1}) = _Vcat(_vcat_cumsum(V.arrays...))
 
+
+_vcat_diff(x::Number) = ()
+_vcat_diff(x) = (diff(x),)
+
+_vcat_diff(a::Number, b, c...) = (first(b)-a, _vcat_diff(b,c...)...)
+_vcat_diff(a, b, c...) = (diff(a), first(b)-last(a), _vcat_diff(b,c...)...)
+@inline diff(V::Vcat{T,1}) where T = _Vcat(T,_vcat_diff(V.arrays...))
 
 ####
 # maximum/minimum

@@ -43,7 +43,7 @@ include("setoptests.jl")
         @test @allocated(copyto!(b, A)) == 0
         @test b == vcat(A.arrays...)
 
-        @test_throws ArgumentError Vcat()
+        @test Vcat() isa Vcat{Any,1,Tuple{}}
     end
     @testset "Hcat" begin
         A = Hcat(1:10, 2:11)
@@ -114,6 +114,11 @@ include("setoptests.jl")
         @test C.arrays[1] isa SVector{2,Int}
         @test C.arrays[2] isa Ones{Float64}
         @test C == Vector(A) + Vector(B)
+    end
+
+    @testset "Empty Vcat" begin
+        @test @inferred(Vcat{Int}([1])) == [1]        
+        @test @inferred(Vcat{Int}(())) == @inferred(Vcat{Int}()) == Int[]        
     end
 end
 
@@ -226,9 +231,11 @@ end
     @test y isa Vcat
     @test y == cumsum(Vector(x)) == Cumsum(x)
     @test @inferred(diff(x)) == diff(Vector(x)) == Diff(x)
+    @test diff(x) isa Vcat
 
     @test sum(x) == sum(Vector(x)) == last(y)
     @test cumsum(Vcat(4)) === Vcat(4)
+    @test diff(Vcat(4)) === Vcat{Int}()
 
     A = randn(3,4)
     @test Cumsum(A; dims=1) == cumsum(A; dims=1)

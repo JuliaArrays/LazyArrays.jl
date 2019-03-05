@@ -118,3 +118,5 @@ function getindex(Q::Cumsum, k::Integer, j::Integer)
         j == 1 ? Q.v[k,1] : Q.v[k,j] + Q[k,j-1]
     end
 end
+
+copyto!(x::AbstractArray{<:Any,N}, C::Cumsum{<:Any,N}) where N = cumsum!(x, C.v)
