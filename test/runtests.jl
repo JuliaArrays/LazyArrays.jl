@@ -120,6 +120,11 @@ include("setoptests.jl")
         @test @inferred(Vcat{Int}([1])) == [1]        
         @test @inferred(Vcat{Int}(())) == @inferred(Vcat{Int}()) == Int[]        
     end
+
+    @testset "in" begin
+        @test 1 in Vcat(1, 1:10_000_000_000)
+        @test 100_000_000 in Vcat(1, 1:10_000_000_000)
+    end
 end
 
 

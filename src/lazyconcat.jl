@@ -360,3 +360,10 @@ _vcat_diff(a, b, c...) = (diff(a), first(b)-last(a), _vcat_diff(b,c...)...)
 for op in (:maximum, :minimum)
     @eval $op(V::Vcat) = $op($op.(V.arrays))
 end
+
+function in(x, V::Vcat) 
+    for a in V.arrays
+        in(x, a) && return true
+    end
+    false
+end
