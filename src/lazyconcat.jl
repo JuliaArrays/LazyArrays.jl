@@ -225,12 +225,19 @@ end
 ######
 
 BroadcastStyle(::Type{<:AbstractConcatArray{<:Any,N}}) where N = LazyArrayStyle{N}()
+
+broadcasted(::LazyArrayStyle, op, A::Vcat) =
+    _Vcat(broadcast(x -> broadcast(op, x), A.arrays))
+
 broadcasted(::LazyArrayStyle, op, A::Vcat, c::Number) =
     _Vcat(broadcast((x,y) -> broadcast(op, x, y), A.arrays, c))
 broadcasted(::LazyArrayStyle, op, c::Number, A::Vcat) =
     _Vcat(broadcast((x,y) -> broadcast(op, x, y), c, A.arrays))
-broadcasted(::LazyArrayStyle, op, A::Vcat) =
-    _Vcat(broadcast(x -> broadcast(op, x), A.arrays))
+broadcasted(::LazyArrayStyle, op, A::Vcat, c::Ref) =
+    _Vcat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.arrays, c))
+broadcasted(::LazyArrayStyle, op, c::Ref, A::Vcat) =
+    _Vcat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.arrays))    
+
 
 # determine indices of components of a vcat
 _vcat_axes(::Tuple{}) = (1,)

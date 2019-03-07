@@ -85,6 +85,10 @@ broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Number) where {T,N
     broadcast(DefaultArrayStyle{N}(), op, r, x)
 broadcasted(::LazyArrayStyle{N}, op, x::Number, r::AbstractFill{T,N}) where {T,N} =
     broadcast(DefaultArrayStyle{N}(), op, x, r)
+broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Ref) where {T,N} =
+    broadcast(DefaultArrayStyle{N}(), op, r, x)
+broadcasted(::LazyArrayStyle{N}, op, x::Ref, r::AbstractFill{T,N}) where {T,N} =
+    broadcast(DefaultArrayStyle{N}(), op, x, r)    
 broadcasted(::LazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} =
     broadcast(DefaultArrayStyle{N}(), op, r1, r2)
 

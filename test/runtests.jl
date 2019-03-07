@@ -202,6 +202,9 @@ end
     @test x .* 2 isa Vcat
     @test 2 .+ x isa Vcat
     @test 2 .* x isa Vcat
+
+    A = Vcat([[1 2; 3 4]], [[4 5; 6 7]])
+    @test A .+ Ref(I) == Ref(I) .+ A == Vcat([[2 2; 3 5]], [[5 5; 6 8]])
 end
 
 @testset "Cache" begin
