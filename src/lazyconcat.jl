@@ -22,6 +22,9 @@ _Vcat(A) = _Vcat(promote_eltypeof(A...), A)
 Vcat(args...) = _Vcat(args)
 Vcat{T}(args...) where T = _Vcat(T, args)
 Vcat() = Vcat{Any}()
+
+copy(x::Vcat) = Vcat(copy.(x.arrays)...)
+
 size(f::Vcat{<:Any,1,Tuple{}}) = (0,)
 size(f::Vcat{<:Any,1}) = tuple(+(length.(f.arrays)...))
 size(f::Vcat{<:Any,2}) = (+(map(a -> size(a,1), f.arrays)...), size(f.arrays[1],2))
@@ -74,6 +77,9 @@ end
 
 _Hcat(A) = _Hcat(promote_eltypeof(A...), A)
 Hcat(args...) = _Hcat(args)
+
+copy(x::Hcat) = Hcat(copy.(x.arrays)...)
+
 size(f::Hcat) = (size(f.arrays[1],1), +(map(a -> size(a,2), f.arrays)...))
 Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
 

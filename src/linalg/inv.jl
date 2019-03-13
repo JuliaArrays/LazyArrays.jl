@@ -9,19 +9,18 @@ PInv(A) = applied(pinv, A)
 ApplyStyle(::typeof(inv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
 ApplyStyle(::typeof(pinv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
 
-const InvOrPInv = Union{Inv, PInv}
+const InvOrPInv = Union{Applied{<:Any,typeof(pinv)}, Applied{<:Any,typeof(inv)}}
 
-parent(A::PInv) = first(A.args)
-parent(A::Inv) = first(A.args)
+parent(A::InvOrPInv) = first(A.args)
 
-pinv(A::PInv) = parent(A)
-function inv(A::PInv)
+pinv(A::Applied{<:Any,typeof(pinv)}) = parent(A)
+function inv(A::Applied{<:Any,typeof(pinv)})
     checksquare(parent(A))
     parent(A)
 end
 
-inv(A::Inv) = parent(A)
-pinv(A::Inv) = inv(A)
+inv(A::Applied{<:Any,typeof(inv)}) = parent(A)
+pinv(A::Applied{<:Any,typeof(inv)}) = inv(A)
 
 ndims(A::InvOrPInv) = ndims(parent(A))
 

@@ -20,6 +20,9 @@ include("setoptests.jl")
         b = Array{Int}(undef, 30)
         @test @allocated(copyto!(b, A)) == 0
         @test b == vcat(A.arrays...)
+        @test copy(A) isa Vcat
+        @test copy(A) == A
+        @test copy(A) !== A
 
         A = Vcat(1:10, 1:20)
         @test @inferred(length(A)) == 30
@@ -31,6 +34,7 @@ include("setoptests.jl")
         b = Array{Int}(undef, 30)
         @test @allocated(copyto!(b, A)) == 0
         @test b == vcat(A.arrays...)
+        @test copy(A) === A
 
         A = Vcat(randn(2,10), randn(4,10))
         @test @inferred(length(A)) == 60
@@ -42,6 +46,9 @@ include("setoptests.jl")
         b = Array{Float64}(undef, 6,10)
         @test @allocated(copyto!(b, A)) == 0
         @test b == vcat(A.arrays...)
+        @test copy(A) isa Vcat
+        @test copy(A) == A
+        @test copy(A) !== A
 
         @test Vcat() isa Vcat{Any,1,Tuple{}}
     end
@@ -56,12 +63,16 @@ include("setoptests.jl")
         b = Array{Int}(undef, 10, 2)
         @test @allocated(copyto!(b, A)) == 0
         @test b == hcat(A.arrays...)
+        @test copy(A) === A
 
         A = Hcat(Vector(1:10), Vector(2:11))
         b = Array{Int}(undef, 10, 2)
         copyto!(b, A)
         @test b == hcat(A.arrays...)
         @test @allocated(copyto!(b, A)) == 0
+        @test copy(A) isa Hcat
+        @test copy(A) == A
+        @test copy(A) !== A
 
         A = Hcat(1, zeros(1,5))
         @test A == hcat(1, zeros(1,5))
