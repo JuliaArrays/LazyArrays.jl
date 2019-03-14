@@ -1,5 +1,5 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-
+import LazyArrays: CachedArray
 include("memorylayouttests.jl")
 include("applytests.jl")
 include("multests.jl")
@@ -224,12 +224,18 @@ end
     @test size(C) == (10,)
     @test axes(C) == (Base.OneTo(10),)
     @test all(Vector(C) .=== Vector(A))
+    @test cache(C) isa CachedArray{Int,1,Vector{Int},UnitRange{Int}}
+    C2 = cache(C)
+    @test C2.data !== C.data
 
     A = reshape(1:10^2, 10,10)
     C = cache(A)
     @test size(C) == (10,10)
     @test axes(C) == (Base.OneTo(10),Base.OneTo(10))
     @test all(Array(C) .=== Array(A))
+    @test cache(C) isa CachedArray{Int,2,Matrix{Int},typeof(A)}
+    C2 = cache(C)
+    @test C2.data !== C.data
 
     A = reshape(1:10^3, 10,10,10)
     C = cache(A)

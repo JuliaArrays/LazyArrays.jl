@@ -26,7 +26,9 @@ CachedArray(array::AbstractArray{T,N}) where {T,N} =
 Caches the entries of an array.
 """
 cache(O::AbstractArray) = CachedArray(O)
+cache(O::CachedArray) = CachedArray(copy(O.data), O.array, O.datasize)
 cache(::Type{MT}, O::AbstractArray) where {MT<:AbstractArray} = CachedArray(MT,O;kwds...)
+
 
 convert(::Type{AbstractArray{T}}, S::CachedArray{T}) where {T} = S
 convert(::Type{AbstractArray{T}}, S::CachedArray) where {T} =
