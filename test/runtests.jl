@@ -136,6 +136,15 @@ include("setoptests.jl")
         @test 1 in Vcat(1, 1:10_000_000_000)
         @test 100_000_000 in Vcat(1, 1:10_000_000_000)
     end
+
+    @testset "convert" begin
+        for T in (Float32, Float64, ComplexF32, ComplexF64)
+            Z = Vcat(0,Zeros{T}(10))
+            @test convert(AbstractArray,Z) ≡ Z
+            @test convert(AbstractArray{T},Z) ≡ AbstractArray{T}(Z) ≡ Z
+            @test convert(AbstractVector{T},Z) ≡ AbstractVector{T}(Z) ≡ Z
+        end
+    end
 end
 
 

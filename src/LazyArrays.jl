@@ -2,7 +2,8 @@ module LazyArrays
 using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays
 import LinearAlgebra.BLAS
 
-import Base: ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
+import Base: AbstractArray, AbstractMatrix, AbstractVector, 
+        ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
              RangeIndex, BroadcastStyle, copyto!, length, broadcastable, axes,
              getindex, eltype, tail, IndexStyle, IndexLinear,
              *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,

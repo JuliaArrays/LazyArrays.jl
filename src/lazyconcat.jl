@@ -23,6 +23,17 @@ Vcat(args...) = _Vcat(args)
 Vcat{T}(args...) where T = _Vcat(T, args)
 Vcat() = Vcat{Any}()
 
+convert(::Type{AbstractArray{T}}, F::Vcat{T}) where T = F
+convert(::Type{AbstractArray{T,N}}, F::Vcat{T,N}) where {T,N} = F
+convert(::Type{AbstractArray{T}}, F::Vcat) where {T} = _Vcat(T, F.arrays)
+convert(::Type{AbstractArray{T,N}}, F::Vcat{<:Any,N}) where {T,N} = _Vcat(T, F.arrays)
+
+_abstractarray(::Type{T}, x::AbstractArray) where T = AbstractArray{T}(x)
+_abstractarray(::Type{T}, x) where T = T(x)
+AbstractArray(F::Vcat) = _Vcat(AbstractArray.(F.arrays))
+AbstractArray{T}(F::Vcat) where T = _Vcat(_abstractarray.(T,F.arrays))
+AbstractArray{T,N}(F::Vcat{<:Any,N}) where {T,N} = _Vcat(AbstractArray{T,N}.(F.arrays))
+
 copy(x::Vcat) = Vcat(copy.(x.arrays)...)
 
 size(f::Vcat{<:Any,1,Tuple{}}) = (0,)
