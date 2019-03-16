@@ -41,7 +41,7 @@ import StaticArrays: StaticArrayStyle
 
 export Mul, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum,
-        applied
+        applied, ⋆
 
 include("memorylayout.jl")
 include("cache.jl")

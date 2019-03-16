@@ -15,7 +15,8 @@ struct Applied{Style, F, Args<:Tuple}
     args::Args
 end
 
-applied(f, args...) = Applied(ApplyStyle(f, args...), f, args)
+Applied(f, args...) = Applied(ApplyStyle(f, args...), f, args)
+applied(f, args...) = Applied(f, args...)
 
 materialize(A::Applied) = _default_materialize(A)
 materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
@@ -117,6 +118,14 @@ struct  ApplyLayout{F, LAY} <: MemoryLayout
 end
 
 MemoryLayout(M::ApplyArray) = ApplyLayout(M.applied.f, MemoryLayout.(M.applied.args))
+
+function show(io::IO, A::Applied) 
+    print(io, "Applied(", A.f)
+    for a in A.args
+        print(io, ',', a)
+    end
+    print(io, ')')
+end
 
 
 # _flatten(A::ApplyArray, B...) = _flatten(A.applied.args..., B...)

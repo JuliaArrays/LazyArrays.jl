@@ -30,9 +30,9 @@ convert(::Type{AbstractArray{T,N}}, F::Vcat{<:Any,N}) where {T,N} = _Vcat(T, F.a
 
 _abstractarray(::Type{T}, x::AbstractArray) where T = AbstractArray{T}(x)
 _abstractarray(::Type{T}, x) where T = T(x)
-AbstractArray(F::Vcat) = _Vcat(AbstractArray.(F.arrays))
+AbstractArray(F::Vcat) = copy(F)
 AbstractArray{T}(F::Vcat) where T = _Vcat(_abstractarray.(T,F.arrays))
-AbstractArray{T,N}(F::Vcat{<:Any,N}) where {T,N} = _Vcat(AbstractArray{T,N}.(F.arrays))
+AbstractArray{T,N}(F::Vcat{<:Any,N}) where {T,N} = _Vcat(_abstractarray.(T,F.arrays))
 
 copy(x::Vcat) = Vcat(copy.(x.arrays)...)
 

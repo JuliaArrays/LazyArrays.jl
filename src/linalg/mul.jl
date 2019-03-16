@@ -48,6 +48,17 @@ axes(M::Mul{<:Any, Tuple{}}) = ()
 # *(A, B::Mul) = materialize(Mul(A, B.args...))
 ⋆(A...) = Mul(A...)
 
+function show(io::IO, A::Mul) 
+    if length(A.args) == 0 
+        print(io, "⋆()")
+        return 
+    end
+    print(io, first(A.args))
+    for a in A.args[2:end]
+        print(io, '⋆', a)
+    end
+end
+
 
 ####
 # Matrix * Array
