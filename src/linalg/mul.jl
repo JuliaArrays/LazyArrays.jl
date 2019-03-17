@@ -83,7 +83,13 @@ lmaterialize(M::Mul) = _lmaterialize(M.args...)
 _lmaterialize(A, B) = apply(*,A,B)
 _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 
-_materialize(M::ArrayMuls, _) = lmaterialize(M)
+_flatten() = ()
+_flatten(A, B...) = (A, _flatten(B...)...)
+_flatten(A::Mul, B...) = _flatten(A.args..., B...)
+flatten(A) = A
+flatten(A::Mul) = Mul(_flatten(A.args...)...)
+
+_materialize(M::ArrayMuls, _) = flatten(lmaterialize(M))
 
 
 
@@ -191,6 +197,10 @@ MulVector(factors...) = MulVector(Mul(factors...))
 MulMatrix(factors...) = MulMatrix(Mul(factors...))
 
 IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
+
+_flatten(A::MulArray, B...) = _flatten(A.applied, B...)
+flatten(A::MulArray) = MulArray(flatten(A.applied))
+
 
 @propagate_inbounds getindex(A::MulArray, k::Int) = A.applied[k]
 @propagate_inbounds getindex(A::MulArray{T,N}, kj::Vararg{Int,N}) where {T,N} =

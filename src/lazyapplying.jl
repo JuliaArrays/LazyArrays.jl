@@ -128,6 +128,3 @@ function show(io::IO, A::Applied)
     print(io, ')')
 end
 
-
-# _flatten(A::ApplyArray, B...) = _flatten(A.applied.args..., B...)
-# flatten(A::MulArray) = MulArray(Mul(_flatten(A.applied.args...)))
