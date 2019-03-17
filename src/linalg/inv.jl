@@ -34,23 +34,26 @@ axes(A::InvOrPInv, k) = axes(A)[k]
 eltype(A::InvOrPInv) = eltype(parent(A))
 
 
-const Ldiv{StyleA, StyleB, AType, BType} =
-    Applied{LayoutApplyStyle{Tuple{StyleA, StyleB}}, typeof(\), <:Tuple{AType, BType}}
+const Ldiv{Style, AType, BType} = Applied{Style,typeof(\),<:Tuple{AType, BType}}
 
 Ldiv(A, B) = applied(\, A, B)
 
 ApplyStyle(::typeof(\), A::AbstractArray, B::AbstractArray) =
     LayoutApplyStyle((MemoryLayout(A), MemoryLayout(B)))
 
-size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractMatrix}) =
+size(L::Ldiv{<:Any,<:Any,<:AbstractMatrix}) =
     (size(L.args[1], 2),size(L.args[2],2))
-size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
+size(L::Ldiv{<:Any,<:Any,<:AbstractVector}) =
     (size(L.args[1], 2),)
-length(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
+axes(L::Ldiv{<:Any,<:Any,<:AbstractMatrix}) =
+    (axes(L.args[1], 2),axes(L.args[2],2))
+axes(L::Ldiv{<:Any,<:Any,<:AbstractVector}) =
+    (axes(L.args[1], 2),)    
+length(L::Ldiv{<:Any,<:Any,<:AbstractVector}) =
     size(L.args[1], 2)
 
-ndims(L::Applied{<:Any, typeof(\)}) = ndims(last(L.args))
-eltype(M::Applied{<:Any, typeof(\)}) = promote_type(Base.promote_op(inv, eltype(first(M.args))),
+ndims(L::Ldiv) = ndims(last(L.args))
+eltype(M::Ldiv) = promote_type(Base.promote_op(inv, eltype(first(M.args))),
                                                     eltype(last(M.args)))
 
 struct ArrayLdivArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
@@ -59,7 +62,7 @@ struct ArrayLdivArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
     _copyto!(MemoryLayout(dest), dest, bc)
 
 const ArrayLdivArray{styleA, styleB, p, q, T, V} =
-    Ldiv{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
+    Ldiv{LayoutApplyStyle{Tuple{styleA, styleB}}, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 const BArrayLdivArray{styleA, styleB, p, q, T, V} =
     Broadcasted{ArrayLdivArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
                 <:Tuple{<:ArrayLdivArray{styleA,styleB,p,q,T,V}}}

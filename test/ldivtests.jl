@@ -17,6 +17,7 @@ import Base.Broadcast: materialize
         @test all(copyto!(similar(b), Ldiv(A,b)) .===
                     (similar(b) .= Ldiv(A,b)) .=== InvMatrix(A) * b .===
                     materialize(Ldiv(A,b)) .===
+                    apply(\,A,b) .===
                   (A\b) .=== (b̃ =  copy(b); LAPACK.gesv!(copy(A), b̃); b̃))
 
 

@@ -653,7 +653,7 @@ import Base.Broadcast: materialize, materialize!
 
     @testset "multi-argument mul" begin
         A = randn(5,5)
-        B = materialize(Mul(A,A,A))
+        B = apply(*,A,A,A)
         @test B isa Matrix{Float64}
         @test all(B .=== (A*A)*A)
     end
@@ -662,12 +662,12 @@ import Base.Broadcast: materialize, materialize!
         A = randn(5,5)
         B = Diagonal(randn(5))
         @test MemoryLayout(B) == DiagonalLayout(DenseColumnMajor())
-        @test materialize(Mul(A,B)) == A*B
+        @test apply(*,A,B) == A*B
 
         A = randn(5,5)
         B = SymTridiagonal(randn(5),randn(4))
         @test MemoryLayout(B) == SymTridiagonalLayout(DenseColumnMajor())
-        @test materialize(Mul(A,B)) == A*B
+        @test apply(*,A,B) == A*B
     end
 
     @testset "MulArray" begin
@@ -690,8 +690,8 @@ import Base.Broadcast: materialize, materialize!
         B = ones(1,1) * 1e150
         C = ones(1,1) * 1e-300
 
-        @test materialize(Mul(A, Mul(B,C))) == A*(B*C)
-        @test materialize(Mul(A , Mul(B , C), C)) == A * (B*C) * C
+        @test apply(*, A, applied(*,B,C)) == A*(B*C)
+        @test apply(*, A , applied(*,B,C), C) == A * (B*C) * C
     end
 
     @testset "#15" begin

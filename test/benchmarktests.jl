@@ -4,7 +4,7 @@
 using LazyArrays, BenchmarkTools
 
 @testset "Applied" begin
-    @test @belapsed(materialize(applied(exp, $x))) ≤ 2(@belapsed exp($x))
+    @test @belapsed(apply(exp, $x)) ≤ 2(@belapsed exp($x))
 end
 
 @testset "concat" begin

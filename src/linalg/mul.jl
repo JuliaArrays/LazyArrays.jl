@@ -43,9 +43,9 @@ axes(M::Mul) = _mul_axes(axes(first(M.args),1), axes(last(M.args)))
 axes(M::Mul{<:Any, Tuple{}}) = ()
 
 
-# *(A::Mul, B::Mul) = materialize(Mul(A.args..., B.args...))
-# *(A::Mul, B) = materialize(Mul(A.args..., B))
-# *(A, B::Mul) = materialize(Mul(A, B.args...))
+# *(A::Mul, B::Mul) = apply(*,A.args..., B.args...)
+# *(A::Mul, B) = apply(*,A.args..., B)
+# *(A, B::Mul) = apply(*,A, B.args...)
 ⋆(A...) = Mul(A...)
 
 function show(io::IO, A::Mul) 
@@ -80,8 +80,8 @@ materializes arrays iteratively, left-to-right.
 """
 lmaterialize(M::Mul) = _lmaterialize(M.args...)
 
-_lmaterialize(A, B) = materialize(Mul(A,B))
-_lmaterialize(A, B, C, D...) = _lmaterialize(materialize(Mul(A,B)), C, D...)
+_lmaterialize(A, B) = apply(*,A,B)
+_lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 
 _materialize(M::ArrayMuls, _) = lmaterialize(M)
 
