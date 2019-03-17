@@ -1,7 +1,7 @@
 
 
-const PInv{Style, Typ} = Applied{LayoutApplyStyle{Tuple{Style}}, typeof(pinv), <:Tuple{Typ}}
-const Inv{Style, Typ} = Applied{LayoutApplyStyle{Tuple{Style}}, typeof(inv), <:Tuple{Typ}}
+const PInv{Style, Typ} = Applied{Style, typeof(pinv), <:Tuple{Typ}}
+const Inv{Style, Typ} = Applied{Style, typeof(inv), <:Tuple{Typ}}
 
 Inv(A) = applied(inv, A)
 PInv(A) = applied(pinv, A)
@@ -9,18 +9,18 @@ PInv(A) = applied(pinv, A)
 ApplyStyle(::typeof(inv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
 ApplyStyle(::typeof(pinv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
 
-const InvOrPInv = Union{Applied{<:Any,typeof(pinv)}, Applied{<:Any,typeof(inv)}}
+const InvOrPInv = Union{PInv, Inv}
 
 parent(A::InvOrPInv) = first(A.args)
 
-pinv(A::Applied{<:Any,typeof(pinv)}) = parent(A)
-function inv(A::Applied{<:Any,typeof(pinv)})
+pinv(A::PInv) = parent(A)
+function inv(A::PInv)
     checksquare(parent(A))
     parent(A)
 end
 
-inv(A::Applied{<:Any,typeof(inv)}) = parent(A)
-pinv(A::Applied{<:Any,typeof(inv)}) = inv(A)
+inv(A::Inv) = parent(A)
+pinv(A::Inv) = inv(A)
 
 ndims(A::InvOrPInv) = ndims(parent(A))
 
@@ -32,7 +32,6 @@ axes(A::InvOrPInv) = reverse(axes(parent(A)))
 size(A::InvOrPInv, k) = size(A)[k]
 axes(A::InvOrPInv, k) = axes(A)[k]
 eltype(A::InvOrPInv) = eltype(parent(A))
-
 
 
 const Ldiv{StyleA, StyleB, AType, BType} =

@@ -1,4 +1,4 @@
-using LazyArrays, Test
+using LazyArrays, FillArrays, Test
 import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
             ApplyArray, ApplyMatrix, ApplyVector
 
@@ -30,4 +30,8 @@ end
 
     @test ApplyArray(+,[1,2],[3,4]) == ApplyVector(+,[1,2],[3,4]) ==
             ApplyArray(+,[1,2],[3,4])
+
+    @test LazyArrays.rowsupport(Diagonal(1:10),3) == 3:3
+    @test ApplyArray(*, Ones(100_000_000,100_000_000), Diagonal(1:100_000_000))[1:10,1:10] == 
+            ones(10,10)*Diagonal(1:10)
 end

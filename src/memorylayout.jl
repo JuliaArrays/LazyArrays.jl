@@ -439,7 +439,6 @@ transposelayout(ml::SymTridiagonalLayout) = ml
 adjointlayout(_, ml::DiagonalLayout) = ml
 adjointlayout(::Type{<:Real}, ml::SymTridiagonal) = ml
 
-
 ###
 # Fill
 ####

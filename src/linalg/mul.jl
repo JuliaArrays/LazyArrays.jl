@@ -113,6 +113,8 @@ gives an iterator containing the possible non-zero entries in the j-th column of
 colsupport(A, j) = colsupport(MemoryLayout(A), A, j)
 
 
+rowsupport(::DiagonalLayout, _, k) = k:k
+colsupport(::DiagonalLayout, _, j) = j:j
 
 
 

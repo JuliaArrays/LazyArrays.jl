@@ -23,8 +23,8 @@ macro lazymul(Typ)
         ret = quote
             $ret
 
-            Base.:*(A::$Struc, B::$Typ, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
-            Base.:*(A::$Typ, B::$Struc, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
+            Base.:*(A::LinearAlgebra.$Struc, B::$Typ, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
+            Base.:*(A::$Typ, B::LinearAlgebra.$Struc, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
         end
     end
     for Mod in (:Adjoint, :Transpose, :Symmetric, :Hermitian)
@@ -48,8 +48,8 @@ macro lazymul(Typ)
             Base.:*(A::$Mod{<:Any,<:$Typ}, B::Diagonal, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
             Base.:*(A::Diagonal, B::$Mod{<:Any,<:$Typ}, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
 
-            Base.:*(A::AbstractTriangular, B::$Mod{<:Any,<:$Typ}, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
-            Base.:*(A::$Mod{<:Any,<:$Typ}, B::AbstractTriangular, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
+            Base.:*(A::LinearAlgebra.AbstractTriangular, B::$Mod{<:Any,<:$Typ}, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
+            Base.:*(A::$Mod{<:Any,<:$Typ}, B::LinearAlgebra.AbstractTriangular, C...) = LazyArrays.materialize(LazyArrays.Mul(A,B, C...))
         end
     end
 
