@@ -1,4 +1,4 @@
-using LazyArrays, LinearAlgebra,  Test
+using LazyArrays, LinearAlgebra, Test
 import LazyArrays: ArrayLdivArrayStyle, InvMatrix
 import Base.Broadcast: materialize
 

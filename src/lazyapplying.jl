@@ -18,6 +18,7 @@ end
 Applied(f, args...) = Applied(ApplyStyle(f, args...), f, args)
 applied(f, args...) = Applied(f, args...)
 apply(f, args...) = materialize(applied(f, args...))
+apply!(f, args...) = materialize!(applied(f, args...))
 
 materialize(A::Applied{DefaultApplyStyle}) = _default_materialize(A)
 materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)

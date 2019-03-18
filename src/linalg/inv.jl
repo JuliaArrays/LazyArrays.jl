@@ -104,60 +104,61 @@ const MatLdivMat{styleA, styleB, T, V} = ArrayLdivArray{styleA, styleB, 2, 2, T,
 # Triangular
 ###
 
-function _copyto!(_, dest::AbstractArray, M::ArrayLdivArray{<:TriangularLayout})
+@inline function _copyto!(_, dest::AbstractVector, M::ArrayLdivArray{<:TriangularLayout})
     A, B = M.args
     dest ≡ B || (dest .= B)
-    ldiv!(A, dest)
+    apply!(\, A, dest)
 end
 
-@inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
-         M::MatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
+function materialize!(M::ArrayLdivArray{<:TriangularLayout})
+    A, B = M.args
+    ldiv!(A, B)
+end
+
+@inline function materialize!(M::MatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                    <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
     A,B = M.args
-    B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(A), dest)
+    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(A), B)
 end
 
-@inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
-         M::MatLdivVec{<:TriangularLayout{'U',UNIT,<:AbstractRowMajor},
+@inline function materialize!(M::MatLdivVec{<:TriangularLayout{'U',UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
     A,B = M.args
-    B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(A)), dest)
+    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(A)), B)
 end
 
-@inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
-         M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:AbstractRowMajor},
+@inline function materialize!(M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:AbstractRowMajor},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
     A,B = M.args
-    B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(A)), dest)
+    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(A)), B)
 end
 
 
-@inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
-         M::MatLdivVec{T, <:TriangularLayout{'U',UNIT,<:ConjLayout{<:AbstractRowMajor}},
+@inline function materialize!(M::MatLdivVec{T, <:TriangularLayout{'U',UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
     A,B = M.args
-    B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('L', 'C', UNIT, triangulardata(A)', dest)
+    BLAS.trsv!('L', 'C', UNIT, triangulardata(A)', B)
 end
 
-@inline function _copyto!(::AbstractStridedLayout, dest::AbstractVector{T},
-         M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:ConjLayout{<:AbstractRowMajor}},
+@inline function materialize!(M::MatLdivVec{<:TriangularLayout{'L',UNIT,<:ConjLayout{<:AbstractRowMajor}},
                                    <:AbstractStridedLayout, T, T}) where {UNIT,T <: BlasFloat}
     A,B = M.args
-    B ≡ dest || copyto!(dest, B)
-    BLAS.trsv!('U', 'C', UNIT, triangulardata(A)', dest)
+    BLAS.trsv!('U', 'C', UNIT, triangulardata(A)', B)
 end
 
-function _copyto!(_, dest::AbstractMatrix, M::MatLdivMat{<:TriangularLayout})
+@inline function _copyto!(_, dest::AbstractMatrix, M::MatLdivMat{<:TriangularLayout})
+    A,x = M.args
+    x ≡ dest || copyto!(dest, x)
+    apply!(\, A, dest)
+end
+
+function materialize!(M::MatLdivMat{<:TriangularLayout})
     A,X = M.args
-    size(dest,2) == size(X,2) || thow(DimensionMismatch("Dimensions must match"))
-    @views for j in axes(dest,2)
-        dest[:,j] .= Ldiv(A, X[:,j])
+    size(A,2) == size(X,1) || thow(DimensionMismatch("Dimensions must match"))
+    @views for j in axes(X,2)
+        apply!(\, A, X[:,j])
     end
-    dest
+    X
 end
 
 
