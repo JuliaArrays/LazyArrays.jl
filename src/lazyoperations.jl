@@ -42,7 +42,7 @@ end
 function _kron2!(R, K)
     size(R) == size(K) || throw(DimensionMismatch("Matrices have wrong dimensions"))
     a,b = K.arrays
-    @assert !has_offset_axes(a, b)
+    require_one_based_indexing(a, b)
     m = 1
     @inbounds for j = 1:size(a,2), l = 1:size(b,2), i = 1:size(a,1)
         aij = a[i,j]

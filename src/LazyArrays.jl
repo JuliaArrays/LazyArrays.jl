@@ -25,7 +25,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
       ArithmeticWraps, floatrange, reverse, unitrange_last,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
       similar, @_gc_preserve_end, @_gc_preserve_begin,
-      has_offset_axes, @nexprs, @ncall, @ntuple
+      @nexprs, @ncall, @ntuple
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
@@ -38,6 +38,13 @@ import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 import FillArrays: AbstractFill
 
 import StaticArrays: StaticArrayStyle
+
+if VERSION < v"1.2-"
+    import Base: has_offset_axes
+    require_one_based_indexing(A...) = !has_offset_axes(A...) || throw(ArgumentError("offset arrays are not supported but got an array with index other than 1"))
+else
+    import Base: require_one_based_indexing    
+end             
 
 export Mul, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum,
