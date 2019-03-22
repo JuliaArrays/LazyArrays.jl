@@ -28,7 +28,7 @@ const BArrayMulArrayPlusConstArray{styleA, styleB, p, q, T, U, V, W} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
                 <:Any, typeof(+),
                 <:Tuple{<:ArrayMulArray{styleA,styleB,p,q,T,U},
-                Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),
+                Broadcasted{<:AbstractArrayStyle{q},<:Any,typeof(*),
                             <:Tuple{V,<:AbstractArray{W,q}}}}}
 const BConstArrayMulArrayPlusArray{styleA, styleB, p, q, T, U, V, W} =
     Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q},
@@ -43,7 +43,7 @@ const BConstArrayMulArrayPlusConstArray{styleA, styleB, p, q, T, U, V, W, X} =
                 <:Tuple{Broadcasted{<:ArrayMulArrayStyle{styleA,styleB,p,q},
                                     <:Any, typeof(*),
                                     <:Tuple{T,<:ArrayMulArray{styleA,styleB,p,q,U,V}}},
-                        Broadcasted{DefaultArrayStyle{q},<:Any,typeof(*),<:Tuple{W,<:AbstractArray{X,q}}}}}
+                        Broadcasted{<:AbstractArrayStyle{q},<:Any,typeof(*),<:Tuple{W,<:AbstractArray{X,q}}}}}
 
 
 BroadcastStyle(::Type{<:ArrayMulArray{StyleA,StyleB,p,q}}) where {StyleA,StyleB,p,q} =

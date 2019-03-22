@@ -1,6 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray
-import Base.Broadcast: materialize, materialize!
+import Base.Broadcast: materialize, materialize!, broadcasted
 
 
 
@@ -702,4 +702,21 @@ import Base.Broadcast: materialize, materialize!
         @test eltype(M) == Float64
         @test all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
     end
+
+    @testset "broadcasting" begin
+        A = randn(5,5); B = randn(5,5); C = randn(5,5)
+        @test broadcasted(identity, Mul(A,B)) isa LazyArrays.BArrayMulArray
+        @test broadcasted(*, 1.0, Mul(A,B)) isa LazyArrays.BConstArrayMulArray
+        @test broadcasted(+, Mul(A,B), C) isa LazyArrays.BArrayMulArrayPlusArray
+        @test broadcasted(+, Mul(A,B), broadcasted(*, 0.0, C)) isa LazyArrays.BArrayMulArrayPlusConstArray
+        @test broadcasted(+, broadcasted(*, 1.0, Mul(A,B)), C) isa LazyArrays.BConstArrayMulArrayPlusArray
+        @test broadcasted(+, broadcasted(*, 1.0, Mul(A,B)), broadcasted(*, 0.0, C)) isa LazyArrays.BConstArrayMulArrayPlusConstArray
+
+        C .= NaN
+        C .= 1.0 .* Mul(A,B) .+ 0.0 .* C
+        @test C == A*B
+    end
 end
+
+
+
