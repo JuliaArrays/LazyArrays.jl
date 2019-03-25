@@ -276,6 +276,8 @@ end
     @test Cumsum(A; dims=2) == cumsum(A; dims=2)
     @test Diff(A; dims=1) == diff(A; dims=1)
     @test Diff(A; dims=2) == diff(A; dims=2)
+
+    @test_broken cumsum(Vcat(Int[], 1:5)) == cumsum(1:5)
 end
 
 
