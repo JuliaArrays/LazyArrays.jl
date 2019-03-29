@@ -58,11 +58,31 @@ MemoryLayout(V::Vcat) = VcatLayout(MemoryLayout.(V.arrays))
     throw(BoundsError(f, k))
 end
 
-function getindex(f::Vcat{T,2}, k::Integer, j::Integer) where T
+@propagate_inbounds @inline function getindex(f::Vcat{T,2}, k::Integer, j::Integer) where T
     κ = k
     for A in f.arrays
         n = size(A,1)
         κ ≤ n && return T(A[κ,j])::T
+        κ -= n
+    end
+    throw(BoundsError(f, (k,j)))
+end
+
+@propagate_inbounds @inline function setindex!(f::Vcat{T,1}, v, k::Integer) where T
+    κ = k
+    for A in f.arrays
+        n = length(A)
+        κ ≤ n && return setindex!(A, v, κ)
+        κ -= n
+    end
+    throw(BoundsError(f, k))
+end
+
+@propagate_inbounds @inline function setindex!(f::Vcat{T,2}, v, k::Integer, j::Integer) where T
+    κ = k
+    for A in f.arrays
+        n = size(A,1)
+        κ ≤ n && return setindex!(A, v, κ, j)
         κ -= n
     end
     throw(BoundsError(f, (k,j)))
@@ -99,6 +119,16 @@ function getindex(f::Hcat{T}, k::Integer, j::Integer) where T
     for A in f.arrays
         n = size(A,2)
         ξ ≤ n && return T(A[k,ξ])::T
+        ξ -= n
+    end
+    throw(BoundsError(f, (k,j)))
+end
+
+function setindex!(f::Hcat{T}, v, k::Integer, j::Integer) where T
+    ξ = j
+    for A in f.arrays
+        n = size(A,2)
+        ξ ≤ n && return setindex!(A, v, k, ξ)
         ξ -= n
     end
     throw(BoundsError(f, (k,j)))

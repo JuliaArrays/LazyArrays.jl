@@ -145,6 +145,34 @@ include("setoptests.jl")
             @test convert(AbstractVector{T},Z) ≡ AbstractVector{T}(Z) ≡ Z
         end
     end
+
+    @testset "setindex!" begin
+        x = randn(5)
+        y = randn(6)
+        A = Vcat(x, y, 3)
+        A[1] = 1
+        @test A[1] == x[1] == 1
+        A[6] = 2
+        @test A[6] == y[1] == 2
+        @test_throws MethodError A[12] = 3
+        @test_throws BoundsError A[13] = 3
+
+        x = randn(2,2); y = randn(3,2)
+        A = Vcat(x,y)
+        A[1,1] = 1
+        @test A[1,1] == x[1,1] == 1
+        A[3,1] = 2
+        @test A[3,1] == y[1,1] == 2
+        A[6] = 3
+        @test A[1,2] == x[1,2] == 3
+
+        x = randn(2,2); y = randn(2,3)
+        B = Hcat(x,y)
+        B[1,1] = 1
+        @test B[1,1] == x[1,1] == 1
+        B[1,3] = 2
+        @test B[1,3] == y[1,1] == 2
+    end
 end
 
 
