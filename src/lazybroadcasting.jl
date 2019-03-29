@@ -37,9 +37,76 @@ getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
-# issue 16: sum(b, dims=(1,2,3)) faster than sum(b)
-Base._sum(b::BroadcastArray{T,N}, ::Colon) where {T,N} = first(Base._sum(b, ntuple(identity, N)))
-Base._prod(b::BroadcastArray{T,N}, ::Colon) where {T,N} = first(Base._prod(b, ntuple(identity, N)))
+# Replacement for #18.
+# Could extend this to other similar reductions in Base... or apply at lower level? 
+# for (fname, op) in [(:sum, :add_sum), (:prod, :mul_prod),
+#                     (:maximum, :max), (:minimum, :min),
+#                     (:all, :&),       (:any, :|)]
+function Base._sum(f, A::BroadcastArray, ::Colon)
+    bc = A.broadcasted
+    T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
+    out = zero(T)
+    @simd for I in eachindex(bc)
+        @inbounds out += f(bc[I])
+    end
+    out
+end
+function Base._prod(f, A::BroadcastArray, ::Colon)
+    bc = A.broadcasted
+    T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
+    out = one(T)
+    @simd for I in eachindex(bc)
+        @inbounds out *= f(bc[I])
+    end
+    out
+end
+
+# Macros for lazy broadcasting, #21 WIP
+# based on @dawbarton  https://discourse.julialang.org/t/19641/20
+# and @tkf            https://github.com/JuliaLang/julia/issues/19198#issuecomment-457967851
+# and @chethega      https://github.com/JuliaLang/julia/pull/30939
+
+export @~
+
+lazy(::Any) = throw(ArgumentError("function `lazy` exists only for its effect on broadcasting, see the macro @~"))
+struct LazyCast{T}
+    value::T
+end
+Broadcast.broadcasted(::typeof(lazy), x) = LazyCast(x)
+Broadcast.materialize(x::LazyCast) = BroadcastArray(x.value)
+
+"""
+    @~ expr
+
+Macro for creating lazy `BroadcastArray`s. 
+Expects a broadcasting expression, possibly created by the `@.` macro:
+```
+julia> @~ A .+ B ./ 2
+
+julia> @~ @. A + B / 2
+```
+"""
+macro ~(ex)
+    checkex(ex)
+    esc( :( $lazy.($ex) ) )
+end
+
+using MacroTools 
+
+function checkex(ex)
+    if @capture(ex, (arg__,) = val_ ) 
+        if arg[2]==:dims
+            throw(ArgumentError("@~ is capturing keyword arguments, try with `; dims = $val` instead of a comma"))
+        else
+            throw(ArgumentError("@~ is probably capturing capturing keyword arguments, try with ; or brackets"))
+        end
+    end
+    if @capture(ex, (arg_,rest__) ) 
+        throw(ArgumentError("@~ is capturing more than one expression, try $name($arg) with brackets"))
+    end
+    ex
+end
+
 
 BroadcastStyle(::Type{<:BroadcastArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 BroadcastStyle(L::LazyArrayStyle{N}, ::StaticArrayStyle{N}) where N = L
