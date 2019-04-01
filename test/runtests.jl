@@ -299,6 +299,12 @@ end
     LazyArrays.resizedata!(C,5,5,5)
     LazyArrays.resizedata!(C,8,8,8)
     @test all(C.data .=== Array(A)[1:8,1:8,1:8])
+
+    A = collect(1:5)
+    C = cache(A)
+    @test C isa Vector{Int}
+    C[1] = 2
+    @test A[1] ≠ 2
 end
 
 @testset "Diff and Cumsum" begin
