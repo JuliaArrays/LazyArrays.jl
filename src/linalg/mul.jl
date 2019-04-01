@@ -131,9 +131,8 @@ colsupport(::DiagonalLayout, _, j) = j:j
 # Matrix * Matrix
 ####
 
-
-
 const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V}
+const VecMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 1, 2, T, V}
 
 
 

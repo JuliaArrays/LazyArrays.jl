@@ -36,6 +36,7 @@ axes(M::MulAdd) = axes(M.C)
 const ArrayMulArrayAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray}
 const MatMulVecAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractMatrix,<:AbstractVector,<:AbstractVector}
 const MatMulMatAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractMatrix,<:AbstractMatrix,<:AbstractMatrix}
+const VecMulMatAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractVector,<:AbstractMatrix,<:AbstractMatrix}
 
 BroadcastStyle(::Type{<:MatMulVecAdd{StyleA,StyleB,StyleC}}) where {StyleA,StyleB,StyleC} =
     ArrayMulArrayStyle{StyleA,StyleB,2,1}()
@@ -46,6 +47,7 @@ broadcastable(M::MulAdd) = M
 
 const BlasMatMulVec{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractVector{T},<:AbstractVector{T}}
 const BlasMatMulMat{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
+const BlasVecMulMat{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractVector{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
 
 @inline function _copyto!(_, dest::AbstractArray, M::MulAdd)
     M.C ≡ dest || copyto!(dest, M.C)
@@ -227,6 +229,13 @@ end
     _gemv!('T', M.α, transpose(M.A), M.B, M.β, M.C)
 @inline materialize!(M::BlasMatMulVec{<:ConjLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
     _gemv!('C', M.α, M.A', M.B, M.β, M.C)
+
+@inline materialize!(M::BlasVecMulMat{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractColumnMajor,<:BlasFloat}) =
+    _gemm!('N', 'N', M.α, M.A, M.B, M.β, M.C)
+@inline materialize!(M::BlasVecMulMat{<:AbstractColumnMajor,<:AbstractRowMajor,<:AbstractColumnMajor,<:BlasFloat}) =
+    _gemm!('N', 'T', M.α, M.A, transpose(M.B), M.β, M.C)
+@inline materialize!(M::BlasVecMulMat{<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
+    _gemm!('N', 'C', M.α, M.A, M.B', M.β, M.C)
 
 @inline materialize!(M::BlasMatMulMat{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractColumnMajor,<:BlasFloat}) =
     _gemm!('N', 'N', M.α, M.A, M.B, M.β, M.C)

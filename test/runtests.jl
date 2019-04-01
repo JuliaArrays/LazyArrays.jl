@@ -356,3 +356,10 @@ end
     @test maximum(x) == 3
     @test minimum(x) == 1
 end
+
+@testset "vector*matrix broadcasting #27" begin
+    H = [1., 0.]
+    @test Mul(H, H') .+ 1 == H*H' .+ 1
+    B =  randn(2,2)
+    @test Mul(H, H') .+ B == H*H' .+ B
+end
