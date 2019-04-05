@@ -18,6 +18,8 @@ macro lazymul(Typ)
         Base.:*(A::$Typ, B::AbstractMatrix, C...) = LazyArrays.apply(*,A,B,C...)
         Base.:*(A::$Typ, B::AbstractVector) = LazyArrays.apply(*,A,B)
         Base.:*(A::AbstractMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+        Base.:*(A::LinearAlgebra.AdjointAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+        Base.:*(A::LinearAlgebra.TransposeAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
     end
     for Struc in (:AbstractTriangular, :Diagonal)
         ret = quote

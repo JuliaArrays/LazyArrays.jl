@@ -674,6 +674,8 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         A = randn(5,5)
         M = MulArray(A,A)
         @test Matrix(M) ≈ A^2
+        x = randn(5)
+        @test x'M ≈ transpose(x)*M ≈ x'Matrix(M)
         @test_throws DimensionMismatch MulArray(randn(5,5), randn(4))
     end
 
