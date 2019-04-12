@@ -1,5 +1,5 @@
 module LazyArrays
-using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays
+using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays, MacroTools
 import LinearAlgebra.BLAS
 
 import Base: AbstractArray, AbstractMatrix, AbstractVector, 

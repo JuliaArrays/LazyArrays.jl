@@ -1,5 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: CachedArray
+
 include("memorylayouttests.jl")
 include("applytests.jl")
 include("multests.jl")

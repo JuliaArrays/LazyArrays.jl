@@ -89,9 +89,7 @@ julia> @~ @. A + B / 2
 macro ~(ex)
     checkex(ex)
     esc( :( $lazy.($ex) ) )
-end
-
-using MacroTools 
+end 
 
 function checkex(ex)
     if @capture(ex, (arg__,) = val_ ) 

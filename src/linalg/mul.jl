@@ -9,7 +9,8 @@ end
 
 const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
 layoutapplystyle(::typeof(*), style1, style2) = MulAddStyle()
-ApplyStyle(::typeof(*), A::AbstractArray...) = layoutapplystyle(*, MemoryLayout(A)...)
+layoutapplystyle(::typeof(*), styles...) = DefaultApplyStyle()
+ApplyStyle(::typeof(*), A::AbstractArray...) = layoutapplystyle(*, MemoryLayout.(A)...)
 
 Mul(args...) = Applied(ApplyStyle(*, args...), *, args)
 
