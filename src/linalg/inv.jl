@@ -6,9 +6,6 @@ const Inv{Style, Typ} = Applied{Style, typeof(inv), <:Tuple{Typ}}
 Inv(A) = applied(inv, A)
 PInv(A) = applied(pinv, A)
 
-ApplyStyle(::typeof(inv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
-ApplyStyle(::typeof(pinv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
-
 const InvOrPInv = Union{PInv, Inv}
 
 parent(A::InvOrPInv) = first(A.args)
@@ -34,22 +31,29 @@ axes(A::InvOrPInv, k) = axes(A)[k]
 eltype(A::InvOrPInv) = eltype(parent(A))
 
 
-const Ldiv{Style, AType, BType} = Applied{Style,typeof(\),<:Tuple{AType, BType}}
+struct Ldiv{StyleA, StyleB, AType, BType} 
+    style_A::StyleA
+    style_B::StyleB
+    A::AType
+    B::BType
+end
 
-Ldiv(A, B) = applied(\, A, B)
+Ldiv(A, B) = Ldiv(MemoryLayout(A), MemoryLayout(B), A, B)
+
+struct LdivApplyStyle <: ApplyStyle end
 
 ApplyStyle(::typeof(\), A::AbstractArray, B::AbstractArray) =
-    LayoutApplyStyle((MemoryLayout(A), MemoryLayout(B)))
+    LdivApplyStyle()
 
-size(L::Ldiv{<:Any,<:Any,<:AbstractMatrix}) =
+size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractMatrix}) =
     (size(L.args[1], 2),size(L.args[2],2))
-size(L::Ldiv{<:Any,<:Any,<:AbstractVector}) =
+size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
     (size(L.args[1], 2),)
-axes(L::Ldiv{<:Any,<:Any,<:AbstractMatrix}) =
+axes(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractMatrix}) =
     (axes(L.args[1], 2),axes(L.args[2],2))
-axes(L::Ldiv{<:Any,<:Any,<:AbstractVector}) =
+axes(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
     (axes(L.args[1], 2),)    
-length(L::Ldiv{<:Any,<:Any,<:AbstractVector}) =
+length(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =
     size(L.args[1], 2)
 
 ndims(L::Ldiv) = ndims(last(L.args))
@@ -62,7 +66,7 @@ struct ArrayLdivArrayStyle{StyleA, StyleB, p, q} <: BroadcastStyle end
     _copyto!(MemoryLayout(dest), dest, bc)
 
 const ArrayLdivArray{styleA, styleB, p, q, T, V} =
-    Ldiv{LayoutApplyStyle{Tuple{styleA, styleB}}, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
+    Ldiv{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
 const BArrayLdivArray{styleA, styleB, p, q, T, V} =
     Broadcasted{ArrayLdivArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
                 <:Tuple{<:ArrayLdivArray{styleA,styleB,p,q,T,V}}}
@@ -180,13 +184,3 @@ size(A::PInvMatrix) = map(length, axes(A))
 @propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
     (parent(A.applied)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
-
-@inline function _copyto!(_, dest::AbstractArray, M::MatMulVec{<:ApplyLayout{typeof(inv)}})
-    Ai,b = M.args
-    dest .= Ldiv(parent(Ai.applied), b)
-end
-
-@inline function _copyto!(_, dest::AbstractArray, M::MatMulVec{<:ApplyLayout{typeof(pinv)}})
-    Ai,b = M.args
-    dest .= Ldiv(parent(Ai.applied), b)
-end

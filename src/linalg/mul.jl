@@ -8,12 +8,10 @@ function checkdimensions(A, B, C...)
 end
 
 const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
-
-ApplyStyle(::typeof(*), args::AbstractArray...) = LayoutApplyStyle(MemoryLayout.(args))
+layoutapplystyle(::typeof(*), style1, style2) = MulAddStyle()
+ApplyStyle(::typeof(*), A::AbstractArray...) = layoutapplystyle(*, MemoryLayout(A)...)
 
 Mul(args...) = Applied(ApplyStyle(*, args...), *, args)
-
-const Mul2{StyleA, StyleB, AType, BType} = Mul{LayoutApplyStyle{Tuple{StyleA,StyleB}}, <:Tuple{AType,BType}}
 
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
@@ -64,13 +62,7 @@ end
 # Matrix * Array
 ####
 
-const ArrayMulArray{styleA, styleB, p, q, T, V} =
-    Mul2{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
-
 const ArrayMuls = Mul{<:Any, <:Tuple{Vararg{<:AbstractArray}}}
-
-# the default is always Array
-_materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
 
 
 """
@@ -98,7 +90,6 @@ _materialize(M::ArrayMuls, _) = flatten(lmaterialize(M))
 ####
 # Matrix * Vector
 ####
-const MatMulVec{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 1, T, V}
 
 
 rowsupport(_, A, k) = axes(A,2)
@@ -123,16 +114,6 @@ rowsupport(::DiagonalLayout, _, k) = k:k
 colsupport(::DiagonalLayout, _, j) = j:j
 
 
-
-
-
-
-####
-# Matrix * Matrix
-####
-
-const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V}
-const VecMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 1, 2, T, V}
 
 
 

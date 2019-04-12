@@ -3,9 +3,8 @@
 abstract type ApplyStyle end
 abstract type AbstractArrayApplyStyle <: ApplyStyle end
 struct DefaultApplyStyle <: ApplyStyle end
-struct LayoutApplyStyle{Layouts<:Tuple} <: AbstractArrayApplyStyle
-    layouts::Layouts
-end
+struct MulAddStyle <: AbstractArrayApplyStyle end
+struct LMulApplyStyle <: AbstractArrayApplyStyle end
 
 ApplyStyle(f, args...) = DefaultApplyStyle()
 
@@ -37,8 +36,12 @@ _materialize(A::Applied, _) = _default_materialize(A)
 @inline copyto!(dest::AbstractArray, M::Applied{DefaultApplyStyle}) = copyto!(dest, materialize(M))
 @inline copyto!(dest, M::Applied{DefaultApplyStyle}) = copyto!(dest, materialize(M))
 
-@inline copyto!(dest::AbstractArray, M::Applied{<:LayoutApplyStyle}) =
+@inline copyto!(dest::AbstractArray, M::Applied{MulAddStyle}) =
     _copyto!(MemoryLayout(dest), dest, materializeargs(M))
+
+@inline copyto!(dest::AbstractArray, M::Applied{LMulApplyStyle}) =
+    _copyto!(MemoryLayout(dest), dest, materializeargs(M))
+
 
 # Used for when a lazy version should be constructed on materialize
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
