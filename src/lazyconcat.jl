@@ -100,7 +100,7 @@ struct Hcat{T,I} <: AbstractConcatArray{T,2}
         isempty(A) && throw(ArgumentError("Cannot concatenate empty vectors"))
         m = size(A[1],1)
         for k=2:length(A)
-            size(A[k],1) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
+            size(A[k],1) == m || throw(ArgumentError("number of rows of each array must match (got $(map(x->size(x,1), A)))"))
         end
         new{T,I}(A)
     end
