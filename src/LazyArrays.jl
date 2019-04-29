@@ -48,7 +48,7 @@ end
 
 export Mul, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum,
-        applied, materialize, ApplyArray, apply, ⋆
+        applied, materialize, ApplyArray, apply, ⋆, @~
 
 include("memorylayout.jl")
 include("cache.jl")
@@ -58,5 +58,6 @@ include("lazyconcat.jl")
 include("linalg/linalg.jl")
 include("lazysetoperations.jl")
 include("lazyoperations.jl")
+include("lazymacro.jl")
 
 end # module
