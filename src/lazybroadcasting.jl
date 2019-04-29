@@ -3,9 +3,11 @@ LazyArrayStyle(::Val{N}) where N = LazyArrayStyle{N}()
 LazyArrayStyle{M}(::Val{N}) where {N,M} = LazyArrayStyle{N}()
 
 
-struct BroadcastArray{T, N, BRD<:Broadcasted} <: AbstractArray{T, N}
+struct BroadcastArray{T, N, BRD<:Broadcasted} <: LazyArray{T, N}
     broadcasted::BRD
 end
+
+LazyArray(bc::Broadcasted) = BroadcastArray(bc)
 
 BroadcastArray{T,N}(bc::BRD) where {T,N,BRD<:Broadcasted} = BroadcastArray{T,N,BRD}(bc)
 BroadcastArray{T}(bc::Broadcasted{<:Union{Nothing,BroadcastStyle},<:Tuple{Vararg{Any,N}},<:Any,<:Tuple}) where {T,N} =

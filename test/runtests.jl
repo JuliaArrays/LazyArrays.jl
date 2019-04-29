@@ -6,6 +6,7 @@ include("multests.jl")
 include("ldivtests.jl")
 include("addtests.jl")
 include("setoptests.jl")
+include("macrotests.jl")
 
 
 @testset "concat" begin
@@ -225,27 +226,13 @@ end
 
 @testset "BroadcastArray" begin
     A = randn(6,6)
-
     B = BroadcastArray(exp, A)
-    B′ = @~ exp.(A)
-    B′′ = @~ @. exp(A)
     @test Matrix(B) == exp.(A)
-    @test Matrix(B′) == exp.(A)
-    @test Matrix(B′′) == exp.(A)
 
     C = BroadcastArray(+, A, 2)
-    C′ = @~ A .+ 2
-    C′′ = @~ @. A + 2
     @test C == A .+ 2
-    @test C′ == A .+ 2
-    @test C′′ == A .+ 2
-
     D = BroadcastArray(+, A, C)
-    D′ = @~ A + C
-    D′′ = @~ @. A + C
     @test D == A + C
-    @test D′ == A + C
-    @test D′′ == A + C
 
     @test sum(B) ≈ sum(exp, A)
     @test sum(C) ≈ sum(A .+ 2)
