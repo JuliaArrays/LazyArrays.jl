@@ -39,6 +39,7 @@ convert(::Type{AbstractArray{T}}, S::CachedArray) where {T} =
 
 
 size(A::CachedArray) = size(A.array)
+length(A::CachedArray) = length(A.array)
 
 @propagate_inbounds function Base.getindex(B::CachedArray{T,N}, kj::Vararg{Integer,N}) where {T,N}
     @boundscheck checkbounds(Bool, B, kj...)
