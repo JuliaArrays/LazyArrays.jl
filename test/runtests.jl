@@ -173,6 +173,15 @@ include("setoptests.jl")
         B[1,3] = 2
         @test B[1,3] == y[1,1] == 2
     end
+
+    @testset "Any/All" begin
+        @test all(Vcat(true, Fill(true,100_000_000)))
+        @test any(Vcat(false, Fill(true,100_000_000)))
+        @test all(iseven, Vcat(2, Fill(4,100_000_000)))
+        @test any(iseven, Vcat(2, Fill(1,100_000_000)))
+        @test_throws TypeError all(Vcat(1))
+        @test_throws TypeError any(Vcat(1))
+    end
 end
 
 

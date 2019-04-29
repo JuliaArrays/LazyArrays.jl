@@ -296,15 +296,11 @@ _vcat_axes(a::Tuple{<:AbstractUnitRange}, b, c...) = tuple(first(a), broadcast((
 _vcat_getindex_eval(y) = ()
 _vcat_getindex_eval(y, a, b...) = tuple(y[a], _vcat_getindex_eval(y, b...)...)
 
-
 function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
     kr = _vcat_axes(axes.(A.arrays)...)  # determine how to break up B
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
     _Vcat(broadcast((a,b) -> broadcast(op,a,b), A.arrays, B_arrays))
 end
-
-
-
 
 function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
     kr = _vcat_axes(axes.(B.arrays)...)
@@ -382,6 +378,10 @@ broadcasted(::LazyArrayStyle{1}, op, A::Vcat{T, 1, <:Tuple{<:Any,<:Any}},
 ####
 
 sum(V::Vcat) = mapreduce(sum, +, V.arrays)
+all(V::Vcat) = all(all.(V.arrays))
+any(V::Vcat) = any(any.(V.arrays))
+all(f::Function, V::Vcat) = all(all.(f, V.arrays))
+any(f::Function, V::Vcat) = any(any.(f, V.arrays))
 
 _dotplus(a,b) = broadcast(+, a, b)
 
