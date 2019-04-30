@@ -82,15 +82,15 @@ julia> B == A .+ 2
 true
 ```
 Such arrays can also be created using the macro `@~` which acts on ordinary 
-broadcasting expressions: 
+broadcasting expressions combined with `LazyArray`:
 ```julia
 julia> C = rand(1000)';
 
-julia> D = @~ exp.(C)
+julia> D = LazyArray(@~ exp.(C))
 
-julia> E = @~ @. 2 + log(C)
+julia> E = LazyArray(@~ @. 2 + log(C))
 
-julia> @btime sum(@~ C .* C'; dims=1) # without `@~`, 1.438 ms (5 allocations: 7.64 MiB) 
+julia> @btime sum(LazyArray(@~ C .* C'); dims=1) # without `@~`, 1.438 ms (5 allocations: 7.64 MiB)
   74.425 μs (7 allocations: 8.08 KiB)
 ```
 
@@ -137,6 +137,12 @@ julia> @btime mymul(A, b, c, d) # calls gemv!
 
 julia> @btime 2*(A*b) + 3c; # does not call gemv!
   241.659 ns (4 allocations: 512 bytes)
+```
+
+Using `@~` macro, above expression using `Mul` can also be written as
+
+```julia
+d .= @~ 2.0 .* (A * b) .+ 3.0 .* c
 ```
 
 ## Inverses

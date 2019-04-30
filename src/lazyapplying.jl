@@ -77,14 +77,23 @@ eltype(A::Applied{<:MatrixFunctionStyle}) = eltype(first(A.args))
 getindex(A::Applied{<:MatrixFunctionStyle}, k::Int, j::Int) =
     materialize(A)[k,j]
 
+"""
+    LazyArray(x::Applied) :: ApplyArray
+    LazyArray(x::Broadcasted) :: BroadcastArray
 
-struct ApplyArray{T, N, App<:Applied} <: AbstractArray{T,N}
+Wrap a lazy object that wraps a computation producing an array to an
+array.
+"""
+abstract type LazyArray{T,N} <: AbstractArray{T,N} end
+
+struct ApplyArray{T, N, App<:Applied} <: LazyArray{T,N}
     applied::App
 end
 
 const ApplyVector{T, App<:Applied} = ApplyArray{T, 1, App}
 const ApplyMatrix{T, App<:Applied} = ApplyArray{T, 2, App}
 
+LazyArray(A::Applied) = ApplyArray(A)
 
 ApplyArray{T,N}(M::App) where {T,N,App<:Applied} = ApplyArray{T,N,App}(M)
 ApplyArray{T}(M::Applied) where {T} = ApplyArray{T,ndims(M)}(M)
