@@ -120,3 +120,6 @@ function getindex(Q::Cumsum, k::Integer, j::Integer)
 end
 
 copyto!(x::AbstractArray{<:Any,N}, C::Cumsum{<:Any,N}) where N = cumsum!(x, C.v)
+
+# keep lazy
+cumsum(a::LazyArray; kwds...) = Cumsum(a; kwds...)
