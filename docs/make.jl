@@ -3,8 +3,11 @@ using LazyArrays
 
 makedocs(
     sitename = "LazyArrays",
-    format = :html,
-    modules = [LazyArrays]
+    modules = [LazyArrays],
+    pages = [
+        "Home" => "index.md",
+        hide("internals.md"),
+    ],
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
