@@ -1,6 +1,6 @@
-# LazyArrays.jl
+# Internals
 
 ```@autodocs
 Modules = [LazyArrays]
-Private = false
+Public = false
 ```
