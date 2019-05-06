@@ -1,3 +1,4 @@
+@doc read(joinpath(dirname(@__DIR__), "README.md"), String) ->
 module LazyArrays
 using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays
 import LinearAlgebra.BLAS

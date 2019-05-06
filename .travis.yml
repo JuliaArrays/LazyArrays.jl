@@ -20,3 +20,14 @@ after_success:
 #script:
 #  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 #  - julia -e 'Pkg.clone(pwd()); Pkg.build("MyPackage"); Pkg.test("MyPackage"; coverage=true)'
+
+jobs:
+  include:
+    - stage: Documentation
+      julia: 1.1
+      script: julia --project=docs -e '
+          using Pkg;
+          Pkg.develop(PackageSpec(path=pwd()));
+          Pkg.instantiate();
+          include("docs/make.jl");'
+      after_success: skip
