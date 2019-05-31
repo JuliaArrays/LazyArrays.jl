@@ -1,5 +1,5 @@
 using LazyArrays, Test
-import LazyArrays: Add
+import LazyArrays: Add, AddArray, MulAdd, materialize!
 
 
 @testset "Add" begin
@@ -7,6 +7,7 @@ import LazyArrays: Add
         A = Add(randn(5,5), randn(5,5))
         b = randn(5)
         c = similar(b)
+        fill!(c,NaN)
         @test (c .= Mul(A, b)) ≈ A.args[1]*b + A.args[2]*b
     end
 
@@ -17,7 +18,13 @@ import LazyArrays: Add
 
             Ã = copy(A)
             c = similar(b)
+            fill!(c,NaN)
 
+            materialize!(MulAdd(1.0, A, b, 0.0, c))
+            @test c ≈ Ã*b ≈ BLAS.gemv!('N', 1.0, Ã, b, 0.0, similar(c))
+
+            c = similar(b)
+            fill!(c,NaN)
             c .= Mul(A,b)
             @test c ≈ Ã*b ≈ BLAS.gemv!('N', 1.0, Ã, b, 0.0, similar(c))
 

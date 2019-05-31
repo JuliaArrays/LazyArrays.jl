@@ -36,6 +36,8 @@ getindex(M::Add, k::Integer, j::Integer) = sum(getindex.(M.args, k, j))
 getindex(M::Add, k::CartesianIndex{1}) = M[convert(Int, k)]
 getindex(M::Add, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 
+_fill_lmul!(β, A::AbstractArray{T}) where T = β == zero(T) ? fill!(A, β) : lmul!(β, A)
+
 for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
     # `MulAdd{<:ApplyLayout{typeof(+)}}` cannot "win" against
     # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:
@@ -44,7 +46,7 @@ for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
         if C ≡ B
             B = copy(B)
         end
-        lmul!(β, C)
+        _fill_lmul!(β, C)
         for A in A.applied.args
             C .= α .* Mul(A, B) .+ C
         end
