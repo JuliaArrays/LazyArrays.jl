@@ -1,5 +1,8 @@
-@doc read(joinpath(dirname(@__DIR__), "README.md"), String) ->
 module LazyArrays
+
+# Use README as the docstring of the module:
+@doc read(joinpath(dirname(@__DIR__), "README.md"), String) LazyArrays
+
 using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays
 import LinearAlgebra.BLAS
 
