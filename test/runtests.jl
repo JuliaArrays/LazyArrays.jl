@@ -1,5 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: CachedArray
+
 include("memorylayouttests.jl")
 include("applytests.jl")
 include("multests.jl")
@@ -7,7 +8,6 @@ include("ldivtests.jl")
 include("addtests.jl")
 include("setoptests.jl")
 include("macrotests.jl")
-
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -198,6 +198,18 @@ include("macrotests.jl")
         @test any(iseven, Vcat(2, Fill(1,100_000_000)))
         @test_throws TypeError all(Vcat(1))
         @test_throws TypeError any(Vcat(1))
+    end
+
+    @testset "isbitsunion #45" begin 
+        @test copyto!(Vector{Vector{Int}}(undef,6), Vcat([[1], [2], [3]], [[1], [2], [3]])) ==
+            [[1], [2], [3], [1], [2], [3]]
+
+        a = Vcat{Union{Float64,UInt8}}([1.0], [UInt8(1)])
+        @test Base.isbitsunion(eltype(a))
+        r = Vector{Union{Float64,UInt8}}(undef,2)
+        @test copyto!(r, a) == a
+        @test r == a
+        @test copyto!(Vector{Float64}(undef,2), a) == [1.0,1.0]
     end
 end
 
