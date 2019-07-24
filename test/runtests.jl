@@ -24,6 +24,7 @@ include("macrotests.jl")
         @test copy(A) isa Vcat
         @test copy(A) == A
         @test copy(A) !== A
+        @test vec(A) === A
 
         A = Vcat(1:10, 1:20)
         @test @inferred(length(A)) == 30
@@ -36,6 +37,7 @@ include("macrotests.jl")
         @test @allocated(copyto!(b, A)) == 0
         @test b == vcat(A.arrays...)
         @test copy(A) === A
+        @test vec(A) === A
 
         A = Vcat(randn(2,10), randn(4,10))
         @test @inferred(length(A)) == 60
@@ -50,8 +52,12 @@ include("macrotests.jl")
         @test copy(A) isa Vcat
         @test copy(A) == A
         @test copy(A) !== A
+        @test vec(A) == vec(Matrix(A))
 
         @test Vcat() isa Vcat{Any,1,Tuple{}}
+
+        A = Vcat(1,zeros(3,1))
+        @test_broken A isa AbstractMatrix
     end
     @testset "Hcat" begin
         A = Hcat(1:10, 2:11)
@@ -65,6 +71,10 @@ include("macrotests.jl")
         @test @allocated(copyto!(b, A)) == 0
         @test b == hcat(A.arrays...)
         @test copy(A) === A
+        @test vec(A) == vec(Matrix(A))
+        @test vec(A) === Vcat(1:10,2:11)
+        @test A' == Matrix(A)'
+        @test A' === Vcat((1:10)', (2:11)')
 
         A = Hcat(Vector(1:10), Vector(2:11))
         b = Array{Int}(undef, 10, 2)
@@ -74,15 +84,21 @@ include("macrotests.jl")
         @test copy(A) isa Hcat
         @test copy(A) == A
         @test copy(A) !== A
+        @test vec(A) == vec(Matrix(A))
+        @test vec(A) === Vcat(A.arrays...)
+        @test A' == Matrix(A)'
 
         A = Hcat(1, zeros(1,5))
         @test A == hcat(1, zeros(1,5))
+        @test vec(A) == vec(Matrix(A))
+        @test_broken A' == Matrix(A)'
 
         A = Hcat(Vector(1:10), randn(10, 2))
         b = Array{Float64}(undef, 10, 3)
         copyto!(b, A)
         @test b == hcat(A.arrays...)
         @test @allocated(copyto!(b, A)) == 0
+        @test vec(A) == vec(Matrix(A))
     end
 
 

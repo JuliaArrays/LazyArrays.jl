@@ -62,7 +62,7 @@ end
     κ = k
     for A in f.arrays
         n = size(A,1)
-        κ ≤ n && return T(A[κ,j])::T
+        κ ≤ n && return convert(T,A[κ,j])::T
         κ -= n
     end
     throw(BoundsError(f, (k,j)))
@@ -242,7 +242,7 @@ function copyto!(dest::AbstractMatrix, H::Hcat)
     else
         for a in arrays
             p1 = pos+(isa(a,AbstractMatrix) ? size(a, 2) : 1)-1
-            dest[:, pos:p1] = a
+            dest[:, pos:p1] .= a
             pos = p1+1
         end
     end
@@ -262,6 +262,23 @@ function copyto!(dest::AbstractMatrix, H::Hcat{<:Any,Tuple{Vararg{<:AbstractVect
 
     dest
 end
+
+
+#####
+# adjoint/transpose
+#####
+
+for adj in (:adjoint, :transpose)
+    @eval begin
+        $adj(A::Hcat{T}) where T = _Vcat(T, $adj.(A.arrays))
+        $adj(A::Vcat{T}) where T = _Hcat(T, $adj.(A.arrays))
+    end
+end
+
+_vec(a) = a
+_vec(a::AbstractArray) = vec(a)
+
+vec(A::Hcat) = Vcat(_vec.(A.arrays)...)
 
 
 #####

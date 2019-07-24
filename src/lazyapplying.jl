@@ -128,7 +128,8 @@ struct  ApplyLayout{F, LAY} <: MemoryLayout
     layouts::LAY
 end
 
-MemoryLayout(M::ApplyArray) = ApplyLayout(M.applied.f, MemoryLayout.(M.applied.args))
+MemoryLayout(M::Applied) = ApplyLayout(M.f, MemoryLayout.(M.args))
+MemoryLayout(M::ApplyArray) = MemoryLayout(M.applied)
 
 function show(io::IO, A::Applied) 
     print(io, "Applied(", A.f)
