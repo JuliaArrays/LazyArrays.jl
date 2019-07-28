@@ -122,6 +122,9 @@ colsupport(A, j) = colsupport(MemoryLayout(A), A, j)
 rowsupport(::DiagonalLayout, _, k) = k:k
 colsupport(::DiagonalLayout, _, j) = j:j
 
+rowsupport(::ZerosLayout, _, _) = 1:0
+colsupport(::ZerosLayout, _, _) = 1:0
+
 
 
 

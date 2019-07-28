@@ -1,5 +1,5 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: CachedArray
+import LazyArrays: CachedArray, colsupport, rowsupport
 
 include("memorylayouttests.jl")
 include("applytests.jl")
@@ -395,4 +395,14 @@ end
     @test Mul(H, H') .+ 1 == H*H' .+ 1
     B =  randn(2,2)
     @test Mul(H, H') .+ B == H*H' .+ B
+end
+
+@testset "col/rowsupport" begin
+    A = randn(5,6)
+    @test rowsupport(A,1) === Base.OneTo(6)
+    @test colsupport(A,1) === Base.OneTo(5)
+    D = Diagonal(randn(5))
+    @test rowsupport(D,3) === colsupport(D,3) === 3:3
+    Z = Zeros(5)
+    @test rowsupport(Z,1) === colsupport(Z,1) === 1:0
 end
