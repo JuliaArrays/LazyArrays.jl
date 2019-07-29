@@ -25,6 +25,7 @@ include("macrotests.jl")
         @test copy(A) == A
         @test copy(A) !== A
         @test vec(A) === A
+        @test A' == transpose(A) == Vector(A)'
 
         A = Vcat(1:10, 1:20)
         @test @inferred(length(A)) == 30
@@ -38,6 +39,9 @@ include("macrotests.jl")
         @test b == vcat(A.arrays...)
         @test copy(A) === A
         @test vec(A) === A
+        @test A' == transpose(A) == Vector(A)'
+        @test A' === Hcat((1:10)', (1:20)')
+        @test transpose(A) === Hcat(transpose(1:10), transpose(1:20))
 
         A = Vcat(randn(2,10), randn(4,10))
         @test @inferred(length(A)) == 60
@@ -53,6 +57,25 @@ include("macrotests.jl")
         @test copy(A) == A
         @test copy(A) !== A
         @test vec(A) == vec(Matrix(A))
+        @test A' == transpose(A) == Matrix(A)'
+
+        A = Vcat(randn(2,10).+im.*randn(2,10), randn(4,10).+im.*randn(4,10))
+        @test eltype(A) == ComplexF64
+        @test @inferred(length(A)) == 60
+        @test @inferred(size(A)) == (6,10)
+        @test_throws BoundsError A[61]
+        @test_throws BoundsError A[7,1]
+        b = Array{ComplexF64}(undef, 7,10)
+        @test_throws DimensionMismatch copyto!(b, A)
+        b = Array{ComplexF64}(undef, 6,10)
+        @test @allocated(copyto!(b, A)) == 0
+        @test b == vcat(A.arrays...)
+        @test copy(A) isa Vcat
+        @test copy(A) == A
+        @test copy(A) !== A
+        @test vec(A) == vec(Matrix(A))
+        @test A' == Matrix(A)'
+        @test transpose(A) == transpose(Matrix(A))
 
         @test Vcat() isa Vcat{Any,1,Tuple{}}
 
@@ -99,6 +122,15 @@ include("macrotests.jl")
         @test b == hcat(A.arrays...)
         @test @allocated(copyto!(b, A)) == 0
         @test vec(A) == vec(Matrix(A))
+
+        A = Hcat(randn(5).+im.*randn(5), randn(5,2).+im.*randn(5,2))
+        b = Array{ComplexF64}(undef, 5, 3)
+        copyto!(b, A)
+        @test b == hcat(A.arrays...)
+        @test @allocated(copyto!(b, A)) == 0
+        @test vec(A) == vec(Matrix(A))
+        @test A' == Matrix(A)'
+        @test transpose(A) == transpose(Matrix(A))
     end
 
 
