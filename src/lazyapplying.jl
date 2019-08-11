@@ -3,11 +3,10 @@
 abstract type ApplyStyle end
 abstract type AbstractArrayApplyStyle <: ApplyStyle end
 struct DefaultApplyStyle <: ApplyStyle end
-struct LayoutApplyStyle{Layouts<:Tuple} <: AbstractArrayApplyStyle
-    layouts::Layouts
-end
+struct DefaultArrayApplyStyle <: AbstractArrayApplyStyle end
 
-ApplyStyle(f, args...) = DefaultApplyStyle()
+ApplyStyle(f, args::Type...) = DefaultApplyStyle()
+ApplyStyle(f, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
 
 struct Applied{Style, F, Args<:Tuple}
     style::Style
@@ -15,7 +14,7 @@ struct Applied{Style, F, Args<:Tuple}
     args::Args
 end
 
-Applied(f, args...) = Applied(ApplyStyle(f, args...), f, args)
+Applied(f, args...) = Applied(ApplyStyle(f, typeof.(args)...), f, args)
 applied(f, args...) = Applied(f, args...)
 apply(f, args...) = materialize(applied(f, args...))
 apply!(f, args...) = materialize!(applied(f, args...))
@@ -37,9 +36,6 @@ _materialize(A::Applied, _) = _default_materialize(A)
 @inline copyto!(dest::AbstractArray, M::Applied{DefaultApplyStyle}) = copyto!(dest, materialize(M))
 @inline copyto!(dest, M::Applied{DefaultApplyStyle}) = copyto!(dest, materialize(M))
 
-@inline copyto!(dest::AbstractArray, M::Applied{<:LayoutApplyStyle}) =
-    _copyto!(MemoryLayout(dest), dest, materializeargs(M))
-
 # Used for when a lazy version should be constructed on materialize
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
 broadcastable(M::Applied) = M
@@ -55,8 +51,6 @@ struct ApplyBroadcastStyle <: BroadcastStyle end
 
 @inline copyto!(dest::AbstractArray, bc::Broadcasted{ApplyBroadcastStyle}) =
     copyto!(dest, first(bc.args))
-# Use default broacasting in general
-@inline _copyto!(_, dest, bc::Broadcasted) = copyto!(dest, Broadcasted{Nothing}(bc.f, bc.args, bc.axes))
 
 BroadcastStyle(::Type{<:Applied}) = ApplyBroadcastStyle()
 
@@ -64,7 +58,7 @@ BroadcastStyle(::Type{<:Applied}) = ApplyBroadcastStyle()
 struct MatrixFunctionStyle{F} <: AbstractArrayApplyStyle end
 
 for f in (:exp, :sin, :cos, :sqrt)
-    @eval ApplyStyle(::typeof($f), ::AbstractMatrix) = MatrixFunctionStyle{typeof($f)}()
+    @eval ApplyStyle(::typeof($f), ::Type{<:AbstractMatrix}) = MatrixFunctionStyle{typeof($f)}()
 end
 
 materialize(A::Applied{<:MatrixFunctionStyle,<:Any,<:Tuple{<:Any}}) =

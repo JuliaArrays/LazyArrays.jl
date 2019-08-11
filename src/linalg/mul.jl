@@ -9,12 +9,6 @@ end
 
 const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
 
-ApplyStyle(::typeof(*), args::AbstractArray...) = LayoutApplyStyle(MemoryLayout.(args))
-
-Mul(args...) = Applied(ApplyStyle(*, args...), *, args)
-
-const Mul2{StyleA, StyleB, AType, BType} = Mul{LayoutApplyStyle{Tuple{StyleA,StyleB}}, <:Tuple{AType,BType}}
-
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
 ndims(M::Mul) = ndims(last(M.args))
@@ -64,13 +58,7 @@ end
 # Matrix * Array
 ####
 
-const ArrayMulArray{styleA, styleB, p, q, T, V} =
-    Mul2{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
-
 const ArrayMuls = Mul{<:Any, <:Tuple{Vararg{<:AbstractArray}}}
-
-# the default is always Array
-_materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
 
 
 """
@@ -91,14 +79,6 @@ flatten(A::Mul) = Mul(_flatten(A.args...)...)
 
 _materialize(M::ArrayMuls, _) = flatten(lmaterialize(M))
 
-
-
-
-
-####
-# Matrix * Vector
-####
-const MatMulVec{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 1, T, V}
 
 
 rowsupport(_, A, k) = axes(A,2)
@@ -125,17 +105,6 @@ colsupport(::DiagonalLayout, _, j) = j:j
 rowsupport(::ZerosLayout, _1, _2) = 1:0
 colsupport(::ZerosLayout, _1, _2) = 1:0
 
-
-
-
-
-
-####
-# Matrix * Matrix
-####
-
-const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V}
-const VecMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 1, 2, T, V}
 
 
 
@@ -183,32 +152,10 @@ const MulMatrix{T, MUL<:Mul} = MulArray{T, 2, MUL}
 const MulLayout{LAY} = ApplyLayout{typeof(*),LAY}
 MulLayout(layouts) = ApplyLayout(*, layouts)
 
-MulArray{T,N}(M::MUL) where {T,N,MUL<:Mul} = MulArray{T,N,MUL}(M)
-MulArray{T}(M::Mul) where {T} = MulArray{T,ndims(M)}(M)
-MulArray(M::Mul) = MulArray{eltype(M)}(M)
-MulVector(M::Mul) = MulVector{eltype(M)}(M)
-MulMatrix(M::Mul) = MulMatrix{eltype(M)}(M)
-
-function MulArray(factors...)
-    checkdimensions(factors...)
-    MulArray(Mul(factors...))
-end
-MulArray{T}(factors...) where T = MulArray{T}(Mul(factors...))
-MulArray{T,N}(factors...) where {T,N} = MulArray{T,N}(Mul(factors...))
-MulVector(factors...) = MulVector(Mul(factors...))
-MulMatrix(factors...) = MulMatrix(Mul(factors...))
-
-IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 
 _flatten(A::MulArray, B...) = _flatten(A.applied, B...)
-flatten(A::MulArray) = MulArray(flatten(A.applied))
+flatten(A::MulArray) = ApplyArray(*, flatten(A.applied))
 
 
-@propagate_inbounds getindex(A::MulArray, k::Int) = A.applied[k]
-@propagate_inbounds getindex(A::MulArray{T,N}, kj::Vararg{Int,N}) where {T,N} =
-    A.applied[kj...]
-
-*(A::MulArray, B::MulArray) = MulArray(A, B)
-
-adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.applied.args))...)
-transpose(A::MulArray) = MulArray(reverse(transpose.(A.applied.args))...)
+adjoint(A::MulArray) = ApplyArray(*, reverse(adjoint.(A.applied.args))...)
+transpose(A::MulArray) = ApplyArray(*, reverse(transpose.(A.applied.args))...)

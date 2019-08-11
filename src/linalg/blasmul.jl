@@ -15,6 +15,14 @@ struct MulAdd{StyleA, StyleB, StyleC, T, AA, BB, CC}
     C::CC
 end
 
+struct Rmul{StyleA, StyleB, T, TypeA, TypeB}
+    A::TypeA
+    B::TypeB
+end
+
+struct RmulStyle <: ApplyStyle end
+struct MulAddStyle <: ApplyStyle end
+
 function MulAdd(styleA::StyleA, styleB::StyleB, styleC::StyleC, α::T, A::AA, B::BB, β::V, C::CC) where {StyleA,StyleB,StyleC,T,V,AA,BB,CC}
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     axes(A,1) == axes(C,1) || throw(DimensionMismatch())
@@ -49,20 +57,20 @@ const BlasMatMulVec{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:Ab
 const BlasMatMulMat{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
 const BlasVecMulMat{StyleA,StyleB,StyleC,T} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractVector{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
 
-@inline function _copyto!(_, dest::AbstractArray, M::MulAdd)
+const MatRmulVec{StyleA,StyleB} = Rmul{StyleA,StyleB,<:Any,<:AbstractMatrix,<:AbstractVector}
+const MatRmulMat{StyleA,StyleB} = Rmul{StyleA,StyleB,<:Any,<:AbstractMatrix,<:AbstractMatrix}
+
+const BlasMatRmulVec{StyleA,StyleB,T} = Rmul{StyleA,StyleB,T,<:AbstractMatrix{T},<:AbstractVector{T}}
+const BlasMatRmulMat{StyleA,StyleB,T} = Rmul{StyleA,StyleB,T,<:AbstractMatrix{T},<:AbstractMatrix{T}}
+
+@inline function copyto!(dest::AbstractArray, M::MulAdd)
     M.C ≡ dest || copyto!(dest, M.C)
-    materialize!(MulAdd(M.α, M.A, M.B, M.β, dest))
+    materialize!(M)
 end
 
-@inline copyto!(dest::AbstractArray, M::MulAdd) = _copyto!(MemoryLayout(dest), dest, M)
-
-const BArrayMulArrayAdd{styleA, styleB, styleC, p, q} =
-    Broadcasted{ArrayMulArrayStyle{styleA,styleB,p,q}, <:Any, typeof(identity),
-                <:Tuple{<:ArrayMulArrayAdd{styleA,styleB,styleC}}}
-
-@inline function _copyto!(_, dest::AbstractArray, bc::BArrayMulArrayAdd)
-    (M,) = bc.args
-    copyto!(dest, M)
+@inline function copyto!(dest::AbstractArray, M::Rmul)
+    M.B ≡ dest || copyto!(dest, M.B)
+    materialize!(M)
 end
 
 import LinearAlgebra: tilebufsize, Abuf, Bbuf, Cbuf
@@ -324,40 +332,36 @@ materialize!(M::BlasMatMulVec{<:HermitianLayout{<:AbstractRowMajor},<:AbstractSt
 # Triangular
 ###
 
-@inline function _copyto!(_, dest::AbstractVector, M::MatMulVec{<:TriangularLayout})
+
+
+@inline function copyto!(dest::AbstractVector, M::Mul{RmulStyle})
     A,x = M.args
     x ≡ dest || copyto!(dest, x)
-    apply!(*, A, dest)
+    materialize!(Rmul(A, dest))
 end
 
-@inline function materialize!(M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
-                                         <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
+@inline function materialize!(M::BlasMatRmulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
+                                         <:AbstractStridedLayout, T}) where {UPLO,UNIT,T <: BlasFloat}
     A,x = M.args
     BLAS.trmv!(UPLO, 'N', UNIT, triangulardata(A), x)
 end
 
-@inline function materialize!(M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractRowMajor},
-                                   <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
+@inline function materialize!(M::BlasMatRmulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractRowMajor},
+                                   <:AbstractStridedLayout, T}) where {UPLO,UNIT,T <: BlasFloat}
     A,x = M.args
     BLAS.trmv!(UPLO, 'T', UNIT, transpose(triangulardata(A)), x)
 end
 
 
-@inline function materialize!(M::MatMulVec{<:TriangularLayout{UPLO,UNIT,<:ConjLayout{<:AbstractRowMajor}},
-                                   <:AbstractStridedLayout, T, T}) where {UPLO,UNIT,T <: BlasFloat}
+@inline function materialize!(M::BlasMatRmulVec{<:TriangularLayout{UPLO,UNIT,<:ConjLayout{<:AbstractRowMajor}},
+                                   <:AbstractStridedLayout, T}) where {UPLO,UNIT,T <: BlasFloat}
     A,x = M.args
     BLAS.trmv!(UPLO, 'C', UNIT, triangulardata(A)', x)
 end
 
 # Triangular *\ Matrix
 
-@inline function _copyto!(_, dest::AbstractMatrix, M::MatMulMat{<:TriangularLayout})
-    A,x = M.args
-    x ≡ dest || copyto!(dest, x)
-    apply!(*, A, dest)
-end
-
-function materialize!(M::MatMulMat{<:TriangularLayout})
+function materialize!(M::MatRmulMat{<:TriangularLayout})
     A,X = M.args
     size(A,2) == size(X,1) || thow(DimensionMismatch("Dimensions must match"))
     for j in axes(X,2)
