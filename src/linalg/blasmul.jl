@@ -47,7 +47,7 @@ ApplyStyle(::typeof(*), ::Type{<:AbstractMatrix}, ::Type{<:AbstractMatrix}) = Mu
 ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractMatrix}, ::Type{<:AbstractMatrix}) = MulAddStyle()
 ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractMatrix}, ::Type{<:AbstractVector}) = MulAddStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractVector}, ::Type{<:AbstractMatrix}) = MulAddStyle()
-ApplyStyle(::typeof(+), ::Type{<:Mul{MulAddStyle}}, ::Type{<:Mul{DefaultArrayApplyStyle}}) = MulAddStyle()
+ApplyStyle(::typeof(+), ::Type{<:Mul{MulAddStyle}}, ::Type{<:Mul}) = MulAddStyle()
 ApplyStyle(::typeof(+), ::Type{<:Mul{MulAddStyle}}, ::Type{<:AbstractArray}) = MulAddStyle()
 
 _materialize(A::Mul{MulAddStyle}, _) = copyto!(similar(A), A)

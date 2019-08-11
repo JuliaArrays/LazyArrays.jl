@@ -72,21 +72,23 @@ import Base.Broadcast: materialize, materialize!, broadcasted
             @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 1.0, copy(b)))
 
             c = copy(b)
-            (@~ A*b + 2.0*c) isa Applied{MulAddStyle}
-            c .= Mul(A,b) .+ 2.0 .* c
+            @test (@~ A*b + 2.0*c) isa Applied{MulAddStyle}
+            c .= @~ A*b + 2.0*c
             @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 2.0, copy(b)))
 
             c = copy(b)
-            c .= 2.0 .* Mul(A,b) .+ c
+            @test (@~ 2.0*A*b + c) isa Applied{MulAddStyle}
+            c .= @~ 2.0*A*b + c
             @test all(c .=== BLAS.gemv!('N', 2.0, A, b, 1.0, copy(b)))
 
             c = copy(b)
-            c .= 3.0 .* Mul(A,b) .+ 2.0 .* c
+            @test ( @~ 3.0*A*b + 2.0*c) isa Applied{MulAddStyle}
+            c .= @~ 3.0*A*b + 2.0*c
             @test all(c .=== BLAS.gemv!('N', 3.0, A, b, 2.0, copy(b)))
 
             d = similar(c)
             c = copy(b)
-            d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
+            d .= @~ 3.0*A*b + 2.0*c
             @test all(d .=== BLAS.gemv!('N', 3.0, A, b, 2.0, copy(b)))
         end
     end
@@ -94,20 +96,20 @@ import Base.Broadcast: materialize, materialize!, broadcasted
     @testset "gemv mixed array types" begin
         (A, b, c) = (randn(5,5), randn(5), 1.0:5.0)
         d = similar(b)
-        d .= Mul(A,b) .+ c
+        d .= @~ A*b + c
         @test all(d .=== BLAS.gemv!('N', 1.0, A, b, 1.0, Vector{Float64}(c)))
 
-        d .= Mul(A,b) .+ 2.0 .* c
+        d .= @~ A*b + 2.0*c
         @test all(d .=== BLAS.gemv!('N', 1.0, A, b, 2.0, Vector{Float64}(c)))
 
-        d .= 2.0 .* Mul(A,b) .+ c
+        d .= @~ 2.0*A*b + c
         @test all(d .=== BLAS.gemv!('N', 2.0, A, b, 1.0, Vector{Float64}(c)))
 
-        d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
+        d .= @~ 3.0*A*b + 2.0 * c
         @test all(d .=== BLAS.gemv!('N', 3.0, A, b, 2.0, Vector{Float64}(c)))
 
-        @test (similar(b) .= 1 .* Mul(A,b)) ≈
-            (similar(b) .= 1 .* Mul(A,b) .+ 0 .* b) ≈
+        @test (similar(b) .= @~ 1 * A * b) ≈
+            (similar(b) .= @~ 1 * A *b + 0 * b) ≈
             A*b
     end
 
@@ -118,36 +120,36 @@ import Base.Broadcast: materialize, materialize!, broadcasted
                 b in (randn(T,5), view(randn(T,5),:))
             c = similar(b);
 
-            c .= Mul(A,b)
+            c .= @~ A*b
             @test all(c .=== BLAS.gemv!('N', one(T), A, b, zero(T), similar(c)))
 
-            b .= Mul(A,b)
+            b .= @~ A*b
             @test all(c .=== b)
 
-            c .= 2one(T) .* Mul(A,b)
+            c .= applied(*, 2one(T), A, b)
             @test all(c .=== BLAS.gemv!('N', 2one(T), A, b, zero(T), similar(c)))
 
             c = copy(b)
-            c .= Mul(A,b) .+ c
+            c .= @~ A*b + c
             @test all(c .=== BLAS.gemv!('N', one(T), A, b, one(T), copy(b)))
 
 
             c = copy(b)
-            c .= Mul(A,b) .+ 2one(T) .* c
+            c .= applied(+, @~(A*b), applied(*, 2one(T), c))
             @test all(c .=== BLAS.gemv!('N', one(T), A, b, 2one(T), copy(b)))
 
             c = copy(b)
-            c .= 2one(T) .* Mul(A,b) .+ c
+            c .= applied(+, applied(*, 2one(T), A, b), c)
             @test all(c .=== BLAS.gemv!('N', 2one(T), A, b, one(T), copy(b)))
 
 
             c = copy(b)
-            c .= 3one(T) .* Mul(A,b) .+ 2one(T) .* c
+            c .= applied(+, applied(*, 3one(T), A, b), applied(*, 2one(T), c))
             @test all(c .=== BLAS.gemv!('N', 3one(T), A, b, 2one(T), copy(b)))
 
             d = similar(c)
             c = copy(b)
-            d .= 3one(T) .* Mul(A,b) .+ 2one(T) .* c
+            d .= applied(+, applied(*, 3one(T), A, b), applied(*, 2one(T), c))
             @test all(d .=== BLAS.gemv!('N', 3one(T), A, b, 2one(T), copy(b)))
         end
     end
@@ -159,36 +161,36 @@ import Base.Broadcast: materialize, materialize!, broadcasted
                       view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5))
             C = similar(B);
 
-            C .= Mul(A,B)
+            C .= @~ A*B
             @test all(C .=== BLAS.gemm!('N', 'N', 1.0, A, B, 0.0, similar(C)))
 
-            B .= Mul(A,B)
+            B .= @~ A*B
             @test all(C .=== B)
 
-            C .= 2.0 .* Mul(A,B)
+            C .= @~ 2.0 * A*B
             @test all(C .=== BLAS.gemm!('N', 'N', 2.0, A, B, 0.0, similar(C)))
 
             C = copy(B)
-            C .= Mul(A,B) .+ C
+            C .= @~ A*B + C
             @test all(C .=== BLAS.gemm!('N', 'N', 1.0, A, B, 1.0, copy(B)))
 
 
             C = copy(B)
-            C .= Mul(A,B) .+ 2.0 .* C
+            C .= @~ A*B + 2.0 * C
             @test all(C .=== BLAS.gemm!('N', 'N', 1.0, A, B, 2.0, copy(B)))
 
             C = copy(B)
-            C .= 2.0 .* Mul(A,B) .+ C
+            C .= @~ 2.0 * A*B + C
             @test all(C .=== BLAS.gemm!('N', 'N', 2.0, A, B, 1.0, copy(B)))
 
 
             C = copy(B)
-            C .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+            C .= @~ 3.0 * A*B + 2.0 * C
             @test all(C .=== BLAS.gemm!('N', 'N', 3.0, A, B, 2.0, copy(B)))
 
             d = similar(C)
             C = copy(B)
-            d .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+            d .= @~ 3.0 * A*B + 2.0 * C
             @test all(d .=== BLAS.gemm!('N', 'N', 3.0, A, B, 2.0, copy(B)))
         end
     end
@@ -199,36 +201,36 @@ import Base.Broadcast: materialize, materialize!, broadcasted
                 B in (randn(T,5,5), view(randn(T,5,5),:,:))
             C = similar(B);
 
-            C .= Mul(A,B)
+            C .= @~ A*B
             @test all(C .=== BLAS.gemm!('N', 'N', one(T), A, B, zero(T), similar(C)))
 
-            B .= Mul(A,B)
+            B .= @~ A*B
             @test all(C .=== B)
 
-            C .= 2one(T) .* Mul(A,B)
+            C .= applied(*, 2one(T), A, B)
             @test all(C .=== BLAS.gemm!('N', 'N', 2one(T), A, B, zero(T), similar(C)))
 
             C = copy(B)
-            C .= Mul(A,B) .+ C
+            C .= @~ A*B + C
             @test all(C .=== BLAS.gemm!('N', 'N', one(T), A, B, one(T), copy(B)))
 
 
             C = copy(B)
-            C .= Mul(A,B) .+ 2one(T) .* C
+            C .= applied(+, @~(A*B), applied(*, 2one(T), C))
             @test all(C .=== BLAS.gemm!('N', 'N', one(T), A, B, 2one(T), copy(B)))
 
             C = copy(B)
-            C .= 2one(T) .* Mul(A,B) .+ C
+            C .= applied(+, applied(*, 2one(T), A,B), C)
             @test all(C .=== BLAS.gemm!('N', 'N', 2one(T), A, B, one(T), copy(B)))
 
 
             C = copy(B)
-            C .= 3one(T) .* Mul(A,B) .+ 2one(T) .* C
+            C .= applied(+, applied(*, 3one(T),A,B), applied(*, 2one(T), C))
             @test all(C .=== BLAS.gemm!('N', 'N', 3one(T), A, B, 2one(T), copy(B)))
 
             d = similar(C)
             C = copy(B)
-            d .= 3one(T) .* Mul(A,B) .+ 2one(T) .* C
+            d .= applied(+, applied(*,3one(T),A,B), applied(*,2one(T), C))
             @test all(d .=== BLAS.gemm!('N', 'N', 3one(T), A, B, 2one(T), copy(B)))
         end
     end
@@ -236,20 +238,20 @@ import Base.Broadcast: materialize, materialize!, broadcasted
     @testset "gemv mixed array types" begin
         (A, B, C) = (randn(5,5), randn(5,5), reshape(1.0:25.0,5,5))
         D = similar(B)
-        D .= Mul(A,B) .+ C
+        D .= @~ A*B + C
         @test all(D .=== BLAS.gemm!('N', 'N', 1.0, A, B, 1.0, Matrix{Float64}(C)))
 
-        D .= Mul(A,B) .+ 2.0 .* C
+        D .= @~ A*B + 2.0 * C
         @test all(D .=== BLAS.gemm!('N', 'N', 1.0, A, B, 2.0, Matrix{Float64}(C)))
 
-        D .= 2.0 .* Mul(A,B) .+ C
+        D .= @~ 2.0 * A*B + C
         @test all(D .=== BLAS.gemm!('N', 'N', 2.0, A, B, 1.0, Matrix{Float64}(C)))
 
-        D .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+        D .= @~ 3.0 * A*B + 2.0 * C
         @test all(D .=== BLAS.gemm!('N', 'N', 3.0, A, B, 2.0, Matrix{Float64}(C)))
 
-        @test (similar(B) .= 1 .* Mul(A,B)) ≈
-            (similar(B) .= 1 .* Mul(A,B) .+ 0 .* B) ≈
+        @test (similar(B) .= 1 * A*B) ≈
+            (similar(B) .= 1 * A*B + 0 * B) ≈
             A*B
     end
 
@@ -260,36 +262,36 @@ import Base.Broadcast: materialize, materialize!, broadcasted
                     Ac in (transpose(A), A')
             c = similar(b);
 
-            c .= Mul(Ac,b)
+            c .= @~ Ac*b
             @test all(c .=== BLAS.gemv!('T', 1.0, A, b, 0.0, similar(c)))
 
-            b .= Mul(Ac,b)
+            b .= @~ Ac*b
             @test all(c .=== b)
 
-            c .= 2.0 .* Mul(Ac,b)
+            c .= @~ 2.0 * Ac*b
             @test all(c .=== BLAS.gemv!('T', 2.0, A, b, 0.0, similar(c)))
 
             c = copy(b)
-            c .= Mul(Ac,b) .+ c
+            c .= @~ Ac*b + c
             @test all(c .=== BLAS.gemv!('T', 1.0, A, b, 1.0, copy(b)))
 
 
             c = copy(b)
-            c .= Mul(Ac,b) .+ 2.0 .* c
+            c .= @~ Ac*b + 2.0 * c
             @test all(c .=== BLAS.gemv!('T', 1.0, A, b, 2.0, copy(b)))
 
             c = copy(b)
-            c .= 2.0 .* Mul(Ac,b) .+ c
+            c .= @~ 2.0 * Ac*b + c
             @test all(c .=== BLAS.gemv!('T', 2.0, A, b, 1.0, copy(b)))
 
 
             c = copy(b)
-            c .= 3.0 .* Mul(Ac,b) .+ 2.0 .* c
+            c .= @~ 3.0 * Ac*b + 2.0 * c
             @test all(c .=== BLAS.gemv!('T', 3.0, A, b, 2.0, copy(b)))
 
             d = similar(c)
             c = copy(b)
-            d .= 3.0 .* Mul(Ac,b) .+ 2.0 .* c
+            d .= @~ 3.0 * Ac*b + 2.0 * c
             @test all(d .=== BLAS.gemv!('T', 3.0, A, b, 2.0, copy(b)))
         end
     end
@@ -298,16 +300,16 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         (A, b, c) = (randn(5,5), randn(5), 1.0:5.0)
         for Ac in (transpose(A), A')
             d = similar(b)
-            d .= Mul(Ac,b) .+ c
+            d .= @~ Ac*b + c
             @test all(d .=== BLAS.gemv!('T', 1.0, A, b, 1.0, Vector{Float64}(c)))
 
-            d .= Mul(Ac,b) .+ 2.0 .* c
+            d .= @~ Ac*b + 2.0 * c
             @test all(d .=== BLAS.gemv!('T', 1.0, A, b, 2.0, Vector{Float64}(c)))
 
-            d .= 2.0 .* Mul(Ac,b) .+ c
+            d .= @~ 2.0 * Ac*b + c
             @test all(d .=== BLAS.gemv!('T', 2.0, A, b, 1.0, Vector{Float64}(c)))
 
-            d .= 3.0 .* Mul(Ac,b) .+ 2.0 .* c
+            d .= @~ 3.0 * Ac*b + 2.0 * c
             @test all(d .=== BLAS.gemv!('T', 3.0, A, b, 2.0, Vector{Float64}(c)))
         end
     end
@@ -319,36 +321,36 @@ import Base.Broadcast: materialize, materialize!, broadcasted
                 (Ac,trans) in ((transpose(A),'T'), (A','C'))
             c = similar(b);
 
-            c .= Mul(Ac,b)
+            c .= @~ Ac*b
             @test all(c .=== BLAS.gemv!(trans, one(T), A, b, zero(T), similar(c)))
 
-            b .= Mul(Ac,b)
+            b .= @~ Ac*b
             @test all(c .=== b)
 
-            c .= 2one(T) .* Mul(Ac,b)
+            c .= applied(*,2one(T),Ac,b)
             @test all(c .=== BLAS.gemv!(trans, 2one(T), A, b, zero(T), similar(c)))
 
             c = copy(b)
-            c .= Mul(Ac,b) .+ c
+            c .= @~ Ac*b + c
             @test all(c .=== BLAS.gemv!(trans, one(T), A, b, one(T), copy(b)))
 
 
             c = copy(b)
-            c .= Mul(Ac,b) .+ 2one(T) .* c
+            c .= applied(+, applied(*,Ac,b), applied(*,2one(T), c))
             @test all(c .=== BLAS.gemv!(trans, one(T), A, b, 2one(T), copy(b)))
 
             c = copy(b)
-            c .= 2one(T) .* Mul(Ac,b) .+ c
+            c .= applied(+,applied(*,2one(T),Ac,b), c)
             @test all(c .=== BLAS.gemv!(trans, 2one(T), A, b, one(T), copy(b)))
 
 
             c = copy(b)
-            c .= 3one(T) .* Mul(Ac,b) .+ 2one(T) .* c
+            c .= applied(+,applied(*,3one(T),Ac,b), applied(*,2one(T), c))
             @test all(c .=== BLAS.gemv!(trans, 3one(T), A, b, 2one(T), copy(b)))
 
             d = similar(c)
             c = copy(b)
-            d .= 3one(T) .* Mul(Ac,b) .+ 2one(T) .* c
+            d .= applied(+,applied(*,3one(T),Ac,b), applied(*,2one(T), c))
             @test all(d .=== BLAS.gemv!(trans, 3one(T), A, b, 2one(T), copy(b)))
         end
     end
@@ -358,104 +360,104 @@ import Base.Broadcast: materialize, materialize!, broadcasted
             B in (randn(5,5), view(randn(5,5),1:5,:))
             for Ac in (transpose(A), A')
                 C = similar(B)
-                C .= Mul(Ac,B)
+                C .= @~ Ac*B
                 @test all(C .=== BLAS.gemm!('T', 'N', 1.0, A, B, 0.0, similar(C)))
 
-                B .= Mul(Ac,B)
+                B .= @~ Ac*B
                 @test all(C .=== B)
 
-                C .= 2.0 .* Mul(Ac,B)
+                C .= @~ 2.0 * Ac*B
                 @test all(C .=== BLAS.gemm!('T', 'N', 2.0, A, B, 0.0, similar(C)))
 
                 C = copy(B)
-                C .= Mul(Ac,B) .+ C
+                C .= @~ Ac*B + C
                 @test all(C .=== BLAS.gemm!('T', 'N', 1.0, A, B, 1.0, copy(B)))
 
 
                 C = copy(B)
-                C .= Mul(Ac,B) .+ 2.0 .* C
+                C .= @~ Ac*B + 2.0 * C
                 @test all(C .=== BLAS.gemm!('T', 'N', 1.0, A, B, 2.0, copy(B)))
 
                 C = copy(B)
-                C .= 2.0 .* Mul(Ac,B) .+ C
+                C .= @~ 2.0 * Ac*B + C
                 @test all(C .=== BLAS.gemm!('T', 'N', 2.0, A, B, 1.0, copy(B)))
 
 
                 C = copy(B)
-                C .= 3.0 .* Mul(Ac,B) .+ 2.0 .* C
+                C .= @~ 3.0 * Ac*B + 2.0 * C
                 @test all(C .=== BLAS.gemm!('T', 'N', 3.0, A, B, 2.0, copy(B)))
 
                 d = similar(C)
                 C = copy(B)
-                d .= 3.0 .* Mul(Ac,B) .+ 2.0 .* C
+                d .= @~ 3.0 * Ac*B + 2.0 * C
                 @test all(d .=== BLAS.gemm!('T', 'N', 3.0, A, B, 2.0, copy(B)))
             end
             for Bc in (transpose(B), B')
                 C = similar(B)
-                C .= Mul(A,Bc)
+                C .= @~ A*Bc
                 @test all(C .=== BLAS.gemm!('N', 'T', 1.0, A, B, 0.0, similar(C)))
 
-                B .= Mul(A,Bc)
+                B .= @~ A*Bc
                 @test all(C .=== B)
 
-                C .= 2.0 .* Mul(A,Bc)
+                C .= @~ 2.0 * A*Bc
                 @test all(C .=== BLAS.gemm!('N', 'T', 2.0, A, B, 0.0, similar(C)))
 
                 C = copy(B)
-                C .= Mul(A,Bc) .+ C
+                C .= @~ A*Bc + C
                 @test all(C .=== BLAS.gemm!('N', 'T', 1.0, A, B, 1.0, copy(B)))
 
 
                 C = copy(B)
-                C .= Mul(A,Bc) .+ 2.0 .* C
+                C .= @~ A*Bc + 2.0 * C
                 @test all(C .=== BLAS.gemm!('N', 'T', 1.0, A, B, 2.0, copy(B)))
 
                 C = copy(B)
-                C .= 2.0 .* Mul(A,Bc) .+ C
+                C .= @~ 2.0 * A*Bc + C
                 @test all(C .=== BLAS.gemm!('N', 'T', 2.0, A, B, 1.0, copy(B)))
 
 
                 C = copy(B)
-                C .= 3.0 .* Mul(A,Bc) .+ 2.0 .* C
+                C .= @~ 3.0 * A*Bc + 2.0 * C
                 @test all(C .=== BLAS.gemm!('N', 'T', 3.0, A, B, 2.0, copy(B)))
 
                 d = similar(C)
                 C = copy(B)
-                d .= 3.0 .* Mul(A,Bc) .+ 2.0 .* C
+                d .= @~ 3.0 * A*Bc + 2.0 * C
                 @test all(d .=== BLAS.gemm!('N', 'T', 3.0, A, B, 2.0, copy(B)))
             end
             for Ac in (transpose(A), A'), Bc in (transpose(B), B')
                 C = similar(B)
-                C .= Mul(Ac,Bc)
+                C .= @~ Ac*Bc
                 @test all(C .=== BLAS.gemm!('T', 'T', 1.0, A, B, 0.0, similar(C)))
 
-                B .= Mul(Ac,Bc)
+                B .= @~ Ac*Bc
                 @test all(C .=== B)
 
-                C .= 2.0 .* Mul(Ac,Bc)
+                C .= @~ 2.0 * Ac*Bc
                 @test all(C .=== BLAS.gemm!('T', 'T', 2.0, A, B, 0.0, similar(C)))
 
                 C = copy(B)
-                C .= Mul(Ac,Bc) .+ C
+                C .= @~ Ac*Bc + C
                 @test all(C .=== BLAS.gemm!('T', 'T', 1.0, A, B, 1.0, copy(B)))
 
 
                 C = copy(B)
-                C .= Mul(Ac,Bc) .+ 2.0 .* C
+                C .= @~ Ac*Bc + 2.0 * C
                 @test all(C .=== BLAS.gemm!('T', 'T', 1.0, A, B, 2.0, copy(B)))
 
                 C = copy(B)
-                C .= 2.0 .* Mul(Ac,Bc) .+ C
+                C .= @~ 2.0 * Ac*Bc + C
                 @test all(C .=== BLAS.gemm!('T', 'T', 2.0, A, B, 1.0, copy(B)))
 
 
                 C = copy(B)
-                C .= 3.0 .* Mul(Ac,Bc) .+ 2.0 .* C
+                C .= @~ 3.0 * Ac*Bc + 2.0 * C
                 @test all(C .=== BLAS.gemm!('T', 'T', 3.0, A, B, 2.0, copy(B)))
 
                 d = similar(C)
                 C = copy(B)
-                d .= 3.0 .* Mul(Ac,Bc) .+ 2.0 .* C
+                d .= @~ 3.0 * Ac*Bc + 2.0 * C
                 @test all(d .=== BLAS.gemm!('T', 'T', 3.0, A, B, 2.0, copy(B)))
             end
         end
@@ -465,24 +467,24 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         A = randn(100,100)
         x = randn(100)
 
-        @test all( (similar(x) .= Mul(Symmetric(A),x)) .===
-                    (similar(x) .= Mul(Hermitian(A),x)) .===
-                    (similar(x) .= Mul(Symmetric(A)',x)) .===
-                    (similar(x) .= Mul(Symmetric(view(A,:,:)',:L),x)) .===
-                    (similar(x) .= 1.0.*Mul(Symmetric(A),x) .+ 0.0.*similar(x)) .===
-                    (similar(x) .= Mul(view(Symmetric(A),:,:),x)) .===
+        @test all( (similar(x) .= applied(*,Symmetric(A),x)) .===
+                    (similar(x) .= applied(*,Hermitian(A),x)) .===
+                    (similar(x) .= applied(*,Symmetric(A)',x)) .===
+                    (similar(x) .= applied(*,Symmetric(view(A,:,:)',:L),x)) .===
+                    (similar(x) .= applied(+,applied(*,1.0,Symmetric(A),x), applied(*,0.0,similar(x)))) .===
+                    (similar(x) .= applied(*,view(Symmetric(A),:,:),x)) .===
                     BLAS.symv!('U', 1.0, A, x, 0.0, similar(x)) )
 
         y = copy(x)
-        y .= Mul(Symmetric(A), y)
+        y .= applied(*,Symmetric(A), y)
         @test all( (similar(x) .= Mul(Symmetric(A),x)) .=== y)
 
         @test all( (similar(x) .= Mul(Symmetric(A,:L),x)) .===
                     (similar(x) .= Mul(Hermitian(A,:L),x)) .===
                     (similar(x) .= Mul(Symmetric(A,:L)',x)) .===
                     (similar(x) .= Mul(Symmetric(view(A,:,:)',:U),x)) .===
-                    (similar(x) .= 1.0.*Mul(Symmetric(A,:L),x) .+ 0.0.*similar(x)) .===
-                    (similar(x) .= Mul(view(Hermitian(A,:L),:,:),x)) .===
+                    (fill!(similar(x),NaN) .= applied(+,applied(*,1.0,Symmetric(A,:L),x), applied(*,0.0,similar(x)))) .===
+                    (fill!(similar(x),NaN) .= Mul(view(Hermitian(A,:L),:,:),x)) .===
                     BLAS.symv!('L', 1.0, A, x, 0.0, similar(x)) )
         T = ComplexF64
         A = randn(T,100,100)
@@ -490,26 +492,26 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         @test all( (similar(x) .= Mul(Symmetric(A),x)) .===
                     (similar(x) .= Mul(transpose(Symmetric(A)),x)) .===
                     (similar(x) .= Mul(Symmetric(transpose(view(A,:,:)),:L),x)) .===
-                    (similar(x) .= one(T).*Mul(Symmetric(A),x) .+ zero(T).*similar(x)) .===
+                    (similar(x) .= applied(+,applied(*,one(T),Symmetric(A),x), applied(*,zero(T),similar(x)))) .===
                     (similar(x) .= Mul(view(Symmetric(A),:,:),x)) .===
                     BLAS.symv!('U', one(T), A, x, zero(T), similar(x)) )
 
         @test all( (similar(x) .= Mul(Symmetric(A,:L),x)) .===
                     (similar(x) .= Mul(transpose(Symmetric(A,:L)),x)) .===
                     (similar(x) .= Mul(Symmetric(transpose(view(A,:,:)),:U),x)) .===
-                    (similar(x) .= one(T).*Mul(Symmetric(A,:L),x) .+ zero(T).*similar(x)) .===
+                    (similar(x) .= applied(+,applied(*,one(T),Symmetric(A,:L),x), applied(*,zero(T),similar(x)))) .===
                     (similar(x) .= Mul(view(Symmetric(A,:L),:,:),x)) .===
                     BLAS.symv!('L', one(T), A, x, zero(T), similar(x)) )
 
         @test all( (similar(x) .= Mul(Hermitian(A),x)) .===
                     (similar(x) .= Mul(Hermitian(A)',x)) .===
-                    (similar(x) .= one(T).*Mul(Hermitian(A),x) .+ zero(T).*similar(x)) .===
+                    (similar(x) .= applied(+,applied(*,one(T),Hermitian(A),x), applied(*,zero(T),similar(x)))) .===
                     (similar(x) .= Mul(view(Hermitian(A),:,:),x)) .===
                     BLAS.hemv!('U', one(T), A, x, zero(T), similar(x)) )
 
         @test all( (similar(x) .= Mul(Hermitian(A,:L),x)) .===
                     (similar(x) .= Mul(Hermitian(A,:L)',x)) .===
-                    (similar(x) .= one(T).*Mul(Hermitian(A,:L),x) .+ zero(T).*similar(x)) .===
+                    (similar(x) .= applied(+,applied(*,one(T),Hermitian(A,:L),x), applied(*,zero(T),similar(x)))) .===
                     (similar(x) .= Mul(view(Hermitian(A,:L),:,:),x)) .===
                     BLAS.hemv!('L', one(T), A, x, zero(T), similar(x)) )
 
