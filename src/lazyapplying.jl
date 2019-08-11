@@ -9,12 +9,23 @@ ApplyStyle(f, args::Type...) = DefaultApplyStyle()
 ApplyStyle(f, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
 
 struct Applied{Style, F, Args<:Tuple}
-    style::Style
     f::F
     args::Args
 end
 
-Applied(f, args...) = Applied(ApplyStyle(f, typeof.(args)...), f, args)
+Applied{Style}(f::F, args::Args) where {Style,F,Args<:Tuple} = 
+    Applied{Style,Core.Typeof(f),Args}(f, args)
+
+_typesof() = ()
+_typesof(a, b...) = tuple(typeof(a), _typesof(b...)...)
+_typesof(a, b) = tuple(typeof(a), typeof(b))
+_typesof(a, b, c) = tuple(typeof(a), typeof(b), typeof(c))
+combine_apply_style(f, a...) = ApplyStyle(f, _typesof(a...)...)
+combine_apply_style(f, a, b) = ApplyStyle(f, typeof(a), typeof(b))
+combine_apply_style(f, a, b, c) = ApplyStyle(f, typeof(a), typeof(b), typeof(c))
+
+
+Applied(f, args...) = Applied{typeof(combine_apply_style(f, args...))}(f, args)
 applied(f, args...) = Applied(f, args...)
 apply(f, args...) = materialize(applied(f, args...))
 apply!(f, args...) = materialize!(applied(f, args...))

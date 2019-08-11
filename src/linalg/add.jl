@@ -48,7 +48,7 @@ for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
         end
         _fill_lmul!(β, C)
         for A in A.applied.args
-            C .= α .* Mul(A, B) .+ C
+            C .= @~ α * A * B + C
         end
         C
     end

@@ -658,12 +658,12 @@ import Base.Broadcast: materialize, materialize!, broadcasted
 
     @testset "no allocation" begin
         function blasnoalloc(c, α, A, x, β, y)
-            c .= Mul(A,x)
-            c .= α .* Mul(A,x)
-            c .= Mul(A,x) .+ y
-            c .= α .* Mul(A,x) .+ y
-            c .= Mul(A,x) .+ β .* y
-            c .= α .* Mul(A,x) .+ β .* y
+            c .= @~ A*x
+            c .= @~ α*A*x
+            c .= @~ A*x + y
+            c .= @~ α * A*x + y
+            c .= @~ A*x + β * y
+            c .= @~ α * A*x + β * y
         end
 
         A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
@@ -672,7 +672,7 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         Ac = A'
         blasnoalloc(c, 2.0, Ac, x, 3.0, y)
         @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
-        Aa = AddArray(A, Ac)
+        Aa = ApplyArray(+, A, Ac)
         blasnoalloc(c, 2.0, Aa, x, 3.0, y)
         @test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
     end
