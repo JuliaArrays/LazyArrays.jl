@@ -9,6 +9,8 @@ end
 
 const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
 
+Mul(A...) = applied(*, A...)
+
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
 ndims(M::Mul) = ndims(last(M.args))
@@ -58,8 +60,6 @@ end
 # Matrix * Array
 ####
 
-const ArrayMuls = Mul{<:Any, <:Tuple{Vararg{<:AbstractArray}}}
-
 
 """
    lmaterialize(M::Mul)
@@ -76,8 +76,6 @@ _flatten(A, B...) = (A, _flatten(B...)...)
 _flatten(A::Mul, B...) = _flatten(A.args..., B...)
 flatten(A) = A
 flatten(A::Mul) = Mul(_flatten(A.args...)...)
-
-_materialize(M::ArrayMuls, _) = flatten(lmaterialize(M))
 
 
 

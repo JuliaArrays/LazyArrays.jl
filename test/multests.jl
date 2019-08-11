@@ -20,9 +20,17 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         @test Ã isa Matrix{Float64}
         @test Ã == zeros(2,2)
 
+        c = similar(v)
+        fill!(c,NaN)
+        @test copyto!(c,v) == zeros(2)
+        fill!(c,NaN)
+        c .= v
+        @test c == zeros(2)
+
         A = randn(6,5); B = randn(5,5); C = randn(5,6)
         M = Mul(A,B,C)
         @test @inferred(eltype(M)) == Float64
+        @test materialize(M) == A*B*C
     end
 
     @testset "gemv Float64" begin

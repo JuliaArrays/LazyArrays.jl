@@ -20,8 +20,6 @@ struct Rmul{StyleA, StyleB, T, TypeA, TypeB}
     B::TypeB
 end
 
-struct RmulStyle <: ApplyStyle end
-struct MulAddStyle <: ApplyStyle end
 
 function MulAdd(styleA::StyleA, styleB::StyleB, styleC::StyleC, α::T, A::AA, B::BB, β::V, C::CC) where {StyleA,StyleB,StyleC,T,V,AA,BB,CC}
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
@@ -40,6 +38,20 @@ axes(M::MulAdd, p::Int) = axes(M)[p]
 length(M::MulAdd) = prod(size(M))
 size(M::MulAdd) = length.(axes(M))
 axes(M::MulAdd) = axes(M.C)
+
+struct RmulStyle <: AbstractArrayApplyStyle end
+struct MulAddStyle <: AbstractArrayApplyStyle end
+
+ApplyStyle(::typeof(*), ::Type{<:AbstractMatrix}, ::Type{<:AbstractVector}) = MulAddStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractMatrix}, ::Type{<:AbstractMatrix}) = MulAddStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractVector}, ::Type{<:AbstractMatrix}) = MulAddStyle()
+
+_materialize(A::Mul{MulAddStyle}, _) = copyto!(similar(A), A)
+
+@inline function copyto!(dest::AbstractArray{T}, M::Mul{MulAddStyle}) where T
+    A,B = M.args
+    materialize!(MulAdd(one(T), A, B, zero(T), dest))
+end
 
 const ArrayMulArrayAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray}
 const MatMulVecAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractMatrix,<:AbstractVector,<:AbstractVector}

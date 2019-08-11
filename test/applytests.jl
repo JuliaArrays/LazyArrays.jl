@@ -21,7 +21,7 @@ end
     @test M == exp(A)
 
     b = randn(2)
-    c = ApplyVector(*, ApplyMatrix(exp, A), b);
+    c = ApplyVector(*, ApplyMatrix(exp, A), b)
 
     @test axes(c) == (Base.OneTo(2),)
 

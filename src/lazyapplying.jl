@@ -31,6 +31,7 @@ _default_materialize(A::Applied) = __default_materialize(materializeargs(A), A)
 
 # _materialize is for applied with axes, which defaults to using copyto!
 materialize(M::Applied{<:AbstractArrayApplyStyle}) = _materialize(M, axes(M))
+_materialize(A::Applied{<:AbstractArrayApplyStyle}, _) = _default_materialize(A)
 _materialize(A::Applied, _) = _default_materialize(A)
 
 @inline copyto!(dest::AbstractArray, M::Applied{DefaultApplyStyle}) = copyto!(dest, materialize(M))
