@@ -1,8 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray
+import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, MulAddStyle, Applied
 import Base.Broadcast: materialize, materialize!, broadcasted
-
-
 
 @testset "Mul" begin
     @testset "eltype" begin
@@ -39,24 +37,42 @@ import Base.Broadcast: materialize, materialize!, broadcasted
             b in (randn(5), view(randn(5),:), view(randn(5),1:5), view(randn(9),1:2:9))
             c = similar(b);
 
-            c .= Mul(A,b)
+            c .= applied(*,A,b)
+            @test applied(*,A,b) isa Mul{MulAddStyle}
             @test all(c .=== A*b .=== BLAS.gemv!('N', 1.0, A, b, 0.0, similar(c)))
-
-            copyto!(c, Mul(A,b))
+            copyto!(c, applied(*,A,b))
+            @test all(c .=== A*b .=== BLAS.gemv!('N', 1.0, A, b, 0.0, similar(c)))
+            c .= @~ A*b
             @test all(c .=== A*b .=== BLAS.gemv!('N', 1.0, A, b, 0.0, similar(c)))
 
             b̃ = copy(b)
-            copyto!(b̃, Mul(A,b̃))
+            copyto!(b̃, applied(*,A,b̃))
             @test all(c .=== b̃)
 
-            c .= 2.0 .* Mul(A,b)
+            M = applied(*, 2.0, A,b)
+            @test M isa Applied{MulAddStyle}
+            c .= M
+            @test all(c .=== BLAS.gemv!('N', 2.0, A, b, 0.0, similar(c)))
+            copyto!(c, M)
+            @test all(c .=== BLAS.gemv!('N', 2.0, A, b, 0.0, similar(c)))
+            c .= @~ 2.0*A*b
             @test all(c .=== BLAS.gemv!('N', 2.0, A, b, 0.0, similar(c)))
 
+
             c = copy(b)
-            c .= Mul(A,b) .+ c
+            M = applied(+, applied(*,A,b), c)
+            @test M isa Applied{MulAddStyle}
+            copyto!(c, M)
+            @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 1.0, copy(b)))
+            c = copy(b)
+            c .= applied(+, applied(*,A,b), c)
+            @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 1.0, copy(b)))
+            c = copy(b)
+            c .= @~ A*b + c
             @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 1.0, copy(b)))
 
             c = copy(b)
+            (@~ A*b + 2.0*c) isa Applied{MulAddStyle}
             c .= Mul(A,b) .+ 2.0 .* c
             @test all(c .=== BLAS.gemv!('N', 1.0, A, b, 2.0, copy(b)))
 

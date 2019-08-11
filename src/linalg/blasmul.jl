@@ -44,13 +44,29 @@ struct MulAddStyle <: AbstractArrayApplyStyle end
 
 ApplyStyle(::typeof(*), ::Type{<:AbstractMatrix}, ::Type{<:AbstractVector}) = MulAddStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractMatrix}, ::Type{<:AbstractMatrix}) = MulAddStyle()
+ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractMatrix}, ::Type{<:AbstractMatrix}) = MulAddStyle()
+ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractMatrix}, ::Type{<:AbstractVector}) = MulAddStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractVector}, ::Type{<:AbstractMatrix}) = MulAddStyle()
+ApplyStyle(::typeof(+), ::Type{<:Mul{MulAddStyle}}, ::Type{<:Mul{DefaultArrayApplyStyle}}) = MulAddStyle()
+ApplyStyle(::typeof(+), ::Type{<:Mul{MulAddStyle}}, ::Type{<:AbstractArray}) = MulAddStyle()
 
 _materialize(A::Mul{MulAddStyle}, _) = copyto!(similar(A), A)
 
-@inline function copyto!(dest::AbstractArray{T}, M::Mul{MulAddStyle}) where T
-    A,B = M.args
-    materialize!(MulAdd(one(T), A, B, zero(T), dest))
+_αAB(M::Mul{MulAddStyle,<:Tuple{<:AbstractArray,<:AbstractArray}}, ::Type{T}) where T = tuple(one(T), M.args...)
+_αAB(M::Mul{MulAddStyle,<:Tuple{<:Number,<:AbstractArray,<:AbstractArray}}, ::Type{T}) where T = M.args
+_αABβC(M::Mul, ::Type{T}) where T = tuple(_αAB(M, T)..., zero(T), nothing)
+
+_βC(M::Mul, ::Type{T}) where T = M.args
+_βC(M::AbstractArray, ::Type{T}) where T = (one(T), M)
+
+_αABβC(M::Applied{MulAddStyle,typeof(+)}, ::Type{T}) where T = 
+    tuple(_αAB(M.args[1], T)..., _βC(M.args[2], T)...)
+
+
+@inline function copyto!(dest::AbstractArray{T}, M::Applied{MulAddStyle}) where T
+    α,A,B,β,C = _αABβC(M, T)
+    C == nothing || C === dest || copyto!(dest, C)
+    materialize!(MulAdd(α, A, B, β, dest))
 end
 
 const ArrayMulArrayAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray}
