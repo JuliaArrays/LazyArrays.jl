@@ -29,7 +29,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
       ArithmeticWraps, floatrange, reverse, unitrange_last,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
       similar, @_gc_preserve_end, @_gc_preserve_begin,
-      @nexprs, @ncall, @ntuple,
+      @nexprs, @ncall, @ntuple, tuple_type_tail,
       all, any,
       isbitsunion
 

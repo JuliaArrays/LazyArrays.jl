@@ -5,14 +5,19 @@
 
 # Lazy representation of α*A*B + β*C
 struct MulAdd{StyleA, StyleB, StyleC, T, AA, BB, CC}
-    style_A::StyleA
-    style_B::StyleB
-    style_C::StyleC
     α::T
     A::AA
     B::BB
     β::T
     C::CC
+end
+
+MulAdd{StyleA,StyleB,StyleC}(α::T, A::AA, B::BB, β::T, C::CC) where {StyleA,StyleB,StyleC,T,AA,BB,CC} =
+    MulAdd{StyleA,StyleB,StyleC,T,AA,BB,CC}(α,A,B,β,C)
+
+function MulAdd{StyleA,StyleB,StyleC}(αT, A, B, βV, C) where {StyleA,StyleB,StyleC}
+    α,β = promote(αT,βV)
+    MulAdd{StyleA,StyleB,StyleC}(α, A, B, β, C)
 end
 
 struct Rmul{StyleA, StyleB, T, TypeA, TypeB}
@@ -28,7 +33,8 @@ function MulAdd(styleA::StyleA, styleB::StyleB, styleC::StyleC, α::T, A::AA, B:
     MulAdd{StyleA,StyleB,StyleC,promote_type(T,V),AA,BB,CC}(styleA, styleB, styleC, α, A, B, β, C)
 end
 
-@inline MulAdd(α, A, B, β, C) = MulAdd(MemoryLayout(A), MemoryLayout(B), MemoryLayout(C), α, A, B, β, C)
+@inline MulAdd(α, A::AA, B::BB, β, C::CC) where {AA,BB,CC} = 
+    MulAdd{typeof(MemoryLayout(AA)), typeof(MemoryLayout(BB)), typeof(MemoryLayout(CC))}(α, A, B, β, C)
 
 eltype(::MulAdd{StyleA,StyleB,StyleC,T,AA,BB,CC}) where {StyleA,StyleB,StyleC,T,AA,BB,CC} =
      promote_type(T, eltype(AA), eltype(BB), eltype(CC))
