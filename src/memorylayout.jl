@@ -256,7 +256,7 @@ adjointlayout(::Type{T}, M::MemoryLayout) where T = transposelayout(conjlayout(T
 
 # MemoryLayout of Symmetric/Hermitian
 """
-    SymmetricLayout(layout, uplo)
+    SymmetricLayout{layout}()
 
 
 is returned by `MemoryLayout(A)` if a matrix `A` has storage in memory
@@ -313,6 +313,9 @@ hermitiandata(V::SubArray{<:Any, 2, <:Any, <:Tuple{<:Slice,<:Slice}}) = hermitia
 hermitiandata(V::Adjoint) = hermitiandata(parent(V))
 hermitiandata(V::Transpose{<:Real}) = hermitiandata(parent(V))
 
+symmetricuplo(A::Symmetric) = A.uplo
+symmetricuplo(A::Hermitian) = A.uplo
+symmetricuplo(A::SubArray{<:Any, 2, <:Any, <:Tuple{<:Slice,<:Slice}}) = symmetricuplo(parent(A))
 
 # MemoryLayout of triangular matrices
 struct TriangularLayout{UPLO,UNIT,ML} <: MemoryLayout end
@@ -416,13 +419,12 @@ triangulardata(A::SubArray{<:Any,2,<:Any,<:Tuple{<:Union{Slice,Base.OneTo},<:Uni
 abstract type AbstractBandedLayout <: MemoryLayout end
 
 struct DiagonalLayout{ML} <: AbstractBandedLayout end
-
 struct SymTridiagonalLayout{ML} <: AbstractBandedLayout end
 
-MemoryLayout(D::Type{Diagonal{T,P}}) where {T,P} = DiagonalLayout(MemoryLayout(P))
+MemoryLayout(D::Type{Diagonal{T,P}}) where {T,P} = DiagonalLayout{typeof(MemoryLayout(P))}()
 diagonaldata(D::Diagonal) = parent(D)
 
-MemoryLayout(::Type{SymTridiagonal{T,P}}) where {T,P} = SymTridiagonalLayout(MemoryLayout(P))
+MemoryLayout(::Type{SymTridiagonal{T,P}}) where {T,P} = SymTridiagonalLayout{typeof(MemoryLayout(P))}()
 diagonaldata(D::SymTridiagonal) = D.dv
 offdiagonaldata(D::SymTridiagonal) = D.ev
 

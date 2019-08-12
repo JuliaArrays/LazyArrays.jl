@@ -35,7 +35,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
-                        materialize!, eltypes
+                        materialize!, eltypes, instantiate
 
 import LinearAlgebra: AbstractTriangular, checksquare, pinv
 

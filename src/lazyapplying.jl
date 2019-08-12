@@ -16,6 +16,13 @@ end
 Applied{Style}(f::F, args::Args) where {Style,F,Args<:Tuple} = 
     Applied{Style,Core.Typeof(f),Args}(f, args)
 
+check_applied_axes(A::Applied) = nothing
+
+function instantiate(A::Applied) 
+    check_applied_axes(A)
+    A
+end
+
 _typesof() = ()
 _typesof(a, b...) = tuple(typeof(a), _typesof(b...)...)
 _typesof(a, b) = tuple(typeof(a), typeof(b))
@@ -30,20 +37,20 @@ applied(f, args...) = Applied(f, args...)
 apply(f, args...) = materialize(applied(f, args...))
 apply!(f, args...) = materialize!(applied(f, args...))
 
-materialize(A::Applied{DefaultApplyStyle}) = _default_materialize(A)
+materialize(A::Applied) = copy(instantiate(A))
 materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
 
 # the following materialzes the args and calls materialize again, unless it hasn't
 # changed in which case it falls back to the default
 __default_materialize(A::App, ::App) where App = A.f(A.args...)
 __default_materialize(A, _) where App = materialize(A)
-_default_materialize(A::Applied) = __default_materialize(materializeargs(A), A)
+copy(A::Applied) = __default_materialize(materializeargs(A), A)
 
 
 # _materialize is for applied with axes, which defaults to using copyto!
-materialize(M::Applied{<:AbstractArrayApplyStyle}) = _materialize(M, axes(M))
-_materialize(A::Applied{<:AbstractArrayApplyStyle}, _) = _default_materialize(A)
-_materialize(A::Applied, _) = _default_materialize(A)
+materialize(M::Applied{<:AbstractArrayApplyStyle}) = _materialize(instantiate(M), axes(M))
+_materialize(A::Applied{<:AbstractArrayApplyStyle}, _) = copy(A)
+_materialize(A::Applied, _) = copy(A)
 
 @inline copyto!(dest::AbstractArray, M::Applied{DefaultApplyStyle}) = copyto!(dest, materialize(M))
 @inline copyto!(dest, M::Applied{DefaultApplyStyle}) = copyto!(dest, materialize(M))
@@ -73,8 +80,10 @@ for f in (:exp, :sin, :cos, :sqrt)
     @eval ApplyStyle(::typeof($f), ::Type{<:AbstractMatrix}) = MatrixFunctionStyle{typeof($f)}()
 end
 
-materialize(A::Applied{<:MatrixFunctionStyle,<:Any,<:Tuple{<:Any}}) =
-    _default_materialize(A)
+function check_applied_axes(A::Applied{<:MatrixFunctionStyle}) 
+    length(A.args) == 1 || throw(ArgumentError("MatrixFunctions only defined with 1 arg"))
+    axes(A.args[1],1) == axes(A.args[1],2) || throw(DimensionMismatch("matrix is not square: dimensions are $axes(A.args[1])"))
+end
 
 axes(A::Applied{<:MatrixFunctionStyle}) = axes(first(A.args))
 size(A::Applied{<:MatrixFunctionStyle}) = size(first(A.args))
@@ -101,7 +110,7 @@ const ApplyMatrix{T, App<:Applied} = ApplyArray{T, 2, App}
 
 LazyArray(A::Applied) = ApplyArray(A)
 
-ApplyArray{T,N}(M::App) where {T,N,App<:Applied} = ApplyArray{T,N,App}(M)
+ApplyArray{T,N}(M::App) where {T,N,App<:Applied} = ApplyArray{T,N,App}(instantiate(M))
 ApplyArray{T}(M::Applied) where {T} = ApplyArray{T,ndims(M)}(M)
 ApplyArray(M::Applied) = ApplyArray{eltype(M)}(M)
 ApplyVector(M::Applied) = ApplyVector{eltype(M)}(M)

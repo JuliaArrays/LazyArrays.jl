@@ -1,5 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, MulAddStyle, Applied
+import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
+                    MulAddStyle, Applied, ApplyStyle, RmulStyle
 import Base.Broadcast: materialize, materialize!, broadcasted
 
 @testset "Mul" begin
@@ -112,7 +113,6 @@ import Base.Broadcast: materialize, materialize!, broadcasted
             (similar(b) .= @~ 1 * A *b + 0 * b) ≈
             A*b
     end
-
 
     @testset "gemv Complex" begin
         for T in (ComplexF64,),
@@ -525,6 +525,8 @@ import Base.Broadcast: materialize, materialize!, broadcasted
             A = randn(Float64, 100, 100)
             x = randn(Float64, 100)
 
+            @test ApplyStyle(*, typeof(UpperTriangular(A)), typeof(x)) isa RmulStyle
+
             @test all((y = copy(x); y .= Mul(UpperTriangular(A),y) ) .===
                         (similar(x) .= Mul(UpperTriangular(A),x)) .===
                         BLAS.trmv!('U', 'N', 'N', A, copy(x)))
@@ -623,7 +625,7 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         A = randn(5,6)
         b = rand(Int,6)
         c = Array{Float64}(undef, 5)
-        c .= Mul(A,b)
+        c .= applied(*,A,b)
 
         @test_throws DimensionMismatch (similar(c,3) .= Mul(A,b))
         @test_throws DimensionMismatch (c .= Mul(A,similar(b,2)))
@@ -687,29 +689,30 @@ import Base.Broadcast: materialize, materialize!, broadcasted
     @testset "Diagonal and SymTridiagonal" begin
         A = randn(5,5)
         B = Diagonal(randn(5))
-        @test MemoryLayout(B) == DiagonalLayout(DenseColumnMajor())
+        @test MemoryLayout(typeof(B)) == DiagonalLayout{DenseColumnMajor}()
         @test apply(*,A,B) == A*B
 
         A = randn(5,5)
         B = SymTridiagonal(randn(5),randn(4))
-        @test MemoryLayout(B) == SymTridiagonalLayout(DenseColumnMajor())
+        @test MemoryLayout(typeof(B)) == SymTridiagonalLayout{DenseColumnMajor}()
         @test apply(*,A,B) == A*B
     end
 
     @testset "MulArray" begin
         A = randn(5,5)
-        M = MulArray(A,A)
+        M = ApplyArray(*,A,A)
         @test Matrix(M) ≈ A^2
         x = randn(5)
         @test x'M ≈ transpose(x)*M ≈ x'Matrix(M)
-        @test_throws DimensionMismatch MulArray(randn(5,5), randn(4))
+        @test_throws DimensionMismatch materialize(applied(*, randn(5,5), randn(4)))
+        @test_throws DimensionMismatch ApplyArray(*, randn(5,5), randn(4))
     end
 
     @testset "Bug in getindex" begin
-        M = MulArray([1,2,3],Ones(1,20))
+        M = ApplyArray(*,[1,2,3],Ones(1,20))
         @test M[1,1] == 1
         @test M[2,1] == 2
-        M = Mul([1 2; 3 4], [1 2; 3 4])
+        M = Applied(*,[1 2; 3 4], [1 2; 3 4])
         @test M[1] == 7
     end
 
@@ -733,15 +736,8 @@ import Base.Broadcast: materialize, materialize!, broadcasted
 
     @testset "broadcasting" begin
         A = randn(5,5); B = randn(5,5); C = randn(5,5)
-        @test broadcasted(identity, Mul(A,B)) isa LazyArrays.BArrayMulArray
-        @test broadcasted(*, 1.0, Mul(A,B)) isa LazyArrays.BConstArrayMulArray
-        @test broadcasted(+, Mul(A,B), C) isa LazyArrays.BArrayMulArrayPlusArray
-        @test broadcasted(+, Mul(A,B), broadcasted(*, 0.0, C)) isa LazyArrays.BArrayMulArrayPlusConstArray
-        @test broadcasted(+, broadcasted(*, 1.0, Mul(A,B)), C) isa LazyArrays.BConstArrayMulArrayPlusArray
-        @test broadcasted(+, broadcasted(*, 1.0, Mul(A,B)), broadcasted(*, 0.0, C)) isa LazyArrays.BConstArrayMulArrayPlusConstArray
-
         C .= NaN
-        C .= 1.0 .* Mul(A,B) .+ 0.0 .* C
+        C .= @~ 1.0 * A*B + 0.0 * C
         @test C == A*B
     end
 end
