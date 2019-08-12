@@ -55,8 +55,8 @@ abstract type AbstractMulAddStyle <: AbstractArrayApplyStyle end
 struct MulAddStyle <: AbstractMulAddStyle end
 
 
-mulapplystyle(A, B) = MulAddStyle()
-mulapplystyle(α, A, B) = MulAddStyle()
+@inline mulapplystyle(A, B) = MulAddStyle()
+@inline mulapplystyle(α, A, B) = MulAddStyle()
 
 ApplyStyle(::typeof(*), ::Type{A}, ::Type{B}) where {A<:AbstractMatrix,B<:AbstractVector} =
     mulapplystyle(MemoryLayout(A), MemoryLayout(B))

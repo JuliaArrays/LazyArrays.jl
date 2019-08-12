@@ -331,7 +331,7 @@ end
 
 # Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) =
-    BroadcastArray(Broadcasted{LazyArrayStyle}(op, (A, B)))
+    Broadcasted{LazyArrayStyle}(op, (A, B))
 
 
 function +(A::Vcat, B::Vcat)
@@ -385,7 +385,7 @@ _vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:SVector{M},<:AbstractFi
 
 # default is BroadcastArray
 _vcat_broadcasted(::Type{T}, op, A, B) where T =
-    BroadcastArray(Broadcasted{LazyArrayStyle}(op, (_Vcat(A), _Vcat(B))))
+    Broadcasted{LazyArrayStyle}(op, (_Vcat(A), _Vcat(B)))
 
 
 broadcasted(::LazyArrayStyle{1}, op, A::Vcat{T, 1, <:Tuple{<:Any,<:Any}},

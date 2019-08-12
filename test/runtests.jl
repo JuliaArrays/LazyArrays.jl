@@ -401,8 +401,8 @@ end
     @test (x .+ y).arrays[end] isa Int
 
     z = Vcat(1:2, [1,1,1,1,1], 3)
-    (x .+ z)  isa BroadcastArray
-    (x + z) isa BroadcastArray
+    @test (x .+ z) isa BroadcastArray
+    @test (x + z) isa BroadcastArray
     @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
 
     # Lazy mixed with Static treats as Lazy
