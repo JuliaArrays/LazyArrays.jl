@@ -701,6 +701,8 @@ import Base.Broadcast: materialize, materialize!, broadcasted
     @testset "MulArray" begin
         A = randn(5,5)
         M = ApplyArray(*,A,A)
+        @test M[5] == M[5,1]
+        @test M[6] == M[1,2]
         @test Matrix(M) ≈ A^2
         x = randn(5)
         @test x'M ≈ transpose(x)*M ≈ x'Matrix(M)

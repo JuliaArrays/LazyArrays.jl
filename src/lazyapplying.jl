@@ -61,9 +61,8 @@ broadcastable(M::Applied) = M
 
 
 
-similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
+similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}, axes) where {T,N} = Array{T}(undef, length.(axes))
 similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
-
 similar(M::Applied) = similar(M, eltype(M))
 
 struct ApplyBroadcastStyle <: BroadcastStyle end
@@ -145,13 +144,14 @@ ApplyMatrix(f, factors...) = ApplyMatrix(applied(f, factors...))
 
 axes(A::ApplyArray) = axes(A.applied)
 size(A::ApplyArray) = map(length, axes(A))
+copy(A::ApplyArray) = copy(A.applied)
 
 IndexStyle(::ApplyArray{<:Any,1}) = IndexLinear()
 
 @propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Int,N}) where {T,N} =
     materialize(A.applied)[kj...]
 
-materialize(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
+copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 
 struct  ApplyLayout{F, LAY} <: MemoryLayout end

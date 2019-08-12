@@ -116,7 +116,7 @@ _mul(A) = A
 _mul(A,B,C...) = Mul(A,B,C...)
 
 
-function getindex(M::Mul, k::Integer)
+function _getindex(M::Mul, ::Tuple{<:Any}, k::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
     ret = zero(eltype(M))
@@ -125,6 +125,9 @@ function getindex(M::Mul, k::Integer)
     end
     ret
 end
+
+_getindex(M::Mul, ax, k::Integer) = M[Base._ind2sub(ax, k)...]
+getindex(M::Mul, k::Integer) = _getindex(M, axes(M), k)
 
 
 getindex(M::Mul, k::CartesianIndex{1}) = M[convert(Int, k)]
