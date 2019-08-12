@@ -94,9 +94,9 @@ const VecMulMatAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:A
 broadcastable(M::MulAdd) = M
 broadcastable(M::Lmul) = M
 
-const BlasMatMulVec{StyleA,StyleB,StyleC,T<:BlasFloat} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractVector{T},<:AbstractVector{T}}
-const BlasMatMulMat{StyleA,StyleB,StyleC,T<:BlasFloat} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
-const BlasVecMulMat{StyleA,StyleB,StyleC,T<:BlasFloat} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractVector{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
+const BlasMatMulVecAdd{StyleA,StyleB,StyleC,T<:BlasFloat} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractVector{T},<:AbstractVector{T}}
+const BlasMatMulMatAdd{StyleA,StyleB,StyleC,T<:BlasFloat} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
+const BlasVecMulMatAdd{StyleA,StyleB,StyleC,T<:BlasFloat} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractVector{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
 
 const MatLmulVec{StyleA,StyleB} = Lmul{StyleA,StyleB,<:AbstractMatrix,<:AbstractVector}
 const MatLmulMat{StyleA,StyleB} = Lmul{StyleA,StyleB,<:AbstractMatrix,<:AbstractMatrix}
@@ -272,63 +272,63 @@ end
 end
 
 
-@inline materialize!(M::BlasMatMulVec{<:AbstractColumnMajor,<:AbstractStridedLayout,<:AbstractStridedLayout}) =
+@inline materialize!(M::BlasMatMulVecAdd{<:AbstractColumnMajor,<:AbstractStridedLayout,<:AbstractStridedLayout}) =
     _gemv!('N', M.α, M.A, M.B, M.β, M.C)
-@inline materialize!(M::BlasMatMulVec{<:AbstractRowMajor,<:AbstractStridedLayout,<:AbstractStridedLayout}) =
+@inline materialize!(M::BlasMatMulVecAdd{<:AbstractRowMajor,<:AbstractStridedLayout,<:AbstractStridedLayout}) =
     _gemv!('T', M.α, transpose(M.A), M.B, M.β, M.C)
-@inline materialize!(M::BlasMatMulVec{<:ConjLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulVecAdd{<:ConjLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
     _gemv!('C', M.α, M.A', M.B, M.β, M.C)
 
-@inline materialize!(M::BlasVecMulMat{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractColumnMajor}) =
+@inline materialize!(M::BlasVecMulMatAdd{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractColumnMajor}) =
     _gemm!('N', 'N', M.α, M.A, M.B, M.β, M.C)
-@inline materialize!(M::BlasVecMulMat{<:AbstractColumnMajor,<:AbstractRowMajor,<:AbstractColumnMajor}) =
+@inline materialize!(M::BlasVecMulMatAdd{<:AbstractColumnMajor,<:AbstractRowMajor,<:AbstractColumnMajor}) =
     _gemm!('N', 'T', M.α, M.A, transpose(M.B), M.β, M.C)
-@inline materialize!(M::BlasVecMulMat{<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
+@inline materialize!(M::BlasVecMulMatAdd{<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
     _gemm!('N', 'C', M.α, M.A, M.B', M.β, M.C)
 
-@inline materialize!(M::BlasMatMulMat{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractColumnMajor}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractColumnMajor}) =
     _gemm!('N', 'N', M.α, M.A, M.B, M.β, M.C)
-@inline materialize!(M::BlasMatMulMat{<:AbstractColumnMajor,<:AbstractRowMajor,<:AbstractColumnMajor}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractColumnMajor,<:AbstractRowMajor,<:AbstractColumnMajor}) =
     _gemm!('N', 'T', M.α, M.A, transpose(M.B), M.β, M.C)
-@inline materialize!(M::BlasMatMulMat{<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
     _gemm!('N', 'C', M.α, M.A, M.B', M.β, M.C)
 
-@inline materialize!(M::BlasMatMulMat{<:AbstractRowMajor,<:AbstractColumnMajor,<:AbstractColumnMajor}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractRowMajor,<:AbstractColumnMajor,<:AbstractColumnMajor}) =
     _gemm!('T', 'N', M.α, transpose(M.A), M.B, M.β, M.C)
-@inline materialize!(M::BlasMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:AbstractColumnMajor,<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:AbstractColumnMajor,<:BlasComplex}) =
     _gemm!('C', 'N', M.α, M.A', M.B, M.β, M.C)
 
-@inline materialize!(M::BlasMatMulMat{<:AbstractRowMajor,<:AbstractRowMajor,<:AbstractColumnMajor}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractRowMajor,<:AbstractRowMajor,<:AbstractColumnMajor}) =
     _gemm!('T', 'T', M.α, transpose(M.A), transpose(M.B), M.β, M.C)
-@inline materialize!(M::BlasMatMulMat{<:AbstractRowMajor,<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractRowMajor,<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
     _gemm!('T', 'C', M.α, transpose(M.A), M.B', M.β, M.C)
 
-@inline materialize!(M::BlasMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:AbstractRowMajor,<:AbstractColumnMajor,<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:ConjLayout{<:AbstractRowMajor},<:AbstractRowMajor,<:AbstractColumnMajor,<:BlasComplex}) =
     _gemm!('C', 'T', M.α, M.A', M.B', M.β, M.C)
-@inline materialize!(M::BlasMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:BlasComplex}) =
     _gemm!('C', 'C', M.α, M.A', M.B', M.β, M.C)
 
-@inline materialize!(M::BlasMatMulMat{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractRowMajor}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractColumnMajor,<:AbstractColumnMajor,<:AbstractRowMajor}) =
     _gemm!('T', 'T', M.α, M.B, M.A, M.β, transpose(M.C))
-@inline materialize!(M::BlasMatMulMat{<:AbstractColumnMajor,<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractColumnMajor,<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
     _gemm!('C', 'C', M.α, M.B, M.A, M.β, M.C')
 
-@inline materialize!(M::BlasMatMulMat{<:AbstractColumnMajor,<:AbstractRowMajor,<:AbstractRowMajor}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractColumnMajor,<:AbstractRowMajor,<:AbstractRowMajor}) =
     _gemm!('N', 'T', M.α, transpose(M.B), M.A, M.β, transpose(M.C))
-@inline materialize!(M::BlasMatMulMat{<:AbstractColumnMajor,<:AbstractRowMajor,<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractColumnMajor,<:AbstractRowMajor,<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
     _gemm!('N', 'T', M.α, transpose(M.B), M.A, M.β, M.C')
-@inline materialize!(M::BlasMatMulMat{<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
     _gemm!('N', 'C', M.α, M.B', M.A, M.β, M.C')
 
-@inline materialize!(M::BlasMatMulMat{<:AbstractRowMajor,<:AbstractColumnMajor,<:AbstractRowMajor}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractRowMajor,<:AbstractColumnMajor,<:AbstractRowMajor}) =
     _gemm!('T', 'N', M.α, M.B, transpose(M.A), M.β, transpose(M.C))
-@inline materialize!(M::BlasMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:ConjLayout{<:AbstractRowMajor},<:AbstractColumnMajor,<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
     _gemm!('C', 'N', M.α, M.B, M.A', M.β, M.C')
 
 
-@inline materialize!(M::BlasMatMulMat{<:AbstractRowMajor,<:AbstractRowMajor,<:AbstractRowMajor}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:AbstractRowMajor,<:AbstractRowMajor,<:AbstractRowMajor}) =
     _gemm!('N', 'N', M.α, transpose(M.B), transpose(M.A), M.β, transpose(M.C))
-@inline materialize!(M::BlasMatMulMat{<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
+@inline materialize!(M::BlasMatMulMatAdd{<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:ConjLayout{<:AbstractRowMajor},<:BlasComplex}) =
     _gemm!('N', 'N', M.α, M.B', M.A', M.β, M.C')
 
 
@@ -354,18 +354,18 @@ end
 end
 
 
-materialize!(M::BlasMatMulVec{<:SymmetricLayout{<:AbstractColumnMajor},<:AbstractStridedLayout,<:AbstractStridedLayout}) =
+materialize!(M::BlasMatMulVecAdd{<:SymmetricLayout{<:AbstractColumnMajor},<:AbstractStridedLayout,<:AbstractStridedLayout}) =
     _symv!(symmetricuplo(M.A), M.α, symmetricdata(M.A), M.B, M.β, M.C)
 
 
-materialize!(M::BlasMatMulVec{<:SymmetricLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout}) =
+materialize!(M::BlasMatMulVecAdd{<:SymmetricLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout}) =
     _symv!(symmetricuplo(M.A) == 'L' ? 'U' : 'L', M.α, transpose(symmetricdata(M.A)), M.B, M.β, M.C)
 
 
-materialize!(M::BlasMatMulVec{<:HermitianLayout{<:AbstractColumnMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
+materialize!(M::BlasMatMulVecAdd{<:HermitianLayout{<:AbstractColumnMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
     _hemv!(symmetricuplo(M.A), M.α, hermitiandata(M.A), M.B, M.β, M.C)
 
-materialize!(M::BlasMatMulVec{<:HermitianLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
+materialize!(M::BlasMatMulVecAdd{<:HermitianLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
     _hemv!(symmetricuplo(M.A) == 'L' ? 'U' : 'L', M.α, hermitiandata(M.A)', M.B, M.β, M.C)
 
 
