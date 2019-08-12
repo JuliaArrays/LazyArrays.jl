@@ -154,6 +154,11 @@ MulLayout(layouts) = ApplyLayout(*, layouts)
 _flatten(A::MulArray, B...) = _flatten(A.applied, B...)
 flatten(A::MulArray) = ApplyArray(*, flatten(A.applied))
 
+@propagate_inbounds getindex(A::MulArray, k::Int) = A.applied[k]		
+@propagate_inbounds getindex(A::MulArray{T,N}, kj::Vararg{Int,N}) where {T,N} =		
+     A.applied[kj...]		
+ 
+*(A::MulArray, B::MulArray) = MulArray(A, B)
 
 adjoint(A::MulArray) = ApplyArray(*, reverse(adjoint.(A.applied.args))...)
 transpose(A::MulArray) = ApplyArray(*, reverse(transpose.(A.applied.args))...)

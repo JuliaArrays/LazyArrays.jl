@@ -6,7 +6,7 @@ struct DefaultApplyStyle <: ApplyStyle end
 struct DefaultArrayApplyStyle <: AbstractArrayApplyStyle end
 
 ApplyStyle(f, args::Type...) = DefaultApplyStyle()
-ApplyStyle(f, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
+ApplyStyle(f, ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
 
 struct Applied{Style, F, Args<:Tuple}
     f::F
@@ -123,10 +123,6 @@ IndexStyle(::ApplyArray{<:Any,1}) = IndexLinear()
     materialize(A.applied)[kj...]
 
 materialize(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
-
-
-# adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.applied.args))...)
-# transpose(A::MulArray) = MulArray(reverse(transpose.(A.applied.args))...)
 
 
 struct  ApplyLayout{F, LAY} <: MemoryLayout
