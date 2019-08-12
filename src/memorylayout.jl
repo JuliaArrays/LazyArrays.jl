@@ -1,3 +1,10 @@
+
+tuple_type_reverse(::Type{T}) where T<:Tuple = Tuple{reverse(tuple(T.parameters...))...}
+tuple_type_reverse(::Type{Tuple{}}) = Tuple{}
+tuple_type_reverse(::Type{Tuple{A}}) where A = Tuple{A}
+tuple_type_reverse(::Type{Tuple{A,B}}) where {A,B} = Tuple{B,A}
+
+
 abstract type MemoryLayout end
 struct UnknownLayout <: MemoryLayout end
 abstract type AbstractStridedLayout <: MemoryLayout end
@@ -156,7 +163,7 @@ subarraylayout(::DenseColumnMajor, ::Type{<:Tuple{<:Union{AbstractUnitRange{Int}
 subarraylayout(ml::AbstractColumnMajor, inds) = _column_subarraylayout1(ml, inds)
 subarraylayout(::AbstractRowMajor, ::Type{<:Tuple{<:Any}}) =
     UnknownLayout()  # A[:] does not have any structure if A is AbstractRowMajor
-subarraylayout(ml::AbstractRowMajor, inds) = _row_subarraylayout1(ml, reverse(inds))
+subarraylayout(ml::AbstractRowMajor, inds) = _row_subarraylayout1(ml, tuple_type_reverse(inds))
 subarraylayout(ml::AbstractStridedLayout, inds) = _strided_subarraylayout(ml, inds)
 
 _column_subarraylayout1(::DenseColumnMajor, inds::Type{<:Tuple{I,Vararg{Int}}}) where I<:Union{Int,AbstractCartesianIndex} =
@@ -225,27 +232,25 @@ _strided_subarraylayout(par, inds::Type{<:Tuple{I, Vararg{Any}}}) where I<:Union
     _strided_subarraylayout(par, tuple_type_tail(inds))
 
 # MemoryLayout of transposed and adjoint matrices
-struct ConjLayout{ML<:MemoryLayout} <: MemoryLayout
-    layout::ML
-end
+struct ConjLayout{ML<:MemoryLayout} <: MemoryLayout end
 
 conjlayout(_1, _2) = UnknownLayout()
-conjlayout(::Type{<:Complex}, M::ConjLayout) = M.layout
-conjlayout(::Type{<:Complex}, M::AbstractStridedLayout) = ConjLayout(M)
+conjlayout(::Type{<:Complex}, ::ConjLayout{ML}) where ML = ML()
+conjlayout(::Type{<:Complex}, ::ML) where ML<:AbstractStridedLayout = ConjLayout{ML}()
 conjlayout(::Type{<:Real}, M::MemoryLayout) = M
 
 
-subarraylayout(M::ConjLayout, t::Type{<:Tuple}) = ConjLayout(subarraylayout(M.layout, t))
+subarraylayout(::ConjLayout{ML}, t::Type{<:Tuple}) where ML = ConjLayout{typeof(subarraylayout(ML(), t))}()
 
-MemoryLayout(A::Transpose) = transposelayout(MemoryLayout(parent(A)))
-MemoryLayout(A::Adjoint) = adjointlayout(eltype(A), MemoryLayout(parent(A)))
+MemoryLayout(::Type{Transpose{T,P}}) where {T,P} = transposelayout(MemoryLayout(P))
+MemoryLayout(::Type{Adjoint{T,P}}) where {T,P} = adjointlayout(T, MemoryLayout(P))
 transposelayout(_) = UnknownLayout()
 transposelayout(::StridedLayout) = StridedLayout()
 transposelayout(::ColumnMajor) = RowMajor()
 transposelayout(::RowMajor) = ColumnMajor()
 transposelayout(::DenseColumnMajor) = DenseRowMajor()
 transposelayout(::DenseRowMajor) = DenseColumnMajor()
-transposelayout(M::ConjLayout) = ConjLayout(transposelayout(M.layout))
+transposelayout(::ConjLayout{ML}) where ML = ConjLayout{typeof(transposelayout(ML()))}()
 adjointlayout(::Type{T}, M::MemoryLayout) where T = transposelayout(conjlayout(T, M))
 
 
@@ -280,16 +285,16 @@ A matrix that has memory layout `HermitianLayout(layout, uplo)` must overrided
 `A[k,j] == conj(B[j,k])` for `j < k` if `uplo == 'U'` (`j > k` if `uplo == 'L'`).
 """
 struct HermitianLayout{ML<:MemoryLayout} <: MemoryLayout end
-HermitianLayout(::ML) where ML<:MemoryLayout = HermitianLayout{ML}(layout)
+HermitianLayout(::ML) where ML<:MemoryLayout = HermitianLayout{ML}()
 
-MemoryLayout(::Type{Hermitian{T,P}}) where {T,P} = hermitianlayout(eltype(A), MemoryLayout(P))
+MemoryLayout(::Type{Hermitian{T,P}}) where {T,P} = hermitianlayout(T, MemoryLayout(P))
 MemoryLayout(::Type{Symmetric{T,P}}) where {T,P} = symmetriclayout(MemoryLayout(P))
 hermitianlayout(_1, _2) = UnknownLayout()
 hermitianlayout(::Type{<:Complex}, ::ML) where ML<:AbstractColumnMajor = HermitianLayout{ML}()
 hermitianlayout(::Type{<:Real}, ::ML) where ML<:AbstractColumnMajor = SymmetricLayout{ML}()
 hermitianlayout(::Type{<:Complex}, ::ML) where ML<:AbstractRowMajor = HermitianLayout{ML}()
 hermitianlayout(::Type{<:Real}, ::ML) where ML<:AbstractRowMajor = SymmetricLayout{ML}()
-symmetriclayout(_1, _2) = UnknownLayout()
+symmetriclayout(_1) = UnknownLayout()
 symmetriclayout(::ML) where ML<:AbstractColumnMajor = SymmetricLayout{ML}()
 symmetriclayout(::ML) where ML<:AbstractRowMajor = SymmetricLayout{ML}()
 transposelayout(S::SymmetricLayout) = S
@@ -391,14 +396,14 @@ triangularlayout(::Type{Tri}, ML::AbstractColumnMajor) where {Tri} = Tri(ML)
 triangularlayout(::Type{Tri}, ML::AbstractRowMajor) where {Tri} = Tri(ML)
 triangularlayout(::Type{Tri}, ML::ConjLayout{<:AbstractRowMajor}) where {Tri} = Tri(ML)
 subarraylayout(layout::TriangularLayout, ::Type{<:Tuple{<:Union{Slice,Base.OneTo},<:Union{Slice,Base.OneTo}}}) = layout
-conjlayout(::Type{<:Complex}, ml::TriangularLayout{UPLO,UNIT}) where {UPLO,UNIT} =
-    TriangularLayout{UPLO,UNIT}(ConjLayout(ml.layout))
+conjlayout(::Type{<:Complex}, ::TriangularLayout{UPLO,UNIT,ML}) where {UPLO,UNIT,ML} =
+    TriangularLayout{UPLO,UNIT,ConjLayout{ML}}()
 
 for (TriLayout, TriLayoutTrans) in ((UpperTriangularLayout,     LowerTriangularLayout),
                                     (UnitUpperTriangularLayout, UnitLowerTriangularLayout),
                                     (LowerTriangularLayout,     UpperTriangularLayout),
                                     (UnitLowerTriangularLayout, UnitUpperTriangularLayout))
-    @eval transposelayout(ml::$TriLayout) = $TriLayoutTrans(transposelayout(ml.layout))
+    @eval transposelayout(::$TriLayout{ML}) where ML = $TriLayoutTrans(transposelayout(ML()))
 end
 
 triangulardata(A::AbstractTriangular) = parent(A)

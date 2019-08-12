@@ -75,12 +75,10 @@ is returned by `MemoryLayout(A)` if a matrix `A` is a `BroadcastArray`.
 `f` is a function that broadcast operation is applied and `layouts` is
 a tuple of `MemoryLayout` of the broadcasted arguments.
 """
-struct BroadcastLayout{F, LAY} <: MemoryLayout
-    f::F
-    layouts::LAY
-end
+struct BroadcastLayout{F, LAY} <: MemoryLayout end
 
-MemoryLayout(A::BroadcastArray) = BroadcastLayout(A.broadcasted.f, MemoryLayout.(A.broadcasted.args))
+MemoryLayout(::Type{BroadcastArray{T,N,Broadcasted{Style,Axes,F,Args}}}) where {T,N,Style,Axes,F,Args} = 
+    BroadcastLayout{F,tuple_type_memorylayouts(Args)}()
 
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting

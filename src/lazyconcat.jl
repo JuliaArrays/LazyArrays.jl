@@ -42,11 +42,15 @@ size(f::Vcat{<:Any,2}) = (+(map(a -> size(a,1), f.arrays)...), size(f.arrays[1],
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
-struct VcatLayout{Lays} <: MemoryLayout
-    layouts::Lays
-end
+struct VcatLayout{Lays} <: MemoryLayout end
 
-MemoryLayout(V::Vcat) = VcatLayout(MemoryLayout.(V.arrays))
+tuple_type_memorylayouts(::Type{I}) where I<:Tuple = Tuple{typeof.(MemoryLayout.(I.parameters))...}
+tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = Tuple{typeof(MemoryLayout(A))}
+tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B))}
+tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B)),typeof(MemoryLayout(C))}
+
+
+MemoryLayout(::Type{Vcat{T,N,I}}) where {T,N,I} = VcatLayout{tuple_type_memorylayouts(I)}()
 
 @propagate_inbounds @inline function getindex(f::Vcat{T,1}, k::Integer) where T
     κ = k

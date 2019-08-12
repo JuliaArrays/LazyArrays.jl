@@ -125,13 +125,10 @@ IndexStyle(::ApplyArray{<:Any,1}) = IndexLinear()
 materialize(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 
-struct  ApplyLayout{F, LAY} <: MemoryLayout
-    f::F
-    layouts::LAY
-end
+struct  ApplyLayout{F, LAY} <: MemoryLayout end
 
-MemoryLayout(M::Applied) = ApplyLayout(M.f, MemoryLayout.(M.args))
-MemoryLayout(M::ApplyArray) = MemoryLayout(M.applied)
+MemoryLayout(M::Type{Applied{Style,F,Args}}) where {Style,F,Args} = ApplyLayout{F,tuple_type_memorylayouts(Args)}()
+MemoryLayout(M::Type{ApplyArray{T,N,App}}) where {T,N,App<:Applied} = MemoryLayout(App)
 
 function show(io::IO, A::Applied) 
     print(io, "Applied(", A.f)

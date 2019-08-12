@@ -1,116 +1,113 @@
 using LazyArrays, LinearAlgebra, FillArrays, Test
-    import LazyArrays: MemoryLayout, DenseRowMajor, DenseColumnMajor, StridedLayout,
-                            ConjLayout, RowMajor, ColumnMajor, UnknownLayout,
-                            SymmetricLayout, HermitianLayout, UpperTriangularLayout,
-                            UnitUpperTriangularLayout, LowerTriangularLayout,
-                            UnitLowerTriangularLayout, ScalarLayout,
-                            hermitiandata, symmetricdata, FillLayout, ZerosLayout,
-                            VcatLayout, BroadcastLayout, Add, AddArray, ApplyLayout
+import LazyArrays: MemoryLayout, DenseRowMajor, DenseColumnMajor, StridedLayout,
+                        ConjLayout, RowMajor, ColumnMajor, UnknownLayout,
+                        SymmetricLayout, HermitianLayout, UpperTriangularLayout,
+                        UnitUpperTriangularLayout, LowerTriangularLayout,
+                        UnitLowerTriangularLayout, ScalarLayout,
+                        hermitiandata, symmetricdata, FillLayout, ZerosLayout,
+                        VcatLayout, BroadcastLayout, Add, AddArray, ApplyLayout
 
 struct FooBar end
 struct FooNumber <: Number end
 
 @testset "MemoryLayout" begin
     @testset "Trivial" begin
-        @test MemoryLayout(1.0) == MemoryLayout(1) == MemoryLayout(FooNumber()) == ScalarLayout()
-        @test MemoryLayout(FooBar()) == UnknownLayout()
+        @test MemoryLayout(Float64) == MemoryLayout(Int) == MemoryLayout(FooNumber) == ScalarLayout()
+        @test MemoryLayout(FooBar) == UnknownLayout()
 
         A = randn(6)
-        @test MemoryLayout(A) == MemoryLayout(Base.ReshapedArray(A,(2,3),())) == MemoryLayout(reinterpret(Float32,A)) ==
-            DenseColumnMajor()
-
+        @test MemoryLayout(typeof(A)) == MemoryLayout(typeof(Base.ReshapedArray(A,(2,3),()))) == 
+            MemoryLayout(typeof(reinterpret(Float32,A))) == DenseColumnMajor()
     end
 
     @testset "adjoint and transpose MemoryLayout" begin
         A = [1.0 2; 3 4]
-        @test MemoryLayout(A') == DenseRowMajor()
-        @test MemoryLayout(transpose(A)) == DenseRowMajor()
+        @test MemoryLayout(typeof(A')) == DenseRowMajor()
+        @test MemoryLayout(typeof(transpose(A))) == DenseRowMajor()
         B = [1.0+im 2; 3 4]
-        @test MemoryLayout(B') == ConjLayout(DenseRowMajor())
-        @test MemoryLayout(transpose(B)) == DenseRowMajor()
+        @test MemoryLayout(typeof(B')) == ConjLayout{DenseRowMajor}()
+        @test MemoryLayout(typeof(transpose(B))) == DenseRowMajor()
         VA = view(A, 1:1, 1:1)
-        @test MemoryLayout(VA') == RowMajor()
-        @test MemoryLayout(transpose(VA)) == RowMajor()
+        @test MemoryLayout(typeof(VA')) == RowMajor()
+        @test MemoryLayout(typeof(transpose(VA))) == RowMajor()
         VB = view(B, 1:1, 1:1)
-        @test MemoryLayout(VB') == ConjLayout(RowMajor())
-        @test MemoryLayout(transpose(VB)) == RowMajor()
+        @test MemoryLayout(typeof(VB')) == ConjLayout{RowMajor}()
+        @test MemoryLayout(typeof(transpose(VB))) == RowMajor()
         VA = view(A, 1:2:2, 1:2:2)
-        @test MemoryLayout(VA') == StridedLayout()
-        @test MemoryLayout(transpose(VA)) == StridedLayout()
+        @test MemoryLayout(typeof(VA')) == StridedLayout()
+        @test MemoryLayout(typeof(transpose(VA))) == StridedLayout()
         VB = view(B, 1:2:2, 1:2:2)
-        @test MemoryLayout(VB') == ConjLayout(StridedLayout())
-        @test MemoryLayout(transpose(VB)) == StridedLayout()
+        @test MemoryLayout(typeof(VB')) == ConjLayout{StridedLayout}()
+        @test MemoryLayout(typeof(transpose(VB))) == StridedLayout()
         VA2 = view(A, [1,2], :)
-        @test MemoryLayout(VA2') == UnknownLayout()
-        @test MemoryLayout(transpose(VA2)) == UnknownLayout()
+        @test MemoryLayout(typeof(VA2')) == UnknownLayout()
+        @test MemoryLayout(typeof(transpose(VA2))) == UnknownLayout()
         VB2 = view(B, [1,2], :)
-        @test MemoryLayout(VB2') == UnknownLayout()
-        @test MemoryLayout(transpose(VB2)) == UnknownLayout()
+        @test MemoryLayout(typeof(VB2')) == UnknownLayout()
+        @test MemoryLayout(typeof(transpose(VB2))) == UnknownLayout()
         VAc = view(A', 1:1, 1:1)
-        @test MemoryLayout(VAc) == RowMajor()
+        @test MemoryLayout(typeof(VAc)) == RowMajor()
         VAt = view(transpose(A), 1:1, 1:1)
-        @test MemoryLayout(VAt) == RowMajor()
+        @test MemoryLayout(typeof(VAt)) == RowMajor()
         VBc = view(B', 1:1, 1:1)
-        @test MemoryLayout(VBc) == ConjLayout(RowMajor())
+        @test MemoryLayout(typeof(VBc)) == ConjLayout{RowMajor}()
         VBt = view(transpose(B), 1:1, 1:1)
-        @test MemoryLayout(VBt) == RowMajor()
+        @test MemoryLayout(typeof(VBt)) == RowMajor()
     end
 
-
     @testset "Symmetric/Hermitian MemoryLayout" begin
-         A = [1.0 2; 3 4]
-         @test MemoryLayout(Symmetric(A)) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Hermitian(A)) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Transpose(Symmetric(A))) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Transpose(Hermitian(A))) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Adjoint(Symmetric(A))) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Adjoint(Hermitian(A))) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(view(Symmetric(A),:,:)) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(view(Hermitian(A),:,:)) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Symmetric(A')) == SymmetricLayout(DenseRowMajor(),'U')
-         @test MemoryLayout(Hermitian(A')) == SymmetricLayout(DenseRowMajor(),'U')
-         @test MemoryLayout(Symmetric(transpose(A))) == SymmetricLayout(DenseRowMajor(),'U')
-         @test MemoryLayout(Hermitian(transpose(A))) == SymmetricLayout(DenseRowMajor(),'U')
+        A = [1.0 2; 3 4]
+        @test MemoryLayout(typeof(Symmetric(A))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Hermitian(A))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Transpose(Symmetric(A)))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Transpose(Hermitian(A)))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Adjoint(Symmetric(A)))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Adjoint(Hermitian(A)))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(view(Symmetric(A),:,:))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(view(Hermitian(A),:,:))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Symmetric(A'))) == SymmetricLayout{DenseRowMajor}()
+        @test MemoryLayout(typeof(Hermitian(A'))) == SymmetricLayout{DenseRowMajor}()
+        @test MemoryLayout(typeof(Symmetric(transpose(A)))) == SymmetricLayout{DenseRowMajor}()
+        @test MemoryLayout(typeof(Hermitian(transpose(A)))) == SymmetricLayout{DenseRowMajor}()
 
-         @test symmetricdata(Symmetric(A)) ≡ A
-         @test symmetricdata(Hermitian(A)) ≡ A
-         @test symmetricdata(Transpose(Symmetric(A))) ≡ A
-         @test symmetricdata(Transpose(Hermitian(A))) ≡ A
-         @test symmetricdata(Adjoint(Symmetric(A))) ≡ A
-         @test symmetricdata(Adjoint(Hermitian(A))) ≡ A
-         @test symmetricdata(view(Symmetric(A),:,:)) ≡ A
-         @test symmetricdata(view(Hermitian(A),:,:)) ≡ A
-         @test symmetricdata(Symmetric(A')) ≡ A'
-         @test symmetricdata(Hermitian(A')) ≡ A'
-         @test symmetricdata(Symmetric(transpose(A))) ≡ transpose(A)
-         @test symmetricdata(Hermitian(transpose(A))) ≡ transpose(A)
+        @test symmetricdata(Symmetric(A)) ≡ A
+        @test symmetricdata(Hermitian(A)) ≡ A
+        @test symmetricdata(Transpose(Symmetric(A))) ≡ A
+        @test symmetricdata(Transpose(Hermitian(A))) ≡ A
+        @test symmetricdata(Adjoint(Symmetric(A))) ≡ A
+        @test symmetricdata(Adjoint(Hermitian(A))) ≡ A
+        @test symmetricdata(view(Symmetric(A),:,:)) ≡ A
+        @test symmetricdata(view(Hermitian(A),:,:)) ≡ A
+        @test symmetricdata(Symmetric(A')) ≡ A'
+        @test symmetricdata(Hermitian(A')) ≡ A'
+        @test symmetricdata(Symmetric(transpose(A))) ≡ transpose(A)
+        @test symmetricdata(Hermitian(transpose(A))) ≡ transpose(A)
 
-         B = [1.0+im 2; 3 4]
-         @test MemoryLayout(Symmetric(B)) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Hermitian(B)) == HermitianLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Transpose(Symmetric(B))) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Transpose(Hermitian(B))) == UnknownLayout()
-         @test MemoryLayout(Adjoint(Symmetric(B))) == UnknownLayout()
-         @test MemoryLayout(Adjoint(Hermitian(B))) == HermitianLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(view(Symmetric(B),:,:)) == SymmetricLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(view(Hermitian(B),:,:)) == HermitianLayout(DenseColumnMajor(),'U')
-         @test MemoryLayout(Symmetric(B')) == UnknownLayout()
-         @test MemoryLayout(Hermitian(B')) == UnknownLayout()
-         @test MemoryLayout(Symmetric(transpose(B))) == SymmetricLayout(DenseRowMajor(),'U')
-         @test MemoryLayout(Hermitian(transpose(B))) == HermitianLayout(DenseRowMajor(),'U')
+        B = [1.0+im 2; 3 4]
+        @test MemoryLayout(typeof(Symmetric(B))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Hermitian(B))) == HermitianLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Transpose(Symmetric(B)))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Transpose(Hermitian(B)))) == UnknownLayout()
+        @test MemoryLayout(typeof(Adjoint(Symmetric(B)))) == UnknownLayout()
+        @test MemoryLayout(typeof(Adjoint(Hermitian(B)))) == HermitianLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(view(Symmetric(B),:,:))) == SymmetricLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(view(Hermitian(B),:,:))) == HermitianLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(Symmetric(B'))) == UnknownLayout()
+        @test MemoryLayout(typeof(Hermitian(B'))) == UnknownLayout()
+        @test MemoryLayout(typeof(Symmetric(transpose(B)))) == SymmetricLayout{DenseRowMajor}()
+        @test MemoryLayout(typeof(Hermitian(transpose(B)))) == HermitianLayout{DenseRowMajor}()
 
-         @test symmetricdata(Symmetric(B)) ≡ B
-         @test hermitiandata(Hermitian(B)) ≡ B
-         @test symmetricdata(Transpose(Symmetric(B))) ≡ B
-         @test hermitiandata(Adjoint(Hermitian(B))) ≡ B
-         @test symmetricdata(view(Symmetric(B),:,:)) ≡ B
-         @test hermitiandata(view(Hermitian(B),:,:)) ≡ B
-         @test symmetricdata(Symmetric(B')) ≡ B'
-         @test hermitiandata(Hermitian(B')) ≡ B'
-         @test symmetricdata(Symmetric(transpose(B))) ≡ transpose(B)
-         @test hermitiandata(Hermitian(transpose(B))) ≡ transpose(B)
+        @test symmetricdata(Symmetric(B)) ≡ B
+        @test hermitiandata(Hermitian(B)) ≡ B
+        @test symmetricdata(Transpose(Symmetric(B))) ≡ B
+        @test hermitiandata(Adjoint(Hermitian(B))) ≡ B
+        @test symmetricdata(view(Symmetric(B),:,:)) ≡ B
+        @test hermitiandata(view(Hermitian(B),:,:)) ≡ B
+        @test symmetricdata(Symmetric(B')) ≡ B'
+        @test hermitiandata(Hermitian(B')) ≡ B'
+        @test symmetricdata(Symmetric(transpose(B))) ≡ transpose(B)
+        @test hermitiandata(Hermitian(transpose(B))) ≡ transpose(B)
      end
-
 
     @testset "triangular MemoryLayout" begin
         A = [1.0 2; 3 4]
@@ -119,40 +116,40 @@ struct FooNumber <: Number end
                               (UnitUpperTriangular, UnitUpperTriangularLayout, UnitLowerTriangularLayout),
                               (LowerTriangular, LowerTriangularLayout, UpperTriangularLayout),
                               (UnitLowerTriangular, UnitLowerTriangularLayout, UnitUpperTriangularLayout))
-            @test MemoryLayout(TriType(A)) == TriLayout(DenseColumnMajor())
-            @test MemoryLayout(TriType(transpose(A))) == TriLayout(DenseRowMajor())
-            @test MemoryLayout(TriType(A')) == TriLayout(DenseRowMajor())
-            @test MemoryLayout(transpose(TriType(A))) == TriLayoutTrans(DenseRowMajor())
-            @test MemoryLayout(TriType(A)') == TriLayoutTrans(DenseRowMajor())
+            @test MemoryLayout(typeof(TriType(A))) == TriLayout{DenseColumnMajor}()
+            @test MemoryLayout(typeof(TriType(transpose(A)))) == TriLayout{DenseRowMajor}()
+            @test MemoryLayout(typeof(TriType(A'))) == TriLayout{DenseRowMajor}()
+            @test MemoryLayout(typeof(transpose(TriType(A)))) == TriLayoutTrans{DenseRowMajor}()
+            @test MemoryLayout(typeof(TriType(A)')) == TriLayoutTrans{DenseRowMajor}()
 
-            @test MemoryLayout(TriType(B)) == TriLayout(DenseColumnMajor())
-            @test MemoryLayout(TriType(transpose(B))) == TriLayout(DenseRowMajor())
-            @test MemoryLayout(TriType(B')) == TriLayout(ConjLayout(DenseRowMajor()))
-            @test MemoryLayout(transpose(TriType(B))) == TriLayoutTrans(DenseRowMajor())
-            @test MemoryLayout(TriType(B)') == TriLayoutTrans(ConjLayout(DenseRowMajor()))
+            @test MemoryLayout(typeof(TriType(B))) == TriLayout{DenseColumnMajor}()
+            @test MemoryLayout(typeof(TriType(transpose(B)))) == TriLayout{DenseRowMajor}()
+            @test MemoryLayout(typeof(TriType(B'))) == TriLayout{ConjLayout{DenseRowMajor}}()
+            @test MemoryLayout(typeof(transpose(TriType(B)))) == TriLayoutTrans{DenseRowMajor}()
+            @test MemoryLayout(typeof(TriType(B)')) == TriLayoutTrans{ConjLayout{DenseRowMajor}}()
         end
 
-        @test MemoryLayout(UpperTriangular(B)') == MemoryLayout(LowerTriangular(B'))
+        @test MemoryLayout(typeof(UpperTriangular(B)')) == MemoryLayout(typeof(LowerTriangular(B')))
     end
 
     @testset "Fill and Vcat" begin
-        @test MemoryLayout(Fill(1,10)) == FillLayout()
-        @test MemoryLayout(Ones(10)) == FillLayout()
-        @test MemoryLayout(Zeros(10)) == ZerosLayout()
-        @test MemoryLayout(Vcat(Ones(10),Zeros(10))) == VcatLayout((FillLayout(), ZerosLayout()))
-        @test MemoryLayout(Vcat([1.],Zeros(10))) == VcatLayout((DenseColumnMajor(), ZerosLayout()))
+        @test MemoryLayout(typeof(Fill(1,10))) == FillLayout()
+        @test MemoryLayout(typeof(Ones(10))) == FillLayout()
+        @test MemoryLayout(typeof(Zeros(10))) == ZerosLayout()
+        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == VcatLayout{Tuple{FillLayout,ZerosLayout}}()
+        @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == VcatLayout{Tuple{DenseColumnMajor,ZerosLayout}}()
     end
 
     @testset "BroadcastArray" begin
         A = [1.0 2; 3 4]
-        @test MemoryLayout(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2))) ==
-            BroadcastLayout(+, (DenseColumnMajor(), FillLayout(), ZerosLayout()))
+        @test @inferred(MemoryLayout(typeof(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
+            BroadcastLayout{typeof(+), Tuple{DenseColumnMajor, FillLayout, ZerosLayout}}()
     end
 
     @testset "ApplyArray" begin
         A = [1.0 2; 3 4]
         @test eltype(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))) == Float64
-        @test MemoryLayout(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))) ==
-            ApplyLayout(+, (DenseColumnMajor(), FillLayout(), ZerosLayout()))
+        @test @inferred(MemoryLayout(typeof(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
+            ApplyLayout{typeof(+), Tuple{DenseColumnMajor, FillLayout, ZerosLayout}}()
     end
 end
