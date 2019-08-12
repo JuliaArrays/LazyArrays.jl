@@ -1,6 +1,6 @@
 using LazyArrays, FillArrays, Test
 import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
-            ApplyArray, ApplyMatrix, ApplyVector
+            ApplyArray, ApplyMatrix, ApplyVector, LazyArrayApplyStyle
 
 @testset "Applied" begin
     @test applied(exp,1) isa Applied{DefaultApplyStyle}
@@ -28,10 +28,14 @@ end
     @test c[1] == c[1,1]
     @test exp(A)*b ≈ c
 
-    @test ApplyArray(+,[1,2],[3,4]) == ApplyVector(+,[1,2],[3,4]) ==
-            ApplyArray(+,[1,2],[3,4])
+    @test ApplyArray(+,[1,2],[3,4]) == ApplyVector(+,[1,2],[3,4]) == ApplyArray(+,[1,2],[3,4])
 
     @test LazyArrays.rowsupport(Diagonal(1:10),3) == 3:3
-    @test ApplyArray(*, Ones(100_000_000,100_000_000), Diagonal(1:100_000_000))[1:10,1:10] == 
-            ones(10,10)*Diagonal(1:10)
+    M = ApplyArray(*, Ones(100_000_000,100_000_000), Diagonal(1:100_000_000))
+    @test M[1,1] === 1.0
+    @test M[1:10,1:10] == ones(10,10)*Diagonal(1:10)
+
+    M = copy(Applied{LazyArrayApplyStyle}(exp, (A,)))
+    @test M isa ApplyArray
+    @test M == exp(A)
 end

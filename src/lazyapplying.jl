@@ -55,8 +55,6 @@ _materialize(A::Applied, _) = copy(A)
 @inline copyto!(dest, M::Applied) = copyto!(dest, materialize(M))
 @inline copyto!(dest::AbstractArray, M::Applied) = copyto!(dest, materialize(M))
 
-# Used for when a lazy version should be constructed on materialize
-struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
 broadcastable(M::Applied) = M
 
 
@@ -108,8 +106,7 @@ axes(A::Applied{<:MatrixFunctionStyle}) = axes(first(A.args))
 size(A::Applied{<:MatrixFunctionStyle}) = size(first(A.args))
 eltype(A::Applied{<:MatrixFunctionStyle}) = eltype(first(A.args))
 
-getindex(A::Applied{<:MatrixFunctionStyle}, k::Int, j::Int) =
-    materialize(A)[k,j]
+getindex(A::Applied, kj...) = materialize(A)[kj...]
 
 """
     LazyArray(x::Applied) :: ApplyArray
@@ -120,16 +117,18 @@ array.
 """
 abstract type LazyArray{T,N} <: AbstractArray{T,N} end
 
-struct ApplyArray{T, N, App<:Applied} <: LazyArray{T,N}
-    applied::App
+struct ApplyArray{T, N, F, Args<:Tuple} <: LazyArray{T,N}
+    f::F
+    args::Args
 end
 
-const ApplyVector{T, App<:Applied} = ApplyArray{T, 1, App}
-const ApplyMatrix{T, App<:Applied} = ApplyArray{T, 2, App}
+const ApplyVector{T, F, Args<:Tuple} = ApplyArray{T, 1, F, Args}
+const ApplyMatrix{T, F, Args<:Tuple} = ApplyArray{T, 2, F, Args}
 
 LazyArray(A::Applied) = ApplyArray(A)
 
-ApplyArray{T,N}(M::App) where {T,N,App<:Applied} = ApplyArray{T,N,App}(instantiate(M))
+ApplyArray{T,N,F,Args}(M::Applied) where {T,N,F,Args} = ApplyArray{T,N,F,Args}(M.f, M.args)
+ApplyArray{T,N}(M::Applied{Style,F,Args}) where {T,N,Style,F,Args} = ApplyArray{T,N,F,Args}(instantiate(M))
 ApplyArray{T}(M::Applied) where {T} = ApplyArray{T,ndims(M)}(M)
 ApplyArray(M::Applied) = ApplyArray{eltype(M)}(M)
 ApplyVector(M::Applied) = ApplyVector{eltype(M)}(M)
@@ -142,22 +141,45 @@ ApplyArray{T,N}(f, factors...) where {T,N} = ApplyArray{T,N}(applied(f, factors.
 ApplyVector(f, factors...) = ApplyVector(applied(f, factors...))
 ApplyMatrix(f, factors...) = ApplyMatrix(applied(f, factors...))
 
+function getproperty(A::ApplyArray, d::Symbol)
+    if d == :applied
+        applied(A.f, A.args...)
+    else
+        getfield(A, d)
+    end
+end
+
 axes(A::ApplyArray) = axes(A.applied)
 size(A::ApplyArray) = map(length, axes(A))
 copy(A::ApplyArray) = copy(A.applied)
 
+
+struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
+copy(A::Applied{<:LazyArrayApplyStyle}) = ApplyArray(A)
+
 IndexStyle(::ApplyArray{<:Any,1}) = IndexLinear()
 
-@propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Int,N}) where {T,N} =
-    materialize(A.applied)[kj...]
+@propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Int,N}) where {T,N} = A.applied[kj...]
 
+
+for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
+            :cosh, :sinh, :tanh, :csch, :sech, :coth,
+            :acosh, :asinh, :atanh, :acsch, :asech, :acoth,
+            :acos, :asin, :atan, :acsc, :asec, :acot)
+    @eval begin
+        ndims(M::Applied{LazyArrayApplyStyle,typeof($F)}) = ndims(first(M.args))
+        axes(M::Applied{LazyArrayApplyStyle,typeof($F)}) = axes(first(M.args))
+        size(M::Applied{LazyArrayApplyStyle,typeof($F)}) = size(first(M.args))
+        eltype(M::Applied{LazyArrayApplyStyle,typeof($F)}) = eltype(first(M.args))
+    end
+end
 copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 
 struct  ApplyLayout{F, LAY} <: MemoryLayout end
 
 MemoryLayout(M::Type{Applied{Style,F,Args}}) where {Style,F,Args} = ApplyLayout{F,tuple_type_memorylayouts(Args)}()
-MemoryLayout(M::Type{ApplyArray{T,N,App}}) where {T,N,App<:Applied} = MemoryLayout(App)
+MemoryLayout(M::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} = ApplyLayout{F,tuple_type_memorylayouts(Args)}()
 
 function show(io::IO, A::Applied) 
     print(io, "Applied(", A.f)
