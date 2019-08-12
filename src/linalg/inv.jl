@@ -35,18 +35,17 @@ eltype(A::InvOrPInv) = eltype(parent(A))
 
 
 struct Ldiv{StyleA, StyleB, AType, BType}
-    style_A::StyleA
-    style_B::StyleB
     A::AType
     B::BType
 end
 
-Ldiv(A, B) = Ldiv(MemoryLayout(A), MemoryLayout(B), A, B)
+Ldiv(A::AType, B::BType) where {AType,BType} = 
+    Ldiv{typeof(MemoryLayout(AType)),typeof(MemoryLayout(BType)),AType,BType}(A, B)
 
 struct LdivBroadcastStyle <: BroadcastStyle end
 struct LdivApplyStyle <: ApplyStyle end
 
-ApplyStyle(::typeof(\), A::AbstractArray, B::AbstractArray) = LdivApplyStyle()
+ApplyStyle(::typeof(\), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = LdivApplyStyle()
 
 size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractMatrix}) = (size(L.A, 2),size(L.B,2))
 size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) = (size(L.A, 2),)
@@ -55,27 +54,22 @@ axes(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) = (axes(L.A, 2),)
 length(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =size(L.A, 2)
 
 ndims(L::Ldiv) = ndims(last(L.args))
-eltype(M::Ldiv) = promote_type(Base.promote_op(inv, eltype(first(M.args))),
-                                                    eltype(last(M.args)))
+eltype(M::Ldiv) = promote_type(Base.promote_op(inv, eltype(M.A)), eltype(M.B))
 
-
+BroadcastStyle(::Type{<:Ldiv}) = ApplyBroadcastStyle()
+broadcastable(M::Ldiv) = M
 
 
 similar(A::InvOrPInv, ::Type{T}) where T = Array{T}(undef, size(A))
 similar(A::Ldiv, ::Type{T}) where T = Array{T}(undef, size(A))
+similar(A::Ldiv) = similar(A, eltype(A))
 
 materialize(M::Ldiv) = copyto!(similar(M), M)
 
 if VERSION ≥ v"1.1-pre"
-    function copyto!(dest::AbstractArray, M::Ldiv)
-        A, B = M.args
-        ldiv!(dest, factorize(A), B)
-    end
+    copyto!(dest::AbstractArray, M::Ldiv) = ldiv!(dest, factorize(M.A), M.B)
 else
-    function copyto!(dest::AbstractArray, M::Ldiv)
-        A, B = M.args
-        ldiv!(dest, factorize(A), copy(B))
-    end
+    copyto!(dest::AbstractArray, M::Ldiv) = ldiv!(dest, factorize(M.A), copy(M.B))
 end
 
 const MatLdivVec{styleA, styleB, T, V} = Ldiv{styleA, styleB, <:AbstractMatrix{T}, <:AbstractVector{V}}
@@ -89,59 +83,40 @@ const BlasMatLdivMat{styleA, styleB, T<:BlasFloat} = MatLdivMat{styleA, styleB, 
 # Triangular
 ###
 
-@inline function copyto!(dest::AbstractVector, M::Ldiv{<:TriangularLayout})
-    A, B = M.args
+@inline function copyto!(dest::AbstractArray, M::Ldiv{<:TriangularLayout})
+    A, B = M.A, M.B
     dest ≡ B || (dest .= B)
-    apply!(\, A, dest)
+    materialize!(Ldiv(A, dest))
 end
 
-function materialize!(M::Ldiv{<:TriangularLayout})
-    A, B = M.args
-    ldiv!(A, B)
-end
+materialize!(M::Ldiv) = ldiv!(M.A, M.B)
 
-@inline function materialize!(M::BlasMatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
-                                                <:AbstractStridedLayout}) where {UPLO,UNIT}
-    A,B = M.args
-    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(A), B)
-end
+@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
+                                       <:AbstractStridedLayout}) where {UPLO,UNIT} =
+    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(M.A), M.B)
 
-@inline function materialize!(M::BlasMatLdivVec{<:TriangularLayout{'U',UNIT,<:AbstractRowMajor},
-                                                <:AbstractStridedLayout}) where {UNIT}
-    A,B = M.args
-    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(A)), B)
-end
+@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{'U',UNIT,<:AbstractRowMajor},
+                                                <:AbstractStridedLayout}) where {UNIT} =
+    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(M.A)), M.B)
 
-@inline function materialize!(M::BlasMatLdivVec{<:TriangularLayout{'L',UNIT,<:AbstractRowMajor},
-                                                <:AbstractStridedLayout}) where {UNIT}
-    A,B = M.args
-    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(A)), B)
-end
+@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{'L',UNIT,<:AbstractRowMajor},
+                                                <:AbstractStridedLayout}) where {UNIT} =
+    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(M.A)), M.B)
 
 
-@inline function materialize!(M::BlasMatLdivVec{<:TriangularLayout{'U',UNIT,<:ConjLayout{<:AbstractRowMajor}},
-                                                <:AbstractStridedLayout}) where {UNIT}
-    A,B = M.args
-    BLAS.trsv!('L', 'C', UNIT, triangulardata(A)', B)
-end
+@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{'U',UNIT,<:ConjLayout{<:AbstractRowMajor}},
+                                                <:AbstractStridedLayout}) where {UNIT} =
+    BLAS.trsv!('L', 'C', UNIT, triangulardata(M.A)', M.B)
 
-@inline function materialize!(M::BlasMatLdivVec{<:TriangularLayout{'L',UNIT,<:ConjLayout{<:AbstractRowMajor}},
-                                                <:AbstractStridedLayout}) where {UNIT,T}
-    A,B = M.args
-    BLAS.trsv!('U', 'C', UNIT, triangulardata(A)', B)
-end
-
-@inline function copyto!(dest::AbstractMatrix, M::MatLdivMat{<:TriangularLayout})
-    A,x = M.args
-    x ≡ dest || copyto!(dest, x)
-    apply!(\, A, dest)
-end
+@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{'L',UNIT,<:ConjLayout{<:AbstractRowMajor}},
+                                                <:AbstractStridedLayout}) where {UNIT,T} =
+    BLAS.trsv!('U', 'C', UNIT, triangulardata(M.A)', M.B)
 
 function materialize!(M::MatLdivMat{<:TriangularLayout})
-    A,X = M.args
+    A,X = M.A,M.B
     size(A,2) == size(X,1) || thow(DimensionMismatch("Dimensions must match"))
     @views for j in axes(X,2)
-        apply!(\, A, X[:,j])
+        materialize!(Ldiv(A, X[:,j]))
     end
     X
 end
@@ -165,13 +140,32 @@ size(A::PInvMatrix) = map(length, axes(A))
 @propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
     (parent(A.applied)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
-struct LdivStyle <: ApplyStyle end
+mulapplystyle(::ApplyLayout{typeof(inv)}, _) = LdivApplyStyle()
+mulapplystyle(::ApplyLayout{typeof(pinv)}, _) = LdivApplyStyle()
 
-ApplyStyle(::typeof(*), ::Type{<:PInvMatrix}, t::Type...) = LdivStyle()
-ApplyStyle(::typeof(*), ::Type{<:InvMatrix}, t::Type...) = LdivStyle()
+similar(M::Applied{LdivApplyStyle}, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
+similar(M::Applied{LdivApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
+
+materialize(A::Mul{LdivApplyStyle}) = _materialize(A, axes(A))
+_materialize(A::Applied{LdivApplyStyle}, _) = copyto!(similar(A), A)
 
 
-@inline function copyto!(dest::AbstractArray, M::Mul{LdivStyle})
+@inline function materialize!(M::Mul{LdivApplyStyle})
+    Ai,b = M.args
+    materialize!(Ldiv(parent(Ai.applied), b))
+end
+
+@inline function copyto!(dest::AbstractArray, M::Mul{LdivApplyStyle})
+    Ai,b = M.args
+    dest .= Ldiv(parent(Ai.applied), b)
+end
+
+@inline function materialize!(M::Applied{LdivApplyStyle,typeof(\)})
+    Ai,b = M.args
+    materialize!(Ldiv(parent(Ai.applied), b))
+end
+
+@inline function copyto!(dest::AbstractArray, M::Applied{LdivApplyStyle,typeof(\)})
     Ai,b = M.args
     dest .= Ldiv(parent(Ai.applied), b)
 end

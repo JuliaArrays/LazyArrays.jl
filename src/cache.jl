@@ -26,7 +26,7 @@ CachedArray(array::AbstractArray{T,N}) where {T,N} =
 Caches the entries of an array.
 """
 cache(::Type{MT}, O::AbstractArray) where {MT<:AbstractArray} = CachedArray(MT,O;kwds...)
-cache(A::AbstractArray) = _cache(MemoryLayout(A), A)
+cache(A::AbstractArray) = _cache(MemoryLayout(typeof(A)), A)
 _cache(_, O::AbstractArray) = CachedArray(O)
 _cache(_, O::CachedArray) = CachedArray(copy(O.data), O.array, O.datasize)
 _cache(::AbstractStridedLayout, O::AbstractArray) = copy(O)

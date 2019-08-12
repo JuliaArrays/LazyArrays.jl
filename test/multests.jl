@@ -1,6 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
-                    MulAddStyle, Applied, ApplyStyle, RmulStyle
+                    MulAddStyle, Applied, ApplyStyle, LmulStyle
 import Base.Broadcast: materialize, materialize!, broadcasted
 
 @testset "Mul" begin
@@ -525,7 +525,7 @@ import Base.Broadcast: materialize, materialize!, broadcasted
             A = randn(Float64, 100, 100)
             x = randn(Float64, 100)
 
-            @test ApplyStyle(*, typeof(UpperTriangular(A)), typeof(x)) isa RmulStyle
+            @test ApplyStyle(*, typeof(UpperTriangular(A)), typeof(x)) isa LmulStyle
 
             @test all((y = copy(x); y .= Mul(UpperTriangular(A),y) ) .===
                         (similar(x) .= Mul(UpperTriangular(A),x)) .===

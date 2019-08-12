@@ -52,8 +52,8 @@ materialize(M::Applied{<:AbstractArrayApplyStyle}) = _materialize(instantiate(M)
 _materialize(A::Applied{<:AbstractArrayApplyStyle}, _) = copy(A)
 _materialize(A::Applied, _) = copy(A)
 
-@inline copyto!(dest::AbstractArray, M::Applied{DefaultApplyStyle}) = copyto!(dest, materialize(M))
-@inline copyto!(dest, M::Applied{DefaultApplyStyle}) = copyto!(dest, materialize(M))
+@inline copyto!(dest, M::Applied) = copyto!(dest, materialize(M))
+@inline copyto!(dest::AbstractArray, M::Applied) = copyto!(dest, materialize(M))
 
 # Used for when a lazy version should be constructed on materialize
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
@@ -67,12 +67,32 @@ similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}) where T = similar(M, T
 similar(M::Applied) = similar(M, eltype(M))
 
 struct ApplyBroadcastStyle <: BroadcastStyle end
+struct ApplyArrayBroadcastStyle{N} <: Broadcast.AbstractArrayStyle{N} end
+ApplyArrayBroadcastStyle{N}(::Val{N}) where N = ApplyArrayBroadcastStyle{N}()
 
-@inline copyto!(dest::AbstractArray, bc::Broadcasted{ApplyBroadcastStyle}) =
-    copyto!(dest, first(bc.args))
 
 BroadcastStyle(::Type{<:Applied}) = ApplyBroadcastStyle()
+# temporary fix
+BroadcastStyle(::Type{<:Applied{<:Any,typeof(*),<:Tuple{<:AbstractMatrix,<:AbstractVector}}}) = ApplyArrayBroadcastStyle{1}()
+BroadcastStyle(::Type{<:Applied{<:Any,typeof(*),<:Tuple{<:AbstractMatrix,<:AbstractMatrix}}}) = ApplyArrayBroadcastStyle{2}()
+BroadcastStyle(::Type{<:Applied{<:Any,typeof(*),<:Tuple{<:AbstractVector,<:AbstractMatrix}}}) = ApplyArrayBroadcastStyle{2}()
 
+BroadcastStyle(::ApplyArrayBroadcastStyle{Any}, b::DefaultArrayStyle) = b
+BroadcastStyle(::ApplyArrayBroadcastStyle{N}, b::DefaultArrayStyle{N}) where N = b
+BroadcastStyle(::ApplyArrayBroadcastStyle{M}, b::DefaultArrayStyle{N}) where {M,N} =
+    typeof(b)(Val(max(M, N)))
+
+similar(bc::Broadcasted{ApplyArrayBroadcastStyle{N}}, ::Type{ElType}) where {N,ElType} =
+    similar(Array{ElType}, axes(bc))
+
+@inline function copyto!(dest::AbstractArray, bc::Broadcasted{ApplyBroadcastStyle}) 
+    @assert length(bc.args) == 1
+    copyto!(dest, first(bc.args))
+end
+@inline function copyto!(dest::AbstractArray, bc::Broadcasted{ApplyArrayBroadcastStyle{N}}) where N 
+    @assert length(bc.args) == 1
+    copyto!(dest, first(bc.args))    
+end
 
 struct MatrixFunctionStyle{F} <: AbstractArrayApplyStyle end
 

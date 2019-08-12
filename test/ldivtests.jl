@@ -1,5 +1,5 @@
 using LazyArrays, LinearAlgebra, Test
-import LazyArrays: ArrayLdivArrayStyle, InvMatrix
+import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivApplyStyle, Applied
 import Base.Broadcast: materialize
 
 @testset "Ldiv" begin
@@ -11,22 +11,22 @@ import Base.Broadcast: materialize
         @test size(M) == (5,)
         @test similar(M) isa Vector{Float64}
         @test materialize(M) isa Vector{Float64}
-        @test all(materialize(M) .=== (A\b))
+        @test all(materialize(M) .=== (A\b) .=== materialize(applied(\,A,b)))
 
-        @test Base.BroadcastStyle(typeof(Ldiv(A,b))) isa ArrayLdivArrayStyle
+        @test Base.BroadcastStyle(typeof(Ldiv(A,b))) isa ApplyBroadcastStyle
+        @test applied(\,A,b) isa Applied{LdivApplyStyle}
+
         @test all(copyto!(similar(b), Ldiv(A,b)) .===
                     (similar(b) .= Ldiv(A,b)) .=== InvMatrix(A) * b .===
                     materialize(Ldiv(A,b)) .===
                     apply(\,A,b) .===
                   (A\b) .=== (b̃ =  copy(b); LAPACK.gesv!(copy(A), b̃); b̃))
 
-
         @test copyto!(similar(b), Ldiv(UpperTriangular(A) , b)) ≈ UpperTriangular(A) \ b
         @test all(copyto!(similar(b), Ldiv(UpperTriangular(A) , b)) .===
                     (similar(b) .= Ldiv(UpperTriangular(A),b)) .===
                     InvMatrix(UpperTriangular(A))*b .===
                     BLAS.trsv('U', 'N', 'N', A, b) )
-
 
         @test copyto!(similar(b), Ldiv(UpperTriangular(A)' , b)) ≈ UpperTriangular(A)' \ b
         @test all(copyto!(similar(b), Ldiv(UpperTriangular(A)' , b)) .===
@@ -39,12 +39,10 @@ import Base.Broadcast: materialize
         @test InvMatrix(A) * b ≈ Matrix(A) \ b
     end
 
-
     @testset "ComplexF64 \\ *" begin
         T = ComplexF64
         A = randn(T,5,5)
         b = randn(T,5)
-        @test Base.BroadcastStyle(typeof(Ldiv(A,b))) isa ArrayLdivArrayStyle
         @test all(copyto!(similar(b), Ldiv(A,b)) .===
                     (similar(b) .= Ldiv(A,b)) .===
                   (A\b) .=== (b̃ =  copy(b); LAPACK.gesv!(copy(A), b̃); b̃))
