@@ -754,6 +754,14 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         A, x =  [1 2; 3 4] , [[1,2],[3,4]]
         @test apply(*,A,x) == A*x
     end 
+
+    @testset "Broken Complex broadcast" begin
+        A = randn(5,5) .+ im*randn(5,5)
+        x = randn(5) .+ im*randn(5)
+        y = randn(5) .+ im*randn(5)
+        z = similar(x)
+        @test_broken all((z .= @~ (2.0+0.0im)*A*x + (3.0+0.0im)*y) .=== BLAS.gemv!('N',2.0+0.0im,A,x,3.0+0.0im,y))
+    end
 end
 
 
