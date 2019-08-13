@@ -749,6 +749,11 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         @test A*x == apply(*,A,x) == copyto!(similar(x), applied(*,A,x))
         @test_throws UndefRefError materialize!(MulAdd(1.0,A,x,0.0,similar(x)))
     end
+
+    @testset "Scalar * Vector" begin
+        A, x =  [1 2; 3 4] , [[1,2],[3,4]]
+        @test apply(*,A,x) == A*x
+    end 
 end
 
 

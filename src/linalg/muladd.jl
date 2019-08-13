@@ -73,12 +73,18 @@ ApplyStyle(::typeof(*), ::Type{α}, ::Type{A}, ::Type{B}) where {α<:Number, A<:
 ApplyStyle(::typeof(+), ::Type{<:Mul{MulAddStyle}}, ::Type{<:Mul}) = MulAddStyle() # TODO: simpler second arg
 ApplyStyle(::typeof(+), ::Type{<:Mul{MulAddStyle}}, ::Type{<:AbstractArray}) = MulAddStyle()
 
-_αAB(M::Mul{<:AbstractMulAddStyle,<:Tuple{<:AbstractArray,<:AbstractArray}}, ::Type{T}) where T = tuple(one(T), M.args...)
+scalarone(::Type{T}) where T = one(T)
+scalarone(::Type{<:AbstractArray{T}}) where T = scalarone(T)
+scalarzero(::Type{T}) where T = zero(T)
+scalarzero(::Type{<:AbstractArray{T}}) where T = scalarzero(T)
+
+
+_αAB(M::Mul{<:AbstractMulAddStyle,<:Tuple{<:AbstractArray,<:AbstractArray}}, ::Type{T}) where T = tuple(scalarone(T), M.args...)
 _αAB(M::Mul{<:AbstractMulAddStyle,<:Tuple{<:Number,<:AbstractArray,<:AbstractArray}}, ::Type{T}) where T = M.args
-_αABβC(M::Mul, ::Type{T}) where T = tuple(_αAB(M, T)..., zero(T), nothing)
+_αABβC(M::Mul, ::Type{T}) where T = tuple(_αAB(M, T)..., scalarzero(T), nothing)
 
 _βC(M::Mul, ::Type{T}) where T = M.args
-_βC(M::AbstractArray, ::Type{T}) where T = (one(T), M)
+_βC(M::AbstractArray, ::Type{T}) where T = (scalarone(T), M)
 
 _αABβC(M::Applied{<:AbstractMulAddStyle,typeof(+)}, ::Type{T}) where T = 
     tuple(_αAB(M.args[1], T)..., _βC(M.args[2], T)...)
@@ -90,7 +96,7 @@ copy(M::Applied{<:AbstractMulAddStyle}) = copyto!(similar(M), M)
     α,A,B,β,C = _αABβC(M, T)
     if C == nothing
         if !isbitstype(T) # instantiate
-            fill!(dest, zero(T))
+            dest .= β .* view(A,:,1) .* Ref(B[1])  # get shape right
         end
     elseif C !== dest 
         copyto!(dest, C)
