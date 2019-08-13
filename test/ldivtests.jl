@@ -109,4 +109,11 @@ import Base.Broadcast: materialize
         @test_throws DimensionMismatch inv(PInv(A))
         @test_throws DimensionMismatch InvMatrix(A)
     end
+
+    @testset "Int" begin
+        A = [1 2 ; 3 4]; b = [5,6];
+        @test eltype(applied(inv, A)) == eltype(applied(pinv, A)) == eltype(applied(\, A, b)) == eltype(Ldiv(A, b)) == 
+            eltype(ApplyArray(\, A, b)) == eltype(InvMatrix(A)) == eltype(PInvMatrix(A)) == Float64
+        @test apply(\,A,b) == A\b
+    end
 end

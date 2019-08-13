@@ -189,3 +189,12 @@ function show(io::IO, A::Applied)
     print(io, ')')
 end
 
+
+
+### 
+# Number special cases
+###
+
+for op in (:+, :-, :*, :\)
+    @eval applied(::typeof($op), x::Number, y::Number) = $op(x,y)
+end

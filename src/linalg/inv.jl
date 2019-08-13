@@ -31,8 +31,7 @@ size(A::InvOrPInv) = reverse(size(parent(A)))
 axes(A::InvOrPInv) = reverse(axes(parent(A)))
 size(A::InvOrPInv, k) = size(A)[k]
 axes(A::InvOrPInv, k) = axes(A)[k]
-eltype(A::InvOrPInv) = eltype(parent(A))
-
+eltype(A::InvOrPInv) = Base.promote_op(inv, eltype(parent(A)))
 
 struct Ldiv{StyleA, StyleB, AType, BType}
     A::AType
@@ -62,7 +61,8 @@ size(M::Applied{Style,typeof(\)}) where Style = length.(axes(M))
 ndims(L::Ldiv) = ndims(last(L.args))
 eltype(M::Ldiv) = promote_type(Base.promote_op(inv, eltype(M.A)), eltype(M.B))
 
-@inline eltype(M::Applied{Style,typeof(\)}) where Style = _mul_eltype(_eltypes(M.args...)...)
+@inline eltype(M::Applied{Style,typeof(\)}) where Style = eltype(Ldiv(M.args...))
+@inline ndims(M::Applied{Style,typeof(\)}) where Style = ndims(last(M.args))
 
 BroadcastStyle(::Type{<:Ldiv}) = ApplyBroadcastStyle()
 broadcastable(M::Ldiv) = M
