@@ -53,8 +53,16 @@ axes(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractMatrix}) = (axes(L.A, 2),axes(L.B,2))
 axes(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) = (axes(L.A, 2),)    
 length(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =size(L.A, 2)
 
+
+axes(M::Applied{Style,typeof(\)}) where Style = _mul_axes(axes(first(M.args),2), axes(last(M.args)))
+axes(M::Applied{Style,typeof(\)}, p::Int)  where Style = axes(M)[p]
+size(M::Applied{Style,typeof(\)}) where Style = length.(axes(M))
+
+
 ndims(L::Ldiv) = ndims(last(L.args))
 eltype(M::Ldiv) = promote_type(Base.promote_op(inv, eltype(M.A)), eltype(M.B))
+
+@inline eltype(M::Applied{Style,typeof(\)}) where Style = _mul_eltype(_eltypes(M.args...)...)
 
 BroadcastStyle(::Type{<:Ldiv}) = ApplyBroadcastStyle()
 broadcastable(M::Ldiv) = M
@@ -63,6 +71,7 @@ broadcastable(M::Ldiv) = M
 similar(A::InvOrPInv, ::Type{T}) where T = Array{T}(undef, size(A))
 similar(A::Ldiv, ::Type{T}) where T = Array{T}(undef, size(A))
 similar(A::Ldiv) = similar(A, eltype(A))
+
 
 materialize(M::Ldiv) = copyto!(similar(M), M)
 
@@ -146,7 +155,7 @@ mulapplystyle(::ApplyLayout{typeof(pinv)}, _) = LdivApplyStyle()
 similar(M::Applied{LdivApplyStyle}, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
 similar(M::Applied{LdivApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 
-materialize(A::Mul{LdivApplyStyle}) = _materialize(A, axes(A))
+materialize(A::Applied{LdivApplyStyle}) = _materialize(A, axes(A))
 _materialize(A::Applied{LdivApplyStyle}, _) = copyto!(similar(A), A)
 
 
@@ -157,15 +166,15 @@ end
 
 @inline function copyto!(dest::AbstractArray, M::Mul{LdivApplyStyle})
     Ai,b = M.args
-    dest .= Ldiv(parent(Ai.applied), b)
+    copyto!(dest, Ldiv(parent(Ai.applied), b))
 end
 
 @inline function materialize!(M::Applied{LdivApplyStyle,typeof(\)})
-    Ai,b = M.args
-    materialize!(Ldiv(parent(Ai.applied), b))
+    A,b = M.args
+    materialize!(Ldiv(A, b))
 end
 
 @inline function copyto!(dest::AbstractArray, M::Applied{LdivApplyStyle,typeof(\)})
-    Ai,b = M.args
-    dest .= Ldiv(parent(Ai.applied), b)
+    A,b = M.args
+    copyto!(dest, Ldiv(A, b))
 end

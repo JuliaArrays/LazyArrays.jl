@@ -8,6 +8,7 @@ include("ldivtests.jl")
 include("addtests.jl")
 include("setoptests.jl")
 include("macrotests.jl")
+include("lazymultests.jl")
 
 @testset "concat" begin
     @testset "Vcat" begin

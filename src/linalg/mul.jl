@@ -79,6 +79,9 @@ _flatten(A::Mul, B...) = _flatten(A.args..., B...)
 flatten(A) = A
 flatten(A::Mul) = Mul(_flatten(A.args...)...)
 
+const ArrayMuls = Mul{<:AbstractArrayApplyStyle, <:Tuple{<:AbstractArray,<:AbstractArray,<:AbstractArray,Vararg{<:AbstractArray}}}
+_materialize(M::ArrayMuls, _) = flatten(lmaterialize(M))
+
 
 
 rowsupport(_, A, k) = axes(A,2)
