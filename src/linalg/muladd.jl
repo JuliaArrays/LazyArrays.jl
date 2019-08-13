@@ -88,7 +88,13 @@ copy(M::Applied{<:AbstractMulAddStyle}) = copyto!(similar(M), M)
 
 @inline function copyto!(dest::AbstractArray{T}, M::Applied{<:AbstractMulAddStyle}) where T
     α,A,B,β,C = _αABβC(M, T)
-    C == nothing || C === dest || copyto!(dest, C)
+    if C == nothing
+        if !isbitstype(T) # instantiate
+            fill!(dest, zero(T))
+        end
+    elseif C !== dest 
+        copyto!(dest, C)
+    end
     materialize!(MulAdd(α, A, B, β, dest))
 end
 

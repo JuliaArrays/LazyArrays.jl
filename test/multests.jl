@@ -742,6 +742,13 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         C .= @~ 1.0 * A*B + 0.0 * C
         @test C == A*B
     end
+
+    @testset "BigFloat" begin
+        A = BigFloat.(randn(5,5))
+        x = BigFloat.(randn(5))
+        @test A*x == apply(*,A,x) == copyto!(similar(x), applied(*,A,x))
+        @test_throws UndefRefError materialize!(MulAdd(1.0,A,x,0.0,similar(x)))
+    end
 end
 
 
