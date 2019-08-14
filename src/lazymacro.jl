@@ -34,7 +34,7 @@ end
 
 function bc_expr(ex::Expr)
     @assert is_dotcall(ex)
-    return :($(Broadcast.instantiate)($lazy.($(bc_expr_impl(ex)))))
+    return :($lazy.($(bc_expr_impl(ex))))
 end
 
 bc_expr_impl(x) = x
@@ -51,7 +51,6 @@ end
 
 function app_expr(ex::Expr)
     @assert is_call(ex)
-    # instantiate?
     return app_expr_impl(ex)
 end
 
@@ -99,5 +98,5 @@ julia> @~ A * B + C
 macro ~(ex)
     checkex(ex)
     # Expanding macro here to support, e.g., `@.`
-    esc(lazy_expr(macroexpand(__module__, ex)))
+    esc(:($instantiate($(lazy_expr(macroexpand(__module__, ex))))))
 end

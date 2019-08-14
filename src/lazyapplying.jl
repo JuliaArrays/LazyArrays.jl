@@ -18,9 +18,9 @@ Applied{Style}(f::F, args::Args) where {Style,F,Args<:Tuple} =
 
 check_applied_axes(A::Applied) = nothing
 
-function instantiate(A::Applied) 
+function instantiate(A::Applied{Style}) where Style
     check_applied_axes(A)
-    A
+    Applied{Style}(A.f, map(instantiate, A.args))
 end
 
 _typesof() = ()
