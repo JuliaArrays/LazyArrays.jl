@@ -1,6 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
-                    MulAddStyle, Applied, ApplyStyle, LmulStyle
+                    MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout
 import Base.Broadcast: materialize, materialize!, broadcasted
 
 @testset "Mul" begin
@@ -529,6 +529,9 @@ import Base.Broadcast: materialize, materialize!, broadcasted
 
             @test all((y = copy(x); y .= Mul(UpperTriangular(A),y) ) .===
                         (similar(x) .= Mul(UpperTriangular(A),x)) .===
+                        copy(Lmul(UpperTriangular(A),x)) .===
+                        materialize!(Lmul(UpperTriangular(A),copy(x))) .===
+                        copyto!(similar(x),Lmul(UpperTriangular(A),x)) .===
                         BLAS.trmv!('U', 'N', 'N', A, copy(x)))
             @test all((y = copy(x); y .= Mul(UnitUpperTriangular(A),y) ) .===
                         (similar(x) .= Mul(UnitUpperTriangular(A),x)) .===
@@ -768,11 +771,30 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         b = randn(3)
         B = randn(3,3)
         Q,R = qr(A)
+        @test MemoryLayout(typeof(Q)) == QLayout()
         @test all(Q*b .=== apply(*,Q,b))
-        @test all(Q*B .=== apply(*,Q,B))
+        @test all(Q*B .=== copyto!(similar(B,5,3),Lmul(Q,B)) .=== copyto!(similar(B,5,3),applied(*,Q,B)) .=== apply(*,Q,B))
         @test all(Q*B*b .=== apply(*,Q,B,b))
         @test_throws DimensionMismatch apply(*, Q, randn(4))
         @test_throws DimensionMismatch apply(*, Q, randn(4,3))
+        dest = fill(NaN,5)
+        @test copyto!(dest, applied(*,Q,b)) == Q*b
+
+        b = randn(5)
+        B = randn(5,5)
+        @test all(Q*b .=== apply(*,Q,b))
+        @test all(Q*b .=== apply(*,Q,b))
+        @test all(Q*B .=== apply(*,Q,B))
+        @test all(Q*B*b .=== apply(*,Q,B,b))
+
+        @test MemoryLayout(typeof(Q')) == QLayout()
+        @test all(Q'b .=== apply(*,Q',b))
+        @test all(Q'B .=== apply(*,Q',B))
+        @test all(Q'B*b .=== apply(*,Q',B,b))
+        @test_throws DimensionMismatch apply(*,Q',randn(3))
+        @test_throws DimensionMismatch apply(*,Q',randn(3,3))
+        dest = fill(NaN,5)
+        @test all(copyto!(dest, applied(*,Q',b)) .=== Q'*b)
     end
 end
 

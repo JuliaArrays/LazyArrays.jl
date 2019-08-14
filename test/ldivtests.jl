@@ -116,4 +116,17 @@ import Base.Broadcast: materialize
             eltype(ApplyArray(\, A, b)) == eltype(InvMatrix(A)) == eltype(PInvMatrix(A)) == Float64
         @test apply(\,A,b) == A\b
     end
+
+    @testset "QR" begin
+        A = randn(5,3)
+        b = randn(5)
+        B = randn(5,5)
+        Q,R = qr(A)
+        @test Q\b ≈ apply(\,Q,b) 
+        @test Q\B ≈ apply(\,Q,B)
+        @test_throws DimensionMismatch apply(\, Q, randn(4))
+        @test_throws DimensionMismatch apply(\, Q, randn(4,3))
+        dest = fill(NaN,5)
+        @test copyto!(dest, applied(\,Q,b)) == apply(\,Q,b)
+    end
 end

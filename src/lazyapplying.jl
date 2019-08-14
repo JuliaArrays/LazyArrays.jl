@@ -5,7 +5,7 @@ abstract type AbstractArrayApplyStyle <: ApplyStyle end
 struct DefaultApplyStyle <: ApplyStyle end
 struct DefaultArrayApplyStyle <: AbstractArrayApplyStyle end
 
-ApplyStyle(f, args::Type...) = DefaultApplyStyle()
+ApplyStyle(f, args...) = DefaultApplyStyle()
 ApplyStyle(f, ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
 
 struct Applied{Style, F, Args<:Tuple}
@@ -44,13 +44,13 @@ materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
 # changed in which case it falls back to the default
 __default_materialize(A::App, ::App) where App = A.f(A.args...)
 __default_materialize(A, _) where App = materialize(A)
-copy(A::Applied{DefaultApplyStyle}) = A.f(A.args...)
+# copy(A::Applied{DefaultApplyStyle}) = A.f(A.args...)
 copy(A::Applied) = __default_materialize(materializeargs(A), A)
 
 
 # _materialize is for applied with axes, which defaults to using copyto!
 materialize(M::Applied{<:AbstractArrayApplyStyle}) = _materialize(instantiate(M), axes(M))
-_materialize(A::Applied{<:AbstractArrayApplyStyle}, _) = copy(A)
+_materialize(A::Applied{<:AbstractArrayApplyStyle}, _) = copy(instantiate(A))
 _materialize(A::Applied, _) = copy(A)
 
 @inline copyto!(dest, M::Applied) = copyto!(dest, materialize(M))

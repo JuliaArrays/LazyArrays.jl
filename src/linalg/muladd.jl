@@ -127,11 +127,6 @@ const BlasMatLmulMat{StyleA,StyleB,T<:BlasFloat} = Lmul{StyleA,StyleB,<:Abstract
     materialize!(MulAdd(M.α,M.A,M.B,M.β,dest))
 end
 
-@inline function copyto!(dest::AbstractArray, M::Lmul)
-    M.B ≡ dest || copyto!(dest, M.B)
-    materialize!(M)
-end
-
 import LinearAlgebra: tilebufsize, Abuf, Bbuf, Cbuf
 
 # Modified from LinearAlgebra._generic_matmatmul!
@@ -387,22 +382,35 @@ materialize!(M::BlasMatMulVecAdd{<:HermitianLayout{<:AbstractRowMajor},<:Abstrac
     _hemv!(symmetricuplo(M.A) == 'L' ? 'U' : 'L', M.α, hermitiandata(M.A)', M.B, M.β, M.C)
 
 
+####
+# LMul materialize
+####
+
+copy(M::Mul{LmulStyle}) = copyto!(similar(M), Lmul(M.args...))
+
+@inline copyto!(dest::AbstractVecOrMat, M::Mul{LmulStyle}) = copyto!(dest, Lmul(M.args...))
+
+@inline function materialize!(M::Mul{LmulStyle})
+    A,x = M.args
+    materialize!(Lmul(A, x))
+end
+
+copy(M::Lmul) = materialize!(Lmul(M.A,copy(M.B)))
+@inline function copyto!(dest::AbstractArray, M::Lmul)
+    M.B ≡ dest || copyto!(dest, M.B)
+    materialize!(Lmul(M.A,dest))
+end
+
+materialize!(M::Lmul) = lmul!(M.A,M.B)
+
+
 ###
 # Triangular
 ###
 mulapplystyle(::TriangularLayout, ::AbstractStridedLayout) = LmulStyle()
 
 
-@inline function copyto!(dest::AbstractVecOrMat, M::Mul{LmulStyle})
-    A,x = M.args
-    x ≡ dest || copyto!(dest, x)
-    materialize!(Lmul(A, dest))
-end
 
-@inline function materialize!(M::Mul{LmulStyle})
-    A,x = M.args
-    materialize!(Lmul(A, x))
-end
 
 @inline function materialize!(M::BlasMatLmulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                          <:AbstractStridedLayout, T}) where {UPLO,UNIT,T <: BlasFloat}

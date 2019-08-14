@@ -73,6 +73,11 @@ similar(A::Ldiv, ::Type{T}) where T = Array{T}(undef, size(A))
 similar(A::Ldiv) = similar(A, eltype(A))
 
 
+check_ldiv_axes(A, B) =
+    axes(A,1) == axes(B,1) || throw(DimensionMismatch("First axis of A, $(axes(A,1)), and first axis of B, $(axes(B,1)) must match"))
+
+check_applied_axes(A::Applied{<:Any,typeof(\)}) = check_ldiv_axes(A.args...)
+
 materialize(M::Ldiv) = copyto!(similar(M), M)
 
 if VERSION ≥ v"1.1-pre"
@@ -155,7 +160,7 @@ mulapplystyle(::ApplyLayout{typeof(pinv)}, _) = LdivApplyStyle()
 similar(M::Applied{LdivApplyStyle}, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
 similar(M::Applied{LdivApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 
-materialize(A::Applied{LdivApplyStyle}) = _materialize(A, axes(A))
+materialize(A::Applied{LdivApplyStyle}) = _materialize(instantiate(A), axes(A))
 _materialize(A::Applied{LdivApplyStyle}, _) = copyto!(similar(A), A)
 
 
