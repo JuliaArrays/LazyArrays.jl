@@ -762,6 +762,18 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         z = similar(x)
         @test all((z .= @~ (2.0+0.0im)*A*x + (3.0+0.0im)*y) .=== BLAS.gemv!('N',2.0+0.0im,A,x,3.0+0.0im,y))
     end
+
+    @testset "QR" begin
+        A = randn(5,3)
+        b = randn(3)
+        B = randn(3,3)
+        Q,R = qr(A)
+        @test all(Q*b .=== apply(*,Q,b))
+        @test all(Q*B .=== apply(*,Q,B))
+        @test all(Q*B*b .=== apply(*,Q,B,b))
+        @test_throws DimensionMismatch apply(*, Q, randn(4))
+        @test_throws DimensionMismatch apply(*, Q, randn(4,3))
+    end
 end
 
 

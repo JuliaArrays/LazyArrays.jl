@@ -7,7 +7,7 @@ Mul(A...) = applied(*, A...)
 
 check_mul_axes(A) = nothing
 function check_mul_axes(A, B, C...) 
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch(""))
+    axes(A,2) == axes(B,1) || throw(DimensionMismatch("Second axis of A, $(axes(A,2)), and first axis of B, $(axes(B,1)) must match"))
     check_mul_axes(B, C...)
 end
 

@@ -44,6 +44,7 @@ materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
 # changed in which case it falls back to the default
 __default_materialize(A::App, ::App) where App = A.f(A.args...)
 __default_materialize(A, _) where App = materialize(A)
+copy(A::Applied{DefaultApplyStyle}) = A.f(A.args...)
 copy(A::Applied) = __default_materialize(materializeargs(A), A)
 
 
