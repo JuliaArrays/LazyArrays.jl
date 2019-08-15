@@ -3,7 +3,7 @@ import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTr
                     MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout
 import Base.Broadcast: materialize, materialize!, broadcasted
 
-@testset "Mul" begin
+@testset "Matrix * Vector" begin
     @testset "eltype" begin
         @test @inferred(eltype(Mul(zeros(Int,2,2), zeros(Float64,2)))) == Float64
         @test @inferred(eltype(Mul(zeros(ComplexF16,2,2),zeros(Int,2,2),zeros(Float64,2)))) == ComplexF64
@@ -153,7 +153,8 @@ import Base.Broadcast: materialize, materialize!, broadcasted
             @test all(d .=== BLAS.gemv!('N', 3one(T), A, b, 2one(T), copy(b)))
         end
     end
-
+end
+@testset "Matrix * Matrix" begin
     @testset "gemm" begin
         for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
                   view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5)),
@@ -235,7 +236,7 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         end
     end
 
-    @testset "gemv mixed array types" begin
+    @testset "gemm mixed array types" begin
         (A, B, C) = (randn(5,5), randn(5,5), reshape(1.0:25.0,5,5))
         D = similar(B)
         D .= @~ A*B + C
@@ -254,7 +255,9 @@ import Base.Broadcast: materialize, materialize!, broadcasted
             (similar(B) .= 1 * A*B + 0 * B) ≈
             A*B
     end
+end
 
+@testset "Mul" begin
     @testset "gemv adjtrans" begin
         for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
                   view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5)),

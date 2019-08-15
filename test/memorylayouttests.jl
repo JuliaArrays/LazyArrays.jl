@@ -18,6 +18,16 @@ struct FooNumber <: Number end
         A = randn(6)
         @test MemoryLayout(typeof(A)) == MemoryLayout(typeof(Base.ReshapedArray(A,(2,3),()))) == 
             MemoryLayout(typeof(reinterpret(Float32,A))) == DenseColumnMajor()
+        
+        @test MemoryLayout(typeof(view(A,1:3))) == DenseColumnMajor()
+        @test MemoryLayout(typeof(view(A,Base.OneTo(3)))) == DenseColumnMajor()
+        @test MemoryLayout(typeof(view(A,:))) == DenseColumnMajor()
+        @test MemoryLayout(typeof(view(A,CartesianIndex(1,1)))) == DenseColumnMajor()
+        @test MemoryLayout(typeof(view(A,1:2:4))) == StridedLayout()
+
+        A = randn(6,6)
+        V = view(A, 1:3,:)
+        @test MemoryLayout(typeof(V)) == ColumnMajor()
     end
 
     @testset "adjoint and transpose MemoryLayout" begin
@@ -45,6 +55,18 @@ struct FooNumber <: Number end
         VB2 = view(B, [1,2], :)
         @test MemoryLayout(typeof(VB2')) == UnknownLayout()
         @test MemoryLayout(typeof(transpose(VB2))) == UnknownLayout()
+        VA2 = view(A, 1:2, :)
+        @test MemoryLayout(typeof(VA2')) == RowMajor()
+        @test MemoryLayout(typeof(transpose(VA2))) == RowMajor()
+        VB2 = view(B, 1:2, :)
+        @test MemoryLayout(typeof(VB2')) == ConjLayout{RowMajor}()
+        @test MemoryLayout(typeof(transpose(VB2))) == RowMajor()
+        VA2 = view(A, :, 1:2)
+        @test MemoryLayout(typeof(VA2')) == DenseRowMajor()
+        @test MemoryLayout(typeof(transpose(VA2))) == DenseRowMajor()
+        VB2 = view(B, :, 1:2)
+        @test MemoryLayout(typeof(VB2')) == ConjLayout{DenseRowMajor}()
+        @test MemoryLayout(typeof(transpose(VB2))) == DenseRowMajor()
         VAc = view(A', 1:1, 1:1)
         @test MemoryLayout(typeof(VAc)) == RowMajor()
         VAt = view(transpose(A), 1:1, 1:1)
@@ -53,6 +75,8 @@ struct FooNumber <: Number end
         @test MemoryLayout(typeof(VBc)) == ConjLayout{RowMajor}()
         VBt = view(transpose(B), 1:1, 1:1)
         @test MemoryLayout(typeof(VBt)) == RowMajor()
+
+        @test MemoryLayout(typeof(view(randn(5)',[1,3]))) == UnknownLayout()
     end
 
     @testset "Symmetric/Hermitian MemoryLayout" begin
@@ -132,12 +156,22 @@ struct FooNumber <: Number end
         @test MemoryLayout(typeof(UpperTriangular(B)')) == MemoryLayout(typeof(LowerTriangular(B')))
     end
 
+    @testset "Reinterpreted/Reshaped" begin
+       @test MemoryLayout(typeof(reinterpret(Float32, UInt32[1 2 3 4 5]))) == DenseColumnMajor()
+       @test MemoryLayout(typeof(reinterpret(Float32, UInt32[1 2 3 4 5]'))) == UnknownLayout()
+       @test MemoryLayout(typeof(Base.__reshape((randn(6),IndexLinear()),(2,3)))) == DenseColumnMajor()
+       @test MemoryLayout(typeof(Base.__reshape((1:6,IndexLinear()),(2,3)))) == UnknownLayout()
+    end
+
     @testset "Fill and Vcat" begin
         @test MemoryLayout(typeof(Fill(1,10))) == FillLayout()
         @test MemoryLayout(typeof(Ones(10))) == FillLayout()
         @test MemoryLayout(typeof(Zeros(10))) == ZerosLayout()
         @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == VcatLayout{Tuple{FillLayout,ZerosLayout}}()
         @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == VcatLayout{Tuple{DenseColumnMajor,ZerosLayout}}()
+
+        @test MemoryLayout(typeof(view(Fill(1,10),1:3))) == UnknownLayout()
+        @test MemoryLayout(typeof(view(Fill(1,10),1:3,1))) == UnknownLayout()
     end
 
     @testset "BroadcastArray" begin

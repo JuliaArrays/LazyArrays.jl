@@ -269,7 +269,6 @@ A matrix that has memory layout `SymmetricLayout(layout, uplo)` must overrided
 `A[k,j] == B[j,k]` for `j < k` if `uplo == 'U'` (`j > k` if `uplo == 'L'`).
 """
 struct SymmetricLayout{ML<:MemoryLayout} <: MemoryLayout end
-SymmetricLayout(::ML) where ML<:MemoryLayout = SymmetricLayout{ML}()
 
 """
     HermitianLayout(layout, uplo)
@@ -285,7 +284,6 @@ A matrix that has memory layout `HermitianLayout(layout, uplo)` must overrided
 `A[k,j] == conj(B[j,k])` for `j < k` if `uplo == 'U'` (`j > k` if `uplo == 'L'`).
 """
 struct HermitianLayout{ML<:MemoryLayout} <: MemoryLayout end
-HermitianLayout(::ML) where ML<:MemoryLayout = HermitianLayout{ML}()
 
 MemoryLayout(::Type{Hermitian{T,P}}) where {T,P} = hermitianlayout(T, MemoryLayout(P))
 MemoryLayout(::Type{Symmetric{T,P}}) where {T,P} = symmetriclayout(MemoryLayout(P))
@@ -319,8 +317,6 @@ symmetricuplo(A::SubArray{<:Any, 2, <:Any, <:Tuple{<:Slice,<:Slice}}) = symmetri
 
 # MemoryLayout of triangular matrices
 struct TriangularLayout{UPLO,UNIT,ML} <: MemoryLayout end
-
-TriangularLayout{UPLO,UNIT}(lay) where {UPLO,UNIT} = TriangularLayout{UPLO,UNIT,typeof(lay)}()
 
 
 """
@@ -395,9 +391,9 @@ MemoryLayout(A::Type{UnitUpperTriangular{T,P}}) where {T,P} = triangularlayout(U
 MemoryLayout(A::Type{LowerTriangular{T,P}}) where {T,P} = triangularlayout(LowerTriangularLayout, MemoryLayout(P))
 MemoryLayout(A::Type{UnitLowerTriangular{T,P}}) where {T,P} = triangularlayout(UnitLowerTriangularLayout, MemoryLayout(P))
 triangularlayout(_, ::MemoryLayout) = UnknownLayout()
-triangularlayout(::Type{Tri}, ML::AbstractColumnMajor) where {Tri} = Tri(ML)
-triangularlayout(::Type{Tri}, ML::AbstractRowMajor) where {Tri} = Tri(ML)
-triangularlayout(::Type{Tri}, ML::ConjLayout{<:AbstractRowMajor}) where {Tri} = Tri(ML)
+triangularlayout(::Type{Tri}, ::ML) where {Tri, ML<:AbstractColumnMajor} = Tri{ML}()
+triangularlayout(::Type{Tri}, ::ML) where {Tri, ML<:AbstractRowMajor} = Tri{ML}()
+triangularlayout(::Type{Tri}, ::ML) where {Tri, ML<:ConjLayout{<:AbstractRowMajor}} = Tri{ML}()
 subarraylayout(layout::TriangularLayout, ::Type{<:Tuple{<:Union{Slice,Base.OneTo},<:Union{Slice,Base.OneTo}}}) = layout
 conjlayout(::Type{<:Complex}, ::TriangularLayout{UPLO,UNIT,ML}) where {UPLO,UNIT,ML} =
     TriangularLayout{UPLO,UNIT,ConjLayout{ML}}()
@@ -406,7 +402,7 @@ for (TriLayout, TriLayoutTrans) in ((UpperTriangularLayout,     LowerTriangularL
                                     (UnitUpperTriangularLayout, UnitLowerTriangularLayout),
                                     (LowerTriangularLayout,     UpperTriangularLayout),
                                     (UnitLowerTriangularLayout, UnitUpperTriangularLayout))
-    @eval transposelayout(::$TriLayout{ML}) where ML = $TriLayoutTrans(transposelayout(ML()))
+    @eval transposelayout(::$TriLayout{ML}) where ML = $TriLayoutTrans{typeof(transposelayout(ML()))}()
 end
 
 triangulardata(A::AbstractTriangular) = parent(A)
