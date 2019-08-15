@@ -1,6 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
-                    MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout
+                    MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle
 import Base.Broadcast: materialize, materialize!, broadcasted
 
 @testset "Matrix * Vector" begin
@@ -807,6 +807,17 @@ end
         x = randn(5)
         M =  applied(+, applied(*,T(1.0),A,x), applied(*,T(0.0),x))
         @test axes(M) == axes(M.args[1]) == (Base.OneTo(5),)
+    end
+
+    @testset "Broadcast" begin
+        A = randn(5,5)
+        b = randn(5)
+        M = Mul(A,b)
+        @test Base.BroadcastStyle(typeof(M)) isa ApplyArrayBroadcastStyle{1}
+        @test M .+ 1 ≈ A*b .+ 1
+
+        @test Base.BroadcastStyle(ApplyArrayBroadcastStyle{1}(), Broadcast.DefaultArrayStyle{1}()) == Broadcast.DefaultArrayStyle{1}()
+        @test Base.BroadcastStyle(ApplyArrayBroadcastStyle{1}(), Broadcast.DefaultArrayStyle{2}()) == Broadcast.DefaultArrayStyle{2}()
     end
 end
 

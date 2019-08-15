@@ -158,8 +158,6 @@ copy(A::ApplyArray) = copy(A.applied)
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
 copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
-IndexStyle(::ApplyArray{<:Any,1}) = IndexLinear()
-
 @propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Int,N}) where {T,N} = A.applied[kj...]
 
 

@@ -16,8 +16,10 @@ end
 @testset "ApplyArray" begin
     A = randn(2,2)
     M = ApplyMatrix(exp, A)
-    @test eltype(M) == Float64
+    @test eltype(M) == eltype(M.applied) == Float64
     @test M == exp(A)
+    @test ndims(M) == 2
+    @test axes(M) == (Base.OneTo(2), Base.OneTo(2))
 
     b = randn(2)
     c = ApplyVector(*, ApplyMatrix(exp, A), b)
