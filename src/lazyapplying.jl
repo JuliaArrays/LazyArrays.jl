@@ -156,7 +156,7 @@ copy(A::ApplyArray) = copy(A.applied)
 
 
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
-copy(A::Applied{<:LazyArrayApplyStyle}) = ApplyArray(A)
+copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 IndexStyle(::ApplyArray{<:Any,1}) = IndexLinear()
 
@@ -174,7 +174,6 @@ for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
         eltype(M::Applied{LazyArrayApplyStyle,typeof($F)}) = eltype(first(M.args))
     end
 end
-copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 
 struct  ApplyLayout{F, LAY} <: MemoryLayout end
@@ -190,7 +189,11 @@ function show(io::IO, A::Applied)
     print(io, ')')
 end
 
+applybroadcaststyle(_1, _2) = DefaultArrayStyle{2}()
+BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
 
+Base.replace_in_print_matrix(A::ApplyMatrix, i::Integer, j::Integer, s::AbstractString) =
+    i in colsupport(A,j) ? s : Base.replace_with_centered_mark(s)
 
 ### 
 # Number special cases
@@ -199,3 +202,24 @@ end
 for op in (:+, :-, :*, :\)
     @eval applied(::typeof($op), x::Number, y::Number) = $op(x,y)
 end
+
+for op in (:one, :zero)
+    @eval applied(::typeof($op), ::Type{T}) where T = $op(T)
+end
+
+###
+# Lazy getindex
+# this uses a lazy-materialize idiom to construct a matrix based
+# on the memory layout
+###
+
+@inline sub_materialize(_, V) = Array(V)
+@inline sub_materialize(V::SubArray) = sub_materialize(MemoryLayout(typeof(V)), V)
+
+@inline lazy_getindex(A, I...) = sub_materialize(view(A, I...))
+
+
+@inline getindex(A::ApplyMatrix, kr::Colon, jr::Colon) = lazy_getindex(A, kr, jr)
+@inline getindex(A::ApplyMatrix, kr::Colon, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
+@inline getindex(A::ApplyMatrix, kr::AbstractUnitRange, jr::Colon) = lazy_getindex(A, kr, jr)
+@inline getindex(A::ApplyMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)

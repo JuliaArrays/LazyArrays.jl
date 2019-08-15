@@ -224,6 +224,20 @@ include("lazymultests.jl")
         @test B[1,3] == y[1,1] == 2
     end
 
+    @testset "fill!" begin
+        A = Vcat([1,2,3],[4,5,6])
+        fill!(A,2)
+        @test A == fill(2,6)
+
+        A = Vcat(2,[4,5,6])
+        @test fill!(A,2) == fill(2,4)
+        @test_throws ArgumentError fill!(A,3)
+
+        A = Hcat([1,2,3],[4,5,6])
+        fill!(A,2)
+        @test A == fill(2,3,2)
+    end
+
     @testset "Any/All" begin
         @test all(Vcat(true, Fill(true,100_000_000)))
         @test any(Vcat(false, Fill(true,100_000_000)))

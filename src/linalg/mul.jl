@@ -34,10 +34,25 @@ size(M::Mul) = length.(axes(M))
 
 @inline eltype(M::Mul) = _mul_eltype(_eltypes(M.args...)...)
 
-_mul_axes(ax1, ::Tuple{}) = (ax1,)
-_mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)
-_mul_axes(ax1, (_,ax2)::Tuple{<:Any,<:Any}) = (ax1,ax2)
-axes(M::Mul) = _mul_axes(axes(first(M.args),1), axes(last(M.args)))
+@inline mulaxes1(A::AbstractArray, C...) = axes(A,1)
+@inline mulaxes1(::Number, B, C...) = mulaxes1(B, C...)
+@inline mulaxes1(::Number) = ()
+@inline mulaxes2(A::AbstractVector, C...) = ()
+@inline mulaxes2(A::AbstractMatrix, C...) = axes(A,2)
+@inline mulaxes2(::Number, B, C...) = mulaxes2(B, C...)
+@inline mulaxes2(::Number) = ()
+
+@inline mulaxes1(M::Mul,B...) = mulaxes1(M.args..., B...)
+@inline mulaxes2(M::Mul,B...) = mulaxes2(reverse(M.args)..., B...)
+mulaxes1(M::Applied,B...) = axes(M,1)
+mulaxes2(M::Applied,B...) = axes(M,2)
+
+@inline _combine_axes(::Tuple{}, ::Tuple{}) = ()
+@inline _combine_axes(a, ::Tuple{}) = (a,)
+@inline _combine_axes(a, b) = (a,b)
+@inline mulaxes(A...) = _combine_axes(mulaxes1(A...), mulaxes2(reverse(A)...))
+
+axes(M::Mul) = mulaxes(M.args...)
 axes(M::Mul{<:Any, Tuple{}}) = ()
 
 
@@ -150,21 +165,17 @@ function getindex(M::Mul, k::Integer, j::Integer)
 end
 
 
-const MulArray{T, N, MUL<:Mul} = ApplyArray{T, N, MUL}
+const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
 
-const MulVector{T, MUL<:Mul} = MulArray{T, 1, MUL}
-const MulMatrix{T, MUL<:Mul} = MulArray{T, 2, MUL}
+const MulVector{T, Args} = MulArray{T, 1, Args}
+const MulMatrix{T, Args} = MulArray{T, 2, Args}
 
 const MulLayout{LAY} = ApplyLayout{typeof(*),LAY}
 MulLayout(layouts) = ApplyLayout(*, layouts)
 
 
 _flatten(A::MulArray, B...) = _flatten(A.applied, B...)
-flatten(A::MulArray) = ApplyArray(*, flatten(A.applied))
-
-@propagate_inbounds getindex(A::MulArray, k::Int) = A.applied[k]		
-@propagate_inbounds getindex(A::MulArray{T,N}, kj::Vararg{Int,N}) where {T,N} =		
-     A.applied[kj...]		
+flatten(A::MulArray) = ApplyArray(*, flatten(A.applied))	
  
 *(A::MulArray, B::MulArray) = MulArray(A, B)
 

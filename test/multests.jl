@@ -734,6 +734,7 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         N = 10
         A = randn(N,N); B = randn(N,N); C = randn(N,N); R1 = similar(A); R2 = similar(A)
         M = Mul(A, Mul(B, C))
+        @test axes(M) == (Base.OneTo(N),Base.OneTo(N))
         @test ndims(M) == ndims(typeof(M)) == 2
         @test eltype(M) == Float64
         @test all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
@@ -795,6 +796,14 @@ import Base.Broadcast: materialize, materialize!, broadcasted
         @test_throws DimensionMismatch apply(*,Q',randn(3,3))
         dest = fill(NaN,5)
         @test all(copyto!(dest, applied(*,Q',b)) .=== Q'*b)
+    end
+
+    @testset "applied axes" begin
+        T = Float64
+        A = randn(5,5)
+        x = randn(5)
+        M =  applied(+, applied(*,T(1.0),A,x), applied(*,T(0.0),x))
+        @test axes(M) == axes(M.args[1]) == (Base.OneTo(5),)
     end
 end
 

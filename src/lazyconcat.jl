@@ -442,3 +442,16 @@ function in(x, V::Vcat)
     end
     false
 end
+
+_fill!(a, x) = fill!(a,x)
+function _fill!(a::Number, x) 
+    a == x || throw(ArgumentError("Cannot set $a to $x"))
+    a
+end
+
+function fill!(V::AbstractConcatArray, x) 
+    for a in V.arrays
+        _fill!(a, x)
+    end
+    V
+end

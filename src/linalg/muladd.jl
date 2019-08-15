@@ -217,7 +217,7 @@ function default_blasmul!(α, A::AbstractMatrix, B::AbstractMatrix, β, C::Abstr
         @simd for ν = 1:size(A,2)
             Ctmp = muladd(A[k, ν],B[ν, j],Ctmp)
         end
-        C[k,j] = α*Ctmp + β*C[k,j]
+        C[k,j] = muladd(α,Ctmp, β*C[k,j])
     end
     C
 end
