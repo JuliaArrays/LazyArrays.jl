@@ -8,7 +8,7 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!
         b = randn(5)
         c = similar(b)
         fill!(c,NaN)
-        @test (c .= Mul(A, b)) ≈ A.args[1]*b + A.args[2]*b
+        @test (c .= @~ A*b) ≈ A.args[1]*b + A.args[2]*b
     end
 
     @testset "gemv Float64" begin
@@ -25,38 +25,38 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!
 
             c = similar(b)
             fill!(c,NaN)
-            c .= Mul(A,b)
+            c .= @~ A*b
             @test c ≈ Ã*b ≈ BLAS.gemv!('N', 1.0, Ã, b, 0.0, similar(c))
 
-            copyto!(c, Mul(A,b))
+            copyto!(c, @~ A*b)
             @test c ≈ Ã*b ≈ BLAS.gemv!('N', 1.0, Ã, b, 0.0, similar(c))
 
             b̃ = copy(b)
             copyto!(b̃, Mul(A,b̃))
             @test c ≈ b̃
 
-            c .= 2.0 .* Mul(A,b)
+            c .= @~ 2.0 * A * b
             @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 0.0, similar(c))
 
             c = copy(b)
-            c .= Mul(A,b) .+ c
+            c .= @~ A*b + c
             @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 1.0, copy(b))
 
             c = copy(b)
-            c .= Mul(A,b) .+ 2.0 .* c
+            c .= @~ A*b + 2.0 * c
             @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 2.0, copy(b))
 
             c = copy(b)
-            c .= 2.0 .* Mul(A,b) .+ c
+            c .= @~ 2.0 * A*b + c
             @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 1.0, copy(b))
 
             c = copy(b)
-            c .= 3.0 .* Mul(A,b) .+ 2.0 .* c
+            c .= @~ 3.0 * A*b + 2.0 * c
             @test c ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, copy(b))
 
             d = similar(c)
             c = copy(b)
-            d .= 3.0 .* Mul(A,b) .+ 2.0 .* c
+            d .= @~ 3.0 * A*b + 2.0 * c
             @test d ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, copy(b))
         end
     end
@@ -70,36 +70,36 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!
             Ã = copy(A)
             C = similar(B)
 
-            C .= Mul(A,B)
+            C .= @~ A*B
             @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 0.0, similar(C))
 
-            B .= Mul(A,B)
+            B .= @~ A*B
             @test C ≈ B
 
-            C .= 2.0 .* Mul(A,B)
+            C .= @~ 2.0 * A*B
             @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 0.0, similar(C))
 
             C = copy(B)
-            C .= Mul(A,B) .+ C
+            C .= @~ A*B + C
             @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 1.0, copy(B))
 
 
             C = copy(B)
-            C .= Mul(A,B) .+ 2.0 .* C
+            C .= @~ A*B + 2.0 * C
             @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 2.0, copy(B))
 
             C = copy(B)
-            C .= 2.0 .* Mul(A,B) .+ C
+            C .= @~ 2.0 * A*B + C
             @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 1.0, copy(B))
 
 
             C = copy(B)
-            C .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+            C .= @~ 3.0 * A*B + 2.0 * C
             @test C ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, copy(B))
 
             d = similar(C)
             C = copy(B)
-            d .= 3.0 .* Mul(A,B) .+ 2.0 .* C
+            d .= @~ 3.0 * A*B + 2.0 * C
             @test d ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, copy(B))
         end
     end

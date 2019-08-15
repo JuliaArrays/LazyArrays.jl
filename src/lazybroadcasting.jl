@@ -3,13 +3,15 @@ LazyArrayStyle(::Val{N}) where N = LazyArrayStyle{N}()
 LazyArrayStyle{M}(::Val{N}) where {N,M} = LazyArrayStyle{N}()
 
 
-struct BroadcastArray{T, N, BRD<:Broadcasted} <: LazyArray{T, N}
-    broadcasted::BRD
+struct BroadcastArray{T, N, F, Args} <: LazyArray{T, N}
+    f::F
+    args::Args
 end
 
 LazyArray(bc::Broadcasted) = BroadcastArray(bc)
 
-BroadcastArray{T,N}(bc::BRD) where {T,N,BRD<:Broadcasted} = BroadcastArray{T,N,BRD}(bc)
+BroadcastArray{T,N,F,Args}(bc::Broadcasted) where {T,N,F,Args} = BroadcastArray{T,N,F,Args}(bc.f,bc.args)
+BroadcastArray{T,N}(bc::Broadcasted{Style,Axes,F,Args}) where {T,N,Style,Axes,F,Args} = BroadcastArray{T,N,F,Args}(bc.f,bc.args)
 BroadcastArray{T}(bc::Broadcasted{<:Union{Nothing,BroadcastStyle},<:Tuple{Vararg{Any,N}},<:Any,<:Tuple}) where {T,N} =
     BroadcastArray{T,N}(bc)
 
@@ -21,6 +23,15 @@ BroadcastArray(bc::Broadcasted{S}) where S =
     _BroadcastArray(instantiate(Broadcasted{S}(bc.f, _broadcast2broadcastarray(bc.args...))))
 BroadcastArray(b::BroadcastArray) = b
 BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
+
+function getproperty(A::BroadcastArray, d::Symbol)
+    if d == :broadcasted
+        instantiate(broadcasted(A.f, A.args...))
+    else
+        getfield(A, d)
+    end
+end
+
 
 axes(A::BroadcastArray) = axes(A.broadcasted)
 size(A::BroadcastArray) = map(length, axes(A))
@@ -75,12 +86,10 @@ is returned by `MemoryLayout(A)` if a matrix `A` is a `BroadcastArray`.
 `f` is a function that broadcast operation is applied and `layouts` is
 a tuple of `MemoryLayout` of the broadcasted arguments.
 """
-struct BroadcastLayout{F, LAY} <: MemoryLayout
-    f::F
-    layouts::LAY
-end
+struct BroadcastLayout{F, LAY} <: MemoryLayout end
 
-MemoryLayout(A::BroadcastArray) = BroadcastLayout(A.broadcasted.f, MemoryLayout.(A.broadcasted.args))
+MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = 
+    BroadcastLayout{F,tuple_type_memorylayouts(Args)}()
 
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting

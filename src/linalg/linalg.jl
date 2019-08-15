@@ -1,6 +1,6 @@
 include("mul.jl")
 include("lazymul.jl")
-include("blasbroadcasting.jl")
-include("blasmul.jl")
+include("muladd.jl")
 include("inv.jl")
 include("add.jl")
+include("factorizations.jl")

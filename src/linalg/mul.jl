@@ -1,19 +1,17 @@
 
-checkdimensions() = nothing
-checkdimensions(_) = nothing
 
-function checkdimensions(A, B, C...)
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch(""))
-    checkdimensions(B, C...)
-end
 
 const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
 
-ApplyStyle(::typeof(*), args::AbstractArray...) = LayoutApplyStyle(MemoryLayout.(args))
+Mul(A...) = applied(*, A...)
 
-Mul(args...) = Applied(ApplyStyle(*, args...), *, args)
+check_mul_axes(A) = nothing
+function check_mul_axes(A, B, C...) 
+    axes(A,2) == axes(B,1) || throw(DimensionMismatch("Second axis of A, $(axes(A,2)), and first axis of B, $(axes(B,1)) must match"))
+    check_mul_axes(B, C...)
+end
 
-const Mul2{StyleA, StyleB, AType, BType} = Mul{LayoutApplyStyle{Tuple{StyleA,StyleB}}, <:Tuple{AType,BType}}
+check_applied_axes(A::Mul) = check_mul_axes(A.args...)
 
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
@@ -36,10 +34,25 @@ size(M::Mul) = length.(axes(M))
 
 @inline eltype(M::Mul) = _mul_eltype(_eltypes(M.args...)...)
 
-_mul_axes(ax1, ::Tuple{}) = (ax1,)
-_mul_axes(ax1, ::Tuple{<:Any}) = (ax1,)
-_mul_axes(ax1, (_,ax2)::Tuple{<:Any,<:Any}) = (ax1,ax2)
-axes(M::Mul) = _mul_axes(axes(first(M.args),1), axes(last(M.args)))
+@inline mulaxes1(A::AbstractArray, C...) = axes(A,1)
+@inline mulaxes1(::Number, B, C...) = mulaxes1(B, C...)
+@inline mulaxes1(::Number) = ()
+@inline mulaxes2(A::AbstractVector, C...) = ()
+@inline mulaxes2(A::AbstractMatrix, C...) = axes(A,2)
+@inline mulaxes2(::Number, B, C...) = mulaxes2(B, C...)
+@inline mulaxes2(::Number) = ()
+
+@inline mulaxes1(M::Mul,B...) = mulaxes1(M.args..., B...)
+@inline mulaxes2(M::Mul,B...) = mulaxes2(reverse(M.args)..., B...)
+mulaxes1(M::Applied,B...) = axes(M,1)
+mulaxes2(M::Applied,B...) = axes(M,2)
+
+@inline _combine_axes(::Tuple{}, ::Tuple{}) = ()
+@inline _combine_axes(a, ::Tuple{}) = (a,)
+@inline _combine_axes(a, b) = (a,b)
+@inline mulaxes(A...) = _combine_axes(mulaxes1(A...), mulaxes2(reverse(A)...))
+
+axes(M::Mul) = mulaxes(M.args...)
 axes(M::Mul{<:Any, Tuple{}}) = ()
 
 
@@ -64,14 +77,6 @@ end
 # Matrix * Array
 ####
 
-const ArrayMulArray{styleA, styleB, p, q, T, V} =
-    Mul2{styleA, styleB, <:AbstractArray{T,p}, <:AbstractArray{V,q}}
-
-const ArrayMuls = Mul{<:Any, <:Tuple{Vararg{<:AbstractArray}}}
-
-# the default is always Array
-_materialize(M::ArrayMulArray, _) = copyto!(similar(M), M)
-
 
 """
    lmaterialize(M::Mul)
@@ -89,16 +94,9 @@ _flatten(A::Mul, B...) = _flatten(A.args..., B...)
 flatten(A) = A
 flatten(A::Mul) = Mul(_flatten(A.args...)...)
 
+const ArrayMuls = Mul{<:AbstractArrayApplyStyle, <:Tuple{<:AbstractArray,<:AbstractArray,<:AbstractArray,Vararg{<:AbstractArray}}}
 _materialize(M::ArrayMuls, _) = flatten(lmaterialize(M))
 
-
-
-
-
-####
-# Matrix * Vector
-####
-const MatMulVec{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 1, T, V}
 
 
 rowsupport(_, A, k) = axes(A,2)
@@ -107,7 +105,7 @@ rowsupport(_, A, k) = axes(A,2)
 
 gives an iterator containing the possible non-zero entries in the k-th row of A.
 """
-rowsupport(A, k) = rowsupport(MemoryLayout(A), A, k)
+rowsupport(A, k) = rowsupport(MemoryLayout(typeof(A)), A, k)
 
 colsupport(_, A, j) = axes(A,1)
 
@@ -116,7 +114,7 @@ colsupport(_, A, j) = axes(A,1)
 
 gives an iterator containing the possible non-zero entries in the j-th column of A.
 """
-colsupport(A, j) = colsupport(MemoryLayout(A), A, j)
+colsupport(A, j) = colsupport(MemoryLayout(typeof(A)), A, j)
 
 
 rowsupport(::DiagonalLayout, _, k) = k:k
@@ -128,17 +126,6 @@ colsupport(::ZerosLayout, _1, _2) = 1:0
 
 
 
-
-
-####
-# Matrix * Matrix
-####
-
-const MatMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 2, 2, T, V}
-const VecMulMat{styleA, styleB, T, V} = ArrayMulArray{styleA, styleB, 1, 2, T, V}
-
-
-
 ####
 # MulArray
 #####
@@ -147,7 +134,7 @@ _mul(A) = A
 _mul(A,B,C...) = Mul(A,B,C...)
 
 
-function getindex(M::Mul, k::Integer)
+function _getindex(M::Mul, ::Tuple{<:Any}, k::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
     ret = zero(eltype(M))
@@ -156,6 +143,9 @@ function getindex(M::Mul, k::Integer)
     end
     ret
 end
+
+_getindex(M::Mul, ax, k::Integer) = M[Base._ind2sub(ax, k)...]
+getindex(M::Mul, k::Integer) = _getindex(M, axes(M), k)
 
 
 getindex(M::Mul, k::CartesianIndex{1}) = M[convert(Int, k)]
@@ -175,40 +165,19 @@ function getindex(M::Mul, k::Integer, j::Integer)
 end
 
 
-const MulArray{T, N, MUL<:Mul} = ApplyArray{T, N, MUL}
+const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
 
-const MulVector{T, MUL<:Mul} = MulArray{T, 1, MUL}
-const MulMatrix{T, MUL<:Mul} = MulArray{T, 2, MUL}
+const MulVector{T, Args} = MulArray{T, 1, Args}
+const MulMatrix{T, Args} = MulArray{T, 2, Args}
 
 const MulLayout{LAY} = ApplyLayout{typeof(*),LAY}
 MulLayout(layouts) = ApplyLayout(*, layouts)
 
-MulArray{T,N}(M::MUL) where {T,N,MUL<:Mul} = MulArray{T,N,MUL}(M)
-MulArray{T}(M::Mul) where {T} = MulArray{T,ndims(M)}(M)
-MulArray(M::Mul) = MulArray{eltype(M)}(M)
-MulVector(M::Mul) = MulVector{eltype(M)}(M)
-MulMatrix(M::Mul) = MulMatrix{eltype(M)}(M)
-
-function MulArray(factors...)
-    checkdimensions(factors...)
-    MulArray(Mul(factors...))
-end
-MulArray{T}(factors...) where T = MulArray{T}(Mul(factors...))
-MulArray{T,N}(factors...) where {T,N} = MulArray{T,N}(Mul(factors...))
-MulVector(factors...) = MulVector(Mul(factors...))
-MulMatrix(factors...) = MulMatrix(Mul(factors...))
-
-IndexStyle(::MulArray{<:Any,1}) = IndexLinear()
 
 _flatten(A::MulArray, B...) = _flatten(A.applied, B...)
-flatten(A::MulArray) = MulArray(flatten(A.applied))
-
-
-@propagate_inbounds getindex(A::MulArray, k::Int) = A.applied[k]
-@propagate_inbounds getindex(A::MulArray{T,N}, kj::Vararg{Int,N}) where {T,N} =
-    A.applied[kj...]
-
+flatten(A::MulArray) = ApplyArray(*, flatten(A.applied))	
+ 
 *(A::MulArray, B::MulArray) = MulArray(A, B)
 
-adjoint(A::MulArray) = MulArray(reverse(adjoint.(A.applied.args))...)
-transpose(A::MulArray) = MulArray(reverse(transpose.(A.applied.args))...)
+adjoint(A::MulArray) = ApplyArray(*, reverse(adjoint.(A.applied.args))...)
+transpose(A::MulArray) = ApplyArray(*, reverse(transpose.(A.applied.args))...)

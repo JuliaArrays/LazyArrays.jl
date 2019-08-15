@@ -9,12 +9,12 @@ import LinearAlgebra.BLAS
 import Base: AbstractArray, AbstractMatrix, AbstractVector, 
         ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
              RangeIndex, BroadcastStyle, copyto!, length, broadcastable, axes,
-             getindex, eltype, tail, IndexStyle, IndexLinear,
+             getindex, eltype, tail, IndexStyle, IndexLinear, getproperty,
              *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
          fld, cld, div, min, max, minimum, maximum, mod,
          <, ≤, >, ≥, promote_rule, convert, copy,
          size, step, isempty, length, first, last, ndims,
-         getindex, setindex!, OneTo, intersect, @_inline_meta, inv,
+         getindex, setindex!, intersect, @_inline_meta, inv,
          sort, sort!, issorted, sortperm, diff, cumsum, sum, in, broadcast,
          eltype, parent, real, imag,
          conj, transpose, adjoint, vec,
@@ -22,22 +22,21 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
                    cosh, sinh, tanh, csch, sech, coth,
                    acos, asin, atan, acsc, asec, acot,
                    acosh, asinh, atanh, acsch, asech, acoth, (:),
-         AbstractMatrix, AbstractArray, checkindex, unsafe_length, OneTo,
+         AbstractMatrix, AbstractArray, checkindex, unsafe_length, OneTo, one, zero,
         to_shape, _sub2ind, print_matrix, print_matrix_row, print_matrix_vdots,
       checkindex, Slice, @propagate_inbounds, @_propagate_inbounds_meta,
       _in_range, _range, _rangestyle, Ordered,
       ArithmeticWraps, floatrange, reverse, unitrange_last,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
       similar, @_gc_preserve_end, @_gc_preserve_begin,
-      @nexprs, @ncall, @ntuple,
-      all, any,
-      isbitsunion
+      @nexprs, @ncall, @ntuple, tuple_type_tail,
+      all, any, isbitsunion
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!, eltypes
 
-import LinearAlgebra: AbstractTriangular, checksquare, pinv
+import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
@@ -54,7 +53,7 @@ end
 
 export Mul, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum,
-        applied, materialize, ApplyArray, apply, ⋆, @~, LazyArray
+        applied, materialize, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
 
 include("memorylayout.jl")
 include("cache.jl")
