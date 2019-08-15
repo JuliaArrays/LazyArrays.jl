@@ -106,7 +106,7 @@ whenever possible:
 ```julia
 julia> A = randn(5,5); b = randn(5); c = randn(5); d = similar(c);
 
-julia> d .= 2.0 .* Mul(A,b) .+ 3.0 .* c # Calls gemv!
+julia> d .= @~ 2.0 * A * b + 3.0 * c # Calls gemv!
 5-element Array{Float64,1}:
  -2.5366335879717514
  -5.305097174484744  
@@ -123,7 +123,7 @@ julia> 2*(A*b) + 3c
   0.26792916096572983
 
 julia> function mymul(A, b, c, d) # need to put in function for benchmarking
-       d .= 2.0 .* Mul(A,b) .+ 3.0 .* c
+       d .= @~ 2.0 * A * b + 3.0 * c
        end
 mymul (generic function with 1 method)
 
@@ -138,12 +138,6 @@ julia> @btime mymul(A, b, c, d) # calls gemv!
 
 julia> @btime 2*(A*b) + 3c; # does not call gemv!
   241.659 ns (4 allocations: 512 bytes)
-```
-
-Using `@~` macro, above expression using `Mul` can also be written as
-
-```julia
-d .= @~ 2.0 .* (A * b) .+ 3.0 .* c
 ```
 
 ## Inverses

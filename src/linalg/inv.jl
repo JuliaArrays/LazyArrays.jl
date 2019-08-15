@@ -6,9 +6,6 @@ const Inv{Style, Typ} = Applied{Style, typeof(inv), <:Tuple{Typ}}
 Inv(A) = applied(inv, A)
 PInv(A) = applied(pinv, A)
 
-ApplyStyle(::typeof(inv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
-ApplyStyle(::typeof(pinv), A::AbstractMatrix) = LayoutApplyStyle((MemoryLayout(A),))
-
 const InvOrPInv = Union{PInv, Inv}
 
 parent(A::InvOrPInv) = first(A.args)
