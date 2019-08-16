@@ -6,8 +6,12 @@ const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
 Mul(A...) = applied(*, A...)
 
 check_mul_axes(A) = nothing
+_check_mul_axes(::Number, ::Number) = nothing
+_check_mul_axes(::Number, _) = nothing
+_check_mul_axes(_, ::Number) = nothing
+_check_mul_axes(A, B) = axes(A,2) == axes(B,1) || throw(DimensionMismatch("Second axis of A, $(axes(A,2)), and first axis of B, $(axes(B,1)) must match"))
 function check_mul_axes(A, B, C...) 
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch("Second axis of A, $(axes(A,2)), and first axis of B, $(axes(B,1)) must match"))
+    _check_mul_axes(A, B)
     check_mul_axes(B, C...)
 end
 
