@@ -92,11 +92,11 @@ lmaterialize(M::Mul) = _lmaterialize(M.args...)
 _lmaterialize(A, B) = apply(*,A,B)
 _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 
-_flatten() = ()
-_flatten(A, B...) = (A, _flatten(B...)...)
-_flatten(A::Mul, B...) = _flatten(A.args..., B...)
-flatten(A) = A
-flatten(A::Mul) = Mul(_flatten(A.args...)...)
+@inline _flatten() = ()
+@inline _flatten(A, B...) = (A, _flatten(B...)...)
+@inline _flatten(A::Mul, B...) = _flatten(A.args..., B...)
+@inline flatten(A) = A
+@inline flatten(A::Mul) = applied(*, _flatten(A.args...)...)
 
 const ArrayMuls = Mul{<:AbstractArrayApplyStyle, <:Tuple{<:AbstractArray,<:AbstractArray,<:AbstractArray,Vararg{<:AbstractArray}}}
 _materialize(M::ArrayMuls, _) = flatten(lmaterialize(M))
