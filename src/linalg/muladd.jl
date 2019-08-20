@@ -70,8 +70,8 @@ ApplyStyle(::typeof(*), ::Type{α}, ::Type{A}, ::Type{B}) where {α<:Number, A<:
     mulapplystyle(MemoryLayout(α), MemoryLayout(A), MemoryLayout(B))    
 ApplyStyle(::typeof(*), ::Type{α}, ::Type{A}, ::Type{B}) where {α<:Number, A<:AbstractVector,B<:AbstractMatrix} =
     mulapplystyle(MemoryLayout(α), MemoryLayout(A), MemoryLayout(B))        
-ApplyStyle(::typeof(+), ::Type{<:Mul{MulAddStyle}}, ::Type{<:Mul}) = MulAddStyle() # TODO: simpler second arg
-ApplyStyle(::typeof(+), ::Type{<:Mul{MulAddStyle}}, ::Type{<:AbstractArray}) = MulAddStyle()
+ApplyStyle(::typeof(+), ::Type{<:Mul{<:AbstractMulAddStyle}}, ::Type{<:Mul}) = MulAddStyle() # TODO: simpler second arg
+ApplyStyle(::typeof(+), ::Type{<:Mul{<:AbstractMulAddStyle}}, ::Type{<:AbstractArray}) = MulAddStyle()
 
 scalarone(::Type{T}) where T = one(T)
 scalarone(::Type{<:AbstractArray{T}}) where T = scalarone(T)
