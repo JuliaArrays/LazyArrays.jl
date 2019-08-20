@@ -163,24 +163,16 @@ mulapplystyle(::ApplyLayout{typeof(pinv)}, _) = LdivApplyStyle()
 similar(M::Applied{LdivApplyStyle}, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
 similar(M::Applied{LdivApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 
-materialize(A::Applied{LdivApplyStyle}) = _materialize(instantiate(A), axes(A))
-_materialize(A::Applied{LdivApplyStyle}, _) = copyto!(similar(A), A)
-
-
-@inline function materialize!(M::Mul{LdivApplyStyle})
+@inline function Ldiv(M::Mul{LdivApplyStyle})
     Ai,b = M.args
-    materialize!(Ldiv(parent(Ai.applied), b))
+    Ldiv(parent(Ai.applied), b)
 end
+Ldiv(A::Applied{LdivApplyStyle,typeof(\)}) = Ldiv(A.args...)
 
-@inline function copyto!(dest::AbstractArray, M::Mul{LdivApplyStyle})
-    Ai,b = M.args
-    copyto!(dest, Ldiv(parent(Ai.applied), b))
-end
-
-@inline function materialize!(M::Applied{LdivApplyStyle,typeof(\)})
-    A,b = M.args
-    materialize!(Ldiv(A, b))
-end
+@inline materialize(A::Applied{LdivApplyStyle}) = _materialize(instantiate(A), axes(A))
+@inline _materialize(A::Applied{LdivApplyStyle}, _) = materialize(Ldiv(A))
+@inline copyto!(dest::AbstractArray, M::Applied{LdivApplyStyle}) = copyto!(dest, Ldiv(M))
+@inline materialize!(M::Applied{LdivApplyStyle}) = materialize!(Ldiv(M))
 
 @inline function copyto!(dest::AbstractArray, M::Applied{LdivApplyStyle,typeof(\)})
     A,b = M.args
