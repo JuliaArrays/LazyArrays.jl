@@ -426,8 +426,8 @@ offdiagonaldata(D::SymTridiagonal) = D.ev
 
 transposelayout(ml::DiagonalLayout) = ml
 transposelayout(ml::SymTridiagonalLayout) = ml
+transposelayout(ml::ConjLayout{DiagonalLayout}) = ml
 
-adjointlayout(_, ml::DiagonalLayout) = ml
 adjointlayout(::Type{<:Real}, ml::SymTridiagonalLayout) = ml
 
 ###
