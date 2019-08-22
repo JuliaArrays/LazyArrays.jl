@@ -49,12 +49,14 @@ axes(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractMatrix}) = (axes(L.A, 2),axes(L.B,2))
 axes(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) = (axes(L.A, 2),)    
 length(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =size(L.A, 2)
 
-@inline ldivaxes1(A::AbstractArray, B) = axes(A,2)
-@inline ldivaxes1(::Number, B) = axes(B,1)
-@inline ldivaxes2(::Number, ::Number) = ()
-@inline ldivaxes2(_, B::AbstractMatrix) = axes(B,2)
-@inline ldivaxes2(_, ::AbstractVector) = ()
-@inline ldivaxes(A...) = _combine_axes(ldivaxes1(A...), ldivaxes2(A...))
+_ldivaxes(::Tuple{}, ::Tuple{}) = ()
+_ldivaxes(::Tuple{}, Bax::Tuple) = Bax
+_ldivaxes(::NTuple{1}, ::NTuple{1}) = ()
+_ldivaxes(::NTuple{1}, Bax::NTuple{2}) = (OneTo(1),last(Bax))
+_ldivaxes(Aax::NTuple{2}, ::NTuple{1}) = (last(Aax),)
+_ldivaxes(Aax::NTuple{2}, Bax::NTuple{2}) = (last(Aax),last(Bax))
+
+@inline ldivaxes(A, B) = _ldivaxes(axes(A), axes(B))
 
 axes(M::Applied{Style,typeof(\)}) where Style = ldivaxes(M.args...)
 axes(M::Applied{Style,typeof(\)}, p::Int)  where Style = axes(M)[p]

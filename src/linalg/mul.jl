@@ -38,26 +38,21 @@ size(M::Mul) = length.(axes(M))
 
 @inline eltype(M::Mul) = _mul_eltype(_eltypes(M.args...)...)
 
-@inline mulaxes1(A::AbstractArray, C...) = axes(A,1)
-@inline mulaxes1(::Number, B, C...) = mulaxes1(B, C...)
-@inline mulaxes1(::Number) = ()
-@inline mulaxes2(A::AbstractVector, C...) = ()
-@inline mulaxes2(A::AbstractMatrix, C...) = axes(A,2)
-@inline mulaxes2(::Number, B, C...) = mulaxes2(B, C...)
-@inline mulaxes2(::Number) = ()
-
-@inline mulaxes1(M::Mul,B...) = mulaxes1(M.args..., B...)
-@inline mulaxes2(M::Mul,B...) = mulaxes2(reverse(M.args)..., B...)
-mulaxes1(M::Applied,B...) = axes(M,1)
-mulaxes2(M::Applied,B...) = axes(M,2)
+@inline mulaxes1(::Tuple{}) = ()
+@inline mulaxes1(::Tuple{}, B, C...) = mulaxes1(B, C...)
+@inline mulaxes1(A::Tuple, C...) = first(A)
+@inline mulaxes2(::Tuple{}) = ()
+@inline mulaxes2(::Tuple{}, B, C...) = mulaxes2(B, C...)
+@inline mulaxes2(A::NTuple{1}, C...) = ()
+@inline mulaxes2(A::NTuple{2}, C...) = last(A)
 
 @inline _combine_axes(::Tuple{}, ::Tuple{}) = ()
 @inline _combine_axes(a, ::Tuple{}) = (a,)
 @inline _combine_axes(a, b) = (a,b)
-@inline mulaxes(A...) = _combine_axes(mulaxes1(A...), mulaxes2(reverse(A)...))
+@inline mulaxes(ax...) = _combine_axes(mulaxes1(ax...), mulaxes2(reverse(ax)...))
 
-axes(M::Mul) = mulaxes(M.args...)
-axes(M::Mul{<:Any, Tuple{}}) = ()
+@inline axes(M::Mul) = mulaxes(map(axes,M.args)...)
+@inline axes(M::Mul{<:Any, Tuple{}}) = ()
 
 
 # *(A::Mul, B::Mul) = apply(*,A.args..., B.args...)

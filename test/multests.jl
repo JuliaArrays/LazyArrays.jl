@@ -673,7 +673,7 @@ end
             c .= @~ A*x + β * y
             c .= @~ α * A*x + β * y
         end
-
+        
         A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
         blasnoalloc(c, 2.0, A, x, 3.0, y)
         @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
