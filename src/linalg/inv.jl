@@ -51,10 +51,10 @@ length(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) =size(L.A, 2)
 
 _ldivaxes(::Tuple{}, ::Tuple{}) = ()
 _ldivaxes(::Tuple{}, Bax::Tuple) = Bax
-_ldivaxes(::NTuple{1}, ::NTuple{1}) = ()
-_ldivaxes(::NTuple{1}, Bax::NTuple{2}) = (OneTo(1),last(Bax))
-_ldivaxes(Aax::NTuple{2}, ::NTuple{1}) = (last(Aax),)
-_ldivaxes(Aax::NTuple{2}, Bax::NTuple{2}) = (last(Aax),last(Bax))
+_ldivaxes(::Tuple{<:Any}, ::Tuple{<:Any}) = ()
+_ldivaxes(::Tuple{<:Any}, Bax::Tuple{<:Any,<:Any}) = (OneTo(1),last(Bax))
+_ldivaxes(Aax::Tuple{<:Any,<:Any}, ::Tuple{<:Any}) = (last(Aax),)
+_ldivaxes(Aax::Tuple{<:Any,<:Any}, Bax::Tuple{<:Any,<:Any}) = (last(Aax),last(Bax))
 
 @inline ldivaxes(A, B) = _ldivaxes(axes(A), axes(B))
 
