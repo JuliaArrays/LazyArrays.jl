@@ -123,6 +123,8 @@ end
     LazyArrays.resizedata!(C,8,8,8)
     @test all(C.data .=== Array(A)[1:8,1:8,1:8])
 
+    @test C[1:3,1,:] == A[1:3,1,:]
+
     A = collect(1:5)
     C = cache(A)
     @test C isa Vector{Int}

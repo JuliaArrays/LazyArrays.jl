@@ -54,6 +54,18 @@ end
     v
 end
 
+_maximum(ax, I) = maximum(I)
+_maximum(ax, ::Colon) = maximum(ax)
+function getindex(A::CachedArray, I...)
+    resizedata!(A, _maximum.(axes(A), I)...)
+    A.data[I...]
+end
+
+function getindex(A::CachedArray, I::CartesianIndex)
+    resizedata!(A, Tuple(I)...)
+    A.data[I]
+end
+
 
 ## Array caching
 
@@ -81,3 +93,9 @@ function resizedata!(B::CachedArray{T,N,Array{T,N}},nm::Vararg{Integer,N}) where
 
     B
 end
+
+colsupport(A::CachedMatrix, i) = colsupport(A.array, i)
+rowsupport(A::CachedMatrix, i) = rowsupport(A.array, i)
+
+Base.replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractString) =
+    i in colsupport(A,j) ? s : Base.replace_with_centered_mark(s)

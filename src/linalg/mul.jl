@@ -174,7 +174,7 @@ MulLayout(layouts) = ApplyLayout(*, layouts)
 
 
 _flatten(A::MulArray, B...) = _flatten(A.applied, B...)
-flatten(A::MulArray) = ApplyArray(*, flatten(A.applied))	
+flatten(A::MulArray) = ApplyArray(flatten(A.applied))	
  
 *(A::MulMatrix, B::MulMatrix) = ApplyArray(*, A.args..., B.args...)
 *(A::MulMatrix, B::MulVector) = ApplyArray(*, A.args..., B.args...)
