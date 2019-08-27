@@ -42,16 +42,10 @@ materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
 
 # the following materialzes the args and calls materialize again, unless it hasn't
 # changed in which case it falls back to the default
-__default_materialize(A::App, ::App) where App = A.f(A.args...)
-__default_materialize(A, _) where App = materialize(A)
+_default_materialize(A::App, ::App) where App = A.f(A.args...)
+_default_materialize(A, _) where App = materialize(A)
 # copy(A::Applied{DefaultApplyStyle}) = A.f(A.args...)
-copy(A::Applied) = __default_materialize(materializeargs(A), A)
-
-
-# _materialize is for applied with axes, which defaults to using copyto!
-materialize(M::Applied{<:AbstractArrayApplyStyle}) = _materialize(instantiate(M), axes(M))
-_materialize(A::Applied{<:AbstractArrayApplyStyle}, _) = copy(instantiate(A))
-_materialize(A::Applied, _) = copy(A)
+copy(A::Applied) = _default_materialize(materializeargs(A), A)
 
 @inline copyto!(dest, M::Applied) = copyto!(dest, materialize(M))
 @inline copyto!(dest::AbstractArray, M::Applied) = copyto!(dest, materialize(M))

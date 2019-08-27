@@ -93,9 +93,7 @@ _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 @inline flatten(A) = A
 @inline flatten(A::Mul) = applied(*, _flatten(A.args...)...)
 
-const ArrayMuls = Mul{<:AbstractArrayApplyStyle, <:Tuple{<:AbstractArray,<:AbstractArray,<:AbstractArray,Vararg{<:AbstractArray}}}
-_materialize(M::ArrayMuls, _) = flatten(lmaterialize(M))
-
+copy(A::Mul{DefaultArrayApplyStyle}) = flatten(lmaterialize(A))
 
 
 rowsupport(_, A, k) = axes(A,2)
