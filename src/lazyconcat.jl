@@ -1,52 +1,32 @@
 # Lazy concatenation of AbstractVector's.
 # Similar to Iterators.Flatten and some code has been reused from julia/base/iterators.jl
 
-function _Vcat end
-abstract type AbstractConcatArray{T,N} <: AbstractArray{T,N} end
-struct Vcat{T,N,I} <: AbstractConcatArray{T,N}
-    arrays::I
 
-    _Vcat(::Type{T}, A::Tuple{}) where {T} = new{T,1,Tuple{}}(A)
-    global _Vcat(::Type{T}, A::I) where {I<:Tuple,T} = new{T,1,I}(A)
-    global function _Vcat(::Type{T}, A::I) where I<:Tuple{Vararg{<:AbstractMatrix}} where T
-        isempty(A) && throw(ArgumentError("Cannot concatenate empty vectors"))
-        m = size(A[1],2)
-        for k=2:length(A)
-            size(A[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
-        end
-        new{T,2,I}(A)
+const Vcat{T,N,I<:Tuple} = ApplyArray{T,N,typeof(vcat),I}
+
+Vcat(A...) = ApplyArray(vcat, A...)
+
+function instantiate(A::Applied{DefaultApplyStyle,typeof(vcat)})
+    isempty(A) && throw(ArgumentError("Cannot concatenate empty vectors"))
+    m = size(A[1],2)
+    for k=2:length(A)
+        size(A[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
     end
+    Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
 end
 
-_Vcat(A) = _Vcat(promote_eltypeof(A...), A)
-Vcat(args...) = _Vcat(args)
-Vcat{T}(args...) where T = _Vcat(T, args)
-Vcat() = Vcat{Any}()
-
-convert(::Type{AbstractArray{T}}, F::Vcat{T}) where T = F
-convert(::Type{AbstractArray{T,N}}, F::Vcat{T,N}) where {T,N} = F
-convert(::Type{AbstractArray{T}}, F::Vcat) where {T} = _Vcat(T, F.arrays)
-convert(::Type{AbstractArray{T,N}}, F::Vcat{<:Any,N}) where {T,N} = _Vcat(T, F.arrays)
-
-_abstractarray(::Type{T}, x::AbstractArray) where T = AbstractArray{T}(x)
-_abstractarray(::Type{T}, x) where T = T(x)
-AbstractArray(F::Vcat) = copy(F)
-AbstractArray{T}(F::Vcat) where T = _Vcat(_abstractarray.(T,F.arrays))
-AbstractArray{T,N}(F::Vcat{<:Any,N}) where {T,N} = _Vcat(_abstractarray.(T,F.arrays))
-
-copy(x::Vcat) = Vcat(copy.(x.arrays)...)
-
-size(f::Vcat{<:Any,1,Tuple{}}) = (0,)
-size(f::Vcat{<:Any,1}) = tuple(+(length.(f.arrays)...))
-size(f::Vcat{<:Any,2}) = (+(map(a -> size(a,1), f.arrays)...), size(f.arrays[1],2))
+eltype(A::Applied{<:Any,typeof(vcat)}) = mapreduce(eltype,promote_type,A.args)
+ndims(A::Applied{<:Any,typeof(vcat),I}) where I = maximum(ndims.(A.args))
+size(f::Applied{<:Any,typeof(vcat),Tuple{}}) = (0,)
+size(f::Applied{<:Any,typeof(vcat)}) = tuple(+(length.(f.args)...))
+size(f::Applied{<:Any,typeof(vcat),<:Tuple{Vararg{AbstractMatrix}}}) = (+(map(a -> size(a,1), f.args)...), size(f.args[1],2))
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
 
-
 @propagate_inbounds @inline function getindex(f::Vcat{T,1}, k::Integer) where T
     κ = k
-    for A in f.arrays
+    for A in f.args
         n = length(A)
         κ ≤ n && return convert(T,A[κ])::T
         κ -= n
@@ -56,7 +36,7 @@ end
 
 @propagate_inbounds @inline function getindex(f::Vcat{T,2}, k::Integer, j::Integer) where T
     κ = k
-    for A in f.arrays
+    for A in f.args
         n = size(A,1)
         κ ≤ n && return convert(T,A[κ,j])::T
         κ -= n
@@ -66,7 +46,7 @@ end
 
 @propagate_inbounds @inline function setindex!(f::Vcat{T,1}, v, k::Integer) where T
     κ = k
-    for A in f.arrays
+    for A in f.args
         n = length(A)
         κ ≤ n && return setindex!(A, v, κ)
         κ -= n
@@ -76,7 +56,7 @@ end
 
 @propagate_inbounds @inline function setindex!(f::Vcat{T,2}, v, k::Integer, j::Integer) where T
     κ = k
-    for A in f.arrays
+    for A in f.args
         n = size(A,1)
         κ ≤ n && return setindex!(A, v, κ, j)
         κ -= n
@@ -84,9 +64,9 @@ end
     throw(BoundsError(f, (k,j)))
 end
 
-reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.arrays))...)
+reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.args))...)
 
-
+abstract type AbstractConcatArray{T,N} <: AbstractArray{T,N} end
 function _Hcat end
 
 struct Hcat{T,I} <: AbstractConcatArray{T,2}
@@ -155,7 +135,7 @@ function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
 end
 
 function copyto!(arr::AbstractVector, A::Vcat{<:Any,1,<:Tuple{Vararg{<:AbstractVector}}})
-    arrays = A.arrays
+    arrays = A.args
     n = 0
     for a in arrays
         n += length(a)
@@ -173,7 +153,7 @@ function copyto!(arr::AbstractVector, A::Vcat{<:Any,1,<:Tuple{Vararg{<:AbstractV
 end
 
 function copyto!(arr::Vector{T}, A::Vcat{T,1,<:Tuple{Vararg{<:Vector{T}}}}) where T
-    arrays = A.arrays
+    arrays = A.args
     n = 0
     for a in arrays
         n += length(a)
@@ -267,7 +247,7 @@ end
 for adj in (:adjoint, :transpose)
     @eval begin
         $adj(A::Hcat{T}) where T = _Vcat(T, $adj.(A.arrays))
-        $adj(A::Vcat{T}) where T = _Hcat(T, $adj.(A.arrays))
+        $adj(A::Vcat{T}) where T = _Hcat(T, $adj.(A.args))
     end
 end
 

@@ -58,12 +58,8 @@ struct MulAddStyle <: AbstractMulAddStyle end
 @inline mulapplystyle(A, B) = MulAddStyle()
 @inline mulapplystyle(α, A, B) = MulAddStyle()
 
-ApplyStyle(::typeof(*), ::Type{A}, ::Type{B}) where {A<:AbstractMatrix,B<:AbstractVector} =
-    mulapplystyle(MemoryLayout(A), MemoryLayout(B))
-ApplyStyle(::typeof(*), ::Type{A}, ::Type{B}) where {A<:AbstractMatrix,B<:AbstractMatrix} =
-    mulapplystyle(MemoryLayout(A), MemoryLayout(B))    
-ApplyStyle(::typeof(*), ::Type{A}, ::Type{B}) where {A<:AbstractVector,B<:AbstractMatrix} =
-    mulapplystyle(MemoryLayout(A), MemoryLayout(B))   
+ApplyStyle(::typeof(*), args::Type{<:AbstractArray}...) = mulapplystyle(MemoryLayout.(args)...)
+
 ApplyStyle(::typeof(*), ::Type{α}, ::Type{A}, ::Type{B}) where {α<:Number, A<:AbstractMatrix,B<:AbstractVector} =
     mulapplystyle(MemoryLayout(α), MemoryLayout(A), MemoryLayout(B))
 ApplyStyle(::typeof(*), ::Type{α}, ::Type{A}, ::Type{B}) where {α<:Number, A<:AbstractMatrix,B<:AbstractMatrix} =

@@ -3,7 +3,8 @@ import LazyArrays: MemoryLayout, HcatLayout, VcatLayout, DenseColumnMajor, mater
 
 @testset "concat" begin
     @testset "Vcat" begin
-        A = Vcat(Vector(1:10), Vector(1:20))
+        A = @inferred(Vcat(Vector(1:10), Vector(1:20)))
+        @test eltype(A) == Int
         @test @inferred(length(A)) == 30
         @test @inferred(A[5]) == A[15] == 5
         @test_throws BoundsError A[31]
@@ -12,14 +13,14 @@ import LazyArrays: MemoryLayout, HcatLayout, VcatLayout, DenseColumnMajor, mater
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{Int}(undef, 30)
         @test @allocated(copyto!(b, A)) == 0
-        @test b == vcat(A.arrays...)
+        @test b == vcat(A.args...)
         @test copy(A) isa Vcat
         @test copy(A) == A
         @test copy(A) !== A
         @test vec(A) === A
         @test A' == transpose(A) == Vector(A)'
 
-        A = Vcat(1:10, 1:20)
+        A = @inferred(Vcat(1:10, 1:20))
         @test @inferred(length(A)) == 30
         @test @inferred(A[5]) == A[15] == 5
         @test_throws BoundsError A[31]
@@ -28,7 +29,7 @@ import LazyArrays: MemoryLayout, HcatLayout, VcatLayout, DenseColumnMajor, mater
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{Int}(undef, 30)
         @test @allocated(copyto!(b, A)) == 0
-        @test b == vcat(A.arrays...)
+        @test b == vcat(A.args...)
         @test copy(A) === A
         @test vec(A) === A
         @test A' == transpose(A) == Vector(A)'

@@ -146,13 +146,13 @@ end
 
 axes(A::ApplyArray) = axes(A.applied)
 size(A::ApplyArray) = map(length, axes(A))
-copy(A::ApplyArray) = copy(A.applied)
+copy(A::ApplyArray) = ApplyArray(A.f, map(copy,A.args)...)
 
 
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
 copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
-@propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Int,N}) where {T,N} = A.applied[kj...]
+@propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Integer,N}) where {T,N} = A.applied[kj...]
 
 
 for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
