@@ -417,7 +417,9 @@ abstract type AbstractBandedLayout <: MemoryLayout end
 struct DiagonalLayout{ML} <: AbstractBandedLayout end
 struct SymTridiagonalLayout{ML} <: AbstractBandedLayout end
 
-MemoryLayout(D::Type{Diagonal{T,P}}) where {T,P} = DiagonalLayout{typeof(MemoryLayout(P))}()
+diagonallayout(_) = UnknownLayout()
+diagonallayout(::ML) where ML<:AbstractStridedLayout = DiagonalLayout{ML}()
+MemoryLayout(D::Type{Diagonal{T,P}}) where {T,P} = diagonallayout(MemoryLayout(P))
 diagonaldata(D::Diagonal) = parent(D)
 
 MemoryLayout(::Type{SymTridiagonal{T,P}}) where {T,P} = SymTridiagonalLayout{typeof(MemoryLayout(P))}()
@@ -439,3 +441,4 @@ struct ZerosLayout <: AbstractFillLayout end
 
 MemoryLayout(::Type{<:AbstractFill}) = FillLayout()
 MemoryLayout(::Type{<:Zeros}) = ZerosLayout()
+diagonallayout(::ML) where ML<:AbstractFillLayout = DiagonalLayout{ML}()
