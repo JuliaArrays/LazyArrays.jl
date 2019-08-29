@@ -137,12 +137,27 @@ colsupport(::ZerosLayout, _1, _2) = 1:0
 _mul(A) = A
 _mul(A,B,C...) = Mul(A,B,C...)
 
+_mul_colsupport(j, Z) = colsupport(Z,j)
+function _mul_colsupport(j, Z, Y...)
+    rws = colsupport(Z,j)
+    a = 1
+    b = 0
+    for k in rws 
+        cs = _mul_colsupport(k, Y...)
+        a = min(a,first(cs))
+        b = max(b,last(cs))
+    end
+    a:b
+end
+
+colsupport(B::Mul, j) = _mul_colsupport(j, reverse(B.args)...)
+
 
 function _getindex(M::Mul, ::Tuple{<:Any}, k::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
     ret = zero(eltype(M))
-    for j = rowsupport(A, k)
+    for j = rowsupport(A, k) ∩ colsupport(B,1)
         ret += A[k,j] * B[j]
     end
     ret

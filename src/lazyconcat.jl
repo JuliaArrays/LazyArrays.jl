@@ -452,3 +452,11 @@ function materialize!(M::MatMulVecAdd{<:ApplyLayout{typeof(hcat)},<:ApplyLayout{
     end
     C
  end
+
+ ####
+ # col/rowsupport
+ ####
+
+
+ most(a) = reverse(tail(reverse(a)))
+colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))

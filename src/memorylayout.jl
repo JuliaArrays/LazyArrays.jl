@@ -438,6 +438,7 @@ adjointlayout(::Type{<:Real}, ml::SymTridiagonalLayout) = ml
 abstract type AbstractFillLayout <: MemoryLayout end
 struct FillLayout <: AbstractFillLayout end
 struct ZerosLayout <: AbstractFillLayout end
+struct EyeLayout <: MemoryLayout end
 
 MemoryLayout(::Type{<:AbstractFill}) = FillLayout()
 MemoryLayout(::Type{<:Zeros}) = ZerosLayout()
