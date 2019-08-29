@@ -141,8 +141,8 @@ function materialize!(M::MatLdivMat{<:TriangularLayout})
 end
 
 
-const PInvMatrix{T,App<:PInv} = ApplyMatrix{T,App}
-const InvMatrix{T,App<:Inv} = ApplyMatrix{T,App}
+const PInvMatrix{T,Arg} = ApplyMatrix{T,typeof(pinv),<:Tuple{Arg}}
+const InvMatrix{T,Arg} = ApplyMatrix{T,typeof(inv),<:Tuple{Arg}}
 
 PInvMatrix(A) = ApplyMatrix(pinv, A)
 function InvMatrix(A)
@@ -150,14 +150,16 @@ function InvMatrix(A)
     ApplyMatrix(inv, A)
 end
 
-axes(A::PInvMatrix) = reverse(axes(parent(A.applied)))
+parent(A::PInvMatrix) = first(A.args)
+parent(A::InvMatrix) = first(A.args)
+axes(A::PInvMatrix) = reverse(axes(parent(A)))
 size(A::PInvMatrix) = map(length, axes(A))
 
 @propagate_inbounds getindex(A::PInvMatrix{T}, k::Int, j::Int) where T =
-    (parent(A.applied)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
+    (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
 @propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
-    (parent(A.applied)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
+    (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
 mulapplystyle(::ApplyLayout{typeof(inv)}, _) = LdivApplyStyle()
 mulapplystyle(::ApplyLayout{typeof(pinv)}, _) = LdivApplyStyle()
@@ -167,7 +169,7 @@ similar(M::Applied{LdivApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 
 @inline function Ldiv(M::Mul{LdivApplyStyle})
     Ai,b = M.args
-    Ldiv(parent(Ai.applied), b)
+    Ldiv(parent(Ai), b)
 end
 Ldiv(A::Applied{LdivApplyStyle,typeof(\)}) = Ldiv(A.args...)
 

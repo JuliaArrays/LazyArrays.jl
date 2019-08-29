@@ -55,7 +55,7 @@ for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
             B = copy(B)
         end
         _fill_lmul!(β, C)
-        for A in A.applied.args
+        for A in Applied(A).args
             C .= applied(+,applied(*,α, A,B), C)
         end
         C

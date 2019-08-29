@@ -88,6 +88,11 @@ a tuple of `MemoryLayout` of the broadcasted arguments.
 """
 struct BroadcastLayout{F, LAY} <: MemoryLayout end
 
+tuple_type_memorylayouts(::Type{I}) where I<:Tuple = Tuple{typeof.(MemoryLayout.(I.parameters))...}
+tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = Tuple{typeof(MemoryLayout(A))}
+tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B))}
+tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B)),typeof(MemoryLayout(C))}
+
 MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = 
     BroadcastLayout{F,tuple_type_memorylayouts(Args)}()
 

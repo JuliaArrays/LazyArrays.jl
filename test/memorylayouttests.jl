@@ -5,7 +5,7 @@ import LazyArrays: MemoryLayout, DenseRowMajor, DenseColumnMajor, StridedLayout,
                         UnitUpperTriangularLayout, LowerTriangularLayout,
                         UnitLowerTriangularLayout, ScalarLayout,
                         hermitiandata, symmetricdata, FillLayout, ZerosLayout,
-                        VcatLayout, BroadcastLayout, Add, AddArray, ApplyLayout
+                        BroadcastLayout, Add, AddArray, ApplyLayout
 
 struct FooBar end
 struct FooNumber <: Number end
@@ -167,8 +167,8 @@ struct FooNumber <: Number end
         @test MemoryLayout(typeof(Fill(1,10))) == FillLayout()
         @test MemoryLayout(typeof(Ones(10))) == FillLayout()
         @test MemoryLayout(typeof(Zeros(10))) == ZerosLayout()
-        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == VcatLayout{Tuple{FillLayout,ZerosLayout}}()
-        @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == VcatLayout{Tuple{DenseColumnMajor,ZerosLayout}}()
+        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == ApplyLayout{typeof(vcat),Tuple{FillLayout,ZerosLayout}}()
+        @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == ApplyLayout{typeof(vcat),Tuple{DenseColumnMajor,ZerosLayout}}()
 
         @test MemoryLayout(typeof(view(Fill(1,10),1:3))) == UnknownLayout()
         @test MemoryLayout(typeof(view(Fill(1,10),1:3,1))) == UnknownLayout()

@@ -1,38 +1,42 @@
-struct Kron{T,N,I} <: AbstractArray{T,N}
-    arrays::I
-    function Kron{T,N,I}(A::I) where {T,N,I}
-        isempty(A) && throw(ArgumentError("Cannot take kronecker product of empty vectors"))
-        new{T,N,I}(A)
-    end
+
+const Kron{T,N,I<:Tuple} = ApplyArray{T,N,typeof(kron),I}
+
+function instantiate(K::Applied{<:Any,typeof(kron)})
+    isempty(K.args) && throw(ArgumentError("Cannot take kronecker product of empty vectors"))
+    applied(kron, map(instantiate,K.args)...)
 end
+
+Kron(A...) = ApplyArray(kron, A...)
+Kron{T}(A...) where T = ApplyArray{T}(kron, A...)
 
 _kron_dims() = 0
 _kron_dims(A, B...) = max(ndims(A), _kron_dims(B...))
 
-Kron{T,N}(A::AbstractArray...) where {T,N} = Kron{T,N,typeof(A)}(A)
-Kron{T}(A::AbstractArray...) where {T} = Kron{T,_kron_dims(A...)}(A...)
-Kron(A...) = Kron{promote_type(eltype.(A)...)}(A...)
+eltype(A::Applied{<:Any,typeof(kron)}) = mapreduce(eltype,promote_type,A.args)
+ndims(A::Applied{<:Any,typeof(kron)}) = _kron_dims(A.args...)
 
-
-size(K::Kron, j::Int) = prod(size.(K.arrays, j))
+size(K::Kron, j::Int) = prod(size.(K.args, j))
 size(a::Kron{<:Any,1}) = (size(a,1),)
 size(a::Kron{<:Any,2}) = (size(a,1), size(a,2))
 size(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> size(a, M), Val(N)))
+axes(a::Kron{<:Any,1}) = (OneTo(size(a,1)),)
+axes(a::Kron{<:Any,2}) = (OneTo(size(a,1)), OneTo(size(a,2)))
+axes(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> OneTo(size(a, M)), Val(N)))
 
 getindex(K::Kron{T,1,<:Tuple{<:AbstractVector}}, k::Int) where T =
-    first(K.arrays)[k]
+    first(K.args)[k]
 
 function getindex(K::Kron{T,1,<:Tuple{<:AbstractVector,<:AbstractVector}}, k::Int) where T
-    A,B = K.arrays
+    A,B = K.args
     K,κ = divrem(k-1, length(B))
     A[K+1]*B[κ+1]
 end
 
 getindex(K::Kron{T,2,<:Tuple{<:AbstractMatrix}}, k::Int, j::Int) where T =
-    first(K.arrays)[k,j]
+    first(K.args)[k,j]
 
 function getindex(K::Kron{T,2,<:Tuple{<:AbstractArray,<:AbstractArray}}, k::Int, j::Int) where T
-    A,B = K.arrays
+    A,B = K.args
     K,κ = divrem(k-1, size(B,1))
     J,ξ = divrem(j-1, size(B,2))
     A[K+1,J+1]*B[κ+1,ξ+1]
@@ -41,7 +45,7 @@ end
 ## Adapted from julia/stdlib/LinearAlgebra/src/dense.jl kron definition
 function _kron2!(R, K)
     size(R) == size(K) || throw(DimensionMismatch("Matrices have wrong dimensions"))
-    a,b = K.arrays
+    a,b = K.args
     require_one_based_indexing(a, b)
     m = 1
     @inbounds for j = 1:size(a,2), l = 1:size(b,2), i = 1:size(a,1)
@@ -60,7 +64,7 @@ copyto!(R::AbstractVector, K::Kron{<:Any,1,<:Tuple{<:AbstractVector,<:AbstractVe
     _kron2!(R, K)
 
 
-struct Diff{T, N, Arr} <: AbstractArray{T, N}
+struct Diff{T, N, Arr} <: LazyArray{T, N}
     v::Arr
     dims::Int
 end
@@ -93,7 +97,7 @@ function getindex(D::Diff, k::Integer, j::Integer)
     end
 end
 
-struct Cumsum{T, N, Arr} <: AbstractArray{T, N}
+struct Cumsum{T, N, Arr} <: LazyArray{T, N}
     v::Arr
     dims::Int
 end

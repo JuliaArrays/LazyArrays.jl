@@ -77,6 +77,11 @@ end
 ####
 
 
+
+@inline mulapplystyle(_...) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), args::Type{<:AbstractArray}...) = mulapplystyle(MemoryLayout.(args)...)
+
+
 """
    lmaterialize(M::Mul)
 
@@ -173,12 +178,14 @@ const MulLayout{LAY} = ApplyLayout{typeof(*),LAY}
 MulLayout(layouts) = ApplyLayout(*, layouts)
 
 
-_flatten(A::MulArray, B...) = _flatten(A.applied, B...)
-flatten(A::MulArray) = ApplyArray(flatten(A.applied))	
+_flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
+flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
  
 *(A::MulMatrix, B::MulMatrix) = ApplyArray(*, A.args..., B.args...)
 *(A::MulMatrix, B::MulVector) = ApplyArray(*, A.args..., B.args...)
 *(A::MulVector, B::MulMatrix) = ApplyArray(*, A.args..., B.args...)
 
-adjoint(A::MulArray) = ApplyArray(*, reverse(adjoint.(A.applied.args))...)
-transpose(A::MulArray) = ApplyArray(*, reverse(transpose.(A.applied.args))...)
+adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
+transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
+
+

@@ -17,12 +17,16 @@ include("concattests.jl")
 
     @test Array(@inferred(Kron(A))) == A
     K = @inferred(Kron(A,B))
+    @test size(K) == (12,)
+    @test size(K,1) == 12
+    @test size(K,2) == 1
+    @test axes(K) == (Base.OneTo(12),)
     @test [K[k] for k=1:length(K)] == Array(K) == kron(A,B)
 
     A = randn(3)
     K = @inferred(Kron(A,B))
     @test K isa Kron{Float64}
-    @test all(K.arrays .=== (A,B))
+    @test all(K.args .=== (A,B))
     @test [K[k] for k=1:length(K)] == Array(K) == Array(Kron{Float64}(A,B)) == kron(A,B)
 
     # C = [7,8,9,10,11]
@@ -51,7 +55,7 @@ include("concattests.jl")
     A = rand(Int,3,2)
     K = Kron(A,B)
     @test K isa Kron{Float64}
-    @test all(K.arrays .=== (A,B))
+    @test all(K.args .=== (A,B))
     @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(K) == Array(Kron{Float64}(A,B)) == kron(A,B)
 
     K = @inferred(Kron{Float64}(Eye{Float64}(1), zeros(4)))
@@ -81,7 +85,7 @@ end
     @test exp.(x) isa Vcat
     @test exp.(x) == exp.(Vector(x))
     @test x .+ 2 isa Vcat
-    @test (x .+ 2).arrays[end] ≡ x.arrays[end] .+ 2 ≡ 3:5
+    @test (x .+ 2).args[end] ≡ x.args[end] .+ 2 ≡ 3:5
     @test x .* 2 isa Vcat
     @test 2 .+ x isa Vcat
     @test 2 .* x isa Vcat
@@ -154,41 +158,6 @@ end
 
     @test cumsum(BroadcastArray(exp, 1:10)) === Cumsum(BroadcastArray(exp, 1:10))
     @test cumsum(ApplyArray(+, 1:10)) === Cumsum(ApplyArray(+, 1:10))
-end
-
-
-
-@testset "broadcast Vcat" begin
-    x = Vcat(1:2, [1,1,1,1,1], 3)
-    y = 1:8
-    f = (x,y) -> cos(x*y)
-    @test f.(x,y) isa Vcat
-    @test @inferred(broadcast(f,x,y)) == f.(Vector(x), Vector(y))
-
-    @test (x .+ y) isa Vcat
-    @test (x .+ y).arrays[1] isa AbstractRange
-    @test (x .+ y).arrays[end] isa Int
-
-    z = Vcat(1:2, [1,1,1,1,1], 3)
-    @test (x .+ z) isa BroadcastArray
-    @test (x + z) isa BroadcastArray
-    @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
-
-    # Lazy mixed with Static treats as Lazy
-    s = SVector(1,2,3,4,5,6,7,8)
-    @test f.(x , s) isa Vcat
-    @test f.(x , s) == f.(Vector(x), Vector(s))
-
-    # these are special cased
-    @test Vcat(1, Ones(5))  + Vcat(2, Fill(2.0,5)) ≡ Vcat(3, Fill(3.0,5))
-    @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡
-        Vcat(SVector(5,7,9), Fill(3.0,5))
-end
-
-@testset "maximum/minimum Vcat" begin
-    x = Vcat(1:2, [1,1,1,1,1], 3)
-    @test maximum(x) == 3
-    @test minimum(x) == 1
 end
 
 @testset "vector*matrix broadcasting #27" begin

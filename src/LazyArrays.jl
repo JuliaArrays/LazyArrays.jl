@@ -30,7 +30,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
       similar, @_gc_preserve_end, @_gc_preserve_begin,
       @nexprs, @ncall, @ntuple, tuple_type_tail,
-      all, any, isbitsunion
+      all, any, isbitsunion, issubset
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
