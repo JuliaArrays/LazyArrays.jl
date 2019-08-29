@@ -71,7 +71,7 @@ end
 reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.args))...)
 
 
-const Hcat{T,N,I<:Tuple} = ApplyArray{T,N,typeof(hcat),I}
+const Hcat{T,I<:Tuple} = ApplyArray{T,2,typeof(hcat),I}
 
 Hcat(A...) = ApplyArray(hcat, A...)
 Hcat{T}(A...) where T = ApplyArray{T}(hcat, A...)
@@ -265,7 +265,7 @@ vec(A::Hcat) = Vcat(_vec.(A.args)...)
 ######
 
 BroadcastStyle(::Type{<:Vcat{<:Any,N}}) where N = LazyArrayStyle{N}()
-BroadcastStyle(::Type{<:Hcat{<:Any,N}}) where N = LazyArrayStyle{N}()
+BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
 
 broadcasted(::LazyArrayStyle, op, A::Vcat) =
     Vcat(broadcast(x -> broadcast(op, x), A.args)...)

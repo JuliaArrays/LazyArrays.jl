@@ -79,9 +79,9 @@ macro lazyldiv(Typ)
     end)
 end
 
-@lazymul ApplyArray
-@lazylmul ApplyArray
-@lazyldiv ApplyArray
-@lazymul BroadcastArray
-@lazylmul BroadcastArray
-@lazyldiv BroadcastArray
+@lazymul ApplyMatrix
+@lazylmul ApplyMatrix
+@lazyldiv ApplyMatrix
+@lazymul BroadcastMatrix
+@lazylmul BroadcastMatrix
+@lazyldiv BroadcastMatrix

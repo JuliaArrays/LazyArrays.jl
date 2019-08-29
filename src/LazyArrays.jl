@@ -51,7 +51,7 @@ else
     import Base: require_one_based_indexing    
 end             
 
-export Mul, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
+export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum,
         applied, materialize, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
 

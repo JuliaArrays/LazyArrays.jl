@@ -51,7 +51,7 @@ julia> A = Hcat(1:3, randn(3,10))
  2.0  -1.10206    1.52817    0.223099      0.851804    0.430933
  3.0  -1.26467   -0.743712  -0.828781     -0.0637502  -0.066743
 
-julia> Matrix(A) == hcat(A.arrays...)
+julia> Matrix(A) == hcat(A.args...)
 true
 
 julia> b = Array{Int}(undef, length(A)); @btime copyto!(b, A);
@@ -60,7 +60,7 @@ julia> b = Array{Int}(undef, length(A)); @btime copyto!(b, A);
 julia> B = Array{Float64}(undef, size(A)...); @btime copyto!(B, A);
   109.625 ns (1 allocation: 32 bytes)
 
-julia> @btime hcat(A.arrays...); # takes twice as long due to memory creation
+julia> @btime hcat(A.args...); # takes twice as long due to memory creation
   274.620 ns (6 allocations: 560 bytes)
 ```
 
