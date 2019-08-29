@@ -179,14 +179,9 @@ transposelayout(::LazyLayout) = LazyLayout()
 conjlayout(::LazyLayout) = LazyLayout()
 diagonallayout(::LazyLayout) = LazyLayout()
 
-mulapplystyle(::LazyLayout, ::LazyLayout, lay...) = LazyArrayApplyStyle()
-mulapplystyle(_, ::LazyLayout, lay...) = LazyArrayApplyStyle()
-mulapplystyle(::LazyLayout, lay...) = LazyArrayApplyStyle()
-mulapplystyle(::LazyLayout, ::LazyLayout, ::LazyLayout, lay...) = LazyArrayApplyStyle()
-mulapplystyle(_, ::LazyLayout, ::LazyLayout, lay...) = LazyArrayApplyStyle()
-mulapplystyle(::LazyLayout, _, ::LazyLayout, lay...) = LazyArrayApplyStyle()
-mulapplystyle(_, _, ::LazyLayout, lay...) = LazyArrayApplyStyle()
-
+combine_mul_styles(::LazyLayout) = LazyArrayApplyStyle()
+result_mul_style(::LazyArrayApplyStyle, _) = LazyArrayApplyStyle()
+result_mul_style(_, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
 
 struct  ApplyLayout{F, LAY} <: MemoryLayout end
 

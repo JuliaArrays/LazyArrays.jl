@@ -77,8 +77,6 @@ end
 ####
 
 
-
-@inline mulapplystyle(_...) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), args::Type{<:AbstractArray}...) = mulapplystyle(MemoryLayout.(args)...)
 
 
@@ -138,6 +136,7 @@ _mul(A) = A
 _mul(A,B,C...) = Mul(A,B,C...)
 
 _mul_colsupport(j, Z) = colsupport(Z,j)
+_mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
 _mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
 function _mul_colsupport(j, Z::AbstractArray, Y...)
     rws = colsupport(Z,j)
@@ -152,6 +151,7 @@ function _mul_colsupport(j, Z::AbstractArray, Y...)
 end
 
 colsupport(B::Mul, j) = _mul_colsupport(j, reverse(B.args)...)
+colsupport(A::ApplyArray, j) = colsupport(Applied(A), j)
 
 
 function _getindex(M::Mul, ::Tuple{<:Any}, k::Integer)
