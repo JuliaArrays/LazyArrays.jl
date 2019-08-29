@@ -138,7 +138,8 @@ _mul(A) = A
 _mul(A,B,C...) = Mul(A,B,C...)
 
 _mul_colsupport(j, Z) = colsupport(Z,j)
-function _mul_colsupport(j, Z, Y...)
+_mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
+function _mul_colsupport(j, Z::AbstractArray, Y...)
     rws = colsupport(Z,j)
     a = 1
     b = 0
