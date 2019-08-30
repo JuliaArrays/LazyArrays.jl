@@ -12,7 +12,7 @@ Kron{T}(A...) where T = ApplyArray{T}(kron, A...)
 _kron_dims() = 0
 _kron_dims(A, B...) = max(ndims(A), _kron_dims(B...))
 
-eltype(A::Applied{<:Any,typeof(kron)}) = mapreduce(eltype,promote_type,A.args)
+eltype(A::Applied{<:Any,typeof(kron)}) = promote_type(map(eltype,A.args)...)
 ndims(A::Applied{<:Any,typeof(kron)}) = _kron_dims(A.args...)
 
 size(K::Kron, j::Int) = prod(size.(K.args, j))

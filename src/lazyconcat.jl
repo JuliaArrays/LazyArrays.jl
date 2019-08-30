@@ -17,7 +17,7 @@ function instantiate(A::Applied{DefaultApplyStyle,typeof(vcat)})
     Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
 end
 
-@inline eltype(A::Applied{<:Any,typeof(vcat)}) = mapreduce(eltype,promote_type,A.args)
+@inline eltype(A::Applied{<:Any,typeof(vcat)}) = promote_type(map(eltype,A.args)...)
 @inline eltype(A::Applied{<:Any,typeof(vcat),Tuple{}}) = Any
 @inline ndims(A::Applied{<:Any,typeof(vcat),I}) where I = max(1,maximum(map(ndims,A.args)))
 @inline ndims(A::Applied{<:Any,typeof(vcat),Tuple{}}) = 1
@@ -85,7 +85,7 @@ function instantiate(A::Applied{DefaultApplyStyle,typeof(hcat)})
     Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
 end
 
-@inline eltype(A::Applied{<:Any,typeof(hcat)}) = mapreduce(eltype,promote_type,A.args)
+@inline eltype(A::Applied{<:Any,typeof(hcat)}) = promote_type(map(eltype,A.args)...)
 ndims(::Applied{<:Any,typeof(hcat)}) = 2
 size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
 Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
@@ -291,9 +291,9 @@ _vcat_getindex_eval(y) = ()
 _vcat_getindex_eval(y, a, b...) = tuple(y[a], _vcat_getindex_eval(y, b...)...)
 
 function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
-    kr = _vcat_axes(axes.(A.args)...)  # determine how to break up B
+    kr = _vcat_axes(map(axes,A.args)...)  # determine how to break up B
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
-    Vcat(broadcast((a,b) -> broadcast(op,a,b), A.args, B_arrays)...)
+    ApplyVector(vcat, broadcast((a,b) -> broadcast(op,a,b), A.args, B_arrays)...)
 end
 
 function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
@@ -391,7 +391,7 @@ _dotplus(a,b) = broadcast(+, a, b)
     end
 end
 
-@inline cumsum(V::Vcat{<:Any,1}) = Vcat(_vcat_cumsum(V.args...)...)
+@inline cumsum(V::Vcat{<:Any,1}) = ApplyVector(vcat,_vcat_cumsum(V.args...)...)
 
 
 _vcat_diff(x::Number) = ()
@@ -399,7 +399,7 @@ _vcat_diff(x) = (diff(x),)
 
 _vcat_diff(a::Number, b, c...) = (first(b)-a, _vcat_diff(b,c...)...)
 _vcat_diff(a, b, c...) = (diff(a), first(b)-last(a), _vcat_diff(b,c...)...)
-@inline diff(V::Vcat{T,1}) where T = Vcat{T}(_vcat_diff(V.args...)...)
+@inline diff(V::Vcat{T,1}) where T = ApplyVector{T}(vcat,_vcat_diff(V.args...)...)
 
 ####
 # maximum/minimum
