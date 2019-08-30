@@ -42,7 +42,7 @@ materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
 # the following materialzes the args and calls materialize again, unless it hasn't
 # changed in which case it falls back to the default
 _default_materialize(A::App, ::App) where App = A.f(A.args...)
-_default_materialize(A, _) where App = materialize(A)
+_default_materialize(A, _) = materialize(A)
 # copy(A::Applied{DefaultApplyStyle}) = A.f(A.args...)
 copy(A::Applied) = _default_materialize(materializeargs(A), A)
 
@@ -98,12 +98,14 @@ function check_applied_axes(A::Applied{<:MatrixFunctionStyle})
     axes(A.args[1],1) == axes(A.args[1],2) || throw(DimensionMismatch("matrix is not square: dimensions are $axes(A.args[1])"))
 end
 
-for op in (:axes, :size, :ndims)
+for op in (:axes, :size)
     @eval begin
         $op(A::Applied{<:MatrixFunctionStyle}) = $op(first(A.args))
         $op(A::Applied{<:MatrixFunctionStyle}, j) = $op(first(A.args), j)
     end
 end
+
+ndims(A::Applied{<:MatrixFunctionStyle}) = ndims(first(A.args))
 
 eltype(A::Applied{<:MatrixFunctionStyle}) = float(eltype(first(A.args)))
 

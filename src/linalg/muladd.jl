@@ -70,7 +70,6 @@ combine_mul_styles(c1, c2) = result_mul_style(combine_mul_styles(c1), combine_mu
 @inline combine_mul_styles(c1, c2, cs...) = result_mul_style(combine_mul_styles(c1), combine_mul_styles(c2, cs...))
 
 # result_mul_style works on types (singletons and pairs), and leverages `Style`
-result_mul_style(s::ApplyStyle) = s
 result_mul_style(::IdentityMulStyle, ::IdentityMulStyle) = MulAddStyle()
 result_mul_style(::MulAddStyle, ::MulAddStyle) = DefaultArrayApplyStyle()
 result_mul_style(_, ::MulAddStyle) = DefaultArrayApplyStyle()
