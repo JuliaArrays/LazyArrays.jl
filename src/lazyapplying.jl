@@ -57,6 +57,8 @@ similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}, axes) where {T,N} = Ar
 similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 similar(M::Applied) = similar(M, eltype(M))
 
+axes(A::Applied, j) = axes(A)[j]
+
 struct ApplyBroadcastStyle <: BroadcastStyle end
 struct ApplyArrayBroadcastStyle{N} <: Broadcast.AbstractArrayStyle{N} end
 ApplyArrayBroadcastStyle{N}(::Val{N}) where N = ApplyArrayBroadcastStyle{N}()
@@ -96,9 +98,14 @@ function check_applied_axes(A::Applied{<:MatrixFunctionStyle})
     axes(A.args[1],1) == axes(A.args[1],2) || throw(DimensionMismatch("matrix is not square: dimensions are $axes(A.args[1])"))
 end
 
-axes(A::Applied{<:MatrixFunctionStyle}) = axes(first(A.args))
-size(A::Applied{<:MatrixFunctionStyle}) = size(first(A.args))
-eltype(A::Applied{<:MatrixFunctionStyle}) = eltype(first(A.args))
+for op in (:axes, :size, :ndims)
+    @eval begin
+        $op(A::Applied{<:MatrixFunctionStyle}) = $op(first(A.args))
+        $op(A::Applied{<:MatrixFunctionStyle}, j) = $op(first(A.args), j)
+    end
+end
+
+eltype(A::Applied{<:MatrixFunctionStyle}) = float(eltype(first(A.args)))
 
 getindex(A::Applied, kj...) = materialize(A)[kj...]
 

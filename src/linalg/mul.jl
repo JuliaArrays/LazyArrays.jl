@@ -151,7 +151,6 @@ function _mul_colsupport(j, Z::AbstractArray, Y...)
 end
 
 colsupport(B::Mul, j) = _mul_colsupport(j, reverse(B.args)...)
-colsupport(A::ApplyArray, j) = colsupport(Applied(A), j)
 
 
 function _getindex(M::Mul, ::Tuple{<:Any}, k::Integer)

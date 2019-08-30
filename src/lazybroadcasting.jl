@@ -27,21 +27,15 @@ BroadcastArray(bc::Broadcasted{S}) where S =
 BroadcastArray(b::BroadcastArray) = b
 BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
 
-function getproperty(A::BroadcastArray, d::Symbol)
-    if d == :broadcasted
-        instantiate(broadcasted(A.f, A.args...))
-    else
-        getfield(A, d)
-    end
-end
+Broadcasted(A::BroadcastArray) = instantiate(broadcasted(A.f, A.args...))
 
 
-axes(A::BroadcastArray) = axes(A.broadcasted)
+axes(A::BroadcastArray) = axes(Broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
 
 IndexStyle(::BroadcastArray{<:Any,1}) = IndexLinear()
 
-@propagate_inbounds getindex(A::BroadcastArray, kj::Int...) = A.broadcasted[kj...]
+@propagate_inbounds getindex(A::BroadcastArray, kj::Int...) = Broadcasted(A)[kj...]
 
 
 @propagate_inbounds _broadcast_getindex_range(A::Union{Ref,AbstractArray{<:Any,0},Number}, I) = A[] # Scalar-likes can just ignore all indices
@@ -49,7 +43,7 @@ IndexStyle(::BroadcastArray{<:Any,1}) = IndexLinear()
 @propagate_inbounds _broadcast_getindex_range(A, I) = A[I]
 
 getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
-    BroadcastArray(B.broadcasted.f, map(a -> _broadcast_getindex_range(a,kr), B.broadcasted.args)...)
+    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
@@ -59,7 +53,7 @@ copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 #                     (:maximum, :max), (:minimum, :min),
 #                     (:all, :&),       (:any, :|)]
 function Base._sum(f, A::BroadcastArray, ::Colon)
-    bc = A.broadcasted
+    bc = Broadcasted(A)
     T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
     out = zero(T)
     @simd for I in eachindex(bc)
@@ -68,7 +62,7 @@ function Base._sum(f, A::BroadcastArray, ::Colon)
     out
 end
 function Base._prod(f, A::BroadcastArray, ::Colon)
-    bc = A.broadcasted
+    bc = Broadcasted(A)
     T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
     out = one(T)
     @simd for I in eachindex(bc)

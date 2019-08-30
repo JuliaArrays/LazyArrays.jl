@@ -53,7 +53,7 @@ end
 
 export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum,
-        applied, materialize, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
+        applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
 
 include("memorylayout.jl")
 include("cache.jl")
