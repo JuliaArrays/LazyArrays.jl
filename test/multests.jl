@@ -675,14 +675,16 @@ end
         end
         
         A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
-        blasnoalloc(c, 2.0, A, x, 3.0, y)
-        @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
-        Ac = A'
-        blasnoalloc(c, 2.0, Ac, x, 3.0, y)
-        @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
-        Aa = ApplyArray(+, A, Ac)
-        blasnoalloc(c, 2.0, Aa, x, 3.0, y)
-        @test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
+        if VERSION ≥ v"1.1"
+			blasnoalloc(c, 2.0, A, x, 3.0, y)
+			@test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
+			Ac = A'
+			blasnoalloc(c, 2.0, Ac, x, 3.0, y)
+			@test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
+			Aa = ApplyArray(+, A, Ac)
+			blasnoalloc(c, 2.0, Aa, x, 3.0, y)
+			@test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
+		end
     end
 
     @testset "multi-argument mul" begin
