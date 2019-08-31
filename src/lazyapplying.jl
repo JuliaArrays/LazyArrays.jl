@@ -189,8 +189,10 @@ conjlayout(::LazyLayout) = LazyLayout()
 diagonallayout(::LazyLayout) = LazyLayout()
 
 combine_mul_styles(::LazyLayout) = LazyArrayApplyStyle()
+result_mul_style(::LazyArrayApplyStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
 result_mul_style(::LazyArrayApplyStyle, _) = LazyArrayApplyStyle()
 result_mul_style(_, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
+
 
 struct  ApplyLayout{F, LAY} <: MemoryLayout end
 

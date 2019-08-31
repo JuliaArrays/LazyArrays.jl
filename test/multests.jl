@@ -1,6 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
-                    MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle
+                    MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
+                    FlattenMulStyle
 import Base.Broadcast: materialize, materialize!, broadcasted
 
 @testset "Matrix * Vector" begin
@@ -678,13 +679,13 @@ end
         
         if VERSION ≥ v"1.1"
             @inferred(MulAdd(@~ A*x + y))
-            blasnoalloc(c, 2.0, A, x, 3.0, y)
-			@test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
-			Ac = A'
-			blasnoalloc(c, 2.0, Ac, x, 3.0, y)
-			@test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
-			Aa = ApplyArray(+, A, Ac)
-			blasnoalloc(c, 2.0, Aa, x, 3.0, y)
+            @test blasnoalloc(c, 2.0, A, x, 3.0, y) === c
+            @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
+            Ac = A'
+            blasnoalloc(c, 2.0, Ac, x, 3.0, y)
+            @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
+            Aa = ApplyArray(+, A, Ac)
+            blasnoalloc(c, 2.0, Aa, x, 3.0, y)
 			@test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
 		end
     end
@@ -829,6 +830,14 @@ end
        @test apply(*, Diagonal(Fill(2,10)), Fill(3,10)) ≡ Fill(6,10)
        @test_broken Diagonal(Fill(2,10))  * Fill(3,10,3) ≡ Fill(6,10)
        @test apply(*, Diagonal(Fill(2,10)), Fill(3,10,3)) ≡ Fill(6,10,3)
+       @test apply(*,Fill(3,10,10),Fill(3,10)) ≡ Fill(9,10)
+    end
+
+    @testset "ApplyArray MulTest" begin
+        A = ApplyArray(*,randn(2,2), randn(2,2))
+        @test ApplyStyle(*,typeof(A),typeof(randn(2,2))) == FlattenMulStyle()
+        @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*Fill(3,10) ≡ Fill(18,10)
+        @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10)) == Fill(36,10,10)
     end
 end
 

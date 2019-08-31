@@ -112,8 +112,21 @@ function resizedata!(B::CachedArray{T,N,Array{T,N}},nm::Vararg{Integer,N}) where
     B
 end
 
-colsupport(A::CachedMatrix, i) = colsupport(A.array, i)
-rowsupport(A::CachedMatrix, i) = rowsupport(A.array, i)
+
+_minimum(a) = isempty(a) ? length(a)+1 : minimum(a)
+_maximum(a) = isempty(a) ? 0 : maximum(a)
+convexunion(a::AbstractVector, b::AbstractVector) = min(_minimum(a),_minimum(b)):max(_maximum(a),_maximum(b))
+
+colsupport(A::CachedMatrix, i) = convexunion(colsupport(A.array, i),colsupport(A.data,i))
+colsupport(A::CachedVector, i) = convexunion(colsupport(A.array, i),colsupport(A.data,i))
+rowsupport(A::CachedMatrix, i) = convexunion(rowsupport(A.array, i),rowsupport(A.data,i))
 
 Base.replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractString) =
     i in colsupport(A,j) ? s : Base.replace_with_centered_mark(s)
+
+
+###
+# special for zero cache
+###
+
+zero!(A::CachedVector{<:Any,<:Any,<:Zeros}) = zero!(A.data)

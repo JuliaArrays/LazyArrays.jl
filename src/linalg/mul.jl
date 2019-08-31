@@ -103,7 +103,13 @@ _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 @inline flatten(A) = A
 @inline flatten(A::Mul) = applied(*, _flatten(A.args...)...)
 
+
+copy(M::Mul{DefaultArrayApplyStyle,<:Tuple{<:Any,<:Any}}) = copyto!(similar(M), M)
 copy(A::Mul{DefaultArrayApplyStyle}) = flatten(lmaterialize(A))
+
+struct FlattenMulStyle <: ApplyStyle end
+
+copy(A::Mul{FlattenMulStyle}) = materialize(flatten(A))
 
 
 rowsupport(_, A, k) = axes(A,2)
@@ -147,7 +153,7 @@ _mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
 _mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
 function _mul_colsupport(j, Z::AbstractArray, Y...)
     rws = colsupport(Z,j)
-    a = 1
+    a = size(Z,1)+1
     b = 0
     for k in rws 
         cs = _mul_colsupport(k, Y...)
@@ -199,10 +205,6 @@ MulLayout(layouts) = ApplyLayout(*, layouts)
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
 flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
  
-*(A::MulMatrix, B::MulMatrix) = ApplyArray(*, A.args..., B.args...)
-*(A::MulMatrix, B::MulVector) = ApplyArray(*, A.args..., B.args...)
-*(A::MulVector, B::MulMatrix) = ApplyArray(*, A.args..., B.args...)
-
 adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
 transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
 

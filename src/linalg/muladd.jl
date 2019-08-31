@@ -35,7 +35,7 @@ length(M::MulAdd) = prod(size(M))
 size(M::MulAdd) = length.(axes(M))
 axes(M::MulAdd) = axes(M.C)
 
-similar(M::MulAdd, ::Type{T}, axes) where {T,N} = Array{T}(undef, length.(axes))
+similar(M::MulAdd, ::Type{T}, axes) where {T,N} = similar(Array{T}, axes)
 similar(M::MulAdd, ::Type{T}) where T = similar(M, T, axes(M))
 similar(M::MulAdd) = similar(M, eltype(M))
 
@@ -65,16 +65,37 @@ struct IdentityMulStyle <: AbstractArrayApplyStyle end
 
 combine_mul_styles() = MulAddStyle()
 combine_mul_styles(_) = IdentityMulStyle()
+combine_mul_styles(::ApplyLayout{typeof(*)}) = FlattenMulStyle()
 combine_mul_styles(::ScalarLayout) = ScalarMulStyle()
 combine_mul_styles(c1, c2) = result_mul_style(combine_mul_styles(c1), combine_mul_styles(c2))
 @inline combine_mul_styles(c1, c2, cs...) = result_mul_style(combine_mul_styles(c1), combine_mul_styles(c2, cs...))
 
 # result_mul_style works on types (singletons and pairs), and leverages `Style`
 result_mul_style(::IdentityMulStyle, ::IdentityMulStyle) = MulAddStyle()
+result_mul_style(::DefaultArrayApplyStyle, ::DefaultArrayApplyStyle) = DefaultArrayApplyStyle()
+result_mul_style(_, ::DefaultArrayApplyStyle) = DefaultArrayApplyStyle()
+result_mul_style(::DefaultArrayApplyStyle, _) = DefaultArrayApplyStyle()
 result_mul_style(::MulAddStyle, ::MulAddStyle) = DefaultArrayApplyStyle()
 result_mul_style(_, ::MulAddStyle) = DefaultArrayApplyStyle()
 result_mul_style(::MulAddStyle, _) = DefaultArrayApplyStyle()
 result_mul_style(::ScalarMulStyle, S::MulAddStyle) = S
+result_mul_style(::DefaultArrayApplyStyle, ::MulAddStyle) = DefaultArrayApplyStyle()
+result_mul_style(::MulAddStyle, ::DefaultArrayApplyStyle) = DefaultArrayApplyStyle()
+result_mul_style(::MulAddStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
+result_mul_style(::LazyArrayApplyStyle, ::MulAddStyle) = LazyArrayApplyStyle()
+result_mul_style(::DefaultArrayApplyStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
+result_mul_style(::LazyArrayApplyStyle, ::DefaultArrayApplyStyle) = LazyArrayApplyStyle()
+result_mul_style(::FlattenMulStyle, ::FlattenMulStyle) = FlattenMulStyle()
+result_mul_style(::FlattenMulStyle, ::MulAddStyle) = FlattenMulStyle()
+result_mul_style(::MulAddStyle, ::FlattenMulStyle) = FlattenMulStyle()
+result_mul_style(::FlattenMulStyle, ::LazyArrayApplyStyle) = FlattenMulStyle()
+result_mul_style(::LazyArrayApplyStyle, ::FlattenMulStyle) = FlattenMulStyle()
+result_mul_style(::FlattenMulStyle, ::DefaultArrayApplyStyle) = FlattenMulStyle()
+result_mul_style(::DefaultArrayApplyStyle, ::FlattenMulStyle) = FlattenMulStyle()
+result_mul_style(::FlattenMulStyle, ::IdentityMulStyle) = FlattenMulStyle()
+result_mul_style(::IdentityMulStyle, ::FlattenMulStyle) = FlattenMulStyle()
+
+
 
 @inline mulapplystyle(A...) = combine_mul_styles(A...)
 
@@ -463,12 +484,22 @@ end
 ####
 
 # Diagonal multiplication never changes structure
+similar(M::MulAdd{<:DiagonalLayout,<:DiagonalLayout}, ::Type{T}, axes) where T = similar(M.B, T, axes)
 similar(M::MulAdd{<:DiagonalLayout}, ::Type{T}, axes) where T = similar(M.B, T, axes)
+similar(M::MulAdd{<:Any,<:DiagonalLayout}, ::Type{T}, axes) where T = similar(M.A, T, axes)
 # equivalent to rescaling
 function materialize!(M::MulAdd{<:DiagonalLayout{<:AbstractFillLayout}})
-    M.C .= (M.α * getindex_value(M.A)) .* M.B .+ M.β .* M.C
+    M.C .= (M.α * getindex_value(M.A.diag)) .* M.B .+ M.β .* M.C
+    M.C
+end
+
+function materialize!(M::MulAdd{<:Any,<:DiagonalLayout{<:AbstractFillLayout}})
+    M.C .= M.α .* M.A .* getindex_value(M.B.diag) .+ M.β .* M.C
     M.C
 end
 
 copy(M::MulAdd{<:DiagonalLayout{<:AbstractFillLayout}}) = (M.α * getindex_value(M.A.diag)) .* M.B .+ M.β .* M.C
 copy(M::MulAdd{<:DiagonalLayout{<:AbstractFillLayout},<:Any,ZerosLayout}) = (M.α * getindex_value(M.A.diag)) .* M.B
+copy(M::MulAdd{<:AbstractFillLayout,<:AbstractFillLayout,<:AbstractFillLayout}) = M.α*M.A*M.B + M.β*M.C
+copy(M::MulAdd{<:Any,<:DiagonalLayout{<:AbstractFillLayout}}) = (M.α * getindex_value(M.B.diag)) .* M.A .+ M.β .* M.C
+copy(M::MulAdd{<:Any,<:DiagonalLayout{<:AbstractFillLayout},ZerosLayout}) = (M.α * getindex_value(M.B.diag)) .* M.A
