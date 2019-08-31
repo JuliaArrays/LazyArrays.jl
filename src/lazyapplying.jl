@@ -186,7 +186,6 @@ MemoryLayout(::Type{<:LazyArray}) = LazyLayout()
 
 transposelayout(::LazyLayout) = LazyLayout()
 conjlayout(::LazyLayout) = LazyLayout()
-diagonallayout(::LazyLayout) = LazyLayout()
 
 combine_mul_styles(::LazyLayout) = LazyArrayApplyStyle()
 result_mul_style(::LazyArrayApplyStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
@@ -241,3 +240,7 @@ end
 @inline getindex(A::ApplyMatrix, kr::Colon, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
 @inline getindex(A::ApplyMatrix, kr::AbstractUnitRange, jr::Colon) = lazy_getindex(A, kr, jr)
 @inline getindex(A::ApplyMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
+
+
+diagonallayout(::LazyLayout) = LazyLayout()
+diagonallayout(::ApplyLayout) = DiagonalLayout{LazyLayout}()
