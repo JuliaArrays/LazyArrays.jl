@@ -106,6 +106,9 @@ end
     C2 = cache(C)
     @test C2.data !== C.data
 
+    @test cache(A)[2,1] == 2
+    @test_throws BoundsError cache(A)[2,2]
+
     A = reshape(1:10^2, 10,10)
     C = cache(A)
     @test size(C) == (10,10)

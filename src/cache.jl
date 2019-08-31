@@ -42,13 +42,19 @@ size(A::CachedArray) = size(A.array)
 length(A::CachedArray) = length(A.array)
 
 @propagate_inbounds function Base.getindex(B::CachedArray{T,N}, kj::Vararg{Integer,N}) where {T,N}
-    @boundscheck checkbounds(Bool, B, kj...)
+    @boundscheck checkbounds(B, kj...)
     resizedata!(B, kj...)
     B.data[kj...]
 end
 
+@propagate_inbounds function Base.getindex(B::CachedArray{T,1}, k::Integer) where T
+    @boundscheck checkbounds(B, k)
+    resizedata!(B, k)
+    B.data[k]
+end
+
 @propagate_inbounds function Base.setindex!(B::CachedArray{T,N}, v, kj::Vararg{Integer,N}) where {T,N}
-    @boundscheck checkbounds(Bool, B, kj...)
+    @boundscheck checkbounds(B, kj...)
     resizedata!(B,kj...)
     @inbounds B.data[kj...] = v
     v
@@ -57,8 +63,20 @@ end
 _maximum(ax, I) = maximum(I)
 _maximum(ax, ::Colon) = maximum(ax)
 function getindex(A::CachedArray, I...)
+    @boundscheck checkbounds(A, I...)
     resizedata!(A, _maximum.(axes(A), I)...)
     A.data[I...]
+end
+
+function getindex(A::CachedVector, I, J...)
+    @boundscheck checkbounds(A, I, J...)
+    resizedata!(A, _maximum(axes(A,1), I))
+    A.data[I]
+end
+
+function getindex(A::CachedVector, I::CartesianIndex)
+    resizedata!(A, Tuple(I)...)
+    A.data[I]
 end
 
 function getindex(A::CachedArray, I::CartesianIndex)

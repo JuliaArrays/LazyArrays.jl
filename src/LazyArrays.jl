@@ -40,7 +40,7 @@ import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, t
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
-import FillArrays: AbstractFill
+import FillArrays: AbstractFill, getindex_value
 
 import StaticArrays: StaticArrayStyle
 

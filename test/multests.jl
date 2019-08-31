@@ -675,8 +675,10 @@ end
         end
         
         A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
+        
         if VERSION ≥ v"1.1"
-			blasnoalloc(c, 2.0, A, x, 3.0, y)
+            @inferred(MulAdd(@~ A*x + y))
+            blasnoalloc(c, 2.0, A, x, 3.0, y)
 			@test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
 			Ac = A'
 			blasnoalloc(c, 2.0, Ac, x, 3.0, y)
@@ -820,6 +822,13 @@ end
 
         @test Base.BroadcastStyle(ApplyArrayBroadcastStyle{1}(), Broadcast.DefaultArrayStyle{1}()) == Broadcast.DefaultArrayStyle{1}()
         @test Base.BroadcastStyle(ApplyArrayBroadcastStyle{1}(), Broadcast.DefaultArrayStyle{2}()) == Broadcast.DefaultArrayStyle{2}()
+    end
+
+    @testset "Diagonal" begin
+       @test Diagonal(Fill(2,10))  * Fill(3,10) ≡ Fill(6,10)
+       @test apply(*, Diagonal(Fill(2,10)), Fill(3,10)) ≡ Fill(6,10)
+       @test_broken Diagonal(Fill(2,10))  * Fill(3,10,3) ≡ Fill(6,10)
+       @test apply(*, Diagonal(Fill(2,10)), Fill(3,10,3)) ≡ Fill(6,10,3)
     end
 end
 

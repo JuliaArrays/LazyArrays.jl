@@ -27,7 +27,7 @@ end
     MulAdd{typeof(MemoryLayout(AA)), typeof(MemoryLayout(BB)), typeof(MemoryLayout(CC))}(α, A, B, β, C)
 
 @inline eltype(::MulAdd{StyleA,StyleB,StyleC,T,AA,BB,CC}) where {StyleA,StyleB,StyleC,T,AA,BB,CC} =
-     promote_type(T, eltype(AA), eltype(BB), eltype(CC))
+     promote_type(_mul_eltype(T, eltype(AA), eltype(BB)), _mul_eltype(T, eltype(CC)))
 
 size(M::MulAdd, p::Int) = size(M)[p]
 axes(M::MulAdd, p::Int) = axes(M)[p]
@@ -106,19 +106,9 @@ _αABβC(M::Applied{MulAddStyle,typeof(+)}, ::Type{T}) where T =
 MulAdd(M::Applied) = MulAdd(_αABβC(M, eltype(M))...)
 
 similar(M::Applied{MulAddStyle}, ::Type{T}) where T = similar(MulAdd(M), T)
-copy(M::Applied{MulAddStyle}) = copyto!(similar(M), M)
+copy(M::Applied{MulAddStyle}) = copy(MulAdd(M))
 
-@inline function copyto!(dest::AbstractArray{T}, M::Applied{MulAddStyle}) where T
-    α,A,B,β,C = _αABβC(M, T)
-    if C isa Zeros
-        if !isbitstype(T) # instantiate
-            dest .= β .* view(A,:,1) .* Ref(B[1])  # get shape right
-        end
-    elseif C !== dest 
-        copyto!(dest, C)
-    end
-    materialize!(MulAdd(α, A, B, β, dest))
-end
+@inline copyto!(dest::AbstractArray, M::Applied{MulAddStyle}) = copyto!(dest, MulAdd(M))
 
 const ArrayMulArrayAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray}
 const MatMulVecAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractMatrix,<:AbstractVector,<:AbstractVector}
@@ -141,9 +131,17 @@ const BlasMatLmulMat{StyleA,StyleB,T<:BlasFloat} = Lmul{StyleA,StyleB,<:Abstract
 materialize(M::MulAdd) = copy(instantiate(M))
 copy(M::MulAdd) = copyto!(similar(M), M)
 
-@inline function copyto!(dest::AbstractArray, M::MulAdd)
-    M.C ≡ dest || copyto!(dest, M.C)
-    materialize!(MulAdd(M.α,M.A,M.B,M.β,dest))
+@inline function copyto!(dest::AbstractArray{T}, M::MulAdd) where T
+    M.C === dest  || copyto!(dest, M.C)
+    materialize!(MulAdd(M.α, M.A, M.B, M.β, dest))
+end
+
+@inline function copyto!(dest::AbstractArray{T}, M::MulAdd{<:Any,<:Any,ZerosLayout}) where T
+    α,A,B,β,C = M.α, M.A, M.B, M.β, M.C  
+    if !isbitstype(T) # instantiate
+        dest .= β .* view(A,:,1) .* Ref(B[1])  # get shape right
+    end
+    materialize!(MulAdd(α, A, B, β, dest))
 end
 
 # Modified from LinearAlgebra._generic_matmatmul!
@@ -458,3 +456,19 @@ function materialize!(M::MatLmulMat{<:TriangularLayout})
     end
     X
 end
+
+
+####
+# Diagonal
+####
+
+# Diagonal multiplication never changes structure
+similar(M::MulAdd{<:DiagonalLayout}, ::Type{T}, axes) where T = similar(M.B, T, axes)
+# equivalent to rescaling
+function materialize!(M::MulAdd{<:DiagonalLayout{<:AbstractFillLayout}})
+    M.C .= (M.α * getindex_value(M.A)) .* M.B .+ M.β .* M.C
+    M.C
+end
+
+copy(M::MulAdd{<:DiagonalLayout{<:AbstractFillLayout}}) = (M.α * getindex_value(M.A.diag)) .* M.B .+ M.β .* M.C
+copy(M::MulAdd{<:DiagonalLayout{<:AbstractFillLayout},<:Any,ZerosLayout}) = (M.α * getindex_value(M.A.diag)) .* M.B

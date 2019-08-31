@@ -15,7 +15,7 @@ size(M::Add) = length.(axes(M))
 axes(M::Add) = axes(first(M.args))
 
 
-eltype(M::Add) = Base._return_type(+, eltype.(M.args))
+eltype(M::Add) = promote_type(map(eltype,M.args)...)
 
 const AddArray{T,N,Factors<:Tuple} = ApplyArray{T,N,<:Add{Factors}}
 const AddVector{T,Factors<:Tuple} = AddArray{T,1,Factors}

@@ -3,6 +3,13 @@
 
 const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
 
+const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
+
+const MulVector{T, Args} = MulArray{T, 1, Args}
+const MulMatrix{T, Args} = MulArray{T, 2, Args}
+
+
+
 Mul(A...) = applied(*, A...)
 
 check_mul_axes(A) = nothing
@@ -151,6 +158,7 @@ function _mul_colsupport(j, Z::AbstractArray, Y...)
 end
 
 colsupport(B::Mul, j) = _mul_colsupport(j, reverse(B.args)...)
+colsupport(B::MulArray, j) = _mul_colsupport(j, reverse(B.args)...)
 
 
 function _getindex(M::Mul, ::Tuple{<:Any}, k::Integer)
@@ -183,11 +191,6 @@ function getindex(M::Mul, k::Integer, j::Integer)
     ret
 end
 
-
-const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
-
-const MulVector{T, Args} = MulArray{T, 1, Args}
-const MulMatrix{T, Args} = MulArray{T, 2, Args}
 
 const MulLayout{LAY} = ApplyLayout{typeof(*),LAY}
 MulLayout(layouts) = ApplyLayout(*, layouts)

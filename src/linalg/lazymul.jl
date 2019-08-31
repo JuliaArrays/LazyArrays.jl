@@ -21,6 +21,13 @@ macro lazymul(Typ)
         Base.:*(A::LinearAlgebra.AdjointAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
         Base.:*(A::LinearAlgebra.TransposeAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
     end
+    if Typ ≠ :ApplyMatrix
+        ret = quote
+            $ret
+            Base.:*(A::$Typ, B::LazyArrays.ApplyMatrix, C...) = LazyArrays.apply(*,A,B,C...)
+            Base.:*(A::LazyArrays.ApplyMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+        end
+    end
     for Struc in (:AbstractTriangular, :Diagonal)
         ret = quote
             $ret
