@@ -8,6 +8,9 @@ Vcat(A...) = ApplyArray(vcat, A...)
 Vcat{T}(A...) where T = ApplyArray{T}(vcat, A...)
 Vcat() = Vcat{Any}()
 
+Vcat(A::AbstractVector...) = ApplyVector(vcat, A...)
+Vcat{T}(A::AbstractVector...) where T = ApplyVector{T}(vcat, A...)
+
 function instantiate(A::Applied{DefaultApplyStyle,typeof(vcat)})
     isempty(A.args) && return A
     m = size(A.args[1],2)
