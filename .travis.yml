@@ -15,7 +15,7 @@ matrix:
 notifications:
   email: false
 after_success:
-  - julia -e 'cd(Pkg.dir("LazyArrays")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
 
 # uncomment the following lines to override the default test script
 #script:
