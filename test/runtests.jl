@@ -132,11 +132,39 @@ end
 
     @test C[1:3,1,:] == A[1:3,1,:]
 
-    A = collect(1:5)
-    C = cache(A)
-    @test C isa Vector{Int}
-    C[1] = 2
-    @test A[1] ≠ 2
+    @testset "Matrix cache" begin
+        A = collect(1:5)
+        C = cache(A)
+        @test C isa Vector{Int}
+        C[1] = 2
+        @test A[1] ≠ 2
+
+        A = cache(Matrix(reshape(1:6,2,3)))
+        C = cache(A)
+        @test C isa Matrix{Int}
+        C[1,1] = 2
+        @test A[1,1] ≠ 2
+        C[1] = 3
+        @test A[1,1] ≠ 3
+    end
+
+    @testset "setindex!" begin
+        A = (1:5)
+        C = cache(A)
+        C[1] = 2
+        @test C[1] == 2
+
+        A = cache(reshape(1:6,2,3))
+        C = cache(A)
+        C[1,1] = 2
+        @test A[1,1] ≠ 2
+        @test C[1,1] == 2
+        C[1] = 3
+        @test C[1,1] == 3
+
+        @test_throws BoundsError C[3,1]
+        @test_throws BoundsError C[7]
+    end
 end
 
 @testset "Diff and Cumsum" begin
@@ -178,4 +206,17 @@ end
     @test rowsupport(D,3) === colsupport(D,3) === 3:3
     Z = Zeros(5)
     @test rowsupport(Z,1) === colsupport(Z,1) === 1:0
+    @test_broken cache(D)
+    C = cache(Array,D)
+    @test colsupport(C,2) === 1:2
+    @test colsupport(C,1) === 1:1
+    @test colsupport(cache(Zeros(5,5)),1) == 1:0
+    C = cache(Zeros(5));
+    @test colsupport(C,1) == 1:0
+    C[3] = 1
+    @test colsupport(C,1) == 1:3
+
+    LazyArrays.zero!(C)
+    @test colsupport(C,1) == 1:3
+    @test C == zeros(5)
 end

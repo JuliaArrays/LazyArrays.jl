@@ -13,6 +13,11 @@ const CachedMatrix{T,DM<:AbstractMatrix{T},M<:AbstractMatrix{T}} = CachedArray{T
 #     CachedArray{T,N,typeof(data),typeof(array)}(data, array, sz)
 CachedArray(data::AbstractArray, array::AbstractArray) = CachedArray(data, array, size(data))
 
+# function CachedArray(::Type{Diagonal}, array::AbstractMatrix{T}) where T 
+#     axes(array,1) == axes(array,2) || throw(DimensionMismatch("Matrix must be square to cache as diagonal"))
+#     CachedArray(Diagonal(Vector{T}(undef, size(array,1))), array)
+# end
+
 CachedArray(::Type{Array}, array::AbstractArray{T,N}) where {T,N} =
     CachedArray(Array{T,N}(undef, ntuple(zero,N)), array)
 
@@ -25,7 +30,7 @@ CachedArray(array::AbstractArray{T,N}) where {T,N} =
 
 Caches the entries of an array.
 """
-cache(::Type{MT}, O::AbstractArray) where {MT<:AbstractArray} = CachedArray(MT,O;kwds...)
+cache(::Type{MT}, O::AbstractArray) where {MT<:AbstractArray} = CachedArray(MT,O)
 cache(A::AbstractArray) = _cache(MemoryLayout(typeof(A)), A)
 _cache(_, O::AbstractArray) = CachedArray(O)
 _cache(_, O::CachedArray) = CachedArray(copy(O.data), O.array, O.datasize)
