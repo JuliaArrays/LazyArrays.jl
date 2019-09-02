@@ -93,11 +93,11 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test apply(\,A,x) isa ApplyVector
         @test apply(\,A,Array(x)) isa ApplyVector
         @test apply(\,Array(A),x) isa ApplyVector
-        @test apply(\,A,x) == apply(\,Array(A),x) == apply(\,A,Array(x))  == Array(A)\Array(x)
+        @test apply(\,A,x) ≈ apply(\,Array(A),x) ≈ apply(\,A,Array(x)) ≈ Array(A)\Array(x)
 
         @test apply(\,A,B) isa ApplyMatrix
         @test apply(\,A,Array(B)) isa ApplyMatrix
         @test apply(\,Array(A),B) isa ApplyMatrix
-        @test apply(\,A,B) ≈ apply(\,Array(A),B) ≈ apply(\,A,Array(B))  ≈ Array(A)\Array(B)
+        @test apply(\,A,B) ≈ apply(\,Array(A),B) ≈ apply(\,A,Array(B)) ≈ Array(A)\Array(B)
     end
 end
