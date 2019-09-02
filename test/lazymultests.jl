@@ -1,5 +1,5 @@
 using LazyArrays, LinearAlgebra
-import LazyArrays: @lazymul, @lazyldiv, materialize!
+import LazyArrays: @lazymul, @lazylmul, @lazyldiv, materialize!, MemoryLayout, triangulardata
 
 # used to test general matrix backends
 struct MyMatrix{T} <: AbstractMatrix{T}
@@ -29,6 +29,35 @@ LinearAlgebra.factorize(A::MyMatrix) = factorize(A.A)
 @lazymul MyMatrix
 @lazyldiv MyMatrix
 
+struct MyUpperTriangular{T} <: AbstractMatrix{T}
+    A::UpperTriangular{T,Matrix{T}}
+end
+
+MyUpperTriangular{T}(::UndefInitializer, n::Int, m::Int) where T = MyUpperTriangular{T}(UpperTriangular(Array{T}(undef, n, m)))
+MyUpperTriangular(A::AbstractMatrix{T}) where T = MyUpperTriangular{T}(UpperTriangular(Matrix{T}(A)))
+Base.convert(::Type{MyUpperTriangular{T}}, A::MyUpperTriangular{T}) where T = A
+Base.convert(::Type{MyUpperTriangular{T}}, A::MyUpperTriangular) where T = MyUpperTriangular(convert(AbstractArray{T}, A.A))
+Base.convert(::Type{MyUpperTriangular}, A::MyUpperTriangular)= A
+Base.convert(::Type{AbstractArray{T}}, A::MyUpperTriangular) where T = MyUpperTriangular(convert(AbstractArray{T}, A.A))
+Base.convert(::Type{AbstractMatrix{T}}, A::MyUpperTriangular) where T = MyUpperTriangular(convert(AbstractArray{T}, A.A))
+Base.convert(::Type{MyUpperTriangular{T}}, A::AbstractArray{T}) where T = MyUpperTriangular{T}(A)
+Base.convert(::Type{MyUpperTriangular{T}}, A::AbstractArray) where T = MyUpperTriangular{T}(convert(AbstractArray{T}, A))
+Base.convert(::Type{MyUpperTriangular}, A::AbstractArray{T}) where T = MyUpperTriangular{T}(A)
+Base.getindex(A::MyUpperTriangular, kj...) = A.A[kj...]
+Base.getindex(A::MyUpperTriangular, ::Colon, j::AbstractVector) = MyUpperTriangular(A.A[:,j])
+Base.setindex!(A::MyUpperTriangular, v, kj...) = setindex!(A.A, v, kj...)
+Base.size(A::MyUpperTriangular) = size(A.A)
+Base.similar(::Type{MyUpperTriangular{T}}, m::Int, n::Int) where T = MyUpperTriangular{T}(undef, m, n)
+Base.similar(::MyUpperTriangular{T}, m::Int, n::Int) where T = MyUpperTriangular{T}(undef, m, n)
+Base.similar(::MyUpperTriangular, ::Type{T}, m::Int, n::Int) where T = MyUpperTriangular{T}(undef, m, n)
+LinearAlgebra.factorize(A::MyUpperTriangular) = factorize(A.A)
+
+MemoryLayout(::Type{MyUpperTriangular{T}}) where T = MemoryLayout(UpperTriangular{T,Matrix{T}})
+triangulardata(A::MyUpperTriangular) = triangulardata(A.A)
+
+@lazylmul MyUpperTriangular
+
+
 struct MyLazyArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
 end
@@ -45,8 +74,36 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         B = randn(5,5)
         x = randn(5)
         @test MyMatrix(A)*x ≈ apply(*,MyMatrix(A),x) ≈ A*x
-        @test MyMatrix(A)*MyMatrix(A) ≈ apply(*,MyMatrix(A),MyMatrix(A)) ≈ apply(*,MyMatrix(A),A) ≈ A^2
+        @test all(MyMatrix(A)*MyMatrix(A) .=== apply(*,MyMatrix(A),MyMatrix(A)))
+        @test all(MyMatrix(A)*A .=== apply(*,MyMatrix(A),A))
+        @test all(A*MyMatrix(A) .=== apply(*,A,MyMatrix(A)))
+        @test MyMatrix(A)*MyMatrix(A) ≈ MyMatrix(A)*A ≈ A*MyMatrix(A) ≈ A^2
+        
         @test MyMatrix(A)*MyMatrix(A)*MyMatrix(A) ≈ apply(*,MyMatrix(A),MyMatrix(A),MyMatrix(A)) ≈ A^3
+
+        @test all(UpperTriangular(A) * MyMatrix(A) .=== apply(*,UpperTriangular(A), MyMatrix(A)))
+        @test all(MyMatrix(A) * UpperTriangular(A) .=== apply(*, MyMatrix(A),UpperTriangular(A)))
+        @test all(Diagonal(A) * MyMatrix(A) .=== apply(*,Diagonal(A), MyMatrix(A)))
+        @test all(MyMatrix(A) * Diagonal(A) .=== apply(*, MyMatrix(A),Diagonal(A)))
+
+        @test all(MyMatrix(A)' * x .=== apply(*,MyMatrix(A)',x))
+
+        @test all(MyMatrix(A)' * MyMatrix(A)' .=== apply(*,MyMatrix(A)', MyMatrix(A)'))
+        @test all(MyMatrix(A)' * A' .=== apply(*,MyMatrix(A)', A'))
+        @test all(A' * MyMatrix(A)' .=== apply(*,MyMatrix(A)', MyMatrix(A)'))
+        @test all(MyMatrix(A)' * MyMatrix(A) .=== apply(*,MyMatrix(A)', MyMatrix(A)))
+        @test all(MyMatrix(A)' * A .=== apply(*,MyMatrix(A)', A))
+        @test all(MyMatrix(A) * MyMatrix(A)' .=== apply(*,MyMatrix(A), MyMatrix(A)'))
+        @test all(A * MyMatrix(A)' .=== apply(*,A, MyMatrix(A)'))
+
+        @test all(UpperTriangular(A) * MyMatrix(A) .=== apply(*,UpperTriangular(A), MyMatrix(A)))
+        @test all(MyMatrix(A) * UpperTriangular(A) .=== apply(*, MyMatrix(A),UpperTriangular(A)))
+
+        @test all(Diagonal(A) * MyMatrix(A)' .=== apply(*,Diagonal(A), MyMatrix(A)'))
+        @test all(MyMatrix(A)' * Diagonal(A) .=== apply(*,MyMatrix(A)',Diagonal(A)))
+        @test all(UpperTriangular(A) * MyMatrix(A)' .=== apply(*,UpperTriangular(A), MyMatrix(A)'))
+        @test all(MyMatrix(A)' * UpperTriangular(A) .=== apply(*,MyMatrix(A)',UpperTriangular(A)))
+
 
         @test MyMatrix(A)\x ≈ apply(\,MyMatrix(A),x) ≈ copyto!(similar(x),Ldiv(A,copy(x))) ≈ A\x
         @test eltype(applied(\,MyMatrix(A),x)) == eltype(apply(\,MyMatrix(A),x)) == eltype(MyMatrix(A)\x) == Float64
@@ -57,7 +114,23 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test MyMatrix(A) * ApplyArray(exp,B) ≈ apply(*, MyMatrix(A),ApplyArray(exp,B)) ≈ A*exp(B)
         @test ApplyArray(exp,A) * MyMatrix(B)  ≈ apply(*, ApplyArray(exp,A), MyMatrix(B)) ≈ exp(A)*B
         @test ApplyArray(exp,A) * ApplyArray(exp,B) ≈ apply(*, ApplyArray(exp,A),ApplyArray(exp,B)) ≈ exp(A)*exp(B)
+    end
 
+    @testset "lmul!" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        x = randn(5)
+
+        @test lmul!(MyUpperTriangular(A), copy(x)) ≈ MyUpperTriangular(A) * x
+        @test lmul!(MyUpperTriangular(A), copy(B)) ≈ MyUpperTriangular(A) * B
+
+        @test_skip lmul!(MyUpperTriangular(A),view(copy(B),collect(1:5),1:5)) ≈ MyUpperTriangular(A) * B
+    end
+
+    @testset "\\" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        x = randn(5)
         @test MyMatrix(A) \ x == apply(\, MyMatrix(A), x)
         @test ldiv!(MyMatrix(A), copy(x)) == materialize!(Ldiv(MyMatrix(A), copy(x)))
         @test MyMatrix(A) \ x ≈ ldiv!(MyMatrix(A), copy(x)) ≈ A\x
@@ -75,6 +148,8 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test_throws DimensionMismatch apply(\,MyMatrix(C),randn(4))
         @test_throws DimensionMismatch apply(\,MyMatrix(C),randn(4,3))
     end
+
+
     @testset "Lazy" begin
         A = MyLazyArray(randn(2,2))
         B = MyLazyArray(randn(2,2))
