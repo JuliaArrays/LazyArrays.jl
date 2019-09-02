@@ -3,6 +3,13 @@
 
 const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
 
+const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
+
+const MulVector{T, Args} = MulArray{T, 1, Args}
+const MulMatrix{T, Args} = MulArray{T, 2, Args}
+
+
+
 Mul(A...) = applied(*, A...)
 
 check_mul_axes(A) = nothing
@@ -77,6 +84,9 @@ end
 ####
 
 
+ApplyStyle(::typeof(*), args::Type{<:AbstractArray}...) = mulapplystyle(MemoryLayout.(args)...)
+
+
 """
    lmaterialize(M::Mul)
 
@@ -93,9 +103,13 @@ _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 @inline flatten(A) = A
 @inline flatten(A::Mul) = applied(*, _flatten(A.args...)...)
 
-const ArrayMuls = Mul{<:AbstractArrayApplyStyle, <:Tuple{<:AbstractArray,<:AbstractArray,<:AbstractArray,Vararg{<:AbstractArray}}}
-_materialize(M::ArrayMuls, _) = flatten(lmaterialize(M))
 
+copy(M::Mul{DefaultArrayApplyStyle,<:Tuple{<:Any,<:Any}}) = copyto!(similar(M), M)
+copy(A::Mul{DefaultArrayApplyStyle}) = flatten(lmaterialize(A))
+
+struct FlattenMulStyle <: ApplyStyle end
+
+copy(A::Mul{FlattenMulStyle}) = materialize(flatten(A))
 
 
 rowsupport(_, A, k) = axes(A,2)
@@ -115,6 +129,8 @@ gives an iterator containing the possible non-zero entries in the j-th column of
 """
 colsupport(A, j) = colsupport(MemoryLayout(typeof(A)), A, j)
 
+rowsupport(::Diagonal, k) = k:k
+colsupport(::Diagonal, j) = j:j
 
 rowsupport(::DiagonalLayout, _, k) = k:k
 colsupport(::DiagonalLayout, _, j) = j:j
@@ -132,12 +148,30 @@ colsupport(::ZerosLayout, _1, _2) = 1:0
 _mul(A) = A
 _mul(A,B,C...) = Mul(A,B,C...)
 
+_mul_colsupport(j, Z) = colsupport(Z,j)
+_mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
+_mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
+function _mul_colsupport(j, Z::AbstractArray, Y...)
+    rws = colsupport(Z,j)
+    a = size(Z,1)+1
+    b = 0
+    for k in rws 
+        cs = _mul_colsupport(k, Y...)
+        a = min(a,first(cs))
+        b = max(b,last(cs))
+    end
+    a:b
+end
+
+colsupport(B::Mul, j) = _mul_colsupport(j, reverse(B.args)...)
+colsupport(B::MulArray, j) = _mul_colsupport(j, reverse(B.args)...)
+
 
 function _getindex(M::Mul, ::Tuple{<:Any}, k::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
     ret = zero(eltype(M))
-    for j = rowsupport(A, k)
+    for j = rowsupport(A, k) ∩ colsupport(B,1)
         ret += A[k,j] * B[j]
     end
     ret
@@ -145,6 +179,7 @@ end
 
 _getindex(M::Mul, ax, k::Integer) = M[Base._ind2sub(ax, k)...]
 getindex(M::Mul, k::Integer) = _getindex(M, axes(M), k)
+@propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer) = Applied{DefaultArrayApplyStyle}(A)[k]
 
 
 getindex(M::Mul, k::CartesianIndex{1}) = M[convert(Int, k)]
@@ -163,22 +198,18 @@ function getindex(M::Mul, k::Integer, j::Integer)
     ret
 end
 
+@propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer, j::Integer) = 
+    Applied{DefaultArrayApplyStyle}(A)[k,j]
 
-const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
-
-const MulVector{T, Args} = MulArray{T, 1, Args}
-const MulMatrix{T, Args} = MulArray{T, 2, Args}
 
 const MulLayout{LAY} = ApplyLayout{typeof(*),LAY}
 MulLayout(layouts) = ApplyLayout(*, layouts)
 
 
-_flatten(A::MulArray, B...) = _flatten(A.applied, B...)
-flatten(A::MulArray) = ApplyArray(flatten(A.applied))	
+_flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
+flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
  
-*(A::MulMatrix, B::MulMatrix) = ApplyArray(*, A.args..., B.args...)
-*(A::MulMatrix, B::MulVector) = ApplyArray(*, A.args..., B.args...)
-*(A::MulVector, B::MulMatrix) = ApplyArray(*, A.args..., B.args...)
+adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
+transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
 
-adjoint(A::MulArray) = ApplyArray(*, reverse(adjoint.(A.applied.args))...)
-transpose(A::MulArray) = ApplyArray(*, reverse(transpose.(A.applied.args))...)
+

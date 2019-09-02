@@ -41,7 +41,13 @@ Ldiv(A::AType, B::BType) where {AType,BType} =
 struct LdivBroadcastStyle <: BroadcastStyle end
 struct LdivApplyStyle <: ApplyStyle end
 
-ApplyStyle(::typeof(\), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = LdivApplyStyle()
+
+ldivapplystyle(_, _) = LdivApplyStyle()
+ldivapplystyle(::LazyLayout, ::LazyLayout) = LazyArrayApplyStyle()
+ldivapplystyle(::LazyLayout, _) = LazyArrayApplyStyle()
+ldivapplystyle(_, ::LazyLayout) = LazyArrayApplyStyle()
+ApplyStyle(::typeof(\), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = 
+    ldivapplystyle(MemoryLayout(A), MemoryLayout(B))
 
 size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractMatrix}) = (size(L.A, 2),size(L.B,2))
 size(L::Ldiv{<:Any,<:Any,<:Any,<:AbstractVector}) = (size(L.A, 2),)
@@ -62,7 +68,6 @@ axes(M::Applied{Style,typeof(\)}) where Style = ldivaxes(M.args...)
 axes(M::Applied{Style,typeof(\)}, p::Int)  where Style = axes(M)[p]
 size(M::Applied{Style,typeof(\)}) where Style = length.(axes(M))
 
-
 ndims(L::Ldiv) = ndims(last(L.args))
 eltype(M::Ldiv) = promote_type(Base.promote_op(inv, eltype(M.A)), eltype(M.B))
 
@@ -72,10 +77,13 @@ eltype(M::Ldiv) = promote_type(Base.promote_op(inv, eltype(M.A)), eltype(M.B))
 BroadcastStyle(::Type{<:Ldiv}) = ApplyBroadcastStyle()
 broadcastable(M::Ldiv) = M
 
-
-similar(A::InvOrPInv, ::Type{T}) where T = Array{T}(undef, size(A))
-similar(A::Ldiv, ::Type{T}) where T = Array{T}(undef, size(A))
+similar(A::Ldiv, ::Type{T}) where T = similar(Array{T}, axes(A))
 similar(A::Ldiv) = similar(A, eltype(A))
+
+function instantiate(L::Ldiv)
+    check_ldiv_axes(L.A, L.B)
+    Ldiv(instantiate(L.A), instantiate(L.B))
+end
 
 
 check_ldiv_axes(A, B) =
@@ -83,12 +91,23 @@ check_ldiv_axes(A, B) =
 
 check_applied_axes(A::Applied{<:Any,typeof(\)}) = check_ldiv_axes(A.args...)
 
-materialize(M::Ldiv) = copyto!(similar(M), M)
+copy(M::Ldiv) = copyto!(similar(M), M)
+materialize(M::Ldiv) = copy(instantiate(M))
 
+
+
+_ldiv!(A, B) = ldiv!(factorize(A), B)
+_ldiv!(A::Factorization, B) = ldiv!(A, B)
+
+_ldiv!(dest, A, B) = ldiv!(dest, factorize(A), B)
+_ldiv!(dest, A::Factorization, B) = ldiv!(dest, A, B)
+
+
+materialize!(M::Ldiv) = _ldiv!(M.A, M.B)
 if VERSION ≥ v"1.1-pre"
-    copyto!(dest::AbstractArray, M::Ldiv) = ldiv!(dest, factorize(M.A), M.B)
+    copyto!(dest::AbstractArray, M::Ldiv) = _ldiv!(dest, M.A, M.B)
 else
-    copyto!(dest::AbstractArray, M::Ldiv) = ldiv!(dest, factorize(M.A), copy(M.B))
+    copyto!(dest::AbstractArray, M::Ldiv) = _ldiv!(dest, M.A, copy(M.B))
 end
 
 const MatLdivVec{styleA, styleB, T, V} = Ldiv{styleA, styleB, <:AbstractMatrix{T}, <:AbstractVector{V}}
@@ -107,8 +126,6 @@ const BlasMatLdivMat{styleA, styleB, T<:BlasFloat} = MatLdivMat{styleA, styleB, 
     dest ≡ B || (dest .= B)
     materialize!(Ldiv(A, dest))
 end
-
-materialize!(M::Ldiv) = ldiv!(M.A, M.B)
 
 @inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
                                        <:AbstractStridedLayout}) where {UPLO,UNIT} =
@@ -141,8 +158,8 @@ function materialize!(M::MatLdivMat{<:TriangularLayout})
 end
 
 
-const PInvMatrix{T,App<:PInv} = ApplyMatrix{T,App}
-const InvMatrix{T,App<:Inv} = ApplyMatrix{T,App}
+const PInvMatrix{T,Arg} = ApplyMatrix{T,typeof(pinv),<:Tuple{Arg}}
+const InvMatrix{T,Arg} = ApplyMatrix{T,typeof(inv),<:Tuple{Arg}}
 
 PInvMatrix(A) = ApplyMatrix(pinv, A)
 function InvMatrix(A)
@@ -150,33 +167,32 @@ function InvMatrix(A)
     ApplyMatrix(inv, A)
 end
 
-axes(A::PInvMatrix) = reverse(axes(parent(A.applied)))
+parent(A::PInvMatrix) = first(A.args)
+parent(A::InvMatrix) = first(A.args)
+axes(A::PInvMatrix) = reverse(axes(parent(A)))
 size(A::PInvMatrix) = map(length, axes(A))
 
 @propagate_inbounds getindex(A::PInvMatrix{T}, k::Int, j::Int) where T =
-    (parent(A.applied)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
+    (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
 @propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
-    (parent(A.applied)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
+    (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
-mulapplystyle(::ApplyLayout{typeof(inv)}, _) = LdivApplyStyle()
-mulapplystyle(::ApplyLayout{typeof(pinv)}, _) = LdivApplyStyle()
+mulapplystyle(::ApplyLayout{typeof(inv),Tuple{A}}, B) where A = ldivapplystyle(A, B)
+mulapplystyle(::ApplyLayout{typeof(pinv),Tuple{A}}, B) where A = ldivapplystyle(A, B)
 
-similar(M::Applied{LdivApplyStyle}, ::Type{T}, ::NTuple{N,OneTo{Int}}) where {T,N} = Array{T}(undef, size(M))
-similar(M::Applied{LdivApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 
-@inline function Ldiv(M::Mul{LdivApplyStyle})
+@inline function Ldiv(M::Mul)
     Ai,b = M.args
-    Ldiv(parent(Ai.applied), b)
+    Ldiv(parent(Ai), b)
 end
-Ldiv(A::Applied{LdivApplyStyle,typeof(\)}) = Ldiv(A.args...)
+Ldiv(A::Applied{<:Any,typeof(\)}) = Ldiv(A.args...)
 
-@inline materialize(A::Applied{LdivApplyStyle}) = _materialize(instantiate(A), axes(A))
-@inline _materialize(A::Applied{LdivApplyStyle}, _) = materialize(Ldiv(A))
+
+similar(M::Applied{LdivApplyStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
+copy(M::Applied{LdivApplyStyle}) = copy(Ldiv(M))
 @inline copyto!(dest::AbstractArray, M::Applied{LdivApplyStyle}) = copyto!(dest, Ldiv(M))
 @inline materialize!(M::Applied{LdivApplyStyle}) = materialize!(Ldiv(M))
 
-@inline function copyto!(dest::AbstractArray, M::Applied{LdivApplyStyle,typeof(\)})
-    A,b = M.args
-    copyto!(dest, Ldiv(A, b))
-end
+@propagate_inbounds getindex(A::Applied{LazyArrayApplyStyle,typeof(\)}, kj...) = 
+    materialize(Ldiv(A))[kj...]

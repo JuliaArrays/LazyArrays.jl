@@ -8,6 +8,9 @@ struct BroadcastArray{T, N, F, Args} <: LazyArray{T, N}
     args::Args
 end
 
+const BroadcastVector{T,F,Args} = BroadcastArray{T,1,F,Args}
+const BroadcastMatrix{T,F,Args} = BroadcastArray{T,2,F,Args}
+
 LazyArray(bc::Broadcasted) = BroadcastArray(bc)
 
 BroadcastArray{T,N,F,Args}(bc::Broadcasted) where {T,N,F,Args} = BroadcastArray{T,N,F,Args}(bc.f,bc.args)
@@ -24,21 +27,15 @@ BroadcastArray(bc::Broadcasted{S}) where S =
 BroadcastArray(b::BroadcastArray) = b
 BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
 
-function getproperty(A::BroadcastArray, d::Symbol)
-    if d == :broadcasted
-        instantiate(broadcasted(A.f, A.args...))
-    else
-        getfield(A, d)
-    end
-end
+Broadcasted(A::BroadcastArray) = instantiate(broadcasted(A.f, A.args...))
 
 
-axes(A::BroadcastArray) = axes(A.broadcasted)
+axes(A::BroadcastArray) = axes(Broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
 
 IndexStyle(::BroadcastArray{<:Any,1}) = IndexLinear()
 
-@propagate_inbounds getindex(A::BroadcastArray, kj::Int...) = A.broadcasted[kj...]
+@propagate_inbounds getindex(A::BroadcastArray, kj::Int...) = Broadcasted(A)[kj...]
 
 
 @propagate_inbounds _broadcast_getindex_range(A::Union{Ref,AbstractArray{<:Any,0},Number}, I) = A[] # Scalar-likes can just ignore all indices
@@ -46,7 +43,7 @@ IndexStyle(::BroadcastArray{<:Any,1}) = IndexLinear()
 @propagate_inbounds _broadcast_getindex_range(A, I) = A[I]
 
 getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
-    BroadcastArray(B.broadcasted.f, map(a -> _broadcast_getindex_range(a,kr), B.broadcasted.args)...)
+    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
@@ -56,7 +53,7 @@ copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 #                     (:maximum, :max), (:minimum, :min),
 #                     (:all, :&),       (:any, :|)]
 function Base._sum(f, A::BroadcastArray, ::Colon)
-    bc = A.broadcasted
+    bc = Broadcasted(A)
     T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
     out = zero(T)
     @simd for I in eachindex(bc)
@@ -65,7 +62,7 @@ function Base._sum(f, A::BroadcastArray, ::Colon)
     out
 end
 function Base._prod(f, A::BroadcastArray, ::Colon)
-    bc = A.broadcasted
+    bc = Broadcasted(A)
     T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
     out = one(T)
     @simd for I in eachindex(bc)
@@ -87,6 +84,11 @@ is returned by `MemoryLayout(A)` if a matrix `A` is a `BroadcastArray`.
 a tuple of `MemoryLayout` of the broadcasted arguments.
 """
 struct BroadcastLayout{F, LAY} <: MemoryLayout end
+
+tuple_type_memorylayouts(::Type{I}) where I<:Tuple = Tuple{typeof.(MemoryLayout.(I.parameters))...}
+tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = Tuple{typeof(MemoryLayout(A))}
+tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B))}
+tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B)),typeof(MemoryLayout(C))}
 
 MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = 
     BroadcastLayout{F,tuple_type_memorylayouts(Args)}()
@@ -130,3 +132,5 @@ broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::AbstractArray{T,N}, b::Zeros{V,
     broadcast(DefaultArrayStyle{N}(), *, a, b)
 broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::AbstractArray{V,N}) where {T,V,N} =
     broadcast(DefaultArrayStyle{N}(), *, a, b)
+
+diagonallayout(::BroadcastLayout) = DiagonalLayout{LazyLayout}()    

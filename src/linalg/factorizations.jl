@@ -3,6 +3,7 @@ struct QLayout <: MemoryLayout end
 MemoryLayout(::Type{<:AbstractQ}) = QLayout()
 
 mulapplystyle(::QLayout, _) = LmulStyle()
+mulapplystyle(::QLayout, ::LazyLayout) = LazyArrayApplyStyle()
 transposelayout(::QLayout) = QLayout()
 
 

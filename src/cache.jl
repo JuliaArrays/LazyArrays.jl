@@ -13,6 +13,11 @@ const CachedMatrix{T,DM<:AbstractMatrix{T},M<:AbstractMatrix{T}} = CachedArray{T
 #     CachedArray{T,N,typeof(data),typeof(array)}(data, array, sz)
 CachedArray(data::AbstractArray, array::AbstractArray) = CachedArray(data, array, size(data))
 
+# function CachedArray(::Type{Diagonal}, array::AbstractMatrix{T}) where T 
+#     axes(array,1) == axes(array,2) || throw(DimensionMismatch("Matrix must be square to cache as diagonal"))
+#     CachedArray(Diagonal(Vector{T}(undef, size(array,1))), array)
+# end
+
 CachedArray(::Type{Array}, array::AbstractArray{T,N}) where {T,N} =
     CachedArray(Array{T,N}(undef, ntuple(zero,N)), array)
 
@@ -25,7 +30,7 @@ CachedArray(array::AbstractArray{T,N}) where {T,N} =
 
 Caches the entries of an array.
 """
-cache(::Type{MT}, O::AbstractArray) where {MT<:AbstractArray} = CachedArray(MT,O;kwds...)
+cache(::Type{MT}, O::AbstractArray) where {MT<:AbstractArray} = CachedArray(MT,O)
 cache(A::AbstractArray) = _cache(MemoryLayout(typeof(A)), A)
 _cache(_, O::AbstractArray) = CachedArray(O)
 _cache(_, O::CachedArray) = CachedArray(copy(O.data), O.array, O.datasize)
@@ -42,13 +47,19 @@ size(A::CachedArray) = size(A.array)
 length(A::CachedArray) = length(A.array)
 
 @propagate_inbounds function Base.getindex(B::CachedArray{T,N}, kj::Vararg{Integer,N}) where {T,N}
-    @boundscheck checkbounds(Bool, B, kj...)
+    @boundscheck checkbounds(B, kj...)
     resizedata!(B, kj...)
     B.data[kj...]
 end
 
+@propagate_inbounds function Base.getindex(B::CachedArray{T,1}, k::Integer) where T
+    @boundscheck checkbounds(B, k)
+    resizedata!(B, k)
+    B.data[k]
+end
+
 @propagate_inbounds function Base.setindex!(B::CachedArray{T,N}, v, kj::Vararg{Integer,N}) where {T,N}
-    @boundscheck checkbounds(Bool, B, kj...)
+    @boundscheck checkbounds(B, kj...)
     resizedata!(B,kj...)
     @inbounds B.data[kj...] = v
     v
@@ -57,8 +68,20 @@ end
 _maximum(ax, I) = maximum(I)
 _maximum(ax, ::Colon) = maximum(ax)
 function getindex(A::CachedArray, I...)
+    @boundscheck checkbounds(A, I...)
     resizedata!(A, _maximum.(axes(A), I)...)
     A.data[I...]
+end
+
+function getindex(A::CachedVector, I, J...)
+    @boundscheck checkbounds(A, I, J...)
+    resizedata!(A, _maximum(axes(A,1), I))
+    A.data[I]
+end
+
+function getindex(A::CachedVector, I::CartesianIndex)
+    resizedata!(A, Tuple(I)...)
+    A.data[I]
 end
 
 function getindex(A::CachedArray, I::CartesianIndex)
@@ -94,8 +117,21 @@ function resizedata!(B::CachedArray{T,N,Array{T,N}},nm::Vararg{Integer,N}) where
     B
 end
 
-colsupport(A::CachedMatrix, i) = colsupport(A.array, i)
-rowsupport(A::CachedMatrix, i) = rowsupport(A.array, i)
+
+_minimum(a) = isempty(a) ? length(a)+1 : minimum(a)
+_maximum(a) = isempty(a) ? 0 : maximum(a)
+convexunion(a::AbstractVector, b::AbstractVector) = min(_minimum(a),_minimum(b)):max(_maximum(a),_maximum(b))
+
+colsupport(A::CachedMatrix, i) = convexunion(colsupport(A.array, i),colsupport(A.data,i))
+colsupport(A::CachedVector, i) = convexunion(colsupport(A.array, i),colsupport(A.data,i))
+rowsupport(A::CachedMatrix, i) = convexunion(rowsupport(A.array, i),rowsupport(A.data,i))
 
 Base.replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractString) =
     i in colsupport(A,j) ? s : Base.replace_with_centered_mark(s)
+
+
+###
+# special for zero cache
+###
+
+zero!(A::CachedVector{<:Any,<:Any,<:Zeros}) = zero!(A.data)

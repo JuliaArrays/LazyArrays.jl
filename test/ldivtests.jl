@@ -1,5 +1,5 @@
 using LazyArrays, LinearAlgebra, Test
-import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivApplyStyle, Applied
+import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivApplyStyle, Applied, LazyLayout
 import Base.Broadcast: materialize
 
 @testset "Ldiv" begin
@@ -15,6 +15,8 @@ import Base.Broadcast: materialize
 
         @test Base.BroadcastStyle(typeof(Ldiv(A,b))) isa ApplyBroadcastStyle
         @test applied(\,A,b) isa Applied{LdivApplyStyle}
+
+        @test parent(InvMatrix(A)) === A
 
         @test all(copyto!(similar(b), Ldiv(A,b)) .===
                     (similar(b) .= Ldiv(A,b)) .=== InvMatrix(A) * b .===

@@ -30,17 +30,17 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
       similar, @_gc_preserve_end, @_gc_preserve_begin,
       @nexprs, @ncall, @ntuple, tuple_type_tail,
-      all, any, isbitsunion
+      all, any, isbitsunion, issubset
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!, eltypes
 
-import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!
+import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, Abuf, Bbuf, Cbuf
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
-import FillArrays: AbstractFill
+import FillArrays: AbstractFill, getindex_value
 
 import StaticArrays: StaticArrayStyle
 
@@ -51,9 +51,9 @@ else
     import Base: require_one_based_indexing    
 end             
 
-export Mul, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
+export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, cache, Ldiv, Inv, PInv, Diff, Cumsum,
-        applied, materialize, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
+        applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
 
 include("memorylayout.jl")
 include("cache.jl")

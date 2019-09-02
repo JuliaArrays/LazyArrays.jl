@@ -1,52 +1,39 @@
 # Lazy concatenation of AbstractVector's.
 # Similar to Iterators.Flatten and some code has been reused from julia/base/iterators.jl
 
-function _Vcat end
-abstract type AbstractConcatArray{T,N} <: AbstractArray{T,N} end
-struct Vcat{T,N,I} <: AbstractConcatArray{T,N}
-    arrays::I
 
-    _Vcat(::Type{T}, A::Tuple{}) where {T} = new{T,1,Tuple{}}(A)
-    global _Vcat(::Type{T}, A::I) where {I<:Tuple,T} = new{T,1,I}(A)
-    global function _Vcat(::Type{T}, A::I) where I<:Tuple{Vararg{<:AbstractMatrix}} where T
-        isempty(A) && throw(ArgumentError("Cannot concatenate empty vectors"))
-        m = size(A[1],2)
-        for k=2:length(A)
-            size(A[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
-        end
-        new{T,2,I}(A)
-    end
-end
+const Vcat{T,N,I<:Tuple} = ApplyArray{T,N,typeof(vcat),I}
 
-_Vcat(A) = _Vcat(promote_eltypeof(A...), A)
-Vcat(args...) = _Vcat(args)
-Vcat{T}(args...) where T = _Vcat(T, args)
+Vcat(A...) = ApplyArray(vcat, A...)
+Vcat{T}(A...) where T = ApplyArray{T}(vcat, A...)
 Vcat() = Vcat{Any}()
 
-convert(::Type{AbstractArray{T}}, F::Vcat{T}) where T = F
-convert(::Type{AbstractArray{T,N}}, F::Vcat{T,N}) where {T,N} = F
-convert(::Type{AbstractArray{T}}, F::Vcat) where {T} = _Vcat(T, F.arrays)
-convert(::Type{AbstractArray{T,N}}, F::Vcat{<:Any,N}) where {T,N} = _Vcat(T, F.arrays)
+Vcat(A::AbstractVector...) = ApplyVector(vcat, A...)
+Vcat{T}(A::AbstractVector...) where T = ApplyVector{T}(vcat, A...)
 
-_abstractarray(::Type{T}, x::AbstractArray) where T = AbstractArray{T}(x)
-_abstractarray(::Type{T}, x) where T = T(x)
-AbstractArray(F::Vcat) = copy(F)
-AbstractArray{T}(F::Vcat) where T = _Vcat(_abstractarray.(T,F.arrays))
-AbstractArray{T,N}(F::Vcat{<:Any,N}) where {T,N} = _Vcat(_abstractarray.(T,F.arrays))
+function instantiate(A::Applied{DefaultApplyStyle,typeof(vcat)})
+    isempty(A.args) && return A
+    m = size(A.args[1],2)
+    for k=2:length(A.args)
+        size(A.args[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
+    end
+    Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
+end
 
-copy(x::Vcat) = Vcat(copy.(x.arrays)...)
-
-size(f::Vcat{<:Any,1,Tuple{}}) = (0,)
-size(f::Vcat{<:Any,1}) = tuple(+(length.(f.arrays)...))
-size(f::Vcat{<:Any,2}) = (+(map(a -> size(a,1), f.arrays)...), size(f.arrays[1],2))
+@inline eltype(A::Applied{<:Any,typeof(vcat)}) = promote_type(map(eltype,A.args)...)
+@inline eltype(A::Applied{<:Any,typeof(vcat),Tuple{}}) = Any
+@inline ndims(A::Applied{<:Any,typeof(vcat),I}) where I = max(1,maximum(map(ndims,A.args)))
+@inline ndims(A::Applied{<:Any,typeof(vcat),Tuple{}}) = 1
+@inline axes(f::Vcat{<:Any,1,Tuple{}}) = (OneTo(0),)
+@inline axes(f::Vcat{<:Any,1}) = tuple(OneTo(+(map(length,f.args)...)))
+@inline axes(f::Vcat{<:Any,2}) = (OneTo(+(map(a -> size(a,1), f.args)...)), OneTo(size(f.args[1],2)))
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
 
-
 @propagate_inbounds @inline function getindex(f::Vcat{T,1}, k::Integer) where T
     κ = k
-    for A in f.arrays
+    for A in f.args
         n = length(A)
         κ ≤ n && return convert(T,A[κ])::T
         κ -= n
@@ -56,7 +43,7 @@ end
 
 @propagate_inbounds @inline function getindex(f::Vcat{T,2}, k::Integer, j::Integer) where T
     κ = k
-    for A in f.arrays
+    for A in f.args
         n = size(A,1)
         κ ≤ n && return convert(T,A[κ,j])::T
         κ -= n
@@ -66,7 +53,7 @@ end
 
 @propagate_inbounds @inline function setindex!(f::Vcat{T,1}, v, k::Integer) where T
     κ = k
-    for A in f.arrays
+    for A in f.args
         n = length(A)
         κ ≤ n && return setindex!(A, v, κ)
         κ -= n
@@ -76,7 +63,7 @@ end
 
 @propagate_inbounds @inline function setindex!(f::Vcat{T,2}, v, k::Integer, j::Integer) where T
     κ = k
-    for A in f.arrays
+    for A in f.args
         n = size(A,1)
         κ ≤ n && return setindex!(A, v, κ, j)
         κ -= n
@@ -84,35 +71,31 @@ end
     throw(BoundsError(f, (k,j)))
 end
 
-reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.arrays))...)
+reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.args))...)
 
 
-function _Hcat end
+const Hcat{T,I<:Tuple} = ApplyArray{T,2,typeof(hcat),I}
 
-struct Hcat{T,I} <: AbstractConcatArray{T,2}
-    arrays::I
+Hcat(A...) = ApplyArray(hcat, A...)
+Hcat{T}(A...) where T = ApplyArray{T}(hcat, A...)
 
-    global function _Hcat(::Type{T}, A::I) where {I<:Tuple,T}
-        isempty(A) && throw(ArgumentError("Cannot concatenate empty vectors"))
-        m = size(A[1],1)
-        for k=2:length(A)
-            size(A[k],1) == m || throw(ArgumentError("number of rows of each array must match (got $(map(x->size(x,1), A)))"))
-        end
-        new{T,I}(A)
+function instantiate(A::Applied{DefaultApplyStyle,typeof(hcat)})
+    isempty(A.args) && return A
+    m = size(A.args[1],1)
+    for k=2:length(A.args)
+        size(A.args[k],1) == m || throw(ArgumentError("number of rows of each array must match (got $(map(x->size(x,1), A)))"))
     end
+    Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
 end
 
-_Hcat(A) = _Hcat(promote_eltypeof(A...), A)
-Hcat(args...) = _Hcat(args)
-
-copy(x::Hcat) = Hcat(copy.(x.arrays)...)
-
-size(f::Hcat) = (size(f.arrays[1],1), +(map(a -> size(a,2), f.arrays)...))
+@inline eltype(A::Applied{<:Any,typeof(hcat)}) = promote_type(map(eltype,A.args)...)
+ndims(::Applied{<:Any,typeof(hcat)}) = 2
+size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
 Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
 
 function getindex(f::Hcat{T}, k::Integer, j::Integer) where T
     ξ = j
-    for A in f.arrays
+    for A in f.args
         n = size(A,2)
         ξ ≤ n && return T(A[k,ξ])::T
         ξ -= n
@@ -122,7 +105,7 @@ end
 
 function setindex!(f::Hcat{T}, v, k::Integer, j::Integer) where T
     ξ = j
-    for A in f.arrays
+    for A in f.args
         n = size(A,2)
         ξ ≤ n && return setindex!(A, v, k, ξ)
         ξ -= n
@@ -135,7 +118,7 @@ end
 # based on Base/array.jl, Base/abstractarray.jl
 
 function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
-    arrays = V.arrays
+    arrays = V.args
     nargs = length(arrays)
     nrows = size(dest,1)
     nrows == sum(a->size(a, 1), arrays) || throw(DimensionMismatch("sum of rows each matrix must equal $nrows"))
@@ -155,7 +138,7 @@ function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
 end
 
 function copyto!(arr::AbstractVector, A::Vcat{<:Any,1,<:Tuple{Vararg{<:AbstractVector}}})
-    arrays = A.arrays
+    arrays = A.args
     n = 0
     for a in arrays
         n += length(a)
@@ -173,7 +156,7 @@ function copyto!(arr::AbstractVector, A::Vcat{<:Any,1,<:Tuple{Vararg{<:AbstractV
 end
 
 function copyto!(arr::Vector{T}, A::Vcat{T,1,<:Tuple{Vararg{<:Vector{T}}}}) where T
-    arrays = A.arrays
+    arrays = A.args
     n = 0
     for a in arrays
         n += length(a)
@@ -214,7 +197,7 @@ function copyto!(arr::Vector{T}, A::Vcat{T,1,<:Tuple{Vararg{<:Vector{T}}}}) wher
 end
 
 function copyto!(dest::AbstractMatrix, H::Hcat)
-    arrays = H.arrays
+    arrays = H.args
     nargs = length(arrays)
     nrows = size(dest, 1)
     ncols = 0
@@ -266,15 +249,15 @@ end
 
 for adj in (:adjoint, :transpose)
     @eval begin
-        $adj(A::Hcat{T}) where T = _Vcat(T, $adj.(A.arrays))
-        $adj(A::Vcat{T}) where T = _Hcat(T, $adj.(A.arrays))
+        $adj(A::Hcat{T}) where T = Vcat{T}(map($adj,A.args)...)
+        $adj(A::Vcat{T}) where T = Hcat{T}(map($adj,A.args)...)
     end
 end
 
 _vec(a) = a
 _vec(a::AbstractArray) = vec(a)
 
-vec(A::Hcat) = Vcat(_vec.(A.arrays)...)
+vec(A::Hcat) = Vcat(_vec.(A.args)...)
 
 
 #####
@@ -284,19 +267,20 @@ vec(A::Hcat) = Vcat(_vec.(A.arrays)...)
 # to take advantage of special implementations of the sub-components
 ######
 
-BroadcastStyle(::Type{<:AbstractConcatArray{<:Any,N}}) where N = LazyArrayStyle{N}()
+BroadcastStyle(::Type{<:Vcat{<:Any,N}}) where N = LazyArrayStyle{N}()
+BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
 
 broadcasted(::LazyArrayStyle, op, A::Vcat) =
-    _Vcat(broadcast(x -> broadcast(op, x), A.arrays))
+    Vcat(broadcast(x -> broadcast(op, x), A.args)...)
 
 broadcasted(::LazyArrayStyle, op, A::Vcat, c::Number) =
-    _Vcat(broadcast((x,y) -> broadcast(op, x, y), A.arrays, c))
+    Vcat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
 broadcasted(::LazyArrayStyle, op, c::Number, A::Vcat) =
-    _Vcat(broadcast((x,y) -> broadcast(op, x, y), c, A.arrays))
+    Vcat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
 broadcasted(::LazyArrayStyle, op, A::Vcat, c::Ref) =
-    _Vcat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.arrays, c))
+    Vcat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
 broadcasted(::LazyArrayStyle, op, c::Ref, A::Vcat) =
-    _Vcat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.arrays))    
+    Vcat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)    
 
 
 # determine indices of components of a vcat
@@ -310,15 +294,15 @@ _vcat_getindex_eval(y) = ()
 _vcat_getindex_eval(y, a, b...) = tuple(y[a], _vcat_getindex_eval(y, b...)...)
 
 function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
-    kr = _vcat_axes(axes.(A.arrays)...)  # determine how to break up B
+    kr = _vcat_axes(map(axes,A.args)...)  # determine how to break up B
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
-    _Vcat(broadcast((a,b) -> broadcast(op,a,b), A.arrays, B_arrays))
+    ApplyVector(vcat, broadcast((a,b) -> broadcast(op,a,b), A.args, B_arrays)...)
 end
 
 function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
-    kr = _vcat_axes(axes.(B.arrays)...)
+    kr = _vcat_axes(axes.(B.args)...)
     A_arrays = _vcat_getindex_eval(A,kr...)
-    _Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.arrays))
+    Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.args)...)
 end
 
 # Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
@@ -364,25 +348,25 @@ function _vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:AbstractVector
         Ctail = op.(Atail[M-m+1:end], Btail)
     end
 
-    _Vcat((Chead, Ctail))
+    Vcat(Chead, Ctail)
 end
 
 _vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:Number,<:AbstractFill},
                            (Bhead, Btail)::Tuple{<:Number,<:AbstractFill}) where {M,T} =
-   _Vcat((op.(Ahead,Bhead), op.(Atail,Btail)))
+   Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
 
 _vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:SVector{M},<:AbstractFill},
                            (Bhead, Btail)::Tuple{<:SVector{M},<:AbstractFill}) where {M,T} =
-   _Vcat((op.(Ahead,Bhead), op.(Atail,Btail)))
+   Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
 
 # default is BroadcastArray
 _vcat_broadcasted(::Type{T}, op, A, B) where T =
-    Broadcasted{LazyArrayStyle}(op, (_Vcat(A), _Vcat(B)))
+    Broadcasted{LazyArrayStyle}(op, (Vcat(A...), Vcat(B...)))
 
 
 broadcasted(::LazyArrayStyle{1}, op, A::Vcat{T, 1, <:Tuple{<:Any,<:Any}},
                                      B::Vcat{V, 1, <:Tuple{<:Any,<:Any}}) where {T,V} =
-  _vcat_broadcasted(promote_type(T,V), op, A.arrays, B.arrays)
+  _vcat_broadcasted(promote_type(T,V), op, A.args, B.args)
 
 
 
@@ -390,11 +374,11 @@ broadcasted(::LazyArrayStyle{1}, op, A::Vcat{T, 1, <:Tuple{<:Any,<:Any}},
 # Cumsum
 ####
 
-sum(V::Vcat) = mapreduce(sum, +, V.arrays)
-all(V::Vcat) = all(all.(V.arrays))
-any(V::Vcat) = any(any.(V.arrays))
-all(f::Function, V::Vcat) = all(all.(f, V.arrays))
-any(f::Function, V::Vcat) = any(any.(f, V.arrays))
+sum(V::Vcat) = mapreduce(sum, +, V.args)
+all(V::Vcat) = all(all.(V.args))
+any(V::Vcat) = any(any.(V.args))
+all(f::Function, V::Vcat) = all(all.(f, V.args))
+any(f::Function, V::Vcat) = any(any.(f, V.args))
 
 _dotplus(a,b) = broadcast(+, a, b)
 
@@ -410,7 +394,7 @@ _dotplus(a,b) = broadcast(+, a, b)
     end
 end
 
-@inline cumsum(V::Vcat{<:Any,1}) = _Vcat(_vcat_cumsum(V.arrays...))
+@inline cumsum(V::Vcat{<:Any,1}) = ApplyVector(vcat,_vcat_cumsum(V.args...)...)
 
 
 _vcat_diff(x::Number) = ()
@@ -418,18 +402,18 @@ _vcat_diff(x) = (diff(x),)
 
 _vcat_diff(a::Number, b, c...) = (first(b)-a, _vcat_diff(b,c...)...)
 _vcat_diff(a, b, c...) = (diff(a), first(b)-last(a), _vcat_diff(b,c...)...)
-@inline diff(V::Vcat{T,1}) where T = _Vcat(T,_vcat_diff(V.arrays...))
+@inline diff(V::Vcat{T,1}) where T = ApplyVector{T}(vcat,_vcat_diff(V.args...)...)
 
 ####
 # maximum/minimum
 ####
 
 for op in (:maximum, :minimum)
-    @eval $op(V::Vcat) = $op($op.(V.arrays))
+    @eval $op(V::Vcat) = $op($op.(V.args))
 end
 
 function in(x, V::Vcat) 
-    for a in V.arrays
+    for a in V.args
         in(x, a) && return true
     end
     false
@@ -441,8 +425,8 @@ function _fill!(a::Number, x)
     a
 end
 
-function fill!(V::AbstractConcatArray, x) 
-    for a in V.arrays
+function fill!(V::Union{Vcat,Hcat}, x) 
+    for a in V.args
         _fill!(a, x)
     end
     V
@@ -452,40 +436,30 @@ end
 # *
 ###
 
-struct VcatLayout{Lays} <: MemoryLayout end
-struct HcatLayout{Lays} <: MemoryLayout end
-
-tuple_type_memorylayouts(::Type{I}) where I<:Tuple = Tuple{typeof.(MemoryLayout.(I.parameters))...}
-tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = Tuple{typeof(MemoryLayout(A))}
-tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B))}
-tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B)),typeof(MemoryLayout(C))}
-
-
-MemoryLayout(::Type{Vcat{T,N,I}}) where {T,N,I} = VcatLayout{tuple_type_memorylayouts(I)}()
-MemoryLayout(::Type{Hcat{T,I}}) where {T,I} = HcatLayout{tuple_type_memorylayouts(I)}()
-
-@lazymul Hcat
-@lazymul Vcat{<:Any,2}
-
-*(A::Hcat, B::Vcat{<:Any,2}) = materialize(Mul(A,B))
-*(A::Vcat{<:Any,2}, B::Hcat) = materialize(Mul(A,B))
-
-function materialize!(M::MatMulVecAdd{<:HcatLayout,<:VcatLayout})
+function materialize!(M::MatMulVecAdd{<:ApplyLayout{typeof(hcat)},<:ApplyLayout{typeof(vcat)}})
     α,A,B,β,C =  M.α,M.A,M.B,M.β,M.C
     T = eltype(C)
     _fill_lmul!(β,C) # this is temporary until strong β = false is supported
-    for (a,b) in zip(A.arrays,B.arrays)
+    for (a,b) in zip(A.args,B.args)
         materialize!(MulAdd(α,a,b,one(T),C))
     end
     C
  end
 
- function materialize!(M::MatMulMatAdd{<:HcatLayout,<:VcatLayout})
+ function materialize!(M::MatMulMatAdd{<:ApplyLayout{typeof(hcat)},<:ApplyLayout{typeof(vcat)}})
     α,A,B,β,C =  M.α,M.A,M.B,M.β,M.C
     T = eltype(C)
     _fill_lmul!(β,C) # this is temporary until strong β = false is supported
-    for (a,b) in zip(A.arrays,B.arrays)
+    for (a,b) in zip(A.args,B.args)
         materialize!(MulAdd(α,a,b,one(T),C))
     end
     C
  end
+
+ ####
+ # col/rowsupport
+ ####
+
+
+ most(a) = reverse(tail(reverse(a)))
+colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))

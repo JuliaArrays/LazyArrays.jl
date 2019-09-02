@@ -5,53 +5,47 @@ abstract type AbstractArrayApplyStyle <: ApplyStyle end
 struct DefaultApplyStyle <: ApplyStyle end
 struct DefaultArrayApplyStyle <: AbstractArrayApplyStyle end
 
-ApplyStyle(f, args...) = DefaultApplyStyle()
-ApplyStyle(f, ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
+@inline ApplyStyle(f, args...) = DefaultApplyStyle()
+@inline ApplyStyle(f, ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
 
 struct Applied{Style, F, Args<:Tuple}
     f::F
     args::Args
 end
 
-Applied{Style}(f::F, args::Args) where {Style,F,Args<:Tuple} = 
-    Applied{Style,Core.Typeof(f),Args}(f, args)
+@inline Applied{Style}(f::F, args::Args) where {Style,F,Args<:Tuple} = Applied{Style,F,Args}(f, args)
+@inline Applied{Style}(A::Applied) where Style = Applied{Style}(A.f, A.args)
 
-check_applied_axes(A::Applied) = nothing
+@inline check_applied_axes(A::Applied) = nothing
 
 function instantiate(A::Applied{Style}) where Style
     check_applied_axes(A)
     Applied{Style}(A.f, map(instantiate, A.args))
 end
 
-_typesof() = ()
-_typesof(a, b...) = tuple(typeof(a), _typesof(b...)...)
-_typesof(a, b) = tuple(typeof(a), typeof(b))
-_typesof(a, b, c) = tuple(typeof(a), typeof(b), typeof(c))
-combine_apply_style(f, a...) = ApplyStyle(f, _typesof(a...)...)
-combine_apply_style(f, a, b) = ApplyStyle(f, typeof(a), typeof(b))
-combine_apply_style(f, a, b, c) = ApplyStyle(f, typeof(a), typeof(b), typeof(c))
+@inline _typesof() = ()
+@inline _typesof(a, b...) = tuple(typeof(a), _typesof(b...)...)
+@inline _typesof(a, b) = tuple(typeof(a), typeof(b))
+@inline _typesof(a, b, c) = tuple(typeof(a), typeof(b), typeof(c))
+@inline combine_apply_style(f, a...) = ApplyStyle(f, _typesof(a...)...)
+@inline combine_apply_style(f, a, b) = ApplyStyle(f, typeof(a), typeof(b))
+@inline combine_apply_style(f, a, b, c) = ApplyStyle(f, typeof(a), typeof(b), typeof(c))
 
 
-Applied(f, args...) = Applied{typeof(combine_apply_style(f, args...))}(f, args)
-applied(f, args...) = Applied(f, args...)
-apply(f, args...) = materialize(applied(f, args...))
-apply!(f, args...) = materialize!(applied(f, args...))
+@inline Applied(f, args...) = Applied{typeof(combine_apply_style(f, args...))}(f, args)
+@inline applied(f, args...) = Applied(f, args...)
+@inline apply(f, args...) = materialize(applied(f, args...))
+@inline apply!(f, args...) = materialize!(applied(f, args...))
 
 materialize(A::Applied) = copy(instantiate(A))
 materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
 
 # the following materialzes the args and calls materialize again, unless it hasn't
 # changed in which case it falls back to the default
-__default_materialize(A::App, ::App) where App = A.f(A.args...)
-__default_materialize(A, _) where App = materialize(A)
+_default_materialize(A::App, ::App) where App = A.f(A.args...)
+_default_materialize(A, _) = materialize(A)
 # copy(A::Applied{DefaultApplyStyle}) = A.f(A.args...)
-copy(A::Applied) = __default_materialize(materializeargs(A), A)
-
-
-# _materialize is for applied with axes, which defaults to using copyto!
-materialize(M::Applied{<:AbstractArrayApplyStyle}) = _materialize(instantiate(M), axes(M))
-_materialize(A::Applied{<:AbstractArrayApplyStyle}, _) = copy(instantiate(A))
-_materialize(A::Applied, _) = copy(A)
+copy(A::Applied) = _default_materialize(materializeargs(A), A)
 
 @inline copyto!(dest, M::Applied) = copyto!(dest, materialize(M))
 @inline copyto!(dest::AbstractArray, M::Applied) = copyto!(dest, materialize(M))
@@ -63,6 +57,8 @@ broadcastable(M::Applied) = M
 similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}, axes) where {T,N} = Array{T}(undef, length.(axes))
 similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 similar(M::Applied) = similar(M, eltype(M))
+
+axes(A::Applied, j) = axes(A)[j]
 
 struct ApplyBroadcastStyle <: BroadcastStyle end
 struct ApplyArrayBroadcastStyle{N} <: Broadcast.AbstractArrayStyle{N} end
@@ -103,9 +99,16 @@ function check_applied_axes(A::Applied{<:MatrixFunctionStyle})
     axes(A.args[1],1) == axes(A.args[1],2) || throw(DimensionMismatch("matrix is not square: dimensions are $axes(A.args[1])"))
 end
 
-axes(A::Applied{<:MatrixFunctionStyle}) = axes(first(A.args))
-size(A::Applied{<:MatrixFunctionStyle}) = size(first(A.args))
-eltype(A::Applied{<:MatrixFunctionStyle}) = eltype(first(A.args))
+for op in (:axes, :size)
+    @eval begin
+        $op(A::Applied{<:MatrixFunctionStyle}) = $op(first(A.args))
+        $op(A::Applied{<:MatrixFunctionStyle}, j) = $op(first(A.args), j)
+    end
+end
+
+ndims(A::Applied{<:MatrixFunctionStyle}) = ndims(first(A.args))
+
+eltype(A::Applied{<:MatrixFunctionStyle}) = float(eltype(first(A.args)))
 
 getindex(A::Applied, kj...) = materialize(A)[kj...]
 
@@ -142,24 +145,28 @@ ApplyArray{T,N}(f, factors...) where {T,N} = ApplyArray{T,N}(applied(f, factors.
 ApplyVector(f, factors...) = ApplyVector(applied(f, factors...))
 ApplyMatrix(f, factors...) = ApplyMatrix(applied(f, factors...))
 
-function getproperty(A::ApplyArray, d::Symbol)
-    if d == :applied
-        applied(A.f, A.args...)
-    else
-        getfield(A, d)
-    end
-end
+convert(::Type{AbstractArray{T}}, A::ApplyArray{T}) where T = A
+convert(::Type{AbstractArray{T}}, A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, A.args...)
+convert(::Type{AbstractArray{T,N}}, A::ApplyArray{T,N}) where {T,N} = A
+convert(::Type{AbstractArray{T,N}}, A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, A.args...)
 
-axes(A::ApplyArray) = axes(A.applied)
-size(A::ApplyArray) = map(length, axes(A))
-copy(A::ApplyArray) = copy(A.applied)
+AbstractArray{T}(A::ApplyArray{T}) where T = copy(A)
+AbstractArray{T}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, map(copy,A.args)...)
+AbstractArray{T,N}(A::ApplyArray{T,N}) where {T,N} = copy(A)
+AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, map(copy,A.args)...)
+
+
+@inline Applied(A::ApplyArray) = applied(A.f, A.args...)
+@inline axes(A::ApplyArray) = axes(Applied(A))
+@inline size(A::ApplyArray) = map(length, axes(A))
+@inline copy(A::ApplyArray) = ApplyArray(A.f, map(copy,A.args)...)
 
 
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
 copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
-@propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Int,N}) where {T,N} = A.applied[kj...]
-
+@propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Integer,N}) where {T,N} = convert(T, Applied(A)[kj...])::T
+@propagate_inbounds getindex(A::Applied{LazyArrayApplyStyle}, kj...) = materialize(Applied{DefaultArrayApplyStyle}(A))[kj...]
 
 for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
             :cosh, :sinh, :tanh, :csch, :sech, :coth,
@@ -172,6 +179,19 @@ for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
         eltype(M::Applied{LazyArrayApplyStyle,typeof($F)}) = eltype(first(M.args))
     end
 end
+
+struct LazyLayout <: MemoryLayout end
+
+
+MemoryLayout(::Type{<:LazyArray}) = LazyLayout()
+
+transposelayout(::LazyLayout) = LazyLayout()
+conjlayout(::LazyLayout) = LazyLayout()
+
+combine_mul_styles(::LazyLayout) = LazyArrayApplyStyle()
+result_mul_style(::LazyArrayApplyStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
+result_mul_style(::LazyArrayApplyStyle, _) = LazyArrayApplyStyle()
+result_mul_style(_, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
 
 
 struct  ApplyLayout{F, LAY} <: MemoryLayout end
@@ -221,3 +241,7 @@ end
 @inline getindex(A::ApplyMatrix, kr::Colon, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
 @inline getindex(A::ApplyMatrix, kr::AbstractUnitRange, jr::Colon) = lazy_getindex(A, kr, jr)
 @inline getindex(A::ApplyMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
+
+
+diagonallayout(::LazyLayout) = LazyLayout()
+diagonallayout(::ApplyLayout) = DiagonalLayout{LazyLayout}()

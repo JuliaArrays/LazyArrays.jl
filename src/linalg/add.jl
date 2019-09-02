@@ -15,9 +15,9 @@ size(M::Add) = length.(axes(M))
 axes(M::Add) = axes(first(M.args))
 
 
-eltype(M::Add) = Base._return_type(+, eltype.(M.args))
+eltype(M::Add) = promote_type(map(eltype,M.args)...)
 
-const AddArray{T,N,Factors<:Tuple} = ApplyArray{T,N,<:Add{Factors}}
+const AddArray{T,N,Factors<:Tuple} = ApplyArray{T,N,typeof(+), Factors}
 const AddVector{T,Factors<:Tuple} = AddArray{T,1,Factors}
 const AddMatrix{T,Factors<:Tuple} = AddArray{T,2,Factors}
 
@@ -45,7 +45,7 @@ function zero!(A::AbstractArray{<:AbstractArray})
 end
 
 _fill_lmul!(β, A::AbstractArray{T}) where T = iszero(β) ? zero!(A) : lmul!(β, A)
-
+combine_mul_styles(::ApplyLayout{typeof(+)}) = IdentityMulStyle()
 for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
     # `MulAdd{<:ApplyLayout{typeof(+)}}` cannot "win" against
     # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:
@@ -55,7 +55,7 @@ for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
             B = copy(B)
         end
         _fill_lmul!(β, C)
-        for A in A.applied.args
+        for A in Applied(A).args
             C .= applied(+,applied(*,α, A,B), C)
         end
         C

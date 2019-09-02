@@ -1,6 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
-                    MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle
+                    MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
+                    FlattenMulStyle
 import Base.Broadcast: materialize, materialize!, broadcasted
 
 @testset "Matrix * Vector" begin
@@ -675,14 +676,18 @@ end
         end
         
         A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
-        blasnoalloc(c, 2.0, A, x, 3.0, y)
-        @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
-        Ac = A'
-        blasnoalloc(c, 2.0, Ac, x, 3.0, y)
-        @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
-        Aa = ApplyArray(+, A, Ac)
-        blasnoalloc(c, 2.0, Aa, x, 3.0, y)
-        @test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
+        
+        if VERSION ≥ v"1.1"
+            @inferred(MulAdd(@~ A*x + y))
+            @test blasnoalloc(c, 2.0, A, x, 3.0, y) === c
+            @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
+            Ac = A'
+            blasnoalloc(c, 2.0, Ac, x, 3.0, y)
+            @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
+            Aa = ApplyArray(+, A, Ac)
+            blasnoalloc(c, 2.0, Aa, x, 3.0, y)
+			@test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
+		end
     end
 
     @testset "multi-argument mul" begin
@@ -819,7 +824,51 @@ end
         @test Base.BroadcastStyle(ApplyArrayBroadcastStyle{1}(), Broadcast.DefaultArrayStyle{1}()) == Broadcast.DefaultArrayStyle{1}()
         @test Base.BroadcastStyle(ApplyArrayBroadcastStyle{1}(), Broadcast.DefaultArrayStyle{2}()) == Broadcast.DefaultArrayStyle{2}()
     end
+
+    @testset "Diagonal" begin
+       @test Diagonal(Fill(2,10))  * Fill(3,10) ≡ Fill(6,10)
+       @test apply(*, Diagonal(Fill(2,10)), Fill(3,10)) ≡ Fill(6,10)
+       @test_broken Diagonal(Fill(2,10))  * Fill(3,10,3) ≡ Fill(6,10)
+       @test apply(*, Diagonal(Fill(2,10)), Fill(3,10,3)) ≡ Fill(6,10,3)
+       @test apply(*,Fill(3,10,10),Fill(3,10)) ≡ Fill(9,10)
+    end
+
+    @testset "ApplyArray MulTest" begin
+        A = ApplyArray(*,randn(2,2), randn(2,2))
+        @test ApplyStyle(*,typeof(A),typeof(randn(2,2))) == FlattenMulStyle()
+        @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*Fill(3,10) ≡ Fill(18,10)
+        @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10)) == Fill(36,10,10)
+    end
 end
 
+@testset "MulAdd" begin
+    A = randn(5,5)
+    B = randn(5,4)
+    C = randn(5,4)
+    b = randn(5)
+    c = randn(5)
 
+    M = MulAdd(2.0,A,B,3.0,C)
+    @test size(M) == size(C)
+    @test size(M,1) == size(C,1)
+    @test size(M,2) == size(C,2)
+    @test_broken size(M,3) == size(C,3)
+    @test length(M) == length(C)
+    @test axes(M) == axes(C)
+    @test eltype(M) == Float64
+    @test materialize(M) ≈ 2.0A*B + 3.0C
 
+    @test_throws DimensionMismatch materialize(MulAdd(2.0,A,randn(3),1.0,B))
+    @test_throws DimensionMismatch materialize(MulAdd([1,2],A,B,[1,2],C))
+    @test_throws DimensionMismatch materialize(MulAdd(2.0,A,B,3.0,randn(3,4)))
+    @test_throws DimensionMismatch materialize(MulAdd(2.0,A,B,3.0,randn(5,5)))
+
+    B = randn(5,5)
+    C = randn(5,5)
+    @test materialize(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(C))) == 
+          materialize!(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(copy(C)))) == 2.0Diagonal(A)*Diagonal(B) + 3.0*Diagonal(C)
+    @test_broken materialize(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(C))) isa Diagonal
+
+    @test materialize(MulAdd(1.0, Eye(5), A, 3.0, C)) == materialize!(MulAdd(1.0, Eye(5), A, 3.0, copy(C))) == A + 3.0C
+    @test materialize(MulAdd(1.0, A, Eye(5), 3.0, C)) == materialize!(MulAdd(1.0, A, Eye(5), 3.0, copy(C))) == A + 3.0C
+end

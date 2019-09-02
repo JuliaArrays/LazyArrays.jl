@@ -16,7 +16,7 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!
                   AddArray(randn(5,5), view(randn(9, 5), 1:2:9, :))),
             b in (randn(5), view(randn(5),:), view(randn(5),1:5), view(randn(9),1:2:9))
 
-            Ã = copy(A)
+            Ã = Array(A)
             c = similar(b)
             fill!(c,NaN)
 
@@ -31,33 +31,33 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!
             copyto!(c, @~ A*b)
             @test c ≈ Ã*b ≈ BLAS.gemv!('N', 1.0, Ã, b, 0.0, similar(c))
 
-            b̃ = copy(b)
+            b̃ = Array(b)
             copyto!(b̃, Mul(A,b̃))
             @test c ≈ b̃
 
             c .= @~ 2.0 * A * b
             @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 0.0, similar(c))
 
-            c = copy(b)
+            c = Array(b)
             c .= @~ A*b + c
-            @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 1.0, copy(b))
+            @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 1.0, Array(b))
 
-            c = copy(b)
+            c = Array(b)
             c .= @~ A*b + 2.0 * c
-            @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 2.0, copy(b))
+            @test c ≈ BLAS.gemv!('N', 1.0, Ã, b, 2.0, Array(b))
 
-            c = copy(b)
+            c = Array(b)
             c .= @~ 2.0 * A*b + c
-            @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 1.0, copy(b))
+            @test c ≈ BLAS.gemv!('N', 2.0, Ã, b, 1.0, Array(b))
 
-            c = copy(b)
+            c = Array(b)
             c .= @~ 3.0 * A*b + 2.0 * c
-            @test c ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, copy(b))
+            @test c ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, Array(b))
 
             d = similar(c)
-            c = copy(b)
+            c = Array(b)
             d .= @~ 3.0 * A*b + 2.0 * c
-            @test d ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, copy(b))
+            @test d ≈ BLAS.gemv!('N', 3.0, Ã, b, 2.0, Array(b))
         end
     end
 
@@ -67,7 +67,7 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!
             B in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
                   view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5))
 
-            Ã = copy(A)
+            Ã = Array(A)
             C = similar(B)
 
             C .= @~ A*B
@@ -79,28 +79,28 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!
             C .= @~ 2.0 * A*B
             @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 0.0, similar(C))
 
-            C = copy(B)
+            C = Array(B)
             C .= @~ A*B + C
-            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 1.0, copy(B))
+            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 1.0, Array(B))
 
 
-            C = copy(B)
+            C = Array(B)
             C .= @~ A*B + 2.0 * C
-            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 2.0, copy(B))
+            @test C ≈ BLAS.gemm!('N', 'N', 1.0, Ã, B, 2.0, Array(B))
 
-            C = copy(B)
+            C = Array(B)
             C .= @~ 2.0 * A*B + C
-            @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 1.0, copy(B))
+            @test C ≈ BLAS.gemm!('N', 'N', 2.0, Ã, B, 1.0, Array(B))
 
 
-            C = copy(B)
+            C = Array(B)
             C .= @~ 3.0 * A*B + 2.0 * C
-            @test C ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, copy(B))
+            @test C ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, Array(B))
 
             d = similar(C)
-            C = copy(B)
+            C = Array(B)
             d .= @~ 3.0 * A*B + 2.0 * C
-            @test d ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, copy(B))
+            @test d ≈ BLAS.gemm!('N', 'N', 3.0, Ã, B, 2.0, Array(B))
         end
     end
 end
