@@ -58,9 +58,22 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test ApplyArray(exp,A) * MyMatrix(B)  ≈ apply(*, ApplyArray(exp,A), MyMatrix(B)) ≈ exp(A)*B
         @test ApplyArray(exp,A) * ApplyArray(exp,B) ≈ apply(*, ApplyArray(exp,A),ApplyArray(exp,B)) ≈ exp(A)*exp(B)
 
+        @test MyMatrix(A) \ x == apply(\, MyMatrix(A), x)
+        @test ldiv!(MyMatrix(A), copy(x)) == materialize!(Ldiv(MyMatrix(A), copy(x)))
         @test MyMatrix(A) \ x ≈ ldiv!(MyMatrix(A), copy(x)) ≈ A\x
+        @test MyMatrix(A) \ B == apply(\, MyMatrix(A), B)
+        @test ldiv!(MyMatrix(A), copy(B)) == materialize!(Ldiv(MyMatrix(A), copy(B)))
         @test MyMatrix(A) \ B ≈ MyMatrix(A) \ MyMatrix(B) ≈ ldiv!(MyMatrix(A), copy(B)) ≈  A\B
         @test_broken ldiv!(MyMatrix(A), MyMatrix(copy(B))) ≈ A\B
+
+        C = randn(5,3)
+        @test all(MyMatrix(C)\x .=== apply(\,MyMatrix(C),x))
+        @test MyMatrix(C)\x ≈ C\x
+        @test all(MyMatrix(C)\B .=== apply(\,MyMatrix(C),B))
+        @test MyMatrix(C)\B ≈ C\B
+
+        @test_throws DimensionMismatch apply(\,MyMatrix(C),randn(4))
+        @test_throws DimensionMismatch apply(\,MyMatrix(C),randn(4,3))
     end
     @testset "Lazy" begin
         A = MyLazyArray(randn(2,2))
