@@ -1,5 +1,5 @@
 using LazyArrays, LinearAlgebra, Test
-import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivApplyStyle, Applied
+import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivApplyStyle, Applied, LazyLayout
 import Base.Broadcast: materialize
 
 @testset "Ldiv" begin

@@ -14,6 +14,7 @@ struct Applied{Style, F, Args<:Tuple}
 end
 
 @inline Applied{Style}(f::F, args::Args) where {Style,F,Args<:Tuple} = Applied{Style,F,Args}(f, args)
+@inline Applied{Style}(A::Applied) where Style = Applied{Style}(A.f, A.args)
 
 @inline check_applied_axes(A::Applied) = nothing
 
@@ -165,7 +166,7 @@ struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
 copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 @propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Integer,N}) where {T,N} = convert(T, Applied(A)[kj...])::T
-
+@propagate_inbounds getindex(A::Applied{LazyArrayApplyStyle}, kj...) = materialize(Applied{DefaultArrayApplyStyle}(A))[kj...]
 
 for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
             :cosh, :sinh, :tanh, :csch, :sech, :coth,

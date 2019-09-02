@@ -179,6 +179,7 @@ end
 
 _getindex(M::Mul, ax, k::Integer) = M[Base._ind2sub(ax, k)...]
 getindex(M::Mul, k::Integer) = _getindex(M, axes(M), k)
+@propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer) = Applied{DefaultArrayApplyStyle}(A)[k]
 
 
 getindex(M::Mul, k::CartesianIndex{1}) = M[convert(Int, k)]
@@ -196,6 +197,9 @@ function getindex(M::Mul, k::Integer, j::Integer)
     end
     ret
 end
+
+@propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer, j::Integer) = 
+    Applied{DefaultArrayApplyStyle}(A)[k,j]
 
 
 const MulLayout{LAY} = ApplyLayout{typeof(*),LAY}

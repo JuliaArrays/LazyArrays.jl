@@ -67,19 +67,19 @@ end
 
 macro lazylmul(Typ)
     esc(quote
-        LinearAlgebra.lmul!(A::$Typ, x::AbstractVector) = copyto!(x, LazyArrays.Mul(A,x))
-        LinearAlgebra.lmul!(A::$Typ, x::AbstractMatrix) = copyto!(x, LazyArrays.Mul(A,x))
-        LinearAlgebra.lmul!(A::$Typ, x::StridedVector) = copyto!(x, LazyArrays.Mul(A,x))
-        LinearAlgebra.lmul!(A::$Typ, x::StridedMatrix) = copyto!(x, LazyArrays.Mul(A,x))
+        LinearAlgebra.lmul!(A::$Typ, x::AbstractVector) = LazyArrays.materialize!(LazyArrays.Lmul(A,x))
+        LinearAlgebra.lmul!(A::$Typ, x::AbstractMatrix) = LazyArrays.materialize!(LazyArrays.Lmul(A,x))
+        LinearAlgebra.lmul!(A::$Typ, x::StridedVector) = LazyArrays.materialize!(LazyArrays.Lmul(A,x))
+        LinearAlgebra.lmul!(A::$Typ, x::StridedMatrix) = LazyArrays.materialize!(LazyArrays.Lmul(A,x))
     end)
 end
 
 macro lazyldiv(Typ)
     esc(quote
-        LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = (x .= LazyArrays.Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = (x .= LazyArrays.Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = (x .= LazyArrays.Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = (x .= LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
 
         Base.:\(A::$Typ, x::AbstractVector) = LazyArrays.apply(\,A,x)
         Base.:\(A::$Typ, x::AbstractMatrix) = LazyArrays.apply(\,A,x)
