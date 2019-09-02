@@ -1,57 +1,17 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · LazyArrays</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link href="assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>LazyArrays</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li class="current"><a class="toctext" href>Home</a><ul class="internal"></ul></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Home</a></li></ul><a class="edit-page" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/master/docs/src/index.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Home</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="LazyArrays.jl-1" href="#LazyArrays.jl-1">LazyArrays.jl</a></h1><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="LazyArrays.LazyArrays" href="#LazyArrays.LazyArrays"><code>LazyArrays.LazyArrays</code></a> — <span class="docstring-category">Module</span>.</div><div><div><p><strong>LazyArrays.jl</strong></p><p><a href="https://juliaarrays.github.io/LazyArrays.jl/dev"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Dev"/></a> <a href="https://travis-ci.org/JuliaArrays/LazyArrays.jl"><img src="https://travis-ci.org/JuliaArrays/LazyArrays.jl.svg?branch=master" alt="Travis"/></a> <a href="https://codecov.io/gh/JuliaArrays/LazyArrays.jl"><img src="https://codecov.io/gh/JuliaArrays/LazyArrays.jl/branch/master/graph/badge.svg" alt="codecov"/></a></p><p>Lazy arrays and linear algebra in Julia</p><p>This package supports lazy analogues of array operations like <code>vcat</code>, <code>hcat</code>, and multiplication. This helps with the implementation of matrix-free methods for iterative solvers.</p><p>The package has been designed with high-performance in mind, so should outperform the non-lazy analogues from Base for many operations like <code>copyto!</code> and broadcasting. Some operations will be inherently slower due to extra computation, like <code>getindex</code>. Please file an issue for any examples that are significantly slower than their the analogue in Base.</p><p><strong>Concatenation</strong></p><p><code>Vcat</code> is the lazy analogue of <code>vcat</code>. For lazy vectors like ranges, it creating such a vector is allocation-free. <code>copyto!</code> allows for allocation-free population of a vector.</p><pre><code class="language-julia">julia&gt; using LazyArrays, BenchmarkTools
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · LazyArrays</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link href="assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>LazyArrays</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li class="current"><a class="toctext" href>Home</a><ul class="internal"></ul></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Home</a></li></ul><a class="edit-page" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/master/docs/src/index.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Home</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="LazyArrays.jl-1" href="#LazyArrays.jl-1">LazyArrays.jl</a></h1><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="LazyArrays.LazyArrays" href="#LazyArrays.LazyArrays"><code>LazyArrays.LazyArrays</code></a> — <span class="docstring-category">Module</span>.</div><div><div><p><strong>LazyArrays.jl</strong></p><p><a href="https://juliaarrays.github.io/LazyArrays.jl/dev"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Dev"/></a> <a href="https://travis-ci.org/JuliaArrays/LazyArrays.jl"><img src="https://travis-ci.org/JuliaArrays/LazyArrays.jl.svg?branch=master" alt="Travis"/></a> <a href="https://codecov.io/gh/JuliaArrays/LazyArrays.jl"><img src="https://codecov.io/gh/JuliaArrays/LazyArrays.jl/branch/master/graph/badge.svg" alt="codecov"/></a></p><p>Lazy arrays and linear algebra in Julia</p><p>This package supports lazy analogues of array operations like <code>vcat</code>, <code>hcat</code>, and multiplication. This helps with the implementation of matrix-free methods for iterative solvers.</p><p>The package has been designed with high-performance in mind, so should outperform the non-lazy analogues from Base for many operations like <code>copyto!</code> and broadcasting. Some operations will be inherently slower due to extra computation, like <code>getindex</code>. Please file an issue for any examples that are significantly slower than their the analogue in Base.</p><p><strong>Lazy operations</strong></p><p>To construct a lazy representation of a function call <code>f(x,y,z...), use the command</code>applied(f, x, y, z...)<code>. This will return an unmaterialized object typically of type</code>Applied<code>that represents the operation. To realize that object, call</code>materialize<code>, which  will typically be equivalent to calling</code>f(x,y,z...)<code>. A macro</code>@~` is available as a shorthand:</p><pre><code class="language-julia">julia&gt; using LazyArrays, LinearAlgebra
 
-julia&gt; A = Vcat(1:5,2:3) # allocation-free
-7-element Vcat{Int64,1,Tuple{UnitRange{Int64},UnitRange{Int64}}}:
- 1
- 2
- 3
- 4
- 5
- 2
- 3
+julia&gt; applied(exp, 1)
+Applied(exp,1)
 
-julia&gt; Vector(A) == vcat(1:5, 2:3)
-true
+julia&gt; materialize(applied(exp, 1))
+2.718281828459045
 
-julia&gt; b = Array{Int}(undef, length(A)); @btime copyto!(b, A);
-  26.670 ns (0 allocations: 0 bytes)
+julia&gt; materialize(@~ exp(1))
+2.718281828459045
 
-julia&gt; @btime vcat(1:5, 2:3); # takes twice as long due to memory creation
-  43.336 ns (1 allocation: 144 bytes)</code></pre><p>Similarly, <code>Hcat</code> is the lazy analogue of <code>hcat</code>.</p><pre><code class="language-julia">julia&gt; A = Hcat(1:3, randn(3,10))
-3×11 Hcat{Float64,Tuple{UnitRange{Int64},Array{Float64,2}}}:
- 1.0   0.350927   0.339103  -1.03526   …   0.786593    0.0416694
- 2.0  -1.10206    1.52817    0.223099      0.851804    0.430933
- 3.0  -1.26467   -0.743712  -0.828781     -0.0637502  -0.066743
-
-julia&gt; Matrix(A) == hcat(A.arrays...)
-true
-
-julia&gt; b = Array{Int}(undef, length(A)); @btime copyto!(b, A);
-  26.670 ns (0 allocations: 0 bytes)
-
-julia&gt; B = Array{Float64}(undef, size(A)...); @btime copyto!(B, A);
-  109.625 ns (1 allocation: 32 bytes)
-
-julia&gt; @btime hcat(A.arrays...); # takes twice as long due to memory creation
-  274.620 ns (6 allocations: 560 bytes)</code></pre><p><strong>Broadcasting</strong></p><p>Base now includes a lazy broadcast object called <code>Broadcasting</code>, but this is not a subtype of <code>AbstractArray</code>. Here we have <code>BroadcastArray</code> which replicates the functionality of <code>Broadcasting</code> while supporting the array interface.</p><pre><code class="language-julia">julia&gt; A = randn(6,6);
-
-julia&gt; B = BroadcastArray(exp, A);
-
-julia&gt; Matrix(B) == exp.(A)
-true
-
-julia&gt; B = BroadcastArray(+, A, 2);
-
-julia&gt; B == A .+ 2
-true</code></pre><p>Such arrays can also be created using the macro <code>@~</code> which acts on ordinary  broadcasting expressions combined with <code>LazyArray</code>:</p><pre><code class="language-julia">julia&gt; C = rand(1000)&#39;;
-
-julia&gt; D = LazyArray(@~ exp.(C))
-
-julia&gt; E = LazyArray(@~ @. 2 + log(C))
-
-julia&gt; @btime sum(LazyArray(@~ C .* C&#39;); dims=1) # without `@~`, 1.438 ms (5 allocations: 7.64 MiB)
-  74.425 μs (7 allocations: 8.08 KiB)</code></pre><p><strong>Multiplication</strong></p><p>Following Base&#39;s lazy broadcasting, we introduce lazy multiplication. The type <code>Mul</code> support multiplication of any two objects, not necessarily arrays. (In the future there will be a <code>MulArray</code> a la <code>BroadcastArray</code>.)</p><p><code>Mul</code> is designed to work along with broadcasting, and to lower to BLAS calls whenever possible:</p><pre><code class="language-julia">julia&gt; A = randn(5,5); b = randn(5); c = randn(5); d = similar(c);
+julia&gt; exp(1)
+2.718281828459045</code></pre><p>The benefit of lazy operations is that they can be materialized in-place,  possible using simplifications. For example, it is possible to  do BLAS-like Matrix-Vector operations of the form <code>α*A*x + β*y</code> as  implemented in <code>BLAS.gemv!</code> using a lazy applied object:</p><pre><code class="language-julia">julia&gt; A = randn(5,5); b = randn(5); c = randn(5); d = similar(c);
 
 julia&gt; d .= @~ 2.0 * A * b + 3.0 * c # Calls gemv!
 5-element Array{Float64,1}:
@@ -84,40 +44,49 @@ julia&gt; @btime mymul(A, b, c, d) # calls gemv!
   0.26792916096572983
 
 julia&gt; @btime 2*(A*b) + 3c; # does not call gemv!
-  241.659 ns (4 allocations: 512 bytes)</code></pre><p><strong>Inverses</strong></p><p>We also have lazy inverses <code>PInv(A)</code>, designed to work alongside <code>Mul</code> to  to lower to BLAS calls whenever possible:</p><pre><code class="language-julia">julia&gt; A = randn(5,5); b = randn(5); c = similar(b);
+  241.659 ns (4 allocations: 512 bytes)</code></pre><p>This also works for inverses, which lower to BLAS calls whenever possible:</p><pre><code class="language-julia">julia&gt; A = randn(5,5); b = randn(5); c = similar(b);
 
-julia&gt; c .= Mul(PInv(A), b)
+julia&gt; c .= @~ A \ b
 5-element Array{Float64,1}:
  -2.5366335879717514
  -5.305097174484744  
  -9.818431932350942  
   2.421562605495651  
-  0.26792916096572983
+  0.26792916096572983</code></pre><p><strong>Lazy arrays</strong></p><p>Often we want lazy realizations of matrices, which are supported via <code>ApplyArray</code>. For example, the following creates a lazy matrix exponential:</p><pre><code class="language-julia">julia&gt; E = ApplyArray(exp, [1 2; 3 4])
+2×2 ApplyArray{Float64,2,typeof(exp),Tuple{Array{Int64,2}}}:
+  51.969   74.7366
+ 112.105  164.074 </code></pre><p>A lazy matrix exponential is useful for, say, in-place matrix-exponetial*vector:</p><pre><code class="language-julia">julia&gt; b = Vector{Float64}(undef, 2); b .= @~ E*[4,4]
+2-element Array{Float64,1}:
+  506.8220830628333
+ 1104.7145995988594
+ ```
+ While this works, it is not actually optimised (yet). 
 
-julia&gt; c .= Ldiv(A, b) # shorthand for above
-5-element Array{Float64,1}:
- -2.5366335879717514
- -5.305097174484744  
- -9.818431932350942  
-  2.421562605495651  
-  0.26792916096572983</code></pre><p><strong>Kronecker products</strong></p><p>We can represent Kronecker products of arrays without constructing the full array.</p><pre><code class="language-julia">julia&gt; A = randn(2,2); B = randn(3,3);
+ Other options do have special implementations that make them fast. We
+ now give some examples. 
 
-julia&gt; K = Kron(A,B)
-6×6 Kron{Float64,2,Tuple{Array{Float64,2},Array{Float64,2}}}:
-  1.99255  -1.45132    0.864789  -0.785538   0.572163  -0.340932
- -2.7016    0.360785  -1.78671    1.06507   -0.142235   0.70439
-  1.89938  -2.69996    0.200992  -0.748806   1.06443   -0.0792386
- -1.84225   1.34184   -0.799557  -2.45355    1.7871    -1.06487
-  2.49782  -0.333571   1.65194    3.32665   -0.444258   2.20009
- -1.75611   2.4963    -0.185831  -2.33883    3.32464   -0.247494
 
-julia&gt; C = Matrix{Float64}(undef, 6, 6); @btime copyto!(C, K);
-  61.528 ns (0 allocations: 0 bytes)
+### Concatenation
 
-julia&gt; C == kron(A,B)
-true</code></pre></div></div><a class="source-link" target="_blank" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/8e2dc3f399a8b072852b3aadee4344dd59f78608/src/LazyArrays.jl#L4-L194">source</a></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="LazyArrays.LazyArray" href="#LazyArrays.LazyArray"><code>LazyArrays.LazyArray</code></a> — <span class="docstring-category">Type</span>.</div><div><div><pre><code class="language-julia">LazyArray(x::Applied) :: ApplyArray
-LazyArray(x::Broadcasted) :: BroadcastArray</code></pre><p>Wrap a lazy object that wraps a computation producing an array to an array.</p></div></div><a class="source-link" target="_blank" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/8e2dc3f399a8b072852b3aadee4344dd59f78608/src/lazyapplying.jl#L112-L118">source</a></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="LazyArrays.cache-Union{Tuple{MT}, Tuple{Type{MT},AbstractArray}} where MT&lt;:AbstractArray" href="#LazyArrays.cache-Union{Tuple{MT}, Tuple{Type{MT},AbstractArray}} where MT&lt;:AbstractArray"><code>LazyArrays.cache</code></a> — <span class="docstring-category">Method</span>.</div><div><div><pre><code class="language-julia">cache(array::AbstractArray)</code></pre><p>Caches the entries of an array.</p></div></div><a class="source-link" target="_blank" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/8e2dc3f399a8b072852b3aadee4344dd59f78608/src/cache.jl#L23-L27">source</a></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="LazyArrays.@~-Tuple{Any}" href="#LazyArrays.@~-Tuple{Any}"><code>LazyArrays.@~</code></a> — <span class="docstring-category">Macro</span>.</div><div><div><pre><code class="language-julia">@~ expr</code></pre><p>Macro for creating a <code>Broadcasted</code> or <code>Applied</code> object.  Regular calls like <code>f(args...)</code> inside <code>expr</code> are replaced with <code>applied(f, args...)</code>. Dotted-calls like <code>f(args...)</code> inside <code>expr</code> are replaced with <code>broadcasted.(f, args...)</code>.  Use <code>LazyArray(@~ expr)</code> if you need an array-based interface.</p><pre><code class="language-none">julia&gt; @~ A .+ B ./ 2
+Lazy `vcat` and `hcat` allow for representing the concatenation of
+vectors without actually allocating memory, and support a fast
+`copyto!`  for allocation-free population of a vector.</code></pre><p>julia julia&gt; using BenchmarkTools</p><p>julia&gt; A = ApplyArray(vcat,1:5,2:3) # allocation-free 7-element ApplyArray{Int64,1,typeof(vcat),Tuple{UnitRange{Int64},UnitRange{Int64}}}:  1  2  3  4  5  2  3</p><p>julia&gt; Vector(A) == vcat(1:5, 2:3) true</p><p>julia&gt; b = Array{Int}(undef, length(A)); @btime copyto!(b, A);   26.670 ns (0 allocations: 0 bytes)</p><p>julia&gt; @btime vcat(1:5, 2:3); # takes twice as long due to memory creation   43.336 ns (1 allocation: 144 bytes)</p><pre><code class="language-none">Similar is the lazy analogue of `hcat`:</code></pre><p>julia julia&gt; A = ApplyArray(hcat, 1:3, randn(3,10)) 3×11 ApplyArray{Float64,2,typeof(hcat),Tuple{UnitRange{Int64},Array{Float64,2}}}:  1.0   1.16561    0.224871  -1.36416   -0.30675    0.103714    0.590141   0.982382  -1.50045    0.323747  -1.28173    2.0   1.04648    1.35506   -0.147157   0.995657  -0.616321   -0.128672  -0.671445  -0.563587  -0.268389  -1.71004    3.0  -0.433093  -0.325207  -1.38496   -0.391113  -0.0568739  -1.55796   -1.00747    0.473686  -1.2113     0.0119156</p><p>julia&gt; Matrix(A) == hcat(A.args...) true</p><p>julia&gt; B = Array{Float64}(undef, size(A)...); @btime copyto!(B, A);   109.625 ns (1 allocation: 32 bytes)</p><p>julia&gt; @btime hcat(A.args...); # takes twice as long due to memory creation   274.620 ns (6 allocations: 560 bytes)</p><pre><code class="language-none">
+
+
+### Kronecker products
+
+We can represent Kronecker products of arrays without constructing the full
+array:
+</code></pre><p>julia julia&gt; A = randn(2,2); B = randn(3,3);</p><p>julia&gt; K = ApplyArray(kron,A,B) 6×6 ApplyArray{Float64,2,typeof(kron),Tuple{Array{Float64,2},Array{Float64,2}}}:  -1.08736   -0.19547   -0.132824   1.60531    0.288579    0.196093    0.353898   0.445557  -0.257776  -0.522472  -0.657791    0.380564   -0.723707   0.911737  -0.710378   1.06843   -1.34603     1.04876     1.40606    0.252761   0.171754  -0.403809  -0.0725908  -0.0493262  -0.457623  -0.576146   0.333329   0.131426   0.165464   -0.0957293   0.935821  -1.17896    0.918584  -0.26876    0.338588   -0.26381  </p><p>julia&gt; C = Matrix{Float64}(undef, 6, 6); @btime copyto!(C, K);   61.528 ns (0 allocations: 0 bytes)</p><p>julia&gt; C == kron(A,B) true</p><pre><code class="language-none">
+
+## Broadcasting
+
+Base includes a lazy broadcast object called `Broadcasting`, but this is
+not a subtype of `AbstractArray`. Here we have `BroadcastArray` which replicates
+the functionality of `Broadcasting` while supporting the array interface.</code></pre><p>julia julia&gt; A = randn(6,6);</p><p>julia&gt; B = BroadcastArray(exp, A);</p><p>julia&gt; Matrix(B) == exp.(A) true</p><p>julia&gt; B = BroadcastArray(+, A, 2);</p><p>julia&gt; B == A .+ 2 true</p><pre><code class="language-none">Such arrays can also be created using the macro `@~` which acts on ordinary 
+broadcasting expressions combined with `LazyArray`:</code></pre><p>julia julia&gt; C = rand(1000)&#39;;</p><p>julia&gt; D = LazyArray(@~ exp.(C))</p><p>julia&gt; E = LazyArray(@~ @. 2 + log(C))</p><p>julia&gt; @btime sum(LazyArray(@~ C .* C&#39;); dims=1) # without <code>@~</code>, 1.438 ms (5 allocations: 7.64 MiB)   74.425 μs (7 allocations: 8.08 KiB) ```</p></div></div><a class="source-link" target="_blank" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/742423ea7f5acc5c271ccc71779b4acaf126ae61/src/LazyArrays.jl#L4-L227">source</a></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="LazyArrays.LazyArray" href="#LazyArrays.LazyArray"><code>LazyArrays.LazyArray</code></a> — <span class="docstring-category">Type</span>.</div><div><div><pre><code class="language-julia">LazyArray(x::Applied) :: ApplyArray
+LazyArray(x::Broadcasted) :: BroadcastArray</code></pre><p>Wrap a lazy object that wraps a computation producing an array to an array.</p></div></div><a class="source-link" target="_blank" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/742423ea7f5acc5c271ccc71779b4acaf126ae61/src/lazyapplying.jl#L115-L121">source</a></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="LazyArrays.cache-Union{Tuple{MT}, Tuple{Type{MT},AbstractArray}} where MT&lt;:AbstractArray" href="#LazyArrays.cache-Union{Tuple{MT}, Tuple{Type{MT},AbstractArray}} where MT&lt;:AbstractArray"><code>LazyArrays.cache</code></a> — <span class="docstring-category">Method</span>.</div><div><div><pre><code class="language-julia">cache(array::AbstractArray)</code></pre><p>Caches the entries of an array.</p></div></div><a class="source-link" target="_blank" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/742423ea7f5acc5c271ccc71779b4acaf126ae61/src/cache.jl#L28-L32">source</a></section><section class="docstring"><div class="docstring-header"><a class="docstring-binding" id="LazyArrays.@~-Tuple{Any}" href="#LazyArrays.@~-Tuple{Any}"><code>LazyArrays.@~</code></a> — <span class="docstring-category">Macro</span>.</div><div><div><pre><code class="language-julia">@~ expr</code></pre><p>Macro for creating a <code>Broadcasted</code> or <code>Applied</code> object.  Regular calls like <code>f(args...)</code> inside <code>expr</code> are replaced with <code>applied(f, args...)</code>. Dotted-calls like <code>f(args...)</code> inside <code>expr</code> are replaced with <code>broadcasted.(f, args...)</code>.  Use <code>LazyArray(@~ expr)</code> if you need an array-based interface.</p><pre><code class="language-none">julia&gt; @~ A .+ B ./ 2
 
 julia&gt; @~ @. A + B / 2
 
-julia&gt; @~ A * B + C</code></pre></div></div><a class="source-link" target="_blank" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/8e2dc3f399a8b072852b3aadee4344dd59f78608/src/lazymacro.jl#L81-L97">source</a></section><footer><hr/><a class="next" href="internals/"><span class="direction">Next</span><span class="title">Internals</span></a></footer></article></body></html>
+julia&gt; @~ A * B + C</code></pre></div></div><a class="source-link" target="_blank" href="https://github.com/JuliaArrays/LazyArrays.jl/blob/742423ea7f5acc5c271ccc71779b4acaf126ae61/src/lazymacro.jl#L81-L97">source</a></section><footer><hr/><a class="next" href="internals/"><span class="direction">Next</span><span class="title">Internals</span></a></footer></article></body></html>
