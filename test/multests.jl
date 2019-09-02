@@ -841,5 +841,34 @@ end
     end
 end
 
+@testset "MulAdd" begin
+    A = randn(5,5)
+    B = randn(5,4)
+    C = randn(5,4)
+    b = randn(5)
+    c = randn(5)
 
+    M = MulAdd(2.0,A,B,3.0,C)
+    @test size(M) == size(C)
+    @test size(M,1) == size(C,1)
+    @test size(M,2) == size(C,2)
+    @test_broken size(M,3) == size(C,3)
+    @test length(M) == length(C)
+    @test axes(M) == axes(C)
+    @test eltype(M) == Float64
+    @test materialize(M) ≈ 2.0A*B + 3.0C
 
+    @test_throws DimensionMismatch materialize(MulAdd(2.0,A,randn(3),1.0,B))
+    @test_throws DimensionMismatch materialize(MulAdd([1,2],A,B,[1,2],C))
+    @test_throws DimensionMismatch materialize(MulAdd(2.0,A,B,3.0,randn(3,4)))
+    @test_throws DimensionMismatch materialize(MulAdd(2.0,A,B,3.0,randn(5,5)))
+
+    B = randn(5,5)
+    C = randn(5,5)
+    @test materialize(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(C))) == 
+          materialize!(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(copy(C)))) == 2.0Diagonal(A)*Diagonal(B) + 3.0*Diagonal(C)
+    @test_broken materialize(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(C))) isa Diagonal
+
+    @test materialize(MulAdd(1.0, Eye(5), A, 3.0, C)) == materialize!(MulAdd(1.0, Eye(5), A, 3.0, copy(C))) == A + 3.0C
+    @test materialize(MulAdd(1.0, A, Eye(5), 3.0, C)) == materialize!(MulAdd(1.0, A, Eye(5), 3.0, copy(C))) == A + 3.0C
+end

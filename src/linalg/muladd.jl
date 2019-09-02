@@ -20,9 +20,6 @@ end
     MulAdd{StyleA,StyleB,StyleC}(α, A, B, β, C)
 end
 
-@inline MulAdd(styleA::StyleA, styleB::StyleB, styleC::StyleC, α::T, A::AA, B::BB, β::V, C::CC) where {StyleA,StyleB,StyleC,T,V,AA,BB,CC} =
-    MulAdd{StyleA,StyleB,StyleC,promote_type(T,V),AA,BB,CC}(styleA, styleB, styleC, α, A, B, β, C)
-
 @inline MulAdd(α, A::AA, B::BB, β, C::CC) where {AA,BB,CC} = 
     MulAdd{typeof(MemoryLayout(AA)), typeof(MemoryLayout(BB)), typeof(MemoryLayout(CC))}(α, A, B, β, C)
 
@@ -42,8 +39,8 @@ similar(M::MulAdd) = similar(M, eltype(M))
 function instantiate(M::MulAdd)
     @boundscheck check_mul_axes(M.α, M.A, M.B)
     @boundscheck check_mul_axes(M.β, M.C)
-    @boundscheck axes(M.A,1) == axes(M.C,1) || throw(DimensionMismatch("First axis of A, $(axes(A,1)), and first axis of C, $(axes(C,1)) must match"))
-    @boundscheck axes(M.B,2) == axes(M.C,2) || throw(DimensionMismatch("Second axis of B, $(axes(B,2)), and second axis of C, $(axes(C,2)) must match"))
+    @boundscheck axes(M.A,1) == axes(M.C,1) || throw(DimensionMismatch("First axis of A, $(axes(M.A,1)), and first axis of C, $(axes(M.C,1)) must match"))
+    @boundscheck axes(M.B,2) == axes(M.C,2) || throw(DimensionMismatch("Second axis of B, $(axes(M.B,2)), and second axis of C, $(axes(M.C,2)) must match"))
     M
 end
 
