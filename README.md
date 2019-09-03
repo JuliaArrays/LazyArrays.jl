@@ -18,7 +18,7 @@ the analogue in Base.
 
 ## Lazy operations
 
-To construct a lazy representation of a function call `f(x,y,z...), use the command
+To construct a lazy representation of a function call `f(x,y,z...)`, use the command
 `applied(f, x, y, z...)`. This will return an unmaterialized object typically of type `Applied`
 that represents the operation. To realize that object, call `materialize`, which 
 will typically be equivalent to calling `f(x,y,z...)`. A macro `@~` is available as a shorthand:
