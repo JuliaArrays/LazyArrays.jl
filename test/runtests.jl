@@ -165,6 +165,11 @@ end
         @test_throws BoundsError C[3,1]
         @test_throws BoundsError C[7]
     end
+
+    @testset "colsupport past size" begin
+        C = cache(Zeros(5,5)); C[5,1]; 
+        @test colsupport(C,3) == 1:0
+    end
 end
 
 @testset "Diff and Cumsum" begin
@@ -207,8 +212,8 @@ end
     Z = Zeros(5)
     @test rowsupport(Z,1) === colsupport(Z,1) === 1:0
     @test_broken cache(D)
-    C = cache(Array,D)
-    @test colsupport(C,2) === 1:2
+    C = cache(Array,D);
+    @test colsupport(C,2) === 2:2
     @test colsupport(C,1) === 1:1
     @test colsupport(cache(Zeros(5,5)),1) == 1:0
     C = cache(Zeros(5));
@@ -219,4 +224,7 @@ end
     LazyArrays.zero!(C)
     @test colsupport(C,1) == 1:3
     @test C == zeros(5)
+
+    # bug from BandedMartrices.jl
+    @test LazyArrays.convexunion(7:10,9:8) == LazyArrays.convexunion(9:8,7:10) == 7:10
 end
