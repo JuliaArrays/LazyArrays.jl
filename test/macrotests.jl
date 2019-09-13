@@ -1,6 +1,7 @@
 module MacroTests
 
 using Test, LazyArrays, MacroTools
+using Base.Broadcast: Broadcasted
 
 A = randn(6, 6)
 B = BroadcastArray(+, A, 2)
@@ -28,7 +29,7 @@ testparams = [
     @testset "$label" for (label, ex) in testparams
         desired = @eval $ex
         lazy = @eval @~ $ex
-        @test lazy isa Union{Broadcast.Broadcasted, LazyArrays.Applied}
+        @test lazy isa Union{Broadcasted, Applied}
 
         @testset ".= @~ $label" begin
             actual = zero(desired)
@@ -55,6 +56,18 @@ testparams = [
             @test actual == desired
         end
     end
+end
+
+@testset "@~ laziness" begin
+    A = ones(1, 1)
+    x = [1]
+
+    bc = @~ exp.(A * x)
+    @test bc.args isa Tuple{Applied}
+
+    bc = @~ exp.(A * x .+ 1)
+    @test bc.args isa Tuple{Broadcasted}
+    @test bc.args[1].args isa Tuple{Applied, Int}
 end
 
 end  # module
