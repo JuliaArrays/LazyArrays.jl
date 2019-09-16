@@ -17,7 +17,8 @@ is_call(ex::Expr) =
     ex.head == :call && !startswith(String(ex.args[1]), ".")
 
 is_dotcall(ex::Expr) =
-    ex.head == :. || (ex.head == :call && startswith(String(ex.args[1]), "."))
+    (ex.head == :. && ex.args[2].head === :tuple) ||
+    (ex.head == :call && startswith(String(ex.args[1]), "."))
 # e.g., `f.(x, y, z)` or `x .+ y .+ z`
 
 lazy_expr(x) = x
@@ -40,11 +41,17 @@ end
 bc_expr_impl(x) = x
 function bc_expr_impl(ex::Expr)
     # walk down chain of dot calls
-    if is_dotcall(ex)
-        return Expr(ex.head,
-                    lazy_expr(ex.args[1]), # function name (`f`, `.+`, etc.)
-                    bc_expr_impl.(ex.args[2:end])...) # arguments
+    if ex.head == :. && ex.args[2].head === :tuple
+        @assert length(ex.args) == 2  # argument is always expressed as a tuple
+        f = ex.args[1]  # function name
+        args = ex.args[2].args
+        return Expr(ex.head, lazy_expr(f), Expr(:tuple, bc_expr_impl.(args)...))
+    elseif ex.head == :call && startswith(String(ex.args[1]), ".")
+        f = ex.args[1]  # function name (e.g., `.+`)
+        args = ex.args[2:end]
+        return Expr(ex.head, lazy_expr(f), bc_expr_impl.(args)...)
     else
+        @assert !is_dotcall(ex)
         return lazy_expr(ex)
     end
 end
