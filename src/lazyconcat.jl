@@ -256,7 +256,7 @@ end
 
 _vec(a) = a
 _vec(a::AbstractArray) = vec(a)
-
+_vec(a::Adjoint{<:Number,<:AbstractVector}) = _vec(parent(a))
 vec(A::Hcat) = Vcat(_vec.(A.args)...)
 
 

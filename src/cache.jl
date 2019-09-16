@@ -136,4 +136,4 @@ Base.replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::Abstrac
 # special for zero cache
 ###
 
-zero!(A::CachedVector{<:Any,<:Any,<:Zeros}) = zero!(A.data)
+zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = zero!(A.data)
