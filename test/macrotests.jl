@@ -10,16 +10,16 @@ C = randn(6, 6)
 expressions_block = quote
     exp.(A)
     @. exp(A)
-    # exp(A)
+    exp(A)
     A .+ 2
     @. A + 2
     A + B
     @. A + B
     A * B + C
-    # A * B .+ C
+    A * B .+ C
     A * (B + C)
     # A * (B .+ C)
-    # 2 .* (A * B) .+ 3 .* C
+    2 .* (A * B) .+ 3 .* C
     exp.(A * C)  # https://github.com/JuliaArrays/LazyArrays.jl/issues/54
     (A * A) .+ (A * C)
 end
