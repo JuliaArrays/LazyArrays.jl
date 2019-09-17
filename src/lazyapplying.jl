@@ -84,9 +84,29 @@ similar(bc::Broadcasted{ApplyArrayBroadcastStyle{N}}, ::Type{ElType}) where {N,E
     copyto!(dest, first(bc.args))
 end
 @inline function copyto!(dest::AbstractArray, bc::Broadcasted{ApplyArrayBroadcastStyle{N}}) where N 
-    @assert length(bc.args) == 1
-    copyto!(dest, first(bc.args))    
+    if length(bc.args) == 1
+        copyto!(dest, first(bc.args))
+        if bc.f !== identity
+            dest .= bc.f.(dest)
+        end
+    else
+        bc′ = mapbc(bc) do x
+            if x isa Applied
+                materialize(x)
+            else
+                x
+            end
+        end
+        materialize!(dest, bc′)
+    end
+    return dest
 end
+
+# Map over all nested Broadcasted and their arguments.  Using `broadcasted`
+# instead of `Broadcasted` to re-process arguments via `broadcastable`.
+@inline mapbc(f, bc::Broadcasted) =
+    f(broadcasted(bc.f, map(a -> mapbc(f, a), bc.args)...))
+@inline mapbc(f, x) = f(x)
 
 struct MatrixFunctionStyle{F} <: AbstractArrayApplyStyle end
 
