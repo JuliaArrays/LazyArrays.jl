@@ -105,7 +105,7 @@ end
 # Diagonal
 ####
 
-# combine_mul_styles(::DiagonalLayout) = LmulStyle()
+mulapplystyle(::DiagonalLayout, _) = LmulStyle()
 
 # Diagonal multiplication never changes structure
 similar(M::Lmul{<:DiagonalLayout}, ::Type{T}, axes) where T = similar(M.B, T, axes)

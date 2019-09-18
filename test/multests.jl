@@ -831,6 +831,8 @@ end
        @test_broken Diagonal(Fill(2,10))  * Fill(3,10,3) ≡ Fill(6,10)
        @test apply(*, Diagonal(Fill(2,10)), Fill(3,10,3)) ≡ Fill(6,10,3)
        @test apply(*,Fill(3,10,10),Fill(3,10)) ≡ Fill(9,10)
+       @test apply(*, Eye(10), Ones(10)) == Ones(10)
+       @test apply(*, Eye(10), Eye(10)) == Eye(10)
     end
 
     @testset "ApplyArray MulTest" begin
