@@ -1,7 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
                     MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
-                    FlattenMulStyle
+                    FlattenMulStyle, RmulStyle
 import Base.Broadcast: materialize, materialize!, broadcasted
 
 @testset "Matrix * Vector" begin
@@ -701,7 +701,11 @@ end
         A = randn(5,5)
         B = Diagonal(randn(5))
         @test MemoryLayout(typeof(B)) == DiagonalLayout{DenseColumnMajor}()
+        @test ApplyStyle(*, typeof(A), typeof(B)) == RmulStyle()
         @test apply(*,A,B) == A*B
+
+        @test apply(*,B,B) == B*B
+        @test apply(*,B,B) isa Diagonal
 
         A = randn(5,5)
         B = SymTridiagonal(randn(5),randn(4))
