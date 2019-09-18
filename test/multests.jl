@@ -704,6 +704,10 @@ end
         @test ApplyStyle(*, typeof(A), typeof(B)) == RmulStyle()
         @test apply(*,A,B) == A*B
 
+        @test ApplyStyle(*, typeof(B), typeof(A)) == LmulStyle()
+        @test apply(*,B,A) == B*A
+
+        @test ApplyStyle(*, typeof(B), typeof(B)) == LmulStyle()
         @test apply(*,B,B) == B*B
         @test apply(*,B,B) isa Diagonal
 
