@@ -211,5 +211,3 @@ flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))
  
 adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
 transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
-
-
