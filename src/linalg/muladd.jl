@@ -29,7 +29,7 @@ end
 size(M::MulAdd, p::Int) = size(M)[p]
 axes(M::MulAdd, p::Int) = axes(M)[p]
 length(M::MulAdd) = prod(size(M))
-size(M::MulAdd) = length.(axes(M))
+size(M::MulAdd) = map(length,axes(M))
 axes(M::MulAdd) = axes(M.C)
 
 similar(M::MulAdd, ::Type{T}, axes) where {T,N} = similar(Array{T}, axes)

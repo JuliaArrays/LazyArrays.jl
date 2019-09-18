@@ -9,9 +9,9 @@ BroadcastStyle(::Type{<:Lmul}) = ApplyBroadcastStyle()
 
 
 struct LmulStyle <: AbstractArrayApplyStyle end
-# combine_mul_styles(::DiagonalLayout) = LmulStyle()
 
 broadcastable(M::Lmul) = M
+
 
 const MatLmulVec{StyleA,StyleB} = Lmul{StyleA,StyleB,<:AbstractMatrix,<:AbstractVector}
 const MatLmulMat{StyleA,StyleB} = Lmul{StyleA,StyleB,<:AbstractMatrix,<:AbstractMatrix}
@@ -23,7 +23,24 @@ const BlasMatLmulMat{StyleA,StyleB,T<:BlasFloat} = Lmul{StyleA,StyleB,<:Abstract
 # LMul materialize
 ####
 
-copy(M::Mul{LmulStyle}) = copyto!(similar(M), Lmul(M.args...))
+Lmul(M::Mul) = Lmul(M.args...)
+
+eltype(::Lmul{<:Any,<:Any,A,B}) where {A,B} = promote_type(eltype(A), eltype(B))
+size(M::Lmul, p::Int) = size(M)[p]
+axes(M::Lmul, p::Int) = axes(M)[p]
+length(M::Lmul) = prod(size(M))
+size(M::Lmul) = map(length,axes(M))
+axes(M::MatLmulVec) = (axes(M.A,1),)
+axes(M::Lmul) = (axes(M.A,1),axes(M.B,2))
+
+
+similar(M::Lmul, ::Type{T}, axes) where {T,N} = similar(Array{T}, axes)
+similar(M::Lmul, ::Type{T}) where T = similar(M, T, axes(M))
+similar(M::Lmul) = similar(M, eltype(M))
+
+similar(M::Applied{LmulStyle}, ::Type{T}) where T = similar(Lmul(M), T)
+copy(M::Applied{LmulStyle}) = copy(Lmul(M))
+
 
 @inline copyto!(dest::AbstractVecOrMat, M::Mul{LmulStyle}) = copyto!(dest, Lmul(M.args...))
 
@@ -39,6 +56,9 @@ copy(M::Lmul) = materialize!(Lmul(M.A,copy(M.B)))
 end
 
 materialize!(M::Lmul) = lmul!(M.A,M.B)
+
+
+
 
 
 
@@ -81,3 +101,18 @@ function materialize!(M::MatLmulMat{<:TriangularLayout})
 end
 
 
+####
+# Diagonal
+####
+
+# combine_mul_styles(::DiagonalLayout) = LmulStyle()
+
+# Diagonal multiplication never changes structure
+similar(M::Lmul{<:DiagonalLayout}, ::Type{T}, axes) where T = similar(M.B, T, axes)
+# equivalent to rescaling
+function materialize!(M::Lmul{<:DiagonalLayout{<:AbstractFillLayout}})
+    M.B .= getindex_value(M.A.diag) .* M.B
+    M.B
+end
+
+copy(M::Lmul{<:DiagonalLayout}) = M.A.diag .* M.B
