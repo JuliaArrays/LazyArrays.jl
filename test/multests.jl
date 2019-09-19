@@ -258,7 +258,7 @@ end
     end
 end
 
-@testset "Mul" begin
+@testset "adjtrans" begin
     @testset "gemv adjtrans" begin
         for A in (randn(5,5), view(randn(5,5),:,:), view(randn(5,5),1:5,:),
                   view(randn(5,5),1:5,1:5), view(randn(5,5),:,1:5)),
@@ -523,8 +523,10 @@ end
         y .= Mul(Hermitian(A), y)
         @test all( (similar(x) .= Mul(Hermitian(A),x)) .=== y)
     end
+end
 
-        @testset "Mixed types" begin
+@testset "Mul"
+    @testset "Mixed types" begin
         A = randn(5,6)
         b = rand(Int,6)
         c = Array{Float64}(undef, 5)
@@ -771,6 +773,62 @@ end
             x = randn(Float64, 100, 100)
 
             @test UpperTriangular(A)*x ≈ (similar(x) .= Mul(UpperTriangular(A), x))
+        end
+
+        @testset "adjtrans" begin
+            for T in (Float64, ComplexF64)
+                A = randn(T,100,100)
+                b = randn(T,100)
+
+                @test all(apply(*, UpperTriangular(A)', b) .=== UpperTriangular(A)'b)
+                @test all(apply(*, UnitUpperTriangular(A)', b) .=== UnitUpperTriangular(A)'b)
+                @test all(apply(*, LowerTriangular(A)', b) .=== LowerTriangular(A)'b)
+                @test all(apply(*, UnitLowerTriangular(A)', b) .=== UnitLowerTriangular(A)'b)
+
+                @test all(apply(*, transpose(UpperTriangular(A)), b) .=== transpose(UpperTriangular(A))b)
+                @test all(apply(*, transpose(UnitUpperTriangular(A)), b) .=== transpose(UnitUpperTriangular(A))b)
+                @test all(apply(*, transpose(LowerTriangular(A)), b) .=== transpose(LowerTriangular(A))b)
+                @test all(apply(*, transpose(UnitLowerTriangular(A)), b) .=== transpose(UnitLowerTriangular(A))b)
+
+                B = randn(T,100,100)
+
+                @test all(apply(*, UpperTriangular(A)', B) .=== UpperTriangular(A)'B)
+                @test all(apply(*, UnitUpperTriangular(A)', B) .=== UnitUpperTriangular(A)'B)
+                @test all(apply(*, LowerTriangular(A)', B) .=== LowerTriangular(A)'B)
+                @test all(apply(*, UnitLowerTriangular(A)', B) .=== UnitLowerTriangular(A)'B)
+
+                @test all(apply(*, transpose(UpperTriangular(A)), B) .=== transpose(UpperTriangular(A))B)
+                @test all(apply(*, transpose(UnitUpperTriangular(A)), B) .=== transpose(UnitUpperTriangular(A))B)
+                @test all(apply(*, transpose(LowerTriangular(A)), B) .=== transpose(LowerTriangular(A))B)
+                @test all(apply(*, transpose(UnitLowerTriangular(A)), B) .=== transpose(UnitLowerTriangular(A))B)                
+            end
+
+            for T in (Float64, ComplexF64)
+                A = big.(randn(T,100,100))
+                b = big.(randn(T,100))
+
+                @test all(apply(*, UpperTriangular(A)', b) ≈ UpperTriangular(A)'b)
+                @test all(apply(*, UnitUpperTriangular(A)', b) ≈ UnitUpperTriangular(A)'b)
+                @test all(apply(*, LowerTriangular(A)', b) ≈ LowerTriangular(A)'b)
+                @test all(apply(*, UnitLowerTriangular(A)', b) ≈ UnitLowerTriangular(A)'b)
+
+                @test all(apply(*, transpose(UpperTriangular(A)), b) ≈ transpose(UpperTriangular(A))b)
+                @test all(apply(*, transpose(UnitUpperTriangular(A)), b) ≈ transpose(UnitUpperTriangular(A))b)
+                @test all(apply(*, transpose(LowerTriangular(A)), b) ≈ transpose(LowerTriangular(A))b)
+                @test all(apply(*, transpose(UnitLowerTriangular(A)), b) ≈ transpose(UnitLowerTriangular(A))b)
+
+                B = big.(randn(T,100,100))
+                
+                @test all(apply(*, UpperTriangular(A)', B) ≈ UpperTriangular(A)'B)
+                @test all(apply(*, UnitUpperTriangular(A)', B) ≈ UnitUpperTriangular(A)'B)
+                @test all(apply(*, LowerTriangular(A)', B) ≈ LowerTriangular(A)'B)
+                @test all(apply(*, UnitLowerTriangular(A)', B) ≈ UnitLowerTriangular(A)'B)
+
+                @test all(apply(*, transpose(UpperTriangular(A)), B) ≈ transpose(UpperTriangular(A))B)
+                @test all(apply(*, transpose(UnitUpperTriangular(A)), B) ≈ transpose(UnitUpperTriangular(A))B)
+                @test all(apply(*, transpose(LowerTriangular(A)), B) ≈ transpose(LowerTriangular(A))B)
+                @test all(apply(*, transpose(UnitLowerTriangular(A)), B) ≈ transpose(UnitLowerTriangular(A))B)                
+            end
         end
     end
 
