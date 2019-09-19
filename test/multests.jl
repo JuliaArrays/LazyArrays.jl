@@ -1,7 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
                     MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
-                    FlattenMulStyle, RmulStyle
+                    FlattenMulStyle, RmulStyle, Rmul
 import Base.Broadcast: materialize, materialize!, broadcasted
 
 @testset "Matrix * Vector" begin
@@ -524,10 +524,156 @@ end
         @test all( (similar(x) .= Mul(Hermitian(A),x)) .=== y)
     end
 
-    @testset "tri" begin
+        @testset "Mixed types" begin
+        A = randn(5,6)
+        b = rand(Int,6)
+        c = Array{Float64}(undef, 5)
+        c .= applied(*,A,b)
+
+        @test_throws DimensionMismatch (similar(c,3) .= Mul(A,b))
+        @test_throws DimensionMismatch (c .= Mul(A,similar(b,2)))
+
+        d = similar(c)
+        mul!(d, A, b)
+        @test all(c .=== d)
+
+        copyto!(d, MulAdd(1, A, b, 0.0, d))
+        @test d == copyto!(similar(d), MulAdd(1, A, b, 0.0, d)) ≈ A*b
+        @test copyto!(similar(d), MulAdd(1, A, b, 1.0, d)) ≈ A*b + d
+
+        @test all((similar(d) .= MulAdd(1, A, b, 1.0, d)) .=== copyto!(similar(d), MulAdd(1, A, b, 1.0, d)))
+
+        B = rand(Int,6,4)
+        C = Array{Float64}(undef, 5, 4)
+        C .= Mul(A,B)
+
+        @test_throws DimensionMismatch materialize!(MulAdd(1,A,B,0,similar(C,4,4)))
+        @test_throws DimensionMismatch (similar(C,4,4) .= Mul(A,B))
+        @test_throws DimensionMismatch (C .= Mul(A,similar(B,2,2)))
+
+        D = similar(C)
+        mul!(D, A, B)
+        @test all(C .=== D)
+
+        A = randn(Float64,20,22)
+        B = randn(ComplexF64,22,24)
+        C = similar(B,20,24)
+        @test all((C .= Mul(A,B)  ) .=== copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)) .=== A*B)
+    end
+
+    @testset "no allocation" begin
+        function blasnoalloc(c, α, A, x, β, y)
+            c .= @~ A*x
+            c .= @~ α*A*x
+            c .= @~ A*x + y
+            c .= @~ α * A*x + y
+            c .= @~ A*x + β * y
+            c .= @~ α * A*x + β * y
+        end
+        
+        A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
+        
+        if VERSION ≥ v"1.1"
+            @inferred(MulAdd(@~ A*x + y))
+            @test blasnoalloc(c, 2.0, A, x, 3.0, y) === c
+            @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
+            Ac = A'
+            blasnoalloc(c, 2.0, Ac, x, 3.0, y)
+            @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
+            Aa = ApplyArray(+, A, Ac)
+            blasnoalloc(c, 2.0, Aa, x, 3.0, y)
+			@test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
+		end
+    end
+
+    @testset "multi-argument mul" begin
+        A = randn(5,5)
+        B = apply(*,A,A,A)
+        @test B isa Matrix{Float64}
+        @test all(B .=== (A*A)*A)
+    end
+
+    @testset "MulArray" begin
+        A = randn(5,5)
+        M = ApplyArray(*,A,A)
+        @test M[5] == M[5,1]
+        @test M[6] == M[1,2]
+        @test Matrix(M) ≈ A^2
+        x = randn(5)
+        @test x'M ≈ transpose(x)*M ≈ x'Matrix(M)
+        @test_throws DimensionMismatch materialize(applied(*, randn(5,5), randn(4)))
+        @test_throws DimensionMismatch ApplyArray(*, randn(5,5), randn(4))
+    end
+
+    @testset "Bug in getindex" begin
+        M = ApplyArray(*,[1,2,3],Ones(1,20))
+        @test M[1,1] == 1
+        @test M[2,1] == 2
+        M = Applied(*,[1 2; 3 4], [1 2; 3 4])
+        @test M[1] == 7
+    end
+
+    @testset "#14" begin
+        A = ones(1,1) * 1e200
+        B = ones(1,1) * 1e150
+        C = ones(1,1) * 1e-300
+
+        @test apply(*, A, applied(*,B,C)) == A*(B*C)
+        @test apply(*, A , applied(*,B,C), C) == A * (B*C) * C
+    end
+
+    @testset "#15" begin
+        N = 10
+        A = randn(N,N); B = randn(N,N); C = randn(N,N); R1 = similar(A); R2 = similar(A)
+        M = Mul(A, Mul(B, C))
+        @test axes(M) == (Base.OneTo(N),Base.OneTo(N))
+        @test ndims(M) == ndims(typeof(M)) == 2
+        @test eltype(M) == Float64
+        @test all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
+    end
+
+    @testset "broadcasting" begin
+        A = randn(5,5); B = randn(5,5); C = randn(5,5)
+        C .= NaN
+        C .= @~ 1.0 * A*B + 0.0 * C
+        @test C == A*B
+    end
+
+    @testset "BigFloat" begin
+        A = BigFloat.(randn(5,5))
+        x = BigFloat.(randn(5))
+        @test A*x == apply(*,A,x) == copyto!(similar(x), applied(*,A,x))
+        @test_throws UndefRefError materialize!(MulAdd(1.0,A,x,0.0,similar(x)))
+    end
+
+    @testset "Scalar * Vector" begin
+        A, x =  [1 2; 3 4] , [[1,2],[3,4]]
+        @test apply(*,A,x) == A*x
+    end 
+
+    @testset "Complex broadcast" begin
+        A = randn(5,5) .+ im*randn(5,5)
+        x = randn(5) .+ im*randn(5)
+        y = randn(5) .+ im*randn(5)
+        z = similar(x)
+        @test all((z .= @~ (2.0+0.0im)*A*x + (3.0+0.0im)*y) .=== BLAS.gemv!('N',2.0+0.0im,A,x,3.0+0.0im,y))
+    end
+end
+
+@testset "Lmul/Rmul" begin
+    @testset "tri Lmul" begin
         @testset "Float * Float vector" begin
             A = randn(Float64, 100, 100)
             x = randn(Float64, 100)
+
+            L = Lmul(UpperTriangular(A),x)
+            @test size(L) == (size(L,1),) == (100,)
+            @test axes(L) == (axes(L,1),) == (Base.OneTo(100),)
+            @test eltype(L) == Float64
+            @test length(L) == 100
+
+            @test similar(L) isa Vector{Float64}
+            @test similar(L,Int) isa Vector{Int}
 
             @test ApplyStyle(*, typeof(UpperTriangular(A)), typeof(x)) isa LmulStyle
 
@@ -628,73 +774,19 @@ end
         end
     end
 
-    @testset "Mixed types" begin
-        A = randn(5,6)
-        b = rand(Int,6)
-        c = Array{Float64}(undef, 5)
-        c .= applied(*,A,b)
+    @testset "tri Rmul" begin
+        A = randn(100,100)
+        B = randn(100,100)
+        R = Rmul(copy(A), UpperTriangular(B))
+        @test size(R) == (size(R,1),size(R,2)) == (100,100)
+        @test axes(R) == (axes(R,1),axes(R,2)) == (Base.OneTo(100),Base.OneTo(100))
+        @test eltype(R) == Float64
+        @test length(R) == 100^2
 
-        @test_throws DimensionMismatch (similar(c,3) .= Mul(A,b))
-        @test_throws DimensionMismatch (c .= Mul(A,similar(b,2)))
-
-        d = similar(c)
-        mul!(d, A, b)
-        @test all(c .=== d)
-
-        copyto!(d, MulAdd(1, A, b, 0.0, d))
-        @test d == copyto!(similar(d), MulAdd(1, A, b, 0.0, d)) ≈ A*b
-        @test copyto!(similar(d), MulAdd(1, A, b, 1.0, d)) ≈ A*b + d
-
-        @test all((similar(d) .= MulAdd(1, A, b, 1.0, d)) .=== copyto!(similar(d), MulAdd(1, A, b, 1.0, d)))
-
-        B = rand(Int,6,4)
-        C = Array{Float64}(undef, 5, 4)
-        C .= Mul(A,B)
-
-        @test_throws DimensionMismatch materialize!(MulAdd(1,A,B,0,similar(C,4,4)))
-        @test_throws DimensionMismatch (similar(C,4,4) .= Mul(A,B))
-        @test_throws DimensionMismatch (C .= Mul(A,similar(B,2,2)))
-
-        D = similar(C)
-        mul!(D, A, B)
-        @test all(C .=== D)
-
-        A = randn(Float64,20,22)
-        B = randn(ComplexF64,22,24)
-        C = similar(B,20,24)
-        @test all((C .= Mul(A,B)  ) .=== copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)) .=== A*B)
-    end
-
-    @testset "no allocation" begin
-        function blasnoalloc(c, α, A, x, β, y)
-            c .= @~ A*x
-            c .= @~ α*A*x
-            c .= @~ A*x + y
-            c .= @~ α * A*x + y
-            c .= @~ A*x + β * y
-            c .= @~ α * A*x + β * y
-        end
-        
-        A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
-        
-        if VERSION ≥ v"1.1"
-            @inferred(MulAdd(@~ A*x + y))
-            @test blasnoalloc(c, 2.0, A, x, 3.0, y) === c
-            @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
-            Ac = A'
-            blasnoalloc(c, 2.0, Ac, x, 3.0, y)
-            @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
-            Aa = ApplyArray(+, A, Ac)
-            blasnoalloc(c, 2.0, Aa, x, 3.0, y)
-			@test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
-		end
-    end
-
-    @testset "multi-argument mul" begin
-        A = randn(5,5)
-        B = apply(*,A,A,A)
-        @test B isa Matrix{Float64}
-        @test all(B .=== (A*A)*A)
+        materialize!(R)
+        @test R.A ≠ A
+        @test all(BLAS.trmm('R', 'U', 'N', 'N', 1.0, B, A) .=== apply(*, A, UpperTriangular(B)) .=== R.A)
+        @test all(BLAS.trmm('R', 'U', 'N', 'N', 1.0, B, A') .=== apply(*, A, UpperTriangular(B)') .=== A*UpperTriangular(B)')
     end
 
     @testset "Diagonal and SymTridiagonal" begin
@@ -716,73 +808,9 @@ end
         @test MemoryLayout(typeof(B)) == SymTridiagonalLayout{DenseColumnMajor}()
         @test apply(*,A,B) == A*B
     end
+end
 
-    @testset "MulArray" begin
-        A = randn(5,5)
-        M = ApplyArray(*,A,A)
-        @test M[5] == M[5,1]
-        @test M[6] == M[1,2]
-        @test Matrix(M) ≈ A^2
-        x = randn(5)
-        @test x'M ≈ transpose(x)*M ≈ x'Matrix(M)
-        @test_throws DimensionMismatch materialize(applied(*, randn(5,5), randn(4)))
-        @test_throws DimensionMismatch ApplyArray(*, randn(5,5), randn(4))
-    end
-
-    @testset "Bug in getindex" begin
-        M = ApplyArray(*,[1,2,3],Ones(1,20))
-        @test M[1,1] == 1
-        @test M[2,1] == 2
-        M = Applied(*,[1 2; 3 4], [1 2; 3 4])
-        @test M[1] == 7
-    end
-
-    @testset "#14" begin
-        A = ones(1,1) * 1e200
-        B = ones(1,1) * 1e150
-        C = ones(1,1) * 1e-300
-
-        @test apply(*, A, applied(*,B,C)) == A*(B*C)
-        @test apply(*, A , applied(*,B,C), C) == A * (B*C) * C
-    end
-
-    @testset "#15" begin
-        N = 10
-        A = randn(N,N); B = randn(N,N); C = randn(N,N); R1 = similar(A); R2 = similar(A)
-        M = Mul(A, Mul(B, C))
-        @test axes(M) == (Base.OneTo(N),Base.OneTo(N))
-        @test ndims(M) == ndims(typeof(M)) == 2
-        @test eltype(M) == Float64
-        @test all(copyto!(R1, M) .=== A*(B*C) .=== (R2 .= M))
-    end
-
-    @testset "broadcasting" begin
-        A = randn(5,5); B = randn(5,5); C = randn(5,5)
-        C .= NaN
-        C .= @~ 1.0 * A*B + 0.0 * C
-        @test C == A*B
-    end
-
-    @testset "BigFloat" begin
-        A = BigFloat.(randn(5,5))
-        x = BigFloat.(randn(5))
-        @test A*x == apply(*,A,x) == copyto!(similar(x), applied(*,A,x))
-        @test_throws UndefRefError materialize!(MulAdd(1.0,A,x,0.0,similar(x)))
-    end
-
-    @testset "Scalar * Vector" begin
-        A, x =  [1 2; 3 4] , [[1,2],[3,4]]
-        @test apply(*,A,x) == A*x
-    end 
-
-    @testset "Complex broadcast" begin
-        A = randn(5,5) .+ im*randn(5,5)
-        x = randn(5) .+ im*randn(5)
-        y = randn(5) .+ im*randn(5)
-        z = similar(x)
-        @test all((z .= @~ (2.0+0.0im)*A*x + (3.0+0.0im)*y) .=== BLAS.gemv!('N',2.0+0.0im,A,x,3.0+0.0im,y))
-    end
-
+@testset "Factorizations" begin
     @testset "QR" begin
         A = randn(5,3)
         b = randn(3)
