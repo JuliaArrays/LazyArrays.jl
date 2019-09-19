@@ -57,15 +57,9 @@ copy(M::Applied{RmulStyle}) = copy(Rmul(M))
 @inline copyto!(dest::AbstractVecOrMat, M::Mul{LmulStyle}) = copyto!(dest, Lmul(M.args...))
 @inline copyto!(dest::AbstractVecOrMat, M::Mul{RmulStyle}) = copyto!(dest, Rmul(M.args...))
 
-@inline function materialize!(M::Mul{LmulStyle})
-    A,x = M.args
-    materialize!(Lmul(A, x))
-end
+@inline materialize!(M::Mul{LmulStyle}) = materialize!(Lmul(M))
+@inline materialize!(M::Mul{RmulStyle}) = materialize!(Rmul(M))
 
-@inline function materialize!(M::Mul{RmulStyle})
-    A,x = M.args
-    materialize!(Rmul(A, x))
-end
 
 copy(M::Lmul) = materialize!(Lmul(M.A,copy(M.B)))
 copy(M::Rmul) = materialize!(Rmul(copy(M.A),M.B))
@@ -146,6 +140,7 @@ end
 copy(M::Lmul{<:DiagonalLayout,<:DiagonalLayout}) = Diagonal(M.A.diag .* M.B.diag)
 copy(M::Lmul{<:DiagonalLayout}) = M.A.diag .* M.B
 copy(M::Lmul{<:DiagonalLayout{<:AbstractFillLayout}}) = getindex_value(M.A.diag) .* M.B
+copy(M::Lmul{<:DiagonalLayout{<:AbstractFillLayout},<:DiagonalLayout}) = Diagonal(getindex_value(M.A.diag) .* M.B.diag)
 
 # Diagonal multiplication never changes structure
 similar(M::Rmul{<:Any,<:DiagonalLayout}, ::Type{T}, axes) where T = similar(M.A, T, axes)
