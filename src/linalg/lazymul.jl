@@ -28,6 +28,13 @@ macro lazymul(Typ)
             Base.:*(A::LazyArrays.ApplyMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
         end
     end
+    if Typ ≠ :BroadcastMatrix
+        ret = quote
+            $ret
+            Base.:*(A::$Typ, B::LazyArrays.BroadcastMatrix, C...) = LazyArrays.apply(*,A,B,C...)
+            Base.:*(A::LazyArrays.BroadcastMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+        end
+    end
     for Struc in (:AbstractTriangular, :Diagonal)
         ret = quote
             $ret
