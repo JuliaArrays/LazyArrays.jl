@@ -178,7 +178,8 @@ struct FooNumber <: Number end
 
     @testset "BroadcastArray" begin
         A = [1.0 2; 3 4]
-        @test @inferred(MemoryLayout(typeof(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
+        VERSION ≥ v"1.1" && @inferred(MemoryLayout(typeof(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2)))))
+        @test MemoryLayout(typeof(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2)))) ==
             BroadcastLayout{typeof(+)}()
     end
 
