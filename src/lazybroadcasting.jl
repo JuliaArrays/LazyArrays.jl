@@ -99,12 +99,13 @@ tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = Tuple{typeof(MemoryLayout
 tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B))}
 tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B)),typeof(MemoryLayout(C))}
 
-broadcastlayout(::Type{F}, ::Type{T}) where {F,T} = BroadcastLayout{F}()
-broadcastlayout(::Type, ::Type{<:Tuple{Vararg{LazyLayout}}}) = LazyLayout()
-broadcastlayout(::Type, ::Type{<:Tuple{T1,LazyLayout}}) where {T1} = LazyLayout()
-broadcastlayout(::Type, ::Type{<:Tuple{T1,T2,LazyLayout}}) where {T1,T2} = LazyLayout()
-broadcastlayout(::Type, ::Type{<:Tuple{T1,T2,T3,LazyLayout}}) where {T1,T2,T3} = LazyLayout()
-MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = broadcastlayout(F, tuple_type_memorylayouts(Args))
+broadcastlayout(::F, ::Type...) where F = BroadcastLayout{F}()
+broadcastlayout(_, ::Type{LazyLayout}...) = LazyLayout()
+broadcastlayout(_, ::Type{T1}, ::Type{LazyLayout}) where {T1} = LazyLayout()
+broadcastlayout(_, ::Type{T1}, ::Type{T2}, ::Type{LazyLayout}) where {T1,T2} = LazyLayout()
+broadcastlayout(_, ::Type{T1}, ::Type{T2}, ::Type{T3}, ::Type{LazyLayout}) where {T1,T2,T3} = LazyLayout()
+MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = 
+    broadcastlayout(F.instance, tuple_type_memorylayouts(Args).parameters...)
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting
 for op in (+, -, big)
