@@ -141,6 +141,9 @@ array.
 """
 abstract type LazyArray{T,N} <: AbstractArray{T,N} end
 
+const LazyMatrix{T} = LazyArray{T,2}
+const LazyVector{T} = LazyArray{T,1}
+
 struct ApplyArray{T, N, F, Args<:Tuple} <: LazyArray{T,N}
     f::F
     args::Args
@@ -230,7 +233,7 @@ end
 applybroadcaststyle(_1, _2) = DefaultArrayStyle{2}()
 BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
 
-Base.replace_in_print_matrix(A::ApplyMatrix, i::Integer, j::Integer, s::AbstractString) =
+Base.replace_in_print_matrix(A::LazyMatrix, i::Integer, j::Integer, s::AbstractString) =
     i in colsupport(A,j) ? s : Base.replace_with_centered_mark(s)
 
 ### 
@@ -263,5 +266,5 @@ end
 @inline getindex(A::ApplyMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
 
 
-diagonallayout(::LazyLayout) = LazyLayout()
+diagonallayout(::LazyLayout) = DiagonalLayout{LazyLayout}()
 diagonallayout(::ApplyLayout) = DiagonalLayout{LazyLayout}()
