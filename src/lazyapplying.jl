@@ -217,10 +217,14 @@ result_mul_style(::LazyArrayApplyStyle, _) = LazyArrayApplyStyle()
 result_mul_style(_, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
 
 
-struct  ApplyLayout{F, LAY} <: MemoryLayout end
+struct  ApplyLayout{F} <: MemoryLayout end
 
-MemoryLayout(M::Type{Applied{Style,F,Args}}) where {Style,F,Args} = ApplyLayout{F,tuple_type_memorylayouts(Args)}()
-MemoryLayout(M::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} = ApplyLayout{F,tuple_type_memorylayouts(Args)}()
+applylayout(::F, args...) where F = ApplyLayout{F}()
+
+MemoryLayout(::Type{Applied{Style,F,Args}}) where {Style,F,Args} = 
+    applylayout(F.instance,tuple_type_memorylayouts(Args).parameters...)
+MemoryLayout(::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} = 
+    applylayout(F.instance,tuple_type_memorylayouts(Args).parameters...)
 
 function show(io::IO, A::Applied) 
     print(io, "Applied(", A.f)
@@ -268,3 +272,4 @@ end
 
 diagonallayout(::LazyLayout) = DiagonalLayout{LazyLayout}()
 diagonallayout(::ApplyLayout) = DiagonalLayout{LazyLayout}()
+

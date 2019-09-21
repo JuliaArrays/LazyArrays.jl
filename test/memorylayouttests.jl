@@ -5,7 +5,7 @@ import LazyArrays: MemoryLayout, DenseRowMajor, DenseColumnMajor, StridedLayout,
                         UnitUpperTriangularLayout, LowerTriangularLayout,
                         UnitLowerTriangularLayout, ScalarLayout,
                         hermitiandata, symmetricdata, FillLayout, ZerosLayout,
-                        BroadcastLayout, Add, AddArray, ApplyLayout
+                        BroadcastLayout, Add, AddArray, ApplyLayout, PaddedLayout
 
 struct FooBar end
 struct FooNumber <: Number end
@@ -167,8 +167,8 @@ struct FooNumber <: Number end
         @test MemoryLayout(typeof(Fill(1,10))) == FillLayout()
         @test MemoryLayout(typeof(Ones(10))) == FillLayout()
         @test MemoryLayout(typeof(Zeros(10))) == ZerosLayout()
-        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == ApplyLayout{typeof(vcat),Tuple{FillLayout,ZerosLayout}}()
-        @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == ApplyLayout{typeof(vcat),Tuple{DenseColumnMajor,ZerosLayout}}()
+        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{FillLayout}()
+        @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
 
         @test MemoryLayout(typeof(view(Fill(1,10),1:3))) == UnknownLayout()
         @test MemoryLayout(typeof(view(Fill(1,10),1:3,1))) == UnknownLayout()
@@ -184,6 +184,6 @@ struct FooNumber <: Number end
         A = [1.0 2; 3 4]
         @test eltype(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))) == Float64
         @test @inferred(MemoryLayout(typeof(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
-            ApplyLayout{typeof(+), Tuple{DenseColumnMajor, FillLayout, ZerosLayout}}()
+            ApplyLayout{typeof(+)}()
     end
 end

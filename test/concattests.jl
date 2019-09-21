@@ -257,22 +257,22 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, MulAdd, Applied
         A = Hcat([1.0 2.0],[3.0 4.0])
         B = Vcat([1.0,2.0],[3.0,4.0])
     
-        @test MemoryLayout(typeof(A)) isa ApplyLayout{typeof(hcat),Tuple{DenseColumnMajor,DenseColumnMajor}}
-        @test MemoryLayout(typeof(B)) isa ApplyLayout{typeof(vcat),Tuple{DenseColumnMajor,DenseColumnMajor}}
+        @test MemoryLayout(typeof(A)) isa ApplyLayout{typeof(hcat)}
+        @test MemoryLayout(typeof(B)) isa ApplyLayout{typeof(vcat)}
         @test A*B == Matrix(A)*Vector(B) == mul!(Vector{Float64}(undef,1),A,B) == (Vector{Float64}(undef,1) .= @~ A*B)
         @test materialize!(MulAdd(1.1,A,B,2.2,[5.0])) == 1.1*Matrix(A)*Vector(B)+2.2*[5.0]
 
         A = Hcat([1.0 2.0; 3 4],[3.0 4.0; 5 6])
         B = Vcat([1.0,2.0],[3.0,4.0])
-        @test MemoryLayout(typeof(A)) isa ApplyLayout{typeof(hcat),Tuple{DenseColumnMajor,DenseColumnMajor}}
-        @test MemoryLayout(typeof(B)) isa ApplyLayout{typeof(vcat),Tuple{DenseColumnMajor,DenseColumnMajor}}
+        @test MemoryLayout(typeof(A)) isa ApplyLayout{typeof(hcat)}
+        @test MemoryLayout(typeof(B)) isa ApplyLayout{typeof(vcat)}
         @test A*B == Matrix(A)*Vector(B) == mul!(Vector{Float64}(undef,2),A,B) == (Vector{Float64}(undef,2) .= @~ A*B)
         @test materialize!(MulAdd(1.1,A,B,2.2,[5.0,6])) ≈ 1.1*Matrix(A)*Vector(B)+2.2*[5.0,6]
 
         A = Hcat([1.0 2.0; 3 4],[3.0 4.0; 5 6])
         B = Vcat([1.0 2.0; 3 4],[3.0 4.0; 5 6])
-        @test MemoryLayout(typeof(A)) isa ApplyLayout{typeof(hcat),Tuple{DenseColumnMajor,DenseColumnMajor}}
-        @test MemoryLayout(typeof(B)) isa ApplyLayout{typeof(vcat),Tuple{DenseColumnMajor,DenseColumnMajor}}
+        @test MemoryLayout(typeof(A)) isa ApplyLayout{typeof(hcat)}
+        @test MemoryLayout(typeof(B)) isa ApplyLayout{typeof(vcat)}
         @test A*B == Matrix(A)*Matrix(B) == mul!(Matrix{Float64}(undef,2,2),A,B) == (Matrix{Float64}(undef,2,2) .= @~ A*B)
         @test materialize!(MulAdd(1.1,A,B,2.2,[5.0 6; 7 8])) ≈ 1.1*Matrix(A)*Matrix(B)+2.2*[5.0 6; 7 8]
     end

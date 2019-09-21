@@ -47,9 +47,9 @@ end
 _fill_lmul!(β, A::AbstractArray{T}) where T = iszero(β) ? zero!(A) : lmul!(β, A)
 combine_mul_styles(::ApplyLayout{typeof(+)}) = IdentityMulStyle()
 for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
-    # `MulAdd{<:ApplyLayout{typeof(+)}}` cannot "win" against
+    # `MulAdd{ApplyLayout{typeof(+)}}` cannot "win" against
     # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:
-    @eval function materialize!(M::$MulAdd_{<:ApplyLayout{typeof(+)}})
+    @eval function materialize!(M::$MulAdd_{ApplyLayout{typeof(+)}})
         α, A, B, β, C = M.α, M.A, M.B, M.β, M.C
         if C ≡ B
             B = copy(B)

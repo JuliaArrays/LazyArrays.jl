@@ -436,7 +436,7 @@ end
 # *
 ###
 
-function materialize!(M::MatMulVecAdd{<:ApplyLayout{typeof(hcat)},<:ApplyLayout{typeof(vcat)}})
+function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{typeof(vcat)}})
     α,A,B,β,C =  M.α,M.A,M.B,M.β,M.C
     T = eltype(C)
     _fill_lmul!(β,C) # this is temporary until strong β = false is supported
@@ -446,7 +446,7 @@ function materialize!(M::MatMulVecAdd{<:ApplyLayout{typeof(hcat)},<:ApplyLayout{
     C
  end
 
- function materialize!(M::MatMulMatAdd{<:ApplyLayout{typeof(hcat)},<:ApplyLayout{typeof(vcat)}})
+ function materialize!(M::MatMulMatAdd{ApplyLayout{typeof(hcat)},ApplyLayout{typeof(vcat)}})
     α,A,B,β,C =  M.α,M.A,M.B,M.β,M.C
     T = eltype(C)
     _fill_lmul!(β,C) # this is temporary until strong β = false is supported
@@ -463,3 +463,12 @@ function materialize!(M::MatMulVecAdd{<:ApplyLayout{typeof(hcat)},<:ApplyLayout{
 
  most(a) = reverse(tail(reverse(a)))
 colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))
+
+
+
+###
+# padded
+####
+
+struct PaddedLayout{L} <: MemoryLayout end
+applylayout(::typeof(vcat), ::Type{A}, ::Type{ZerosLayout}) where A = PaddedLayout{A}()
