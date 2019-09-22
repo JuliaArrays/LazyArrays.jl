@@ -676,6 +676,9 @@ end
 
             @test similar(L) isa Vector{Float64}
             @test similar(L,Int) isa Vector{Int}
+            
+            @test applied(*, UpperTriangular(A), x) isa Applied{LmulStyle}
+            @test similar(applied(*, UpperTriangular(A), x), Float64) isa Vector{Float64}
 
             @test ApplyStyle(*, typeof(UpperTriangular(A)), typeof(x)) isa LmulStyle
 
@@ -852,24 +855,39 @@ end
     end
 
     @testset "tri Rmul" begin
-        A = randn(100,100)
-        B = randn(100,100)
-        R = Rmul(copy(A), UpperTriangular(B))
-        @test size(R) == (size(R,1),size(R,2)) == (100,100)
-        @test axes(R) == (axes(R,1),axes(R,2)) == (Base.OneTo(100),Base.OneTo(100))
-        @test eltype(R) == Float64
-        @test length(R) == 100^2
+        for T in (Float64, ComplexF64)
+            A = randn(T, 100,100)
+            B = randn(T, 100,100)
+            R = Rmul(copy(A), UpperTriangular(B))
+            @test size(R) == (size(R,1),size(R,2)) == (100,100)
+            @test axes(R) == (axes(R,1),axes(R,2)) == (Base.OneTo(100),Base.OneTo(100))
+            @test eltype(R) == T
+            @test length(R) == 100^2
 
-        materialize!(R)
-        @test R.A ≠ A
-        @test all(BLAS.trmm('R', 'U', 'N', 'N', 1.0, B, A) .=== apply(*, A, UpperTriangular(B)) .=== R.A)
-        @test all(BLAS.trmm('R', 'U', 'T', 'N', 1.0, B, A) .=== apply(*, A, UpperTriangular(B)') .=== A*UpperTriangular(B)')
-        @test all(BLAS.trmm('R', 'U', 'N', 'U', 1.0, B, A) .=== apply(*, A, UnitUpperTriangular(B)) .=== A*UnitUpperTriangular(B))
-        @test all(BLAS.trmm('R', 'U', 'T', 'U', 1.0, B, A) .=== apply(*, A, UnitUpperTriangular(B)') .=== A*UnitUpperTriangular(B)')
-        @test all(BLAS.trmm('R', 'L', 'N', 'N', 1.0, B, A) .=== apply(*, A, LowerTriangular(B)) .=== A*LowerTriangular(B))
-        @test all(BLAS.trmm('R', 'L', 'T', 'N', 1.0, B, A) .=== apply(*, A, LowerTriangular(B)') .=== A*LowerTriangular(B)')
-        @test all(BLAS.trmm('R', 'L', 'N', 'U', 1.0, B, A) .=== apply(*, A, UnitLowerTriangular(B)) .=== A*UnitLowerTriangular(B))
-        @test all(BLAS.trmm('R', 'L', 'T', 'U', 1.0, B, A) .=== apply(*, A, UnitLowerTriangular(B)') .=== A*UnitLowerTriangular(B)')
+            @test similar(R) isa Matrix{T}
+            @test similar(R,Int) isa Matrix{Int}
+            
+            @test applied(*, A, UpperTriangular(B)) isa Applied{RmulStyle}
+            @test similar(applied(*, A, UpperTriangular(B)), Float64) isa Matrix{Float64}
+
+            R2 = deepcopy(R)
+            @test all(BLAS.trmm('R', 'U', 'N', 'N', one(T), B, A) .=== apply(*, A, UpperTriangular(B)) .=== copyto!(similar(R2), R2) .=== materialize!(R))
+            @test R.A ≠ A
+            @test all(BLAS.trmm('R', 'U', 'T', 'N', one(T), B, A) .=== apply(*, A, transpose(UpperTriangular(B))) .=== A*transpose(UpperTriangular(B)))
+            @test all(BLAS.trmm('R', 'U', 'N', 'U', one(T), B, A) .=== apply(*, A, UnitUpperTriangular(B)) .=== A*UnitUpperTriangular(B))
+            @test all(BLAS.trmm('R', 'U', 'T', 'U', one(T), B, A) .=== apply(*, A, transpose(UnitUpperTriangular(B))) .=== A*transpose(UnitUpperTriangular(B)))
+            @test all(BLAS.trmm('R', 'L', 'N', 'N', one(T), B, A) .=== apply(*, A, LowerTriangular(B)) .=== A*LowerTriangular(B))
+            @test all(BLAS.trmm('R', 'L', 'T', 'N', one(T), B, A) .=== apply(*, A, transpose(LowerTriangular(B))) .=== A*transpose(LowerTriangular(B)))
+            @test all(BLAS.trmm('R', 'L', 'N', 'U', one(T), B, A) .=== apply(*, A, UnitLowerTriangular(B)) .=== A*UnitLowerTriangular(B))
+            @test all(BLAS.trmm('R', 'L', 'T', 'U', one(T), B, A) .=== apply(*, A, transpose(UnitLowerTriangular(B))) .=== A*transpose(UnitLowerTriangular(B)))
+
+            if T <: Complex
+                @test all(BLAS.trmm('R', 'U', 'C', 'N', one(T), B, A) .=== apply(*, A, UpperTriangular(B)') .=== A*UpperTriangular(B)')
+                @test all(BLAS.trmm('R', 'U', 'C', 'U', one(T), B, A) .=== apply(*, A, UnitUpperTriangular(B)') .=== A*UnitUpperTriangular(B)')
+                @test all(BLAS.trmm('R', 'L', 'C', 'N', one(T), B, A) .=== apply(*, A, LowerTriangular(B)') .=== A*LowerTriangular(B)')
+                @test all(BLAS.trmm('R', 'L', 'C', 'U', one(T), B, A) .=== apply(*, A, UnitLowerTriangular(B)') .=== A*UnitLowerTriangular(B)')
+            end
+        end
     end
 
     @testset "Diagonal and SymTridiagonal" begin

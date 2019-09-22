@@ -189,7 +189,7 @@ end
 @inline function materialize!(M::BlasMatRmulMat{<:AbstractStridedLayout,
                                                 <:TriangularLayout{'U',UNIT,<:ConjLayout{<:AbstractRowMajor}},T}) where {UPLO,UNIT,T<:BlasComplex}
 x,A = M.A,M.B
-BLAS.trmm!('L', 'U', 'C', UNIT, one(T), triangulardata(A)', x)
+BLAS.trmm!('R', 'L', 'C', UNIT, one(T), triangulardata(A)', x)
 end
 
 
