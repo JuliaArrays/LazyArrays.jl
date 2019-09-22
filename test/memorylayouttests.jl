@@ -5,7 +5,8 @@ import LazyArrays: MemoryLayout, DenseRowMajor, DenseColumnMajor, StridedLayout,
                         UnitUpperTriangularLayout, LowerTriangularLayout,
                         UnitLowerTriangularLayout, ScalarLayout,
                         hermitiandata, symmetricdata, FillLayout, ZerosLayout,
-                        BroadcastLayout, Add, AddArray, ApplyLayout, PaddedLayout
+                        BroadcastLayout, Add, AddArray, ApplyLayout, PaddedLayout,
+                        DiagonalLayout, LazyLayout
 
 struct FooBar end
 struct FooNumber <: Number end
@@ -181,6 +182,8 @@ struct FooNumber <: Number end
         VERSION ≥ v"1.1" && @inferred(MemoryLayout(typeof(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2)))))
         @test MemoryLayout(typeof(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2)))) ==
             BroadcastLayout{typeof(+)}()
+
+        @test MemoryLayout(typeof(Diagonal(BroadcastArray(exp,randn(5))))) == DiagonalLayout{LazyLayout}()
     end
 
     @testset "ApplyArray" begin

@@ -18,23 +18,25 @@ BroadcastArray{T,N}(bc::Broadcasted{Style,Axes,F,Args}) where {T,N,Style,Axes,F,
 BroadcastArray{T}(bc::Broadcasted{<:Union{Nothing,BroadcastStyle},<:Tuple{Vararg{Any,N}},<:Any,<:Tuple}) where {T,N} =
     BroadcastArray{T,N}(bc)
 
+BroadcastVector(bc::Broadcasted) = BroadcastVector{combine_eltypes(bc.f, bc.args)}(bc)  
+BroadcastMatrix(bc::Broadcasted) = BroadcastMatrix{combine_eltypes(bc.f, bc.args)}(bc)
+
 _broadcast2broadcastarray(a, b...) = tuple(a, b...)
 _broadcast2broadcastarray(a::Broadcasted, b...) = tuple(BroadcastArray(a), b...)
 
 _BroadcastArray(bc::Broadcasted) = BroadcastArray{combine_eltypes(bc.f, bc.args)}(bc)
 BroadcastArray(bc::Broadcasted{S}) where S =
     _BroadcastArray(instantiate(Broadcasted{S}(bc.f, _broadcast2broadcastarray(bc.args...))))
-BroadcastArray(b::BroadcastArray) = b
+
 BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
-
-Broadcasted(A::BroadcastArray) = instantiate(broadcasted(A.f, A.args...))
-
-BroadcastMatrix(bc::Broadcasted) = BroadcastMatrix{combine_eltypes(bc.f, bc.args)}(bc)
 BroadcastMatrix(f, A...) = BroadcastMatrix(broadcasted(f, A...))
-
-BroadcastVector(bc::Broadcasted) = BroadcastVector{combine_eltypes(bc.f, bc.args)}(bc)
 BroadcastVector(f, A...) = BroadcastVector(broadcasted(f, A...))
 
+BroadcastArray(b::BroadcastArray) = b
+BroadcastVector(A::BroadcastVector) = A
+BroadcastMatrix(A::BroadcastMatrix) = A
+
+Broadcasted(A::BroadcastArray) = instantiate(broadcasted(A.f, A.args...))
 
 axes(A::BroadcastArray) = axes(Broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
