@@ -155,12 +155,12 @@ diagonallayout(::BroadcastLayout) = DiagonalLayout{LazyLayout}()
 # support
 ###
 
-_broadcast_colsupport(sz, A::Number, j) = sz[1]
+_broadcast_colsupport(sz, A::Number, j) = OneTo(sz[1])
 _broadcast_colsupport(sz, A::AbstractVector, j) = colsupport(A,j)
-_broadcast_colsupport(sz, A::AbstractMatrix, j) = size(A,1) == 1 ? (1:sz[1]) : colsupport(A,j)
-_broadcast_rowsupport(sz, A::Number, j) = sz[2]
-_broadcast_rowsupport(sz, A::AbstractVector, j) = sz[2]
-_broadcast_rowsupport(sz, A::AbstractMatrix, j) = size(A,2) == 1 ? (1:sz[2]) : rowsupport(A,j)
+_broadcast_colsupport(sz, A::AbstractMatrix, j) = size(A,1) == 1 ? OneTo(sz[1]) : colsupport(A,j)
+_broadcast_rowsupport(sz, A::Number, j) = OneTo(sz[2])
+_broadcast_rowsupport(sz, A::AbstractVector, j) = OneTo(sz[2])
+_broadcast_rowsupport(sz, A::AbstractMatrix, j) = size(A,2) == 1 ? OneTo(sz[2]) : rowsupport(A,j)
 
 colsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(size(A)), A.args, j)...)
 rowsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(size(A)), A.args, j)...)

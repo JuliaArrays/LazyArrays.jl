@@ -153,14 +153,7 @@ BLAS.trmm!('L', 'L', 'C', UNIT, one(T), triangulardata(A)', x)
 end
 
 
-function materialize!(M::MatLmulMat{<:TriangularLayout})
-    A,X = M.A,M.B
-    size(A,2) == size(X,1) || thow(DimensionMismatch("Dimensions must match"))
-    for j in axes(X,2)
-        apply!(*, A, view(X,:,j))
-    end
-    X
-end
+materialize!(M::MatLmulMat{<:TriangularLayout}) = lmul!(M.A, M.B)
 
 @inline function materialize!(M::BlasMatRmulMat{<:AbstractStridedLayout,
                                                 <:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},T}) where {UPLO,UNIT,T<:BlasFloat}
@@ -193,11 +186,7 @@ BLAS.trmm!('R', 'L', 'C', UNIT, one(T), triangulardata(A)', x)
 end
 
 
-function materialize!(M::MatRmulMat{<:AbstractStridedLayout,<:TriangularLayout})
-    A,X = M.A,M.B
-    apply!(*, X', A')
-    A
-end
+materialize!(M::MatRmulMat{<:AbstractStridedLayout,<:TriangularLayout}) = rmul!(M.A, M.B)
 
 
 ####

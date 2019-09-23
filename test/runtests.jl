@@ -110,6 +110,27 @@ end
     @test A .+ Ref(I) == Ref(I) .+ A == Vcat([[2 2; 3 5]], [[5 5; 6 8]])
 
     @test_broken BroadcastArray(*,1.1,[1 2])[1] == 1.1
+
+    B = BroadcastArray(*, Diagonal(randn(5)), randn(5,5))
+    @test B == broadcast(*,B.args...)
+    @test colsupport(B,1) == rowsupport(B,1) == 1:1
+    @test colsupport(B,3) == rowsupport(B,3) == 3:3
+    @test colsupport(B,5) == rowsupport(B,5) == 5:5
+    B = BroadcastArray(*, Diagonal(randn(5)), 2)
+    @test B == broadcast(*,B.args...)
+    @test colsupport(B,1) == rowsupport(B,1) == 1:1
+    @test colsupport(B,3) == rowsupport(B,3) == 3:3
+    @test colsupport(B,5) == rowsupport(B,5) == 5:5
+    B = BroadcastArray(*, Diagonal(randn(5)), randn(5))
+    @test B == broadcast(*,B.args...)
+    @test colsupport(B,1) == rowsupport(B,1) == 1:1
+    @test colsupport(B,3) == rowsupport(B,3) == 3:3
+    @test colsupport(B,5) == rowsupport(B,5) == 5:5
+
+    B = BroadcastArray(+, Diagonal(randn(5)), 2)
+    @test colsupport(B,1) == rowsupport(B,1) == 1:5
+    @test colsupport(B,3) == rowsupport(B,3) == 1:5
+    @test colsupport(B,5) == rowsupport(B,5) == 1:5
 end
 
 @testset "Cache" begin

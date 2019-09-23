@@ -871,7 +871,10 @@ end
             @test similar(applied(*, A, UpperTriangular(B)), Float64) isa Matrix{Float64}
 
             R2 = deepcopy(R)
-            @test all(BLAS.trmm('R', 'U', 'N', 'N', one(T), B, A) .=== apply(*, A, UpperTriangular(B)) .=== copyto!(similar(R2), R2) .=== materialize!(R))
+            Ap = applied(*, copy(A), UpperTriangular(B))
+            Ap2 = applied(*, copy(A), UpperTriangular(B))
+            @test all(BLAS.trmm('R', 'U', 'N', 'N', one(T), B, A) .=== apply(*, A, UpperTriangular(B)) .=== 
+                    copyto!(similar(Ap),Ap) .=== materialize!(Ap2) .=== copyto!(similar(R2), R2) .=== materialize!(R))
             @test R.A ≠ A
             @test all(BLAS.trmm('R', 'U', 'T', 'N', one(T), B, A) .=== apply(*, A, transpose(UpperTriangular(B))) .=== A*transpose(UpperTriangular(B)))
             @test all(BLAS.trmm('R', 'U', 'N', 'U', one(T), B, A) .=== apply(*, A, UnitUpperTriangular(B)) .=== A*UnitUpperTriangular(B))
@@ -888,6 +891,11 @@ end
                 @test all(BLAS.trmm('R', 'L', 'C', 'U', one(T), B, A) .=== apply(*, A, UnitLowerTriangular(B)') .=== A*UnitLowerTriangular(B)')
             end
         end
+
+        T = Float64
+        A = big.(randn(100,100))
+        B = big.(randn(100,100))
+        materialize!(Rmul(A,UpperTriangular(B)))
     end
 
     @testset "Diagonal and SymTridiagonal" begin
@@ -895,7 +903,7 @@ end
         B = Diagonal(randn(5))
         @test MemoryLayout(typeof(B)) == DiagonalLayout{DenseColumnMajor}()
         @test ApplyStyle(*, typeof(A), typeof(B)) == RmulStyle()
-        @test apply(*,A,B) == A*B
+        @test apply(*,A,B) == A*B == materialize!(Rmul(copy(A),B))
 
         @test ApplyStyle(*, typeof(B), typeof(A)) == LmulStyle()
         @test apply(*,B,A) == B*A
@@ -908,6 +916,8 @@ end
         B = SymTridiagonal(randn(5),randn(4))
         @test MemoryLayout(typeof(B)) == SymTridiagonalLayout{DenseColumnMajor}()
         @test apply(*,A,B) == A*B
+
+
     end
 end
 
