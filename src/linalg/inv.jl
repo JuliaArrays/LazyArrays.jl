@@ -181,8 +181,8 @@ size(A::PInvMatrix) = map(length, axes(A))
 struct InvLayout{L} <: MemoryLayout end
 struct PInvLayout{L} <: MemoryLayout end
 
-applylayout(::typeof(inv), ::Type{A}) where A = InvLayout{A}()
-applylayout(::typeof(pinv), ::Type{A}) where A = PInvLayout{A}()
+applylayout(::Type{typeof(inv)}, ::A) where A = InvLayout{A}()
+applylayout(::Type{typeof(pinv)}, ::A) where A = PInvLayout{A}()
 
 mulapplystyle(::InvLayout{A}, B) where A = ldivapplystyle(A, B)
 mulapplystyle(::PInvLayout{A}, B) where A = ldivapplystyle(A, B)

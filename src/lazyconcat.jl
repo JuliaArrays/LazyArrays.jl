@@ -471,4 +471,4 @@ colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.ar
 ####
 
 struct PaddedLayout{L} <: MemoryLayout end
-applylayout(::typeof(vcat), ::Type{A}, ::Type{ZerosLayout}) where A = PaddedLayout{A}()
+applylayout(::Type{typeof(vcat)}, ::A, ::ZerosLayout) where A = PaddedLayout{A}()

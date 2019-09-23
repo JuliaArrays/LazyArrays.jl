@@ -219,12 +219,12 @@ result_mul_style(_, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
 
 struct  ApplyLayout{F} <: MemoryLayout end
 
-applylayout(::F, args...) where F = ApplyLayout{F}()
+applylayout(::Type{F}, args...) where F = ApplyLayout{F}()
 
 MemoryLayout(::Type{Applied{Style,F,Args}}) where {Style,F,Args} = 
-    applylayout(F.instance,tuple_type_memorylayouts(Args).parameters...)
+    applylayout(F, tuple_type_memorylayouts(Args)...)
 MemoryLayout(::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} = 
-    applylayout(F.instance,tuple_type_memorylayouts(Args).parameters...)
+    applylayout(F, tuple_type_memorylayouts(Args)...)
 
 function show(io::IO, A::Applied) 
     print(io, "Applied(", A.f)

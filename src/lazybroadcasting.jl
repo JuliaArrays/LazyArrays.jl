@@ -96,18 +96,18 @@ is returned by `MemoryLayout(A)` if a matrix `A` is a `BroadcastArray`.
 """
 struct BroadcastLayout{F} <: MemoryLayout end
 
-tuple_type_memorylayouts(::Type{I}) where I<:Tuple = Tuple{typeof.(MemoryLayout.(I.parameters))...}
-tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = Tuple{typeof(MemoryLayout(A))}
-tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B))}
-tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = Tuple{typeof(MemoryLayout(A)),typeof(MemoryLayout(B)),typeof(MemoryLayout(C))}
+tuple_type_memorylayouts(::Type{I}) where I<:Tuple = MemoryLayout.(I.parameters)
+tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = (MemoryLayout(A),)
+tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = (MemoryLayout(A),MemoryLayout(B))
+tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C))
 
-broadcastlayout(::F, ::Type...) where F = BroadcastLayout{F}()
-broadcastlayout(_, ::Type{LazyLayout}...) = LazyLayout()
-broadcastlayout(_, ::Type{T1}, ::Type{LazyLayout}) where {T1} = LazyLayout()
-broadcastlayout(_, ::Type{T1}, ::Type{T2}, ::Type{LazyLayout}) where {T1,T2} = LazyLayout()
-broadcastlayout(_, ::Type{T1}, ::Type{T2}, ::Type{T3}, ::Type{LazyLayout}) where {T1,T2,T3} = LazyLayout()
+broadcastlayout(::Type{F}, _...) where F = BroadcastLayout{F}()
+broadcastlayout(::Type, ::LazyLayout...) = LazyLayout()
+broadcastlayout(::Type, _, ::LazyLayout) = LazyLayout()
+broadcastlayout(::Type, _, _, ::LazyLayout) = LazyLayout()
+broadcastlayout(::Type, _, _, _, ::LazyLayout) = LazyLayout()
 MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = 
-    broadcastlayout(F.instance, tuple_type_memorylayouts(Args).parameters...)
+    broadcastlayout(F, tuple_type_memorylayouts(Args)...)
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting
 for op in (+, -, big)
