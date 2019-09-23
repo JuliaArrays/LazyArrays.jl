@@ -472,6 +472,11 @@ colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.ar
 
 struct PaddedLayout{L} <: MemoryLayout end
 applylayout(::Type{typeof(vcat)}, ::A, ::ZerosLayout) where A = PaddedLayout{A}()
+cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
+
+
+paddeddata(A::CachedArray) = A.data
+paddeddata(A::Vcat) = A.args[1]
 
 # special copyto! since `similar` of a padded returns a cached
 function copyto!(dest::CachedArray{T,1,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:AbstractVector,<:Zeros}}) where T
@@ -481,3 +486,19 @@ function copyto!(dest::CachedArray{T,1,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,
     copyto!(dest.data, a)
     dest
 end
+
+struct Dot{StyleA,StyleB,ATyp,BTyp}
+    A::ATyp
+    B::BTyp
+end
+
+Dot(A::ATyp,B::BTyp) where {ATyp,BTyp} = Dot{typeof(MemoryLayout(ATyp)), typeof(MemoryLayout(BTyp)), ATyp, BTyp}(A, B)
+materialize(d::Dot{<:Any,<:Any,<:AbstractArray,<:AbstractArray}) = Base.invoke(dot, Tuple{AbstractArray,AbstractArray}, d.A, d.B)
+function materialize(d::Dot{<:PaddedLayout,<:PaddedLayout,<:AbstractVector{T},<:AbstractVector{V}}) where {T,V}
+    a,b = paddeddata(d.A), paddeddata(d.B)
+    m = min(length(a), length(b))
+    convert(promote_type(T,V), dot(view(a,1:m), view(b,1:m)))
+end
+
+dot(a::CachedArray, b::AbstractArray) = materialize(Dot(a,b)) 
+dot(a::LazyArray, b::AbstractArray) = materialize(Dot(a,b)) 

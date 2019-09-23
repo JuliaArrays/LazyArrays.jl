@@ -137,3 +137,10 @@ Base.replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::Abstrac
 ###
 
 zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = zero!(A.data)
+
+###
+# MemoryLayout
+####
+
+cachedlayout(_, _) = UnknownLayout()
+MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayout(MemoryLayout(DAT), MemoryLayout(ARR))

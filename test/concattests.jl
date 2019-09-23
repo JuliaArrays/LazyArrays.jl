@@ -1,5 +1,5 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, Test
-import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, MulAdd, Applied, ApplyLayout
+import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, MulAdd, Applied, ApplyLayout
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -313,13 +313,18 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, MulAdd, Applied
     @testset "copyto!" begin
         a = Vcat(1:3, Zeros(10))
         c = cache(Zeros(13));
-        @test copyto!(c, a) === c;
+        @test MemoryLayout(typeof(a)) isa PaddedLayout
+        @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
+        @test copyto!(c, a) ≡ c;
         @test length(c.data) == 3
         @test c == a
 
+        @test dot(a,a) ≡ dot(a,c) ≡ dot(c,a) ≡ dot(c,c) ≡ 14.0
+
+
         a = Vcat(1:3, Zeros(5))
         c = cache(Zeros(13));
-        @test copyto!(c, a) === c;
+        @test copyto!(c, a) ≡ c;
         @test length(c.data) == 3
         @test c[1:8] == a
     end 
