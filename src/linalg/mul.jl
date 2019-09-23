@@ -138,7 +138,10 @@ colsupport(::DiagonalLayout, _, j) = j:j
 rowsupport(::ZerosLayout, _1, _2) = 1:0
 colsupport(::ZerosLayout, _1, _2) = 1:0
 
-
+colsupport(::TriangularLayout{'L'}, A, j) = colsupport(triangulardata(A), j) ∩ (j:size(A,1))
+colsupport(::TriangularLayout{'U'}, A, j) = colsupport(triangulardata(A), j) ∩ OneTo(j)
+rowsupport(::TriangularLayout{'U'}, A, j) = rowsupport(triangulardata(A), j) ∩ (j:size(A,2))
+rowsupport(::TriangularLayout{'L'}, A, j) = rowsupport(triangulardata(A), j) ∩ OneTo(j)
 
 
 ####
