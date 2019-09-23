@@ -472,3 +472,12 @@ colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.ar
 
 struct PaddedLayout{L} <: MemoryLayout end
 applylayout(::Type{typeof(vcat)}, ::A, ::ZerosLayout) where A = PaddedLayout{A}()
+
+# special copyto! since `similar` of a padded returns a cached
+function copyto!(dest::CachedArray{T,1,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:AbstractVector,<:Zeros}}) where T
+    length(src) ≤ length(dest)  || throw(BoundsError())
+    a,_ = src.args
+    resizedata!(dest, length(a)) # make sure we are padded enough
+    copyto!(dest.data, a)
+    dest
+end
