@@ -178,8 +178,14 @@ size(A::PInvMatrix) = map(length, axes(A))
 @propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
     (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
-mulapplystyle(::ApplyLayout{typeof(inv),Tuple{A}}, B) where A = ldivapplystyle(A, B)
-mulapplystyle(::ApplyLayout{typeof(pinv),Tuple{A}}, B) where A = ldivapplystyle(A, B)
+struct InvLayout{L} <: MemoryLayout end
+struct PInvLayout{L} <: MemoryLayout end
+
+applylayout(::Type{typeof(inv)}, ::A) where A = InvLayout{A}()
+applylayout(::Type{typeof(pinv)}, ::A) where A = PInvLayout{A}()
+
+mulapplystyle(::InvLayout{A}, B) where A = ldivapplystyle(A, B)
+mulapplystyle(::PInvLayout{A}, B) where A = ldivapplystyle(A, B)
 
 
 @inline function Ldiv(M::Mul)

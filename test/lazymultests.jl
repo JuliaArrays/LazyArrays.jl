@@ -114,6 +114,10 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test MyMatrix(A) * ApplyArray(exp,B) ≈ apply(*, MyMatrix(A),ApplyArray(exp,B)) ≈ A*exp(B)
         @test ApplyArray(exp,A) * MyMatrix(B)  ≈ apply(*, ApplyArray(exp,A), MyMatrix(B)) ≈ exp(A)*B
         @test ApplyArray(exp,A) * ApplyArray(exp,B) ≈ apply(*, ApplyArray(exp,A),ApplyArray(exp,B)) ≈ exp(A)*exp(B)
+
+        @test MyMatrix(A) * BroadcastArray(exp,B) ≈ apply(*, MyMatrix(A),BroadcastArray(exp,B)) ≈ A*exp.(B)
+        @test BroadcastArray(exp,A) * MyMatrix(B)  ≈ apply(*, BroadcastArray(exp,A), MyMatrix(B)) ≈ exp.(A)*B
+        @test BroadcastArray(exp,A) * BroadcastArray(exp,B) ≈ apply(*, BroadcastArray(exp,A),BroadcastArray(exp,B)) ≈ exp.(A)*exp.(B)
     end
 
     @testset "lmul!" begin

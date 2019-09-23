@@ -29,7 +29,7 @@ end
 size(M::MulAdd, p::Int) = size(M)[p]
 axes(M::MulAdd, p::Int) = axes(M)[p]
 length(M::MulAdd) = prod(size(M))
-size(M::MulAdd) = length.(axes(M))
+size(M::MulAdd) = map(length,axes(M))
 axes(M::MulAdd) = axes(M.C)
 
 similar(M::MulAdd, ::Type{T}, axes) where {T,N} = similar(Array{T}, axes)
@@ -44,18 +44,9 @@ function instantiate(M::MulAdd)
     M
 end
 
-struct Lmul{StyleA, StyleB, TypeA, TypeB}
-    A::TypeA
-    B::TypeB
-end
-
-Lmul(A::TypeA, B::TypeB) where {TypeA,TypeB} = Lmul{typeof(MemoryLayout(TypeA)),typeof(MemoryLayout(TypeB)),TypeA,TypeB}(A,B)
-
 
 BroadcastStyle(::Type{<:MulAdd}) = ApplyBroadcastStyle()
-BroadcastStyle(::Type{<:Lmul}) = ApplyBroadcastStyle()
 
-struct LmulStyle <: AbstractArrayApplyStyle end
 struct MulAddStyle <: AbstractArrayApplyStyle end
 struct ScalarMulStyle <: ApplyStyle end
 struct IdentityMulStyle <: AbstractArrayApplyStyle end
@@ -68,16 +59,12 @@ combine_mul_styles(c1, c2) = result_mul_style(combine_mul_styles(c1), combine_mu
 @inline combine_mul_styles(c1, c2, cs...) = result_mul_style(combine_mul_styles(c1), combine_mul_styles(c2, cs...))
 
 # result_mul_style works on types (singletons and pairs), and leverages `Style`
+result_mul_style(_, _) = DefaultArrayApplyStyle()
 result_mul_style(::IdentityMulStyle, ::IdentityMulStyle) = MulAddStyle()
-result_mul_style(::DefaultArrayApplyStyle, ::DefaultArrayApplyStyle) = DefaultArrayApplyStyle()
-result_mul_style(_, ::DefaultArrayApplyStyle) = DefaultArrayApplyStyle()
-result_mul_style(::DefaultArrayApplyStyle, _) = DefaultArrayApplyStyle()
 result_mul_style(::MulAddStyle, ::MulAddStyle) = DefaultArrayApplyStyle()
 result_mul_style(_, ::MulAddStyle) = DefaultArrayApplyStyle()
 result_mul_style(::MulAddStyle, _) = DefaultArrayApplyStyle()
 result_mul_style(::ScalarMulStyle, S::MulAddStyle) = S
-result_mul_style(::DefaultArrayApplyStyle, ::MulAddStyle) = DefaultArrayApplyStyle()
-result_mul_style(::MulAddStyle, ::DefaultArrayApplyStyle) = DefaultArrayApplyStyle()
 result_mul_style(::MulAddStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
 result_mul_style(::LazyArrayApplyStyle, ::MulAddStyle) = LazyArrayApplyStyle()
 result_mul_style(::DefaultArrayApplyStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
@@ -134,17 +121,12 @@ const MatMulMatAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:A
 const VecMulMatAdd{StyleA,StyleB,StyleC} = MulAdd{StyleA,StyleB,StyleC,<:Any,<:AbstractVector,<:AbstractMatrix,<:AbstractMatrix}
 
 broadcastable(M::MulAdd) = M
-broadcastable(M::Lmul) = M
+
 
 const BlasMatMulVecAdd{StyleA,StyleB,StyleC,T<:BlasFloat} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractVector{T},<:AbstractVector{T}}
 const BlasMatMulMatAdd{StyleA,StyleB,StyleC,T<:BlasFloat} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractMatrix{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
 const BlasVecMulMatAdd{StyleA,StyleB,StyleC,T<:BlasFloat} = MulAdd{StyleA,StyleB,StyleC,T,<:AbstractVector{T},<:AbstractMatrix{T},<:AbstractMatrix{T}}
 
-const MatLmulVec{StyleA,StyleB} = Lmul{StyleA,StyleB,<:AbstractMatrix,<:AbstractVector}
-const MatLmulMat{StyleA,StyleB} = Lmul{StyleA,StyleB,<:AbstractMatrix,<:AbstractMatrix}
-
-const BlasMatLmulVec{StyleA,StyleB,T<:BlasFloat} = Lmul{StyleA,StyleB,<:AbstractMatrix{T},<:AbstractVector{T}}
-const BlasMatLmulMat{StyleA,StyleB,T<:BlasFloat} = Lmul{StyleA,StyleB,<:AbstractMatrix{T},<:AbstractMatrix{T}}
 
 materialize(M::MulAdd) = copy(instantiate(M))
 copy(M::MulAdd) = copyto!(similar(M), M)
@@ -413,67 +395,6 @@ materialize!(M::BlasMatMulVecAdd{<:HermitianLayout{<:AbstractColumnMajor},<:Abst
 
 materialize!(M::BlasMatMulVecAdd{<:HermitianLayout{<:AbstractRowMajor},<:AbstractStridedLayout,<:AbstractStridedLayout,<:BlasComplex}) =
     _hemv!(symmetricuplo(M.A) == 'L' ? 'U' : 'L', M.α, hermitiandata(M.A)', M.B, M.β, M.C)
-
-
-####
-# LMul materialize
-####
-
-copy(M::Mul{LmulStyle}) = copyto!(similar(M), Lmul(M.args...))
-
-@inline copyto!(dest::AbstractVecOrMat, M::Mul{LmulStyle}) = copyto!(dest, Lmul(M.args...))
-
-@inline function materialize!(M::Mul{LmulStyle})
-    A,x = M.args
-    materialize!(Lmul(A, x))
-end
-
-copy(M::Lmul) = materialize!(Lmul(M.A,copy(M.B)))
-@inline function copyto!(dest::AbstractArray, M::Lmul)
-    M.B ≡ dest || copyto!(dest, M.B)
-    materialize!(Lmul(M.A,dest))
-end
-
-materialize!(M::Lmul) = lmul!(M.A,M.B)
-
-
-###
-# Triangular
-###
-mulapplystyle(::TriangularLayout, ::AbstractStridedLayout) = LmulStyle()
-
-
-
-
-@inline function materialize!(M::BlasMatLmulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
-                                         <:AbstractStridedLayout, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.A,M.B
-    BLAS.trmv!(UPLO, 'N', UNIT, triangulardata(A), x)
-end
-
-@inline function materialize!(M::BlasMatLmulVec{<:TriangularLayout{UPLO,UNIT,<:AbstractRowMajor},
-                                   <:AbstractStridedLayout, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.A,M.B
-    BLAS.trmv!(UPLO, 'T', UNIT, transpose(triangulardata(A)), x)
-end
-
-
-@inline function materialize!(M::BlasMatLmulVec{<:TriangularLayout{UPLO,UNIT,<:ConjLayout{<:AbstractRowMajor}},
-                                   <:AbstractStridedLayout, T}) where {UPLO,UNIT,T <: BlasFloat}
-    A,x = M.A,M.B
-    BLAS.trmv!(UPLO, 'C', UNIT, triangulardata(A)', x)
-end
-
-# Triangular *\ Matrix
-
-function materialize!(M::MatLmulMat{<:TriangularLayout})
-    A,X = M.A,M.B
-    size(A,2) == size(X,1) || thow(DimensionMismatch("Dimensions must match"))
-    for j in axes(X,2)
-        apply!(*, A, view(X,:,j))
-    end
-    X
-end
 
 
 ####

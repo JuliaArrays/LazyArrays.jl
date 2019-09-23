@@ -14,6 +14,7 @@ function check_mul_axes(A::AbstractQ, B, C...)
     check_mul_axes(B, C...)
 end
 
+copy(M::Lmul{QLayout}) = copyto!(similar(M), M)
 
 function copyto!(dest::AbstractArray{T}, M::Lmul{QLayout}) where T
     A,B = M.A,M.B
@@ -21,7 +22,7 @@ function copyto!(dest::AbstractArray{T}, M::Lmul{QLayout}) where T
         copyto!(dest, B)
     else
         copyto!(view(dest,1:size(B,1),:), B)
-        fill!(@view(dest[size(B,1)+1:end,:]), zero(T))
+        zero!(@view(dest[size(B,1)+1:end,:]))
     end
     materialize!(Lmul(A,dest))
 end
