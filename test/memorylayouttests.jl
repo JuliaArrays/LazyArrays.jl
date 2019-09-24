@@ -190,4 +190,12 @@ struct FooNumber <: Number end
         @test @inferred(MemoryLayout(typeof(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
             ApplyLayout{typeof(+)}()
     end
+
+    @testset "Triangular col/rowsupport" begin
+        A = randn(5,5)
+        @test colsupport(UpperTriangular(A),3) ≡ Base.OneTo(3)
+        @test rowsupport(UpperTriangular(A),3) ≡ 3:5
+        @test colsupport(LowerTriangular(A),3) ≡ 3:5
+        @test rowsupport(LowerTriangular(A),3) ≡ Base.OneTo(3)
+    end
 end

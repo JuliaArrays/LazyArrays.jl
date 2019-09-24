@@ -116,46 +116,9 @@ const BlasMatLdivVec{styleA, styleB, T<:BlasFloat} = MatLdivVec{styleA, styleB, 
 const BlasMatLdivMat{styleA, styleB, T<:BlasFloat} = MatLdivMat{styleA, styleB, T, T}
 
 
-
-###
-# Triangular
-###
-
-@inline function copyto!(dest::AbstractArray, M::Ldiv{<:TriangularLayout})
-    A, B = M.A, M.B
-    dest ≡ B || (dest .= B)
-    materialize!(Ldiv(A, dest))
-end
-
-@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{UPLO,UNIT,<:AbstractColumnMajor},
-                                       <:AbstractStridedLayout}) where {UPLO,UNIT} =
-    BLAS.trsv!(UPLO, 'N', UNIT, triangulardata(M.A), M.B)
-
-@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{'U',UNIT,<:AbstractRowMajor},
-                                                <:AbstractStridedLayout}) where {UNIT} =
-    BLAS.trsv!('L', 'T', UNIT, transpose(triangulardata(M.A)), M.B)
-
-@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{'L',UNIT,<:AbstractRowMajor},
-                                                <:AbstractStridedLayout}) where {UNIT} =
-    BLAS.trsv!('U', 'T', UNIT, transpose(triangulardata(M.A)), M.B)
-
-
-@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{'U',UNIT,<:ConjLayout{<:AbstractRowMajor}},
-                                                <:AbstractStridedLayout}) where {UNIT} =
-    BLAS.trsv!('L', 'C', UNIT, triangulardata(M.A)', M.B)
-
-@inline materialize!(M::BlasMatLdivVec{<:TriangularLayout{'L',UNIT,<:ConjLayout{<:AbstractRowMajor}},
-                                                <:AbstractStridedLayout}) where {UNIT,T} =
-    BLAS.trsv!('U', 'C', UNIT, triangulardata(M.A)', M.B)
-
-function materialize!(M::MatLdivMat{<:TriangularLayout})
-    A,X = M.A,M.B
-    size(A,2) == size(X,1) || thow(DimensionMismatch("Dimensions must match"))
-    @views for j in axes(X,2)
-        materialize!(Ldiv(A, X[:,j]))
-    end
-    X
-end
+######
+# PInv/Inv
+########
 
 
 const PInvMatrix{T,Arg} = ApplyMatrix{T,typeof(pinv),<:Tuple{Arg}}
@@ -202,3 +165,6 @@ copy(M::Applied{LdivApplyStyle}) = copy(Ldiv(M))
 
 @propagate_inbounds getindex(A::Applied{LazyArrayApplyStyle,typeof(\)}, kj...) = 
     materialize(Ldiv(A))[kj...]
+
+
+
