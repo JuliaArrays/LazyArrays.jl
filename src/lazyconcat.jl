@@ -478,8 +478,15 @@ cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 paddeddata(A::CachedArray) = A.data
 paddeddata(A::Vcat) = A.args[1]
 
+function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
+    length(A) == length(B) || return false
+    n = max(length(A.data), length(B.data))
+    resizedata!(A,n); resizedata!(B,n)
+    A.data == B.data
+end
+
 # special copyto! since `similar` of a padded returns a cached
-function copyto!(dest::CachedArray{T,1,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:AbstractVector,<:Zeros}}) where T
+function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:AbstractVector,<:Zeros}}) where T
     length(src) ≤ length(dest)  || throw(BoundsError())
     a,_ = src.args
     resizedata!(dest, length(a)) # make sure we are padded enough

@@ -327,5 +327,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
         @test copyto!(c, a) ≡ c;
         @test length(c.data) == 3
         @test c[1:8] == a
+
+        a = cache(Zeros(13)); b = cache(Zeros(15));
+        @test a ≠ b
+        b = cache(Zeros(13));
+        a[3] = 2; b[3] = 2; b[5]=0;
+        @test a == b
     end 
 end
