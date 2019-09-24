@@ -68,6 +68,30 @@ import Base.Broadcast: materialize
         @test InvMatrix(A) * b ≈ A \ b
     end
 
+    @testset "BigFloat Triangular \\" begin
+        for T in (Float64, ComplexF64)
+            A = big.(randn(T,5,5))
+            b = big.(randn(T,5))
+            @test materialize!(Ldiv(UpperTriangular(A),copy(b))) ≈ UpperTriangular(A)\b
+            @test materialize!(Ldiv(UnitUpperTriangular(A),copy(b))) ≈ UnitUpperTriangular(A)\b
+            @test materialize!(Ldiv(LowerTriangular(A),copy(b))) ≈ LowerTriangular(A)\b
+            @test materialize!(Ldiv(UnitLowerTriangular(A),copy(b))) ≈ UnitLowerTriangular(A)\b
+
+            @test materialize!(Ldiv(UpperTriangular(A)',copy(b))) ≈ UpperTriangular(A)'\b
+            @test materialize!(Ldiv(UnitUpperTriangular(A)',copy(b))) ≈ UnitUpperTriangular(A)'\b
+            @test materialize!(Ldiv(LowerTriangular(A)',copy(b))) ≈ LowerTriangular(A)'\b
+            @test materialize!(Ldiv(UnitLowerTriangular(A)',copy(b))) ≈ UnitLowerTriangular(A)'\b
+
+            @test materialize!(Ldiv(transpose(UpperTriangular(A)),copy(b))) ≈ transpose(UpperTriangular(A))\b
+            @test materialize!(Ldiv(transpose(UnitUpperTriangular(A)),copy(b))) ≈ transpose(UnitUpperTriangular(A))\b
+            @test materialize!(Ldiv(transpose(LowerTriangular(A)),copy(b))) ≈ transpose(LowerTriangular(A))\b
+            @test materialize!(Ldiv(transpose(UnitLowerTriangular(A)),copy(b))) ≈ transpose(UnitLowerTriangular(A))\b
+
+            B = big.(randn(T,5,5))
+            @test materialize!(Ldiv(UpperTriangular(A),copy(B))) ≈ UpperTriangular(A)\B
+        end
+    end
+
     @testset "Triangular \\ matrix" begin
         A = randn(5,5)
         b = randn(5,5)
