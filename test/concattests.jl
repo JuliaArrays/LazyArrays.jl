@@ -311,6 +311,14 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
     end
 
     @testset "copyto!" begin
+        a = Vcat(1, Zeros(10))
+        c = cache(Zeros(11));
+        @test MemoryLayout(typeof(a)) isa PaddedLayout
+        @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
+        @test copyto!(c, a) ≡ c;
+        @test length(c.data) == 1
+        @test c == a
+
         a = Vcat(1:3, Zeros(10))
         c = cache(Zeros(13));
         @test MemoryLayout(typeof(a)) isa PaddedLayout

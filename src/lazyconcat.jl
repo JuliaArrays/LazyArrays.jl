@@ -486,12 +486,14 @@ function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:
 end
 
 # special copyto! since `similar` of a padded returns a cached
-function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:AbstractVector,<:Zeros}}) where T
-    length(src) ≤ length(dest)  || throw(BoundsError())
-    a,_ = src.args
-    resizedata!(dest, length(a)) # make sure we are padded enough
-    copyto!(dest.data, a)
-    dest
+for Typ in (:Number, :AbstractVector)
+    @eval function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:$Typ,<:Zeros}}) where T
+        length(src) ≤ length(dest)  || throw(BoundsError())
+        a,_ = src.args
+        resizedata!(dest, length(a)) # make sure we are padded enough
+        copyto!(dest.data, a)
+        dest
+    end
 end
 
 struct Dot{StyleA,StyleB,ATyp,BTyp}
