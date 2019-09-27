@@ -131,7 +131,7 @@ function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
     pos = 1
     for a in arrays
         p1 = pos+size(a,1)-1
-        dest[pos:p1, :] = a
+        dest[pos:p1, :] .= a
         pos = p1+1
     end
     return dest
@@ -258,6 +258,12 @@ _vec(a) = a
 _vec(a::AbstractArray) = vec(a)
 _vec(a::Adjoint{<:Number,<:AbstractVector}) = _vec(parent(a))
 vec(A::Hcat) = Vcat(_vec.(A.args)...)
+
+_permutedims(a) = a
+_permutedims(a::AbstractArray) = permutedims(a)
+
+permutedims(A::Hcat{T}) where T = Vcat{T}(map(_permutedims,A.args)...)
+permutedims(A::Vcat{T}) where T = Hcat{T}(map(_permutedims,A.args)...)
 
 
 #####

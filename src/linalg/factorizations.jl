@@ -34,3 +34,16 @@ function copyto!(dest::AbstractArray, M::Ldiv{QLayout})
 end
 
 materialize!(M::Ldiv{QLayout}) = materialize!(Lmul(M.A',M.B))
+
+factorizestyle(_) = DefaultArrayApplyStyle()
+
+for op in (:factorize, :qr, :lu, :cholesky)
+    @eval begin
+        $op(B::LazyMatrix) = apply($op, B)
+        ApplyStyle(::typeof($op), B::Type{<:AbstractMatrix}) = factorizestyle(MemoryLayout(B))
+        materialize(A::Applied{DefaultArrayApplyStyle,typeof($op),<:Tuple{<:AbstractMatrix{T}}}) where T = 
+            Base.invoke($op, Tuple{AbstractMatrix{T}}, A.args...)
+
+        eltype(A::Applied{<:Any,typeof($op)}) = float(eltype(first(A.args)))
+    end
+end
