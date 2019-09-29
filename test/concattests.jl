@@ -19,6 +19,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
         @test copy(A) !== A
         @test vec(A) === A
         @test A' == transpose(A) == Vector(A)'
+        @test permutedims(A) == permutedims(Vector(A))
 
         A = @inferred(Vcat(1:10, 1:20))
         @test @inferred(length(A)) == 30
@@ -35,6 +36,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
         @test A' == transpose(A) == Vector(A)'
         @test A' === Hcat((1:10)', (1:20)')
         @test transpose(A) === Hcat(transpose(1:10), transpose(1:20))
+        @test permutedims(A) == permutedims(Vector(A))
 
         A = Vcat(randn(2,10), randn(4,10))
         @test @inferred(length(A)) == 60
@@ -51,6 +53,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
         @test copy(A) !== A
         @test vec(A) == vec(Matrix(A))
         @test A' == transpose(A) == Matrix(A)'
+        @test permutedims(A) == permutedims(Matrix(A))
 
         A = Vcat(randn(2,10).+im.*randn(2,10), randn(4,10).+im.*randn(4,10))
         @test eltype(A) == ComplexF64
@@ -69,6 +72,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
         @test vec(A) == vec(Matrix(A))
         @test A' == Matrix(A)'
         @test transpose(A) == transpose(Matrix(A))
+        @test permutedims(A) == permutedims(Matrix(A))
 
         @test Vcat() isa Vcat{Any,1,Tuple{}}
 
@@ -77,6 +81,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
         @test A[1,1] == 1.0
         @test A[2,1] == 0.0
         @test axes(A) == (Base.OneTo(4),Base.OneTo(1))
+        @test permutedims(A) == permutedims(Matrix(A))
     end
     @testset "Hcat" begin
         A = @inferred(Hcat(1:10, 2:11))

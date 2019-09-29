@@ -164,3 +164,10 @@ _broadcast_rowsupport(sz, A::AbstractMatrix, j) = size(A,2) == 1 ? OneTo(sz[2]) 
 
 colsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(size(A)), A.args, j)...)
 rowsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(size(A)), A.args, j)...)
+
+for op in (:+, :-)
+    @eval begin
+        colsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(size(A)), A.args, j)...)
+        rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(size(A)), A.args, j)...)
+    end
+end

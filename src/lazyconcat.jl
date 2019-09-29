@@ -131,6 +131,27 @@ function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
     pos = 1
     for a in arrays
         p1 = pos+size(a,1)-1
+        dest[pos:p1, :] .= a
+        pos = p1+1
+    end
+    return dest
+end
+
+# this is repeated to avoid allocation in .=
+function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2,<:Tuple{Vararg{<:AbstractMatrix}}})
+    arrays = V.args
+    nargs = length(arrays)
+    nrows = size(dest,1)
+    nrows == sum(a->size(a, 1), arrays) || throw(DimensionMismatch("sum of rows each matrix must equal $nrows"))
+    ncols = size(dest, 2)
+    for a in arrays
+        if size(a, 2) != ncols
+            throw(DimensionMismatch("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
+        end
+    end
+    pos = 1
+    for a in arrays
+        p1 = pos+size(a,1)-1
         dest[pos:p1, :] = a
         pos = p1+1
     end
@@ -258,6 +279,12 @@ _vec(a) = a
 _vec(a::AbstractArray) = vec(a)
 _vec(a::Adjoint{<:Number,<:AbstractVector}) = _vec(parent(a))
 vec(A::Hcat) = Vcat(_vec.(A.args)...)
+
+_permutedims(a) = a
+_permutedims(a::AbstractArray) = permutedims(a)
+
+permutedims(A::Hcat{T}) where T = Vcat{T}(map(_permutedims,A.args)...)
+permutedims(A::Vcat{T}) where T = Hcat{T}(map(_permutedims,A.args)...)
 
 
 #####

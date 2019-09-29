@@ -17,7 +17,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
          getindex, setindex!, intersect, @_inline_meta, inv,
          sort, sort!, issorted, sortperm, diff, cumsum, sum, in, broadcast,
          eltype, parent, real, imag,
-         conj, transpose, adjoint, vec,
+         conj, transpose, adjoint, permutedims, vec,
          exp, log, sqrt, cos, sin, tan, csc, sec, cot,
                    cosh, sinh, tanh, csch, sech, coth,
                    acos, asin, atan, acsc, asec, acot,
@@ -36,7 +36,7 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!, eltypes
 
-import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, Abuf, Bbuf, Cbuf, dot
+import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, Abuf, Bbuf, Cbuf, dot, factorize, qr, lu, cholesky
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
