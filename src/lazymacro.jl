@@ -13,12 +13,11 @@ Broadcast.broadcasted(::typeof(lazy), x) = LazyCast(x)
 Broadcast.materialize(x::LazyCast) = x.value
 
 
-is_call(ex::Expr) =
-    ex.head == :call && !startswith(String(ex.args[1]), ".")
+is_call(ex) = isexpr(ex, :call) && !is_dotcall(ex)
 
-is_dotcall(ex::Expr) =
-    (ex.head == :. && ex.args[2].head === :tuple) ||
-    (ex.head == :call && startswith(String(ex.args[1]), "."))
+is_dotcall(ex) =
+    (isexpr(ex, :.) && isexpr(ex.args[2], :tuple)) ||
+    (isexpr(ex, :call) && ex.args[1] isa Symbol && startswith(String(ex.args[1]), "."))
 # e.g., `f.(x, y, z)` or `x .+ y .+ z`
 
 lazy_expr(x) = x
