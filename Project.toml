@@ -4,6 +4,7 @@ version = "0.12.1"
 
 [deps]
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
+GroundEffects = "d00d4687-65cd-4fba-8fd9-ecb45a036ebe"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
