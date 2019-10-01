@@ -62,6 +62,29 @@ testparams = [
     end
 end
 
+struct CustomProperty end
+Base.getproperty(::CustomProperty, property::Symbol) = property
+Base.getproperty(::CustomProperty, property) = property
+
+complex_number = 1 + 2im
+custom_property = CustomProperty()
+
+expressions_block = quote
+    complex_number.im # https://github.com/JuliaArrays/LazyArrays.jl/pull/69
+    custom_property."property"
+end
+testparams = [
+    ("$(rmlines(ex))", ex) for ex in expressions_block.args if ex isa Expr
+]
+
+@testset "@~ non-lazy" begin
+    @testset "$label" for (label, ex) in testparams
+        desired = @eval $ex
+        actual = @eval @~ $ex
+        @test actual === desired
+    end
+end
+
 @testset "@~ laziness" begin
     A = ones(1, 1)
     x = [1]
