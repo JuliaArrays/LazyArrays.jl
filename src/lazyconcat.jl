@@ -544,8 +544,8 @@ dot(a::LazyArray, b::AbstractArray) = materialize(Dot(a,b))
 # norm
 ###
 for Cat in (:Vcat, :Hcat)
-    for op in (:norm1, :norm2, :normInf, :normMinusInf)
-        @eval $op(a::$Cat) = $op(map($op,a.args))
+    for (op,p) in ((:norm1,1), (:norm2,2), (:normInf,Inf), (:normMinusInf,-Inf))
+        @eval $op(a::$Cat) = $op(norm.(a.args,$p))
     end
     @eval normp(a::$Cat, p) = norm(norm.(a.args, p), p)
 end
