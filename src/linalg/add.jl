@@ -76,7 +76,7 @@ for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
             _fill_lmul!(β, C)
             a1,a2 = A.args
             C .= applied(+,applied(*,α, a1,B), C)
-            C .= applied(-,applied(*,α, a2,B), C)
+            C .= applied(+,applied(*,-α, a2,B), C)
             C
         end
     end
