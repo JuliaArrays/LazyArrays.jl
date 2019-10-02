@@ -16,6 +16,8 @@ end
 @inline Applied{Style}(f::F, args::Args) where {Style,F,Args<:Tuple} = Applied{Style,F,Args}(f, args)
 @inline Applied{Style}(A::Applied) where Style = Applied{Style}(A.f, A.args)
 
+arguments(a) = a.args
+
 @inline check_applied_axes(A::Applied) = nothing
 
 function instantiate(A::Applied{Style}) where Style

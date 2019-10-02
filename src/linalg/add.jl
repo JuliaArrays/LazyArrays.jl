@@ -63,7 +63,7 @@ for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
                 B = copy(B)
             end
             _fill_lmul!(β, C)
-            for A in A.args
+            for A in arguments(A)
                 C .= applied(+,applied(*,α, A,B), C)
             end
             C
@@ -74,10 +74,23 @@ for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
                 B = copy(B)
             end
             _fill_lmul!(β, C)
-            a1,a2 = A.args
+            a1,a2 = arguments(A)
             C .= applied(+,applied(*,α, a1,B), C)
             C .= applied(+,applied(*,-α, a2,B), C)
             C
         end
+    end
+end
+
+
+### 
+# views
+####
+_view(a, b::Tuple) = view(a, b...)
+for op in (:+, :-)
+    @eval begin
+        subarraylayout(a::ApplyLayout{typeof($op)}, _) = a
+        arguments(a::SubArray{<:Any,N,<:ApplyArray{<:Any,N,typeof($op)}}) where N =
+            _view.(arguments(parent(a)), Ref(parentindices(a)))
     end
 end
