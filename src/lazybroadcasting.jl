@@ -53,7 +53,11 @@ IndexStyle(::BroadcastArray{<:Any,1}) = IndexLinear()
 getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
     BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)
 
-copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
+copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
+
+
+copyto!(dest::AbstractArray{<:Any,N}, bc::BroadcastArray{<:Any,N}) where N = 
+    copyto!(dest, Broadcasted(bc))
 
 # Replacement for #18.
 # Could extend this to other similar reductions in Base... or apply at lower level? 
