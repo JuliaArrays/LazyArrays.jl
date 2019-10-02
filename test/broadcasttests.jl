@@ -82,7 +82,9 @@ end
     a = BroadcastArray(+, randn(400), randn(400))
     b = similar(a)
     copyto!(b, a)
-    @test @allocated(copyto!(b, a)) == 0
+    if VERSION ≥ v"1.1"
+        @test @allocated(copyto!(b, a)) == 0
+    end
     @test b == a
 end
 
