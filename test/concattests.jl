@@ -347,4 +347,12 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
         a[3] = 2; b[3] = 2; b[5]=0;
         @test a == b
     end 
+
+    @testset "norm" begin
+        for a in (Vcat(1,2,Fill(5,3)), Hcat([1,2],randn(2,2)), Vcat(1,Float64[])),
+            p in (-Inf, 0, 0.1, 1, 2, 3, Inf)
+            @show p
+            @test norm(a,p) ≈ norm(Array(a),p)
+        end
+    end
 end
