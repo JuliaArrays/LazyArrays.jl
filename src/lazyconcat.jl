@@ -556,14 +556,55 @@ end
 # subarrays
 ###
 
-const SubVcat = SubArray{<:Any,2,<:Vcat,<:Tuple{<:Slice,<:Any}}
-const SubHcat = SubArray{<:Any,2,<:Hcat,<:Tuple{<:Any,<:Slice}}
+subarraylayout(::ApplyLayout{typeof(vcat)}, _) = 
+    ApplyLayout{typeof(vcat)}()
+subarraylayout(::ApplyLayout{typeof(hcat)}, _) = 
+    ApplyLayout{typeof(hcat)}()
 
-MemoryLayout(::Type{<:SubVcat}) = ApplyLayout{typeof(vcat)}()
-MemoryLayout(::Type{<:SubHcat}) = ApplyLayout{typeof(hcat)}()
+arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) = 
+    view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
+arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = 
+    view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
 
-arguments(V::SubVcat) = view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
-arguments(V::SubHcat) = view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
+
+_vcat_lastinds(sz) = _vcat_cumsum(sz...)
+_vcat_firstinds(sz) = (1, (1 .+ most(_vcat_lastinds(sz)))...)
+
+_argsindices(sz) = broadcast(:, _vcat_firstinds(sz), _vcat_lastinds(sz))
+
+_view_vcat(a::Number, kr) = Fill(a,length(kr))
+_view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
+_view_vcat(a, kr...) = view(a, kr...)
+
+function arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1})
+    A = parent(V)
+    kr = parentindices(V)[1]
+    sz = size.(arguments(A),1)
+    skr = intersect.(_argsindices(sz), Ref(kr))
+    skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
+    _view_vcat.(arguments(A), skr2)
+end
+
+function arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
+    A = parent(V)
+    kr,jr = parentindices(V)
+    sz = size.(arguments(A),1)
+    skr = intersect.(_argsindices(sz), Ref(kr))
+    skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
+    _view_vcat.(arguments(A), skr2, Ref(jr))
+end
+
+_view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
+_view_hcat(a, kr, jr) = view(a, kr, jr)
+
+function arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2})
+    A = parent(V)
+    kr,jr = parentindices(V)
+    sz = size.(arguments(A),2)
+    sjr = intersect.(_argsindices(sz), Ref(jr))
+    sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
+    _view_hcat.(arguments(A), Ref(kr), sjr2)
+end
 
 function sub_materialize(::ApplyLayout{typeof(vcat)}, V)
     ret = similar(V)

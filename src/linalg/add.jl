@@ -86,11 +86,11 @@ end
 ### 
 # views
 ####
-_view(a, b::Tuple) = view(a, b...)
+_view_tuple(a, b::Tuple) = view(a, b...)
 for op in (:+, :-)
     @eval begin
         subarraylayout(a::ApplyLayout{typeof($op)}, _) = a
         arguments(a::SubArray{<:Any,N,<:ApplyArray{<:Any,N,typeof($op)}}) where N =
-            _view.(arguments(parent(a)), Ref(parentindices(a)))
+            _view_tuple.(arguments(parent(a)), Ref(parentindices(a)))
     end
 end
