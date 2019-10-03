@@ -354,4 +354,16 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
             @test norm(a,p) ≈ norm(Array(a),p)
         end
     end
+
+    @testset "SubVcat" begin
+        A = Vcat((1:100)', Zeros(1,100))
+        V = view(A,:,3:5)
+        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
+        @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
+
+        A = Hcat(1:10, Zeros(10,10))
+        V = view(A,3:5,:)
+        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(hcat)}
+        @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
+    end
 end

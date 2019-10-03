@@ -550,3 +550,42 @@ for Cat in (:Vcat, :Hcat)
     end
     @eval normp(a::$Cat, p) = norm(norm.(a.args, p), p)
 end
+
+
+###
+# subarrays
+###
+
+const SubVcat = SubArray{<:Any,2,<:Vcat,<:Tuple{<:Slice,<:Any}}
+const SubHcat = SubArray{<:Any,2,<:Hcat,<:Tuple{<:Any,<:Slice}}
+
+MemoryLayout(::Type{<:SubVcat}) = ApplyLayout{typeof(vcat)}()
+MemoryLayout(::Type{<:SubHcat}) = ApplyLayout{typeof(hcat)}()
+
+arguments(V::SubVcat) = view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
+arguments(V::SubHcat) = view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
+
+function sub_materialize(::ApplyLayout{typeof(vcat)}, V)
+    ret = similar(V)
+    n = 0
+    _,jr = parentindices(V)
+    for a in arguments(V)
+        m = size(a,1)
+        view(ret,n+1:n+m,:) .= a
+        n += m
+    end
+    ret
+end
+    
+function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
+    ret = similar(V)
+    n = 0
+    kr,_ = parentindices(V)
+    for a in arguments(V)
+        m = size(a,2)
+        view(ret,:,n+1:n+m) .= a
+        n += m
+    end
+    ret
+end
+    
