@@ -129,8 +129,8 @@ gives an iterator containing the possible non-zero entries in the j-th column of
 """
 colsupport(A, j) = colsupport(MemoryLayout(typeof(A)), A, j)
 
-rowsupport(::ZerosLayout, _1, _2) = 1:0
-colsupport(::ZerosLayout, _1, _2) = 1:0
+rowsupport(::ZerosLayout, A, _) = 1:0
+colsupport(::ZerosLayout, A, _) = 1:0
 
 
 ####
@@ -198,3 +198,28 @@ flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))
  
 adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
 transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
+
+###
+# sub materialize
+###
+
+# determine rows/cols of multiplication
+__mul_args_rows(kr, a) = (kr,)
+__mul_args_rows(kr, a, b...) = 
+    (kr, __mul_args_rows(rowsupport(a,kr), b...)...)
+_mul_args_rows(kr, a, b...) = __mul_args_rows(rowsupport(a,kr), b...)
+__mul_args_cols(jr, z) = (jr,)
+__mul_args_cols(jr, z, y...) = 
+    (__mul_args_cols(colsupport(z,jr), y...)..., jr)
+_mul_args_cols(jr, z, y...) = __mul_args_cols(colsupport(z,jr), y...)
+    
+
+function arguments(::ApplyLayout{typeof(*)}, V::SubArray)
+    P = parent(V)
+    kr, jr = parentindices(V)
+    as = arguments(P)
+    kjr = intersect.(_mul_args_rows(kr, as...), _mul_args_cols(jr, reverse(as)...))
+    view.(as, (kr, kjr...), (kjr..., jr))
+end
+
+@inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, map(sub_materialize,arguments(V))...)

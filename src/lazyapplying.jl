@@ -274,6 +274,4 @@ end
 @inline getindex(A::LazyMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
 
 
-diagonallayout(::LazyLayout) = DiagonalLayout{LazyLayout}()
-diagonallayout(::ApplyLayout) = DiagonalLayout{LazyLayout}()
 

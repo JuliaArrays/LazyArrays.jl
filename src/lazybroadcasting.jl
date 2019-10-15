@@ -152,8 +152,6 @@ broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::AbstractArray{T,N}, b::Zeros{V,
 broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::AbstractArray{V,N}) where {T,V,N} =
     broadcast(DefaultArrayStyle{N}(), *, a, b)
 
-diagonallayout(::BroadcastLayout) = DiagonalLayout{LazyLayout}()    
-
 
 ###
 # support

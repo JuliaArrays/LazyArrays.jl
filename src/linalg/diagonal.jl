@@ -1,12 +1,9 @@
-####
-# Diagonal
-####
+diagonallayout(::LazyLayout) = DiagonalLayout{LazyLayout}()
+diagonallayout(::ApplyLayout) = DiagonalLayout{LazyLayout}()
+diagonallayout(::BroadcastLayout) = DiagonalLayout{LazyLayout}()    
 
-rowsupport(::Diagonal, k) = k:k
-colsupport(::Diagonal, j) = j:j
-
-rowsupport(::DiagonalLayout, _, k) = k:k
-colsupport(::DiagonalLayout, _, j) = j:j
+rowsupport(::DiagonalLayout, _, k) = minimum(k):maximum(k)
+colsupport(::DiagonalLayout, _, j) = minimum(j):maximum(j)
 
 ###
 # Lmul

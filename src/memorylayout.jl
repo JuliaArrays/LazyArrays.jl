@@ -417,7 +417,7 @@ abstract type AbstractBandedLayout <: MemoryLayout end
 struct DiagonalLayout{ML} <: AbstractBandedLayout end
 struct SymTridiagonalLayout{ML} <: AbstractBandedLayout end
 
-diagonallayout(_) = UnknownLayout()
+diagonallayout(_) = DiagonalLayout{UnknownLayout}()
 diagonallayout(::ML) where ML<:AbstractStridedLayout = DiagonalLayout{ML}()
 MemoryLayout(D::Type{Diagonal{T,P}}) where {T,P} = diagonallayout(MemoryLayout(P))
 diagonaldata(D::Diagonal) = parent(D)

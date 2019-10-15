@@ -124,9 +124,12 @@ function convexunion(a::AbstractVector, b::AbstractVector)
     min(minimum(a),minimum(b)):max(maximum(a),maximum(b))
 end
 
-colsupport(A::CachedMatrix, i) = i ≤ size(A.data,2) ? convexunion(colsupport(A.array, i),colsupport(A.data,i)) : colsupport(A.array, i)
-colsupport(A::CachedVector, i) = convexunion(colsupport(A.array, i),colsupport(A.data,i))
-rowsupport(A::CachedMatrix, i) = i ≤ size(A.data,1) ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i)) : rowsupport(A.array, i)
+colsupport(A::CachedMatrix, i) = 
+    minimum(i) ≤ size(A.data,2) ? convexunion(colsupport(A.array, i),colsupport(A.data,i)) : colsupport(A.array, i)
+colsupport(A::CachedVector, i) = 
+    convexunion(colsupport(A.array, i),colsupport(A.data,i))
+rowsupport(A::CachedMatrix, i) = 
+    minimum(i) ≤ size(A.data,1) ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i)) : rowsupport(A.array, i)
 
 Base.replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractString) =
     i in colsupport(A,j) ? s : Base.replace_with_centered_mark(s)
