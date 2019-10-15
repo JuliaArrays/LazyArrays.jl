@@ -182,8 +182,6 @@ AbstractArray{T}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, map(
 AbstractArray{T,N}(A::ApplyArray{T,N}) where {T,N} = copy(A)
 AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, map(copy,A.args)...)
 
-
-@inline Applied(A::ApplyArray) = applied(A.f, A.args...)
 @inline axes(A::ApplyArray) = axes(Applied(A))
 @inline size(A::ApplyArray) = map(length, axes(A))
 @inline copy(A::ApplyArray) = ApplyArray(A.f, map(copy,A.args)...)
@@ -230,6 +228,10 @@ MemoryLayout(::Type{Applied{Style,F,Args}}) where {Style,F,Args} =
 MemoryLayout(::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} = 
     applylayout(F, tuple_type_memorylayouts(Args)...)
 
+_Applied(::ApplyLayout{F}, A) where F = Applied(F.instance, arguments(A)...)
+_Applied(ML, A) = throw(ArgumentError("$ML is not an ApplyLayout"))
+@inline Applied(A::AbstractArray) = _Applied(MemoryLayout(typeof(A)), A)    
+
 function show(io::IO, A::Applied) 
     print(io, "Applied(", A.f)
     for a in A.args
@@ -273,5 +275,5 @@ end
 @inline getindex(A::LazyMatrix, kr::AbstractUnitRange, jr::Colon) = lazy_getindex(A, kr, jr)
 @inline getindex(A::LazyMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
 
-
-
+@inline copyto!(dest::AbstractArray{T,N}, src::ApplyArray{T,N}) where {T,N} = copyto!(dest, Applied(src))
+@inline copyto!(dest::AbstractArray, src::ApplyArray) = copyto!(dest, Applied(src))    

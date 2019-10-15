@@ -212,9 +212,10 @@ __mul_args_cols(jr, z) = (jr,)
 __mul_args_cols(jr, z, y...) = 
     (__mul_args_cols(colsupport(z,jr), y...)..., jr)
 _mul_args_cols(jr, z, y...) = __mul_args_cols(colsupport(z,jr), y...)
-    
 
-function arguments(::ApplyLayout{typeof(*)}, V::SubArray)
+subarraylayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
+
+function arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2})
     P = parent(V)
     kr, jr = parentindices(V)
     as = arguments(P)
@@ -222,4 +223,17 @@ function arguments(::ApplyLayout{typeof(*)}, V::SubArray)
     view.(as, (kr, kjr...), (kjr..., jr))
 end
 
-@inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, map(sub_materialize,arguments(V))...)
+_vec_mul_view(a...) = view(a...)
+_vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
+
+function arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1})
+    P = parent(V)
+    kr, = parentindices(V)
+    as = arguments(P)
+    kjr = intersect.(_mul_args_rows(kr, as...), _mul_args_cols(Base.OneTo(1), reverse(as)...))
+    _vec_mul_view.(as, (kr, kjr...), (kjr..., :))
+end
+
+@inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
+@inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} = 
+    copyto!(dest, Applied(src))
