@@ -16,6 +16,10 @@ end
 @inline Applied{Style}(f::F, args::Args) where {Style,F,Args<:Tuple} = Applied{Style,F,Args}(f, args)
 @inline Applied{Style}(A::Applied) where Style = Applied{Style}(A.f, A.args)
 
+
+call(a) = a.f
+call(_, a) = a.f
+call(a::AbstractArray) = call(MemoryLayout(typeof(a)), a)
 arguments(a) = a.args
 arguments(_, a) = a.args
 arguments(a::AbstractArray) = arguments(MemoryLayout(typeof(a)), a)
@@ -228,9 +232,8 @@ MemoryLayout(::Type{Applied{Style,F,Args}}) where {Style,F,Args} =
 MemoryLayout(::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} = 
     applylayout(F, tuple_type_memorylayouts(Args)...)
 
-_Applied(::ApplyLayout{F}, A) where F = Applied(F.instance, arguments(A)...)
-_Applied(ML, A) = throw(ArgumentError("$ML is not an ApplyLayout"))
-@inline Applied(A::AbstractArray) = _Applied(MemoryLayout(typeof(A)), A)    
+@inline Applied(A::AbstractArray) = Applied(call(A), arguments(A)...)
+@inline ApplyArray(A::AbstractArray) = ApplyArray(call(A), arguments(A)...)
 
 function show(io::IO, A::Applied) 
     print(io, "Applied(", A.f)

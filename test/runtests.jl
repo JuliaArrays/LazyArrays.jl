@@ -16,7 +16,7 @@ include("broadcasttests.jl")
     A = [1,2,3]
     B = [4,5,6,7]
 
-    @test Array(@inferred(Kron(A))) == A
+    @test_throws MethodError Array(@inferred(Kron(A))) == A
     K = @inferred(Kron(A,B))
     @test size(K) == (12,)
     @test size(K,1) == 12

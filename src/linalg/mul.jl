@@ -215,6 +215,8 @@ _mul_args_cols(jr, z, y...) = __mul_args_cols(colsupport(z,jr), y...)
 
 subarraylayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 
+call(::ApplyLayout{typeof(*)}, V::SubArray) = *
+
 function arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2})
     P = parent(V)
     kr, jr = parentindices(V)
