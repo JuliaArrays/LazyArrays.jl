@@ -1034,9 +1034,9 @@ end
         @test Applied(V) isa Applied{MulAddStyle}
         c = similar(V)
         copyto!(c,Applied(V))
-        @test @allocated(copyto!(c,Applied(V))) ≤ 200
+        VERSION ≥ v"1.2" && @test @allocated(copyto!(c,Applied(V))) ≤ 200
         copyto!(c, V)
-        @test @allocated(copyto!(c, V)) ≤ 200
+        VERSION ≥ v"1.2" && @test @allocated(copyto!(c, V)) ≤ 200
         @test all(c .=== apply(*, arguments(V)...))
 
         B = randn(500,500)
@@ -1047,9 +1047,9 @@ end
         @test Applied(V) isa Applied{MulAddStyle}
         c = similar(V)
         copyto!(c,Applied(V))
-        @test @allocated(copyto!(c,Applied(V))) ≤ 1000
+        VERSION ≥ v"1.2" && @test @allocated(copyto!(c,Applied(V))) ≤ 1000
         copyto!(c, V)
-        @test @allocated(copyto!(c, V)) ≤ 1000
+        VERSION ≥ v"1.2" && @test @allocated(copyto!(c, V)) ≤ 1000
         @test all(c .=== apply(*, arguments(V)...))
     end
 end
