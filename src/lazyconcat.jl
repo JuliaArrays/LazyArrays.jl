@@ -607,4 +607,8 @@ function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     end
     ret
 end
-
+# temporarily allocate. In the future, we add a loop over arguments
+materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) = 
+    materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))
+materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) = 
+    materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))    
