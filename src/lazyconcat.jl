@@ -116,9 +116,8 @@ end
 
 ## copyto!
 # based on Base/array.jl, Base/abstractarray.jl
-
-function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
-    arrays = V.args
+copyto!(dest::AbstractMatrix, V::Vcat) = vcat_copyto!(dest, arguments(V)...)
+function vcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest,1)
     nrows == sum(a->size(a, 1), arrays) || throw(DimensionMismatch("sum of rows each matrix must equal $nrows"))
@@ -137,29 +136,7 @@ function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
     return dest
 end
 
-# this is repeated to avoid allocation in .=
-function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2,<:Tuple{Vararg{<:AbstractMatrix}}})
-    arrays = V.args
-    nargs = length(arrays)
-    nrows = size(dest,1)
-    nrows == sum(a->size(a, 1), arrays) || throw(DimensionMismatch("sum of rows each matrix must equal $nrows"))
-    ncols = size(dest, 2)
-    for a in arrays
-        if size(a, 2) != ncols
-            throw(DimensionMismatch("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
-        end
-    end
-    pos = 1
-    for a in arrays
-        p1 = pos+size(a,1)-1
-        dest[pos:p1, :] = a
-        pos = p1+1
-    end
-    return dest
-end
-
-function copyto!(arr::AbstractVector, A::Vcat{<:Any,1,<:Tuple{Vararg{<:AbstractVector}}})
-    arrays = A.args
+function vcat_copyto!(arr::AbstractVector, arrays::AbstractVector...)
     n = 0
     for a in arrays
         n += length(a)
@@ -176,7 +153,7 @@ function copyto!(arr::AbstractVector, A::Vcat{<:Any,1,<:Tuple{Vararg{<:AbstractV
     arr
 end
 
-function copyto!(arr::Vector{T}, A::Vcat{T,1,<:Tuple{Vararg{<:Vector{T}}}}) where T
+function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
     arrays = A.args
     n = 0
     for a in arrays
@@ -217,8 +194,8 @@ function copyto!(arr::Vector{T}, A::Vcat{T,1,<:Tuple{Vararg{<:Vector{T}}}}) wher
     return arr
 end
 
-function copyto!(dest::AbstractMatrix, H::Hcat)
-    arrays = H.args
+copyto!(dest::AbstractMatrix, H::Hcat) = hcat_copyto!(dest, arguments(H)...)
+function hcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest, 1)
     ncols = 0
@@ -229,7 +206,7 @@ function copyto!(dest::AbstractMatrix, H::Hcat)
         ncols += (nd==2 ? size(a,2) : 1)
     end
 
-    nrows == size(H,1) || throw(DimensionMismatch("Destination rows must match"))
+    nrows == size(first(arrays),1) || throw(DimensionMismatch("Destination rows must match"))
     ncols == size(dest,2) || throw(DimensionMismatch("Destination columns must match"))
 
     pos = 1
@@ -249,15 +226,15 @@ function copyto!(dest::AbstractMatrix, H::Hcat)
     return dest
 end
 
-function copyto!(dest::AbstractMatrix, H::Hcat{<:Any,Tuple{Vararg{<:AbstractVector}}})
+function hcat_copyto!(dest::AbstractMatrix, arrays::AbstractVector...)
     height = size(dest, 1)
-    for j = 1:length(H)
-        if length(H[j]) != height
+    for j = 1:length(arrays)
+        if length(arrays[j]) != height
             throw(DimensionMismatch("vectors must have same lengths"))
         end
     end
-    for j=1:length(H)
-        dest[i,:] .= H[j]
+    for j=1:length(arrays)
+        dest[i,:] .= arrays[j]
     end
 
     dest
@@ -556,15 +533,16 @@ end
 # subarrays
 ###
 
-subarraylayout(::ApplyLayout{typeof(vcat)}, _) = 
-    ApplyLayout{typeof(vcat)}()
-subarraylayout(::ApplyLayout{typeof(hcat)}, _) = 
-    ApplyLayout{typeof(hcat)}()
+subarraylayout(::ApplyLayout{typeof(vcat)}, _) = ApplyLayout{typeof(vcat)}()
+subarraylayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
 
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) = 
     view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
 arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = 
     view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
+
+copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:Vcat{T,N}}) where {T,N} = vcat_copyto!(dest, arguments(src)...)
+copyto!(dest::AbstractMatrix{T}, src::SubArray{T,2,<:Hcat{T}}) where T = hcat_copyto!(dest, arguments(src)...)
 
 
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
@@ -629,4 +607,4 @@ function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     end
     ret
 end
-    
+
