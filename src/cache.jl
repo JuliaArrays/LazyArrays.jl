@@ -145,11 +145,11 @@ function convexunion(a::AbstractVector, b::AbstractVector)
 end
 
 colsupport(A::CachedMatrix, i) = 
-    minimum(i) ≤ size(A.data,2) ? convexunion(colsupport(A.array, i),colsupport(A.data,i)) : colsupport(A.array, i)
+    minimum(i) ≤ A.datasize[2] ? convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1])) : colsupport(A.array, i)
 colsupport(A::CachedVector, i) = 
-    convexunion(colsupport(A.array, i),colsupport(A.data,i))
+    convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1]))
 rowsupport(A::CachedMatrix, i) = 
-    minimum(i) ≤ size(A.data,1) ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i)) : rowsupport(A.array, i)
+    minimum(i) ≤ A.datasize[1] ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i) ∩ Base.OneTo(A.datasize[2])) : rowsupport(A.array, i)
 
 Base.replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractString) =
     i in colsupport(A,j) ? s : Base.replace_with_centered_mark(s)

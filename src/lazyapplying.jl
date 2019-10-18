@@ -280,3 +280,8 @@ end
 
 @inline copyto!(dest::AbstractArray{T,N}, src::ApplyArray{T,N}) where {T,N} = copyto!(dest, Applied(src))
 @inline copyto!(dest::AbstractArray, src::ApplyArray) = copyto!(dest, Applied(src))    
+
+# avoid infinite-loop
+_base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)
+_base_copyto!(dest::AbstractArray, src::AbstractArray) = Base.invoke(copyto!, NTuple{2,AbstractArray}, dest, src)
+@inline copyto!(dest::AbstractArray, M::Applied{LazyArrayApplyStyle}) = _base_copyto!(dest, materialize(M))

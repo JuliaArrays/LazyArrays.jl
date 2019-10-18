@@ -116,7 +116,7 @@ end
 
 ## copyto!
 # based on Base/array.jl, Base/abstractarray.jl
-copyto!(dest::AbstractMatrix, V::Vcat) = vcat_copyto!(dest, arguments(V)...)
+copyto!(dest::AbstractArray, V::Vcat) = vcat_copyto!(dest, arguments(V)...)
 function vcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest,1)
@@ -136,7 +136,7 @@ function vcat_copyto!(dest::AbstractMatrix, arrays...)
     return dest
 end
 
-function vcat_copyto!(arr::AbstractVector, arrays::AbstractVector...)
+function vcat_copyto!(arr::AbstractVector, arrays...)
     n = 0
     for a in arrays
         n += length(a)
@@ -145,16 +145,14 @@ function vcat_copyto!(arr::AbstractVector, arrays::AbstractVector...)
 
     i = 0
     @inbounds for a in arrays
-        for ai in a
-            i += 1
-            arr[i] = ai
-        end
+        m = length(a)
+        arr[i+1:i+m] .= a
+        i += m
     end
     arr
 end
 
 function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
-    arrays = A.args
     n = 0
     for a in arrays
         n += length(a)
@@ -234,7 +232,7 @@ function hcat_copyto!(dest::AbstractMatrix, arrays::AbstractVector...)
         end
     end
     for j=1:length(arrays)
-        dest[i,:] .= arrays[j]
+        dest[:,j] .= arrays[j]
     end
 
     dest
@@ -479,14 +477,14 @@ applylayout(::Type{typeof(vcat)}, ::A, ::ZerosLayout) where A = PaddedLayout{A}(
 cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 
 
-paddeddata(A::CachedArray) = A.data
+paddeddata(A::CachedArray) = view(A.data,OneTo.(A.datasize)...)
 paddeddata(A::Vcat) = A.args[1]
 
 function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
     length(A) == length(B) || return false
-    n = max(length(A.data), length(B.data))
+    n = max(A.datasize[1], B.datasize[1])
     resizedata!(A,n); resizedata!(B,n)
-    A.data == B.data
+    view(A.data,OneTo(n)) == view(B.data,OneTo(n))
 end
 
 # special copyto! since `similar` of a padded returns a cached
@@ -494,10 +492,19 @@ for Typ in (:Number, :AbstractVector)
     @eval function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:$Typ,<:Zeros}}) where T
         length(src) ≤ length(dest)  || throw(BoundsError())
         a,_ = src.args
-        resizedata!(dest, length(a)) # make sure we are padded enough
-        copyto!(dest.data, a)
+        n = length(a)
+        resizedata!(dest, n) # make sure we are padded enough
+        copyto!(view(dest.data,OneTo(n)), a)
         dest
     end
+end
+
+function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::CachedVector{V,Vector{V},<:Zeros{V,1}}) where {T,V}
+    length(src) ≤ length(dest)  || throw(BoundsError())
+    n = src.datasize[1]
+    resizedata!(dest, n)
+    copyto!(view(dest.data,OneTo(n)), view(src.data,OneTo(n)))
+    dest
 end
 
 struct Dot{StyleA,StyleB,ATyp,BTyp}

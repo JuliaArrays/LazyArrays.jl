@@ -97,11 +97,17 @@ lmaterialize(M::Mul) = _lmaterialize(M.args...)
 _lmaterialize(A, B) = apply(*,A,B)
 _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 
+# arguments for something that is a *
+@inline _arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
+@inline _arguments(_, A) = (A,)
+@inline _arguments(A) = _arguments(MemoryLayout(typeof(A)), A)
+
+@inline __flatten(A::Tuple{<:Any}, B::Tuple) = (A..., _flatten(B...)...)
+@inline __flatten(A::Tuple, B::Tuple) = _flatten(A..., B...)
+
 @inline _flatten() = ()
-@inline _flatten(A, B...) = (A, _flatten(B...)...)
-@inline _flatten(A::Mul, B...) = _flatten(A.args..., B...)
-@inline flatten(A) = A
-@inline flatten(A::Mul) = applied(*, _flatten(A.args...)...)
+@inline _flatten(A, B...) = __flatten(_arguments(A), B)
+@inline flatten(A) = _mul(_flatten(_arguments(A)...)...)
 
 
 copy(M::Mul{DefaultArrayApplyStyle,<:Tuple{<:Any,<:Any}}) = copyto!(similar(M), M)
