@@ -92,6 +92,26 @@ end
 
 ## Array caching
 
+function resizedata!(B::CachedVector{T,Vector{T}}, n::Integer) where T<:Number
+    @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
+
+    # increase size of array if necessary
+    olddata = B.data
+    ν, = B.datasize
+    n = max(ν,n)
+    if n > length(B.data) # double memory to avoid O(n^2) growing
+        B.data = Array{T}(undef, min(2n,length(B.array)))
+        B.data[axes(olddata,1)] = olddata
+    end
+
+    inds = ν+1:n
+    B.data[inds] .= view(B.array,inds)
+
+    B.datasize = (n,)
+
+    B
+end
+
 function resizedata!(B::CachedArray{T,N,Array{T,N}},nm::Vararg{Integer,N}) where {T<:Number,N}
     @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
