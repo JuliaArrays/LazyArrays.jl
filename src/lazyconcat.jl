@@ -130,7 +130,7 @@ function vcat_copyto!(dest::AbstractMatrix, arrays...)
     pos = 1
     for a in arrays
         p1 = pos+size(a,1)-1
-        dest[pos:p1, :] .= a
+        copyto!(view(dest,pos:p1, :), a)
         pos = p1+1
     end
     return dest
@@ -146,7 +146,7 @@ function vcat_copyto!(arr::AbstractVector, arrays...)
     i = 0
     @inbounds for a in arrays
         m = length(a)
-        arr[i+1:i+m] .= a
+        copyto!(view(arr,i+1:i+m), a)
         i += m
     end
     arr
@@ -217,7 +217,7 @@ function hcat_copyto!(dest::AbstractMatrix, arrays...)
     else
         for a in arrays
             p1 = pos+(isa(a,AbstractMatrix) ? size(a, 2) : 1)-1
-            dest[:, pos:p1] .= a
+            copyto!(view(dest,:, pos:p1), a)
             pos = p1+1
         end
     end
@@ -232,7 +232,7 @@ function hcat_copyto!(dest::AbstractMatrix, arrays::AbstractVector...)
         end
     end
     for j=1:length(arrays)
-        dest[:,j] .= arrays[j]
+        copyto!(view(dest,:,j), arrays[j])
     end
 
     dest
@@ -597,7 +597,7 @@ function sub_materialize(::ApplyLayout{typeof(vcat)}, V)
     _,jr = parentindices(V)
     for a in arguments(V)
         m = size(a,1)
-        view(ret,n+1:n+m,:) .= a
+        copyto!(view(ret,n+1:n+m,:), a)
         n += m
     end
     ret
@@ -609,7 +609,7 @@ function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     kr,_ = parentindices(V)
     for a in arguments(V)
         m = size(a,2)
-        view(ret,:,n+1:n+m) .= a
+        copyto!(view(ret,:,n+1:n+m), a)
         n += m
     end
     ret
