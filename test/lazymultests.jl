@@ -1,5 +1,5 @@
 using LazyArrays, LinearAlgebra
-import LazyArrays: @lazymul, @lazylmul, @lazyldiv, materialize!, MemoryLayout, triangulardata
+import LazyArrays: @lazymul, @lazylmul, @lazyldiv, materialize!, MemoryLayout, triangulardata, LazyLayout, LazyArrayApplyStyle, UnknownLayout
 
 # used to test general matrix backends
 struct MyMatrix{T} <: AbstractMatrix{T}
@@ -178,5 +178,14 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test apply(\,A,Array(B)) isa ApplyMatrix
         @test apply(\,Array(A),B) isa ApplyMatrix
         @test apply(\,A,B) ≈ apply(\,Array(A),B) ≈ apply(\,A,Array(B)) ≈ Array(A)\Array(B)
+
+        Ap = applied(*,A,x)
+        @test Ap isa Applied{LazyArrayApplyStyle}
+        @test copyto!(similar(Ap), Ap) == A*x
+        @test copyto!(similar(Ap,BigFloat), Ap) == A*x
+
+        @test MemoryLayout(typeof(Diagonal(x))) isa DiagonalLayout{LazyLayout}
+        @test MemoryLayout(typeof(Diagonal(ApplyArray(+,x,x)))) isa DiagonalLayout{LazyLayout}
+        @test MemoryLayout(typeof(Diagonal(1:6))) isa DiagonalLayout{UnknownLayout}
     end
 end
