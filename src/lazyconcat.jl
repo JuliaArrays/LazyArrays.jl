@@ -116,9 +116,8 @@ end
 
 ## copyto!
 # based on Base/array.jl, Base/abstractarray.jl
-
-function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
-    arrays = V.args
+copyto!(dest::AbstractArray, V::Vcat) = vcat_copyto!(dest, arguments(V)...)
+function vcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest,1)
     nrows == sum(a->size(a, 1), arrays) || throw(DimensionMismatch("sum of rows each matrix must equal $nrows"))
@@ -131,35 +130,13 @@ function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2})
     pos = 1
     for a in arrays
         p1 = pos+size(a,1)-1
-        dest[pos:p1, :] .= a
+        copyto!(view(dest,pos:p1, :), a)
         pos = p1+1
     end
     return dest
 end
 
-# this is repeated to avoid allocation in .=
-function copyto!(dest::AbstractMatrix, V::Vcat{<:Any,2,<:Tuple{Vararg{<:AbstractMatrix}}})
-    arrays = V.args
-    nargs = length(arrays)
-    nrows = size(dest,1)
-    nrows == sum(a->size(a, 1), arrays) || throw(DimensionMismatch("sum of rows each matrix must equal $nrows"))
-    ncols = size(dest, 2)
-    for a in arrays
-        if size(a, 2) != ncols
-            throw(DimensionMismatch("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
-        end
-    end
-    pos = 1
-    for a in arrays
-        p1 = pos+size(a,1)-1
-        dest[pos:p1, :] = a
-        pos = p1+1
-    end
-    return dest
-end
-
-function copyto!(arr::AbstractVector, A::Vcat{<:Any,1,<:Tuple{Vararg{<:AbstractVector}}})
-    arrays = A.args
+function vcat_copyto!(arr::AbstractVector, arrays...)
     n = 0
     for a in arrays
         n += length(a)
@@ -168,16 +145,14 @@ function copyto!(arr::AbstractVector, A::Vcat{<:Any,1,<:Tuple{Vararg{<:AbstractV
 
     i = 0
     @inbounds for a in arrays
-        for ai in a
-            i += 1
-            arr[i] = ai
-        end
+        m = length(a)
+        copyto!(view(arr,i+1:i+m), a)
+        i += m
     end
     arr
 end
 
-function copyto!(arr::Vector{T}, A::Vcat{T,1,<:Tuple{Vararg{<:Vector{T}}}}) where T
-    arrays = A.args
+function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
     n = 0
     for a in arrays
         n += length(a)
@@ -217,8 +192,8 @@ function copyto!(arr::Vector{T}, A::Vcat{T,1,<:Tuple{Vararg{<:Vector{T}}}}) wher
     return arr
 end
 
-function copyto!(dest::AbstractMatrix, H::Hcat)
-    arrays = H.args
+copyto!(dest::AbstractMatrix, H::Hcat) = hcat_copyto!(dest, arguments(H)...)
+function hcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest, 1)
     ncols = 0
@@ -229,7 +204,7 @@ function copyto!(dest::AbstractMatrix, H::Hcat)
         ncols += (nd==2 ? size(a,2) : 1)
     end
 
-    nrows == size(H,1) || throw(DimensionMismatch("Destination rows must match"))
+    nrows == size(first(arrays),1) || throw(DimensionMismatch("Destination rows must match"))
     ncols == size(dest,2) || throw(DimensionMismatch("Destination columns must match"))
 
     pos = 1
@@ -242,22 +217,22 @@ function copyto!(dest::AbstractMatrix, H::Hcat)
     else
         for a in arrays
             p1 = pos+(isa(a,AbstractMatrix) ? size(a, 2) : 1)-1
-            dest[:, pos:p1] .= a
+            copyto!(view(dest,:, pos:p1), a)
             pos = p1+1
         end
     end
     return dest
 end
 
-function copyto!(dest::AbstractMatrix, H::Hcat{<:Any,Tuple{Vararg{<:AbstractVector}}})
+function hcat_copyto!(dest::AbstractMatrix, arrays::AbstractVector...)
     height = size(dest, 1)
-    for j = 1:length(H)
-        if length(H[j]) != height
+    for j = 1:length(arrays)
+        if length(arrays[j]) != height
             throw(DimensionMismatch("vectors must have same lengths"))
         end
     end
-    for j=1:length(H)
-        dest[i,:] .= H[j]
+    for j=1:length(arrays)
+        copyto!(view(dest,:,j), arrays[j])
     end
 
     dest
@@ -502,14 +477,14 @@ applylayout(::Type{typeof(vcat)}, ::A, ::ZerosLayout) where A = PaddedLayout{A}(
 cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 
 
-paddeddata(A::CachedArray) = A.data
+paddeddata(A::CachedArray) = view(A.data,OneTo.(A.datasize)...)
 paddeddata(A::Vcat) = A.args[1]
 
 function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
     length(A) == length(B) || return false
-    n = max(length(A.data), length(B.data))
+    n = max(A.datasize[1], B.datasize[1])
     resizedata!(A,n); resizedata!(B,n)
-    A.data == B.data
+    view(A.data,OneTo(n)) == view(B.data,OneTo(n))
 end
 
 # special copyto! since `similar` of a padded returns a cached
@@ -517,10 +492,19 @@ for Typ in (:Number, :AbstractVector)
     @eval function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:$Typ,<:Zeros}}) where T
         length(src) ≤ length(dest)  || throw(BoundsError())
         a,_ = src.args
-        resizedata!(dest, length(a)) # make sure we are padded enough
-        copyto!(dest.data, a)
+        n = length(a)
+        resizedata!(dest, n) # make sure we are padded enough
+        copyto!(view(dest.data,OneTo(n)), a)
         dest
     end
+end
+
+function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::CachedVector{V,Vector{V},<:Zeros{V,1}}) where {T,V}
+    length(src) ≤ length(dest)  || throw(BoundsError())
+    n = src.datasize[1]
+    resizedata!(dest, n)
+    copyto!(view(dest.data,OneTo(n)), view(src.data,OneTo(n)))
+    dest
 end
 
 struct Dot{StyleA,StyleB,ATyp,BTyp}
@@ -556,15 +540,16 @@ end
 # subarrays
 ###
 
-subarraylayout(::ApplyLayout{typeof(vcat)}, _) = 
-    ApplyLayout{typeof(vcat)}()
-subarraylayout(::ApplyLayout{typeof(hcat)}, _) = 
-    ApplyLayout{typeof(hcat)}()
+subarraylayout(::ApplyLayout{typeof(vcat)}, _) = ApplyLayout{typeof(vcat)}()
+subarraylayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
 
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) = 
     view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
 arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = 
     view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
+
+copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:Vcat{T,N}}) where {T,N} = vcat_copyto!(dest, arguments(src)...)
+copyto!(dest::AbstractMatrix{T}, src::SubArray{T,2,<:Hcat{T}}) where T = hcat_copyto!(dest, arguments(src)...)
 
 
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
@@ -612,7 +597,7 @@ function sub_materialize(::ApplyLayout{typeof(vcat)}, V)
     _,jr = parentindices(V)
     for a in arguments(V)
         m = size(a,1)
-        view(ret,n+1:n+m,:) .= a
+        copyto!(view(ret,n+1:n+m,:), a)
         n += m
     end
     ret
@@ -624,9 +609,13 @@ function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     kr,_ = parentindices(V)
     for a in arguments(V)
         m = size(a,2)
-        view(ret,:,n+1:n+m) .= a
+        copyto!(view(ret,:,n+1:n+m), a)
         n += m
     end
     ret
 end
-    
+# temporarily allocate. In the future, we add a loop over arguments
+materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) = 
+    materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))
+materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) = 
+    materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))    

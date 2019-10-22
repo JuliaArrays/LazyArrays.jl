@@ -92,6 +92,26 @@ end
 
 ## Array caching
 
+function resizedata!(B::CachedVector{T,Vector{T}}, n::Integer) where T<:Number
+    @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
+
+    # increase size of array if necessary
+    olddata = B.data
+    ν, = B.datasize
+    n = max(ν,n)
+    if n > length(B.data) # double memory to avoid O(n^2) growing
+        B.data = Array{T}(undef, min(2n,length(B.array)))
+        B.data[axes(olddata,1)] = olddata
+    end
+
+    inds = ν+1:n
+    B.data[inds] .= view(B.array,inds)
+
+    B.datasize = (n,)
+
+    B
+end
+
 function resizedata!(B::CachedArray{T,N,Array{T,N}},nm::Vararg{Integer,N}) where {T<:Number,N}
     @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
@@ -124,9 +144,12 @@ function convexunion(a::AbstractVector, b::AbstractVector)
     min(minimum(a),minimum(b)):max(maximum(a),maximum(b))
 end
 
-colsupport(A::CachedMatrix, i) = i ≤ size(A.data,2) ? convexunion(colsupport(A.array, i),colsupport(A.data,i)) : colsupport(A.array, i)
-colsupport(A::CachedVector, i) = convexunion(colsupport(A.array, i),colsupport(A.data,i))
-rowsupport(A::CachedMatrix, i) = i ≤ size(A.data,1) ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i)) : rowsupport(A.array, i)
+colsupport(A::CachedMatrix, i) = 
+    minimum(i) ≤ A.datasize[2] ? convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1])) : colsupport(A.array, i)
+colsupport(A::CachedVector, i) = 
+    convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1]))
+rowsupport(A::CachedMatrix, i) = 
+    minimum(i) ≤ A.datasize[1] ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i) ∩ Base.OneTo(A.datasize[2])) : rowsupport(A.array, i)
 
 Base.replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractString) =
     i in colsupport(A,j) ? s : Base.replace_with_centered_mark(s)

@@ -97,11 +97,17 @@ lmaterialize(M::Mul) = _lmaterialize(M.args...)
 _lmaterialize(A, B) = apply(*,A,B)
 _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 
+# arguments for something that is a *
+@inline _arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
+@inline _arguments(_, A) = (A,)
+@inline _arguments(A) = _arguments(MemoryLayout(typeof(A)), A)
+
+@inline __flatten(A::Tuple{<:Any}, B::Tuple) = (A..., _flatten(B...)...)
+@inline __flatten(A::Tuple, B::Tuple) = _flatten(A..., B...)
+
 @inline _flatten() = ()
-@inline _flatten(A, B...) = (A, _flatten(B...)...)
-@inline _flatten(A::Mul, B...) = _flatten(A.args..., B...)
-@inline flatten(A) = A
-@inline flatten(A::Mul) = applied(*, _flatten(A.args...)...)
+@inline _flatten(A, B...) = __flatten(_arguments(A), B)
+@inline flatten(A) = _mul(_flatten(_arguments(A)...)...)
 
 
 copy(M::Mul{DefaultArrayApplyStyle,<:Tuple{<:Any,<:Any}}) = copyto!(similar(M), M)
@@ -129,8 +135,8 @@ gives an iterator containing the possible non-zero entries in the j-th column of
 """
 colsupport(A, j) = colsupport(MemoryLayout(typeof(A)), A, j)
 
-rowsupport(::ZerosLayout, _1, _2) = 1:0
-colsupport(::ZerosLayout, _1, _2) = 1:0
+rowsupport(::ZerosLayout, A, _) = 1:0
+colsupport(::ZerosLayout, A, _) = 1:0
 
 
 ####
@@ -198,3 +204,44 @@ flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))
  
 adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
 transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
+
+###
+# sub materialize
+###
+
+# determine rows/cols of multiplication
+__mul_args_rows(kr, a) = (kr,)
+__mul_args_rows(kr, a, b...) = 
+    (kr, __mul_args_rows(rowsupport(a,kr), b...)...)
+_mul_args_rows(kr, a, b...) = __mul_args_rows(rowsupport(a,kr), b...)
+__mul_args_cols(jr, z) = (jr,)
+__mul_args_cols(jr, z, y...) = 
+    (__mul_args_cols(colsupport(z,jr), y...)..., jr)
+_mul_args_cols(jr, z, y...) = __mul_args_cols(colsupport(z,jr), y...)
+
+subarraylayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
+
+call(::ApplyLayout{typeof(*)}, V::SubArray) = *
+
+function arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2})
+    P = parent(V)
+    kr, jr = parentindices(V)
+    as = arguments(P)
+    kjr = intersect.(_mul_args_rows(kr, as...), _mul_args_cols(jr, reverse(as)...))
+    view.(as, (kr, kjr...), (kjr..., jr))
+end
+
+_vec_mul_view(a...) = view(a...)
+_vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
+
+function arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1})
+    P = parent(V)
+    kr, = parentindices(V)
+    as = arguments(P)
+    kjr = intersect.(_mul_args_rows(kr, as...), _mul_args_cols(Base.OneTo(1), reverse(as)...))
+    _vec_mul_view.(as, (kr, kjr...), (kjr..., :))
+end
+
+@inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
+@inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} = 
+    copyto!(dest, Applied(src))

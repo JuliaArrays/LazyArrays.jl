@@ -1,7 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
                     MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
-                    FlattenMulStyle, RmulStyle, Rmul
+                    FlattenMulStyle, RmulStyle, Rmul, ApplyLayout, arguments
 import Base.Broadcast: materialize, materialize!, broadcasted
 
 @testset "Matrix * Vector" begin
@@ -595,26 +595,6 @@ end
         @test all(B .=== (A*A)*A)
     end
 
-    @testset "MulArray" begin
-        A = randn(5,5)
-        M = ApplyArray(*,A,A)
-        @test M[5] == M[5,1]
-        @test M[6] == M[1,2]
-        @test Matrix(M) ≈ A^2
-        x = randn(5)
-        @test x'M ≈ transpose(x)*M ≈ x'Matrix(M)
-        @test_throws DimensionMismatch materialize(applied(*, randn(5,5), randn(4)))
-        @test_throws DimensionMismatch ApplyArray(*, randn(5,5), randn(4))
-    end
-
-    @testset "Bug in getindex" begin
-        M = ApplyArray(*,[1,2,3],Ones(1,20))
-        @test M[1,1] == 1
-        @test M[2,1] == 2
-        M = Applied(*,[1 2; 3 4], [1 2; 3 4])
-        @test M[1] == 7
-    end
-
     @testset "#14" begin
         A = ones(1,1) * 1e200
         B = ones(1,1) * 1e150
@@ -1020,4 +1000,57 @@ end
 
     @test materialize(MulAdd(1.0, Eye(5), A, 3.0, C)) == materialize!(MulAdd(1.0, Eye(5), A, 3.0, copy(C))) == A + 3.0C
     @test materialize(MulAdd(1.0, A, Eye(5), 3.0, C)) == materialize!(MulAdd(1.0, A, Eye(5), 3.0, copy(C))) == A + 3.0C
+end
+
+@testset "MulArray" begin
+  @testset "Basic" begin
+        A = randn(5,5)
+        M = ApplyArray(*,A,A)
+        @test M[5] == M[5,1]
+        @test M[6] == M[1,2]
+        @test Matrix(M) ≈ A^2
+        x = randn(5)
+        @test x'M ≈ transpose(x)*M ≈ x'Matrix(M)
+        @test_throws DimensionMismatch materialize(applied(*, randn(5,5), randn(4)))
+        @test_throws DimensionMismatch ApplyArray(*, randn(5,5), randn(4))
+    end
+
+    @testset "Bug in getindex" begin
+        M = ApplyArray(*,[1,2,3],Ones(1,20))
+        @test M[1,1] == 1
+        @test M[2,1] == 2
+        M = Applied(*,[1 2; 3 4], [1 2; 3 4])
+        @test M[1] == 7
+    end
+
+    @testset "Views" begin
+        A = randn(500,500)
+        b = randn(500)
+        M = ApplyArray(*,A,b)
+
+        V = view(M,2:300)
+        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(*)}
+        @test arguments(V) == (view(A,2:300,Base.OneTo(500)),view(b, Base.OneTo(500)))
+        @test Applied(V) isa Applied{MulAddStyle}
+        @test ApplyArray(V) ≈ (A*b)[2:300]
+        c = similar(V)
+        copyto!(c,Applied(V))
+        VERSION ≥ v"1.2" && @test @allocated(copyto!(c,Applied(V))) ≤ 200
+        copyto!(c, V)
+        VERSION ≥ v"1.2" && @test @allocated(copyto!(c, V)) ≤ 200
+        @test all(c .=== apply(*, arguments(V)...))
+
+        B = randn(500,500)
+        M = ApplyArray(*,A,B)
+        V = view(M,2:300,3:400)
+        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(*)}
+        @test arguments(V) == (view(A,2:300,Base.OneTo(500)),view(B, Base.OneTo(500),3:400))
+        @test Applied(V) isa Applied{MulAddStyle}
+        c = similar(V)
+        copyto!(c,Applied(V))
+        VERSION ≥ v"1.2" && @test @allocated(copyto!(c,Applied(V))) ≤ 1000
+        copyto!(c, V)
+        VERSION ≥ v"1.2" && @test @allocated(copyto!(c, V)) ≤ 1000
+        @test all(c .=== apply(*, arguments(V)...))
+    end
 end
