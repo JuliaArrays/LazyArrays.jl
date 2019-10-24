@@ -188,3 +188,18 @@ end
     # bug from BandedMartrices.jl
     @test LazyArrays.convexunion(7:10,9:8) == LazyArrays.convexunion(9:8,7:10) == 7:10
 end
+
+@testset "triu/tril" begin
+    A = ApplyArray(triu,randn(2,2))
+    @test A isa ApplyArray{Float64}
+    @test A == triu(A.args[1])
+    A = ApplyArray(tril,randn(2,2))
+    @test A isa ApplyArray{Float64}
+    @test A == tril(A.args[1])
+    A = ApplyArray(triu,randn(2,2),1)
+    @test A isa ApplyArray{Float64}
+    @test A == triu(A.args[1],1)
+    A = ApplyArray(tril,randn(2,2),-1)
+    @test A isa ApplyArray{Float64}
+    @test A == tril(A.args[1],-1)
+end

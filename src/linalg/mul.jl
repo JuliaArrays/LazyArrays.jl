@@ -245,3 +245,15 @@ end
 @inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
 @inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} = 
     copyto!(dest, Applied(src))
+
+## 
+# * specialcase
+##    
+
+for op in (:*, :\)
+    @eval broadcasted(::DefaultArrayStyle{N}, ::typeof($op), a::Number, b::ApplyArray{<:Number,N,typeof(*)}) where N =
+        ApplyArray(*, broadcast($op,a,first(b.args)), tail(b.args)...)
+end
+
+broadcasted(::DefaultArrayStyle{N}, ::typeof(/), b::ApplyArray{<:Number,N,typeof(*)}, a::Number) where N =
+        ApplyArray(*, most(b.args)..., broadcast(/,last(b.args),a))

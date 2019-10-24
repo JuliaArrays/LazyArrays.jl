@@ -1053,4 +1053,14 @@ end
         VERSION ≥ v"1.2" && @test @allocated(copyto!(c, V)) ≤ 1000
         @test all(c .=== apply(*, arguments(V)...))
     end
+
+    @testset "* algebra" begin
+        A = ApplyArray(*,[1 2; 3 4], Vcat(Fill(1,1,3),Fill(2,1,3)))
+        @test 2.0A isa ApplyArray
+        @test 2.0\A isa ApplyArray
+        @test A/2 isa ApplyArray
+        @test (2.0A) == 2.0Array(A)
+        @test (2.0\A) == 2.0\Array(A)
+        @test A/2.0 == Array(A)/2.0
+    end
 end

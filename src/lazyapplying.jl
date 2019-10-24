@@ -285,3 +285,19 @@ end
 _base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)
 _base_copyto!(dest::AbstractArray, src::AbstractArray) = Base.invoke(copyto!, NTuple{2,AbstractArray}, dest, src)
 @inline copyto!(dest::AbstractArray, M::Applied{LazyArrayApplyStyle}) = _base_copyto!(dest, materialize(M))
+
+## 
+# triu/tril
+##
+for tri in (:tril, :triu)
+    for op in (:axes, :size)
+        @eval begin
+            $op(A::Applied{<:Any,typeof($tri)}) = $op(first(A.args))
+            $op(A::Applied{<:Any,typeof($tri)}, j) = $op(first(A.args), j)
+        end
+    end
+    @eval begin 
+        ndims(::Applied{<:Any,typeof($tri)}) = 2
+        eltype(A::Applied{<:Any,typeof($tri)}) = eltype(first(A.args))
+    end
+end
