@@ -243,11 +243,12 @@ function show(io::IO, A::Applied)
     print(io, ')')
 end
 
-applybroadcaststyle(_1, _2) = DefaultArrayStyle{2}()
+applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, _2) where N = DefaultArrayStyle{N}()
+applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::LazyLayout) where N = LazyArrayStyle{N}()
 BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
 
-Base.replace_in_print_matrix(A::LazyMatrix, i::Integer, j::Integer, s::AbstractString) =
-    i in colsupport(A,j) ? s : Base.replace_with_centered_mark(s)
+replace_in_print_matrix(A::LazyMatrix, i::Integer, j::Integer, s::AbstractString) =
+    i in colsupport(A,j) ? s : replace_with_centered_mark(s)
 
 ### 
 # Number special cases
@@ -301,3 +302,14 @@ for tri in (:tril, :triu)
         eltype(A::Applied{<:Any,typeof($tri)}) = eltype(first(A.args))
     end
 end
+
+getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix}}, k::Integer, j::Integer) where T = 
+    j ≥ k ? A.args[1][k,j] : zero(T)
+
+getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T = 
+    j ≥ k+A.args[2] ? A.args[1][k,j] : zero(T)    
+
+replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(triu),<:Tuple{<:AbstractMatrix}}, i::Integer, j::Integer, s::AbstractString) =
+    j ≥ i ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)
+replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(triu),<:Tuple{<:AbstractMatrix,<:Integer}}, i::Integer, j::Integer, s::AbstractString) =
+    j ≥ i+A.args[2] ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)    

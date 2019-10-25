@@ -619,3 +619,17 @@ materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}})
     materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))
 materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) = 
     materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))    
+
+
+## print
+
+function replace_in_print_matrix(f::Vcat{<:Any,1}, k::Integer, j::Integer, s::AbstractString)
+    @assert j == 1
+    κ = k
+    for A in f.args
+        n = length(A)
+        κ ≤ n && return replace_in_print_matrix(A, κ, 1, s)
+        κ -= n
+    end
+    throw(BoundsError(f, k))
+end
