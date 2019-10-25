@@ -243,7 +243,8 @@ function show(io::IO, A::Applied)
     print(io, ')')
 end
 
-applybroadcaststyle(_1, _2) = DefaultArrayStyle{2}()
+applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, _2) where N = DefaultArrayStyle{N}()
+applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::LazyLayout) where N = LazyArrayStyle{N}()
 BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
 
 replace_in_print_matrix(A::LazyMatrix, i::Integer, j::Integer, s::AbstractString) =
