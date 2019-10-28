@@ -199,8 +199,8 @@ end
 @propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer, j::Integer) = 
     Applied{DefaultArrayApplyStyle}(A)[k,j]
 
-_flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
-flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
+_flatten(A::ApplyArray, B...) = _flatten(Applied(A), B...)
+flatten(A::ApplyArray) = ApplyArray(flatten(Applied(A)))	
  
 adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
 transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
@@ -223,7 +223,7 @@ subarraylayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 
 call(::ApplyLayout{typeof(*)}, V::SubArray) = *
 
-function arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2})
+function _mat_mul_arguments(V)
     P = parent(V)
     kr, jr = parentindices(V)
     as = arguments(P)
@@ -231,10 +231,11 @@ function arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2})
     view.(as, (kr, kjr...), (kjr..., jr))
 end
 
+
 _vec_mul_view(a...) = view(a...)
 _vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
 
-function arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1})
+function _vec_mul_arguments(V)
     P = parent(V)
     kr, = parentindices(V)
     as = arguments(P)
@@ -242,9 +243,27 @@ function arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1})
     _vec_mul_view.(as, (kr, kjr...), (kjr..., :))
 end
 
+arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V)
+arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
+
 @inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
 @inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} = 
     copyto!(dest, Applied(src))
+
+##
+# adoint Mul
+##
+
+adjointlayout(::Type, ::ApplyLayout{typeof(*)}) = ApplyLayout{typeof(*)}()
+transposelayout(::Type, ::ApplyLayout{typeof(*)}) = ApplyLayout{typeof(*)}()
+
+call(::ApplyLayout{typeof(*)}, V::Adjoint) = *
+call(::ApplyLayout{typeof(*)}, V::Transpose) = *
+
+arguments(::ApplyLayout{typeof(*)}, V::Adjoint) = reverse(adjoint.(arguments(V')))
+arguments(::ApplyLayout{typeof(*)}, V::Transpose) = reverse(transpose.(arguments(V')))
+
+
 
 ## 
 # * specialcase

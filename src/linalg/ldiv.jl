@@ -167,4 +167,11 @@ copy(M::Applied{LdivApplyStyle}) = copy(Ldiv(M))
     materialize(Ldiv(A))[kj...]
 
 
+###
+# * layout
+###
 
+function copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) 
+    args = arguments(L.B)
+    apply(*, L.A \  first(args),  tail(args)...)
+end

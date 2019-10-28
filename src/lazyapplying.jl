@@ -209,13 +209,15 @@ for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
     end
 end
 
-struct LazyLayout <: MemoryLayout end
+abstract type AbstractLazyLayout <: MemoryLayout end
+struct LazyLayout <: AbstractLazyLayout end
 
 
-MemoryLayout(::Type{<:LazyArray}) = LazyLayout()
+MemoryLayout(::Type{<:LazyArray}) = LazyArrayLayout()
 
-transposelayout(::LazyLayout) = LazyLayout()
-conjlayout(::LazyLayout) = LazyLayout()
+transposelayout(L::LazyLayout) = L
+conjlayout(L::LazyLayout) = L
+subarraylayout(L::LazyLayout, _) = L
 
 combine_mul_styles(::LazyLayout) = LazyArrayApplyStyle()
 result_mul_style(::LazyArrayApplyStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
