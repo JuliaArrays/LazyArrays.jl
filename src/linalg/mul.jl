@@ -199,8 +199,8 @@ end
 @propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer, j::Integer) = 
     Applied{DefaultArrayApplyStyle}(A)[k,j]
 
-_flatten(A::ApplyArray, B...) = _flatten(Applied(A), B...)
-flatten(A::ApplyArray) = ApplyArray(flatten(Applied(A)))	
+_flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
+flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
  
 adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
 transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)

@@ -218,6 +218,7 @@ MemoryLayout(::Type{<:LazyArray}) = LazyArrayLayout()
 transposelayout(L::LazyLayout) = L
 conjlayout(L::LazyLayout) = L
 subarraylayout(L::LazyLayout, _) = L
+reshapedlayout(::LazyLayout, _) = LazyLayout()
 
 combine_mul_styles(::LazyLayout) = LazyArrayApplyStyle()
 result_mul_style(::LazyArrayApplyStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()

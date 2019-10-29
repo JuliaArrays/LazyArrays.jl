@@ -73,6 +73,8 @@ function getindex(A::CachedArray, I...)
     A.data[I...]
 end
 
+getindex(A::CachedVector, ::Colon) = copy(A)
+
 function getindex(A::CachedVector, I, J...)
     @boundscheck checkbounds(A, I, J...)
     resizedata!(A, _maximum(axes(A,1), I))

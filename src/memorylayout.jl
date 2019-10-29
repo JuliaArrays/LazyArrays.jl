@@ -145,13 +145,14 @@ dispatch to BLAS and LAPACK routines if the memory layout is compatible.
 @inline MemoryLayout(::Type{<:Number}) = ScalarLayout()
 @inline MemoryLayout(::Type{<:DenseArray}) = DenseColumnMajor()
 
-@inline MemoryLayout(::Type{<:ReinterpretArray{T,N,S,P}}) where {T,N,S,P} = reinterpretedmemorylayout(MemoryLayout(P))
-@inline reinterpretedmemorylayout(::MemoryLayout) = UnknownLayout()
-@inline reinterpretedmemorylayout(::DenseColumnMajor) = DenseColumnMajor()
+@inline MemoryLayout(::Type{<:ReinterpretArray{T,N,S,P}}) where {T,N,S,P} = reinterpretedlayout(MemoryLayout(P))
+@inline reinterpretedlayout(::MemoryLayout) = UnknownLayout()
+@inline reinterpretedlayout(::DenseColumnMajor) = DenseColumnMajor()
 
-@inline MemoryLayout(A::Type{<:ReshapedArray{T,N,P}}) where {T,N,P} = reshapedmemorylayout(MemoryLayout(P))
-@inline reshapedmemorylayout(::MemoryLayout) = UnknownLayout()
-@inline reshapedmemorylayout(::DenseColumnMajor) = DenseColumnMajor()
+
+MemoryLayout(::Type{<:ReshapedArray{T,N,A,DIMS}}) where {T,N,A,DIMS} = reshapedlayout(MemoryLayout(A), DIMS)
+@inline reshapedlayout(_, _) = UnknownLayout()
+@inline reshapedlayout(::DenseColumnMajor, _) = DenseColumnMajor()
 
 
 @inline MemoryLayout(A::Type{<:SubArray{T,N,P,I}}) where {T,N,P,I} = 
@@ -443,3 +444,9 @@ struct EyeLayout <: MemoryLayout end
 MemoryLayout(::Type{<:AbstractFill}) = FillLayout()
 MemoryLayout(::Type{<:Zeros}) = ZerosLayout()
 diagonallayout(::ML) where ML<:AbstractFillLayout = DiagonalLayout{ML}()
+# all sub arrays are same
+subarraylayout(L::AbstractFillLayout, inds::Type) = L
+reshapedlayout(L::AbstractFillLayout, _) = L
+adjointlayout(::Type, L::AbstractFillLayout) = L
+transposelayout(L::AbstractFillLayout) = L
+
