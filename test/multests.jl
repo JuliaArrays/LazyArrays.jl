@@ -560,7 +560,8 @@ end
         A = randn(Float64,20,22)
         B = randn(ComplexF64,22,24)
         C = similar(B,20,24)
-        @test all((C .= Mul(A,B)  ) .=== copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)) .=== A*B)
+        @test all((C .= Mul(A,B)  ) .=== copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)))
+        @test copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)) ≈ A*B
     end
 
     @testset "no allocation" begin
