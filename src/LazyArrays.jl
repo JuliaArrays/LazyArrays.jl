@@ -57,10 +57,10 @@ export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
 
 include("memorylayout.jl")
-include("cache.jl")
 include("lazyapplying.jl")
 include("lazybroadcasting.jl")
 include("linalg/linalg.jl")
+include("cache.jl")
 include("lazyconcat.jl")
 include("lazysetoperations.jl")
 include("lazyoperations.jl")

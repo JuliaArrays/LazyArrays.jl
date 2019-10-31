@@ -169,3 +169,49 @@ zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = zero!(A.data)
 
 cachedlayout(_, _) = UnknownLayout()
 MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayout(MemoryLayout(DAT), MemoryLayout(ARR))
+
+
+
+#####
+# broadcasting
+#
+# We want broadcasting for numbers with concaenations to pass through
+# to take advantage of special implementations of the sub-components
+######
+
+BroadcastStyle(::Type{<:CachedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
+
+broadcasted(::LazyArrayStyle, op, A::CachedArray) =
+    CachedArray(broadcast(op, paddeddata(A)), broadcast(op, A.array))
+
+broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Number) =
+    CachedArray(broadcast(op, paddeddata(A), c), broadcast(op, A.array, c))
+broadcasted(::LazyArrayStyle, op, c::Number, A::CachedArray) =
+CachedArray(broadcast(op, c, paddeddata(A)), broadcast(op, c, A.array))
+broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Ref) =
+    CachedArray(broadcast(op, paddeddata(A), c), broadcast(op, A.array, c))
+broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) =
+    CachedArray(broadcast(op, c, paddeddata(A)), broadcast(op, c, A.array)) 
+
+
+function broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector)
+    dat = paddeddata(A)
+    n = length(dat)
+    m = length(B)
+    CachedArray(broadcast(op, dat, view(B,1:n)), broadcast(op, A.array, B))
+end
+
+function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector)
+    dat = paddeddata(B)
+    n = length(dat)
+    m = length(A)
+    CachedArray(broadcast(op, view(A,1:n), dat), broadcast(op, A, B.array))
+end
+
+function broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector)
+    n = max(A.datasize[1],B.datasize[1])
+    Adat = view(paddeddata(A),1:n)
+    Bdat = view(paddeddata(B),1:n)
+    CachedArray(broadcast(op, Adat, Bdat), broadcast(op, A.array, B.array))
+end
+
