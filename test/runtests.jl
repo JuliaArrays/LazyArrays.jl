@@ -72,6 +72,7 @@ end
     @test cache(C) isa CachedArray{Int,1,Vector{Int},UnitRange{Int}}
     C2 = cache(C)
     @test C2.data !== C.data
+    @test C[:] == C
 
     @test cache(A)[2,1] == 2
     @test_throws BoundsError cache(A)[2,2]
@@ -136,6 +137,28 @@ end
     @testset "colsupport past size" begin
         C = cache(Zeros(5,5)); C[5,1]; 
         @test colsupport(C,3) == 1:0
+    end
+
+    @testset "broadcast" begin
+        x = CachedArray([1,2,3],1:8);
+        y = 1:8;
+        f = (x,y) -> cos(x*y)
+        @test f.(x,y) isa CachedArray
+        @test @inferred(broadcast(f,x,y)) == f.(Vector(x), Vector(y))
+
+        @test (x + y) isa CachedArray
+        @test (x + y).array isa AbstractRange
+        @test (x + y) == Vector(x) + Vector(y)
+
+        z = CachedArray([1,4],Zeros{Int}(8));
+        @test (x .+ z) isa CachedArray
+        @test (x + z) isa CachedArray
+        @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
+
+        # Lazy mixed with Static treats as Lazy
+        s = SVector(1,2,3,4,5,6,7,8)
+        @test f.(x , s) isa CachedArray
+        @test f.(x , s) == f.(Vector(x), Vector(s))
     end
 end
 

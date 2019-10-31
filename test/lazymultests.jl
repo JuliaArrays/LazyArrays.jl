@@ -187,5 +187,10 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test MemoryLayout(typeof(Diagonal(x))) isa DiagonalLayout{LazyLayout}
         @test MemoryLayout(typeof(Diagonal(ApplyArray(+,x,x)))) isa DiagonalLayout{LazyLayout}
         @test MemoryLayout(typeof(Diagonal(1:6))) isa DiagonalLayout{UnknownLayout}
+
+        @test MemoryLayout(typeof(A')) isa LazyLayout
+        @test MemoryLayout(typeof(transpose(A))) isa LazyLayout
+        @test MemoryLayout(typeof(view(A,1:2,1:2))) isa LazyLayout
+        @test MemoryLayout(typeof(reshape(A,4))) isa LazyLayout
     end
 end

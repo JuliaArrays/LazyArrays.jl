@@ -1064,4 +1064,15 @@ end
         @test (2.0\A) == 2.0\Array(A)
         @test A/2.0 == Array(A)/2.0
     end
+
+    @testset "* trans" begin
+        A = ApplyArray(*,[1 2; 3 4], Vcat(Fill(1,1,3),Fill(2,1,3)))
+        V = view(A,1:2,1:2)
+        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(*)}
+        @test V == ApplyArray(V)
+        @test MemoryLayout(typeof(V')) isa ApplyLayout{typeof(*)}
+        @test V' == ApplyArray(V')
+        @test MemoryLayout(typeof(transpose(V))) isa ApplyLayout{typeof(*)}
+        @test transpose(V) == ApplyArray(transpose(V))
+    end
 end

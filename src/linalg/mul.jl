@@ -255,7 +255,7 @@ arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V
 ##
 
 adjointlayout(::Type, ::ApplyLayout{typeof(*)}) = ApplyLayout{typeof(*)}()
-transposelayout(::Type, ::ApplyLayout{typeof(*)}) = ApplyLayout{typeof(*)}()
+transposelayout(::ApplyLayout{typeof(*)}) = ApplyLayout{typeof(*)}()
 
 call(::ApplyLayout{typeof(*)}, V::Adjoint) = *
 call(::ApplyLayout{typeof(*)}, V::Transpose) = *
