@@ -9,8 +9,8 @@ end
 const CachedVector{T,DM<:AbstractVector{T},M<:AbstractVector{T}} = CachedArray{T,1,DM,M}
 const CachedMatrix{T,DM<:AbstractMatrix{T},M<:AbstractMatrix{T}} = CachedArray{T,2,DM,M}
 
-CachedArray(data::AbstractArray{T,N}, array::AbstractArray{T,N}, sz::NTuple{N,Int}) where {T,N} =
-    CachedArray{T,N,typeof(data),typeof(array)}(data, array, sz)
+# CachedArray(data::AbstractArray{T,N}, array::AbstractArray{T,N}, sz::NTuple{N,Int}) where {T,N} =
+#     CachedArray{T,N,typeof(data),typeof(array)}(data, array, sz)
 CachedArray(data::AbstractArray, array::AbstractArray) = CachedArray(data, array, size(data))
 
 # function CachedArray(::Type{Diagonal}, array::AbstractMatrix{T}) where T 
