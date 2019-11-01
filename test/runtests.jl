@@ -230,14 +230,14 @@ end
 end
 
 @testset "BroadcastArray" begin
-    bc = Base.broadcasted(exp,[1,2,3])
+    bc = broadcasted(exp,[1,2,3])
     v = BroadcastArray(exp, [1,2,3])
     @test BroadcastArray(bc) == BroadcastVector(bc) == BroadcastVector{Float64,typeof(exp),typeof(bc.args)}(bc) ==
         v == BroadcastVector(exp, [1,2,3]) == exp.([1,2,3])
 
     Base.IndexStyle(typeof(BroadcastVector(exp, [1,2,3]))) == IndexLinear()
     
-    bc = Base.broadcasted(exp,[1 2; 3 4])
+    bc = broadcasted(exp,[1 2; 3 4])
     M = BroadcastArray(exp, [1 2; 3 4])
     @test BroadcastArray(bc) == BroadcastMatrix(bc) == BroadcastMatrix{Float64,typeof(exp),typeof(bc.args)}(bc) ==
         M == BroadcastMatrix(BroadcastMatrix(bc)) == BroadcastMatrix(exp,[1 2; 3 4]) == exp.([1 2; 3 4])
