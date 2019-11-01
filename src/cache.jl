@@ -74,6 +74,7 @@ function getindex(A::CachedArray, I...)
 end
 
 getindex(A::CachedVector, ::Colon) = copy(A)
+getindex(A::CachedVector, ::Slice) = copy(A)
 
 function getindex(A::CachedVector, I, J...)
     @boundscheck checkbounds(A, I, J...)

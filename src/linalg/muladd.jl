@@ -250,7 +250,7 @@ function default_blasmul!(α, A::AbstractMatrix, B::AbstractVector, β, C::Abstr
     z = zero(A[1]*B[1] + A[1]*B[1])
     Astride = size(A, 1) # use size, not stride, since its not pointer arithmetic
 
-    @inbounds for k = 1:mB
+    @inbounds for k in colsupport(B,1)
         aoffs = (k-1)*Astride
         b = B[k]
         for i = 1:mA

@@ -72,7 +72,7 @@ end
     @test cache(C) isa CachedArray{Int,1,Vector{Int},UnitRange{Int}}
     C2 = cache(C)
     @test C2.data !== C.data
-    @test C[:] == C
+    @test C[:] == C[Base.Slice(Base.OneTo(10))] == C
 
     @test cache(A)[2,1] == 2
     @test_throws BoundsError cache(A)[2,2]
@@ -136,7 +136,9 @@ end
 
     @testset "colsupport past size" begin
         C = cache(Zeros(5,5)); C[5,1]; 
+        @test colsupport(C,1) == Base.OneTo(5)
         @test colsupport(C,3) == 1:0
+        @test rowsupport(C,1) == Base.OneTo(1)
     end
 
     @testset "broadcast" begin
@@ -225,4 +227,23 @@ end
     A = ApplyArray(tril,randn(2,2),-1)
     @test A isa ApplyArray{Float64}
     @test A == tril(A.args[1],-1)
+end
+
+@testset "BroadcastArray" begin
+    bc = Base.broadcasted(exp,[1,2,3])
+    v = BroadcastArray(exp, [1,2,3])
+    @test BroadcastArray(bc) == BroadcastVector(bc) == BroadcastVector{Float64,typeof(exp),typeof(bc.args)}(bc) ==
+        v == BroadcastVector(exp, [1,2,3]) == exp.([1,2,3])
+
+    Base.IndexStyle(typeof(BroadcastVector(exp, [1,2,3]))) == IndexLinear()
+    
+    bc = Base.broadcasted(exp,[1 2; 3 4])
+    M = BroadcastArray(exp, [1 2; 3 4])
+    @test BroadcastArray(bc) == BroadcastMatrix(bc) == BroadcastMatrix{Float64,typeof(exp),typeof(bc.args)}(bc) ==
+        M == BroadcastMatrix(BroadcastMatrix(bc)) == BroadcastMatrix(exp,[1 2; 3 4]) == exp.([1 2; 3 4])
+    
+    @test exp.(v') isa BroadcastMatrix
+    @test exp.(transpose(v)) isa BroadcastMatrix
+    @test exp.(M') isa BroadcastMatrix
+    @test exp.(transpose(M)) isa BroadcastMatrix
 end
