@@ -155,4 +155,11 @@ import Base.Broadcast: materialize
         dest = fill(NaN,5)
         @test copyto!(dest, applied(\,Q,b)) == apply(\,Q,b)
     end
+
+    @testset "Lazy *" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        b = 1:5
+        @test apply(\,B,ApplyArray(*,A,b)) == B\A*b
+    end
 end

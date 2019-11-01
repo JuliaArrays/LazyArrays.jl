@@ -171,8 +171,8 @@ struct FooNumber <: Number end
         @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{FillLayout}()
         @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
 
-        @test MemoryLayout(typeof(view(Fill(1,10),1:3))) == UnknownLayout()
-        @test MemoryLayout(typeof(view(Fill(1,10),1:3,1))) == UnknownLayout()
+        @test MemoryLayout(typeof(view(Fill(1,10),1:3))) == FillLayout()
+        @test MemoryLayout(typeof(view(Fill(1,10),1:3,1))) == FillLayout()
     end
 
     @testset "BroadcastArray" begin

@@ -41,7 +41,6 @@ Broadcasted(A::BroadcastArray) = instantiate(broadcasted(A.f, A.args...))
 axes(A::BroadcastArray) = axes(Broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
 
-IndexStyle(::BroadcastArray{<:Any,1}) = IndexLinear()
 
 @propagate_inbounds getindex(A::BroadcastArray, kj::Int...) = Broadcasted(A)[kj...]
 

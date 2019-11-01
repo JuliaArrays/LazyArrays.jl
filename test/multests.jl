@@ -560,7 +560,8 @@ end
         A = randn(Float64,20,22)
         B = randn(ComplexF64,22,24)
         C = similar(B,20,24)
-        @test all((C .= Mul(A,B)  ) .=== copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)) .=== A*B)
+        @test all((C .= Mul(A,B)  ) .=== copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)))
+        @test copyto!(similar(C), MulAdd(1.0, A, B, 0.0, C)) ≈ A*B
     end
 
     @testset "no allocation" begin
@@ -1062,5 +1063,16 @@ end
         @test (2.0A) == 2.0Array(A)
         @test (2.0\A) == 2.0\Array(A)
         @test A/2.0 == Array(A)/2.0
+    end
+
+    @testset "* trans" begin
+        A = ApplyArray(*,[1 2; 3 4], Vcat(Fill(1,1,3),Fill(2,1,3)))
+        V = view(A,1:2,1:2)
+        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(*)}
+        @test V == ApplyArray(V)
+        @test MemoryLayout(typeof(V')) isa ApplyLayout{typeof(*)}
+        @test V' == ApplyArray(V')
+        @test MemoryLayout(typeof(transpose(V))) isa ApplyLayout{typeof(*)}
+        @test transpose(V) == ApplyArray(transpose(V))
     end
 end

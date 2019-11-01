@@ -97,10 +97,11 @@ scalarone(::Type{<:AbstractArray{T}}) where T = scalarone(T)
 scalarzero(::Type{T}) where T = zero(T)
 scalarzero(::Type{<:AbstractArray{T}}) where T = scalarzero(T)
 
+fillzeros(::Type{T}, ax) where T = Zeros{T}(ax)
 
 _αAB(M::Mul{MulAddStyle,<:Tuple{<:AbstractArray,<:AbstractArray}}, ::Type{T}) where T = tuple(scalarone(T), M.args...)
 _αAB(M::Mul{MulAddStyle,<:Tuple{<:Number,<:AbstractArray,<:AbstractArray}}, ::Type{T}) where T = M.args
-_αABβC(M::Mul, ::Type{T}) where T = tuple(_αAB(M, T)..., scalarzero(T), Zeros{T}(axes(M)))
+_αABβC(M::Mul, ::Type{T}) where T = tuple(_αAB(M, T)..., scalarzero(T), fillzeros(T,axes(M)))
 
 _βC(M::Mul, ::Type{T}) where T = M.args
 _βC(M::AbstractArray, ::Type{T}) where T = (scalarone(T), M)
@@ -249,7 +250,7 @@ function default_blasmul!(α, A::AbstractMatrix, B::AbstractVector, β, C::Abstr
     z = zero(A[1]*B[1] + A[1]*B[1])
     Astride = size(A, 1) # use size, not stride, since its not pointer arithmetic
 
-    @inbounds for k = 1:mB
+    @inbounds for k in colsupport(B,1)
         aoffs = (k-1)*Astride
         b = B[k]
         for i = 1:mA

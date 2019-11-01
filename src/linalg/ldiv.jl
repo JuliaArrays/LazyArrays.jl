@@ -35,6 +35,9 @@ struct Ldiv{StyleA, StyleB, AType, BType}
     B::BType
 end
 
+Ldiv{StyleA, StyleB}(A::AType, B::BType) where {StyleA,StyleB,AType,BType} = 
+    Ldiv{StyleA,StyleB,AType,BType}(A,B)
+
 Ldiv(A::AType, B::BType) where {AType,BType} = 
     Ldiv{typeof(MemoryLayout(AType)),typeof(MemoryLayout(BType)),AType,BType}(A, B)
 
@@ -167,4 +170,11 @@ copy(M::Applied{LdivApplyStyle}) = copy(Ldiv(M))
     materialize(Ldiv(A))[kj...]
 
 
+###
+# * layout
+###
 
+function copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) 
+    args = arguments(L.B)
+    apply(*, L.A \  first(args),  tail(args)...)
+end
