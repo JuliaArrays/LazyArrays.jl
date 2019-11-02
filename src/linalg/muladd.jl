@@ -227,10 +227,10 @@ function default_blasmul!(α, A::AbstractMatrix, B::AbstractMatrix, β, C::Abstr
     nA == mB || throw(DimensionMismatch("Dimensions must match"))
     size(C) == (mA, nB) || throw(DimensionMismatch("Dimensions must match"))
 
-    @inbounds for k = 1:mA, j = 1:nB
+    @inbounds for k in colsupport(A), j in rowsupport(B)
         z2 = zero(A[k, 1]*B[1, j] + A[k, 1]*B[1, j])
         Ctmp = convert(promote_type(eltype(C), typeof(z2)), z2)
-        @simd for ν = 1:size(A,2)
+        @simd for ν = rowsupport(A,k) ∩ colsupport(B,j)
             Ctmp = muladd(A[k, ν],B[ν, j],Ctmp)
         end
         C[k,j] = muladd(α,Ctmp, β*C[k,j])
@@ -268,9 +268,17 @@ function materialize!(M::MatMulMatAdd)
     end
     ts = tile_size(eltype(A), eltype(B), eltype(C))
     if iszero(β) # false is a "strong" zero to wipe out NaNs
-        ts == 0 ? default_blasmul!(α, A, B, false, C) : tiled_blasmul!(ts, α, A, B, false, C)
+        if ts == 0 || !(axes(A) isa NTuple{2,OneTo{Int}}) || !(axes(B) isa NTuple{2,OneTo{Int}}) || !(axes(C) isa NTuple{2,OneTo{Int}})
+            default_blasmul!(α, A, B, false, C) 
+        else 
+            tiled_blasmul!(ts, α, A, B, false, C)
+        end
     else
-        ts == 0 ? default_blasmul!(α, A, B, β, C) : tiled_blasmul!(ts, α, A, B, β, C)
+        if ts == 0 || !(axes(A) isa NTuple{2,OneTo{Int}}) || !(axes(B) isa NTuple{2,OneTo{Int}}) || !(axes(C) isa NTuple{2,OneTo{Int}})
+            default_blasmul!(α, A, B, β, C) 
+        else
+            tiled_blasmul!(ts, α, A, B, β, C)
+        end
     end
 end
 
