@@ -51,8 +51,6 @@ function zero!(A::AbstractArray{<:AbstractArray})
     end
     A
 end
-
-_fill_lmul!(β, A::AbstractArray{T}) where T = iszero(β) ? zero!(A) : lmul!(β, A)
 for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
     # `MulAdd{ApplyLayout{typeof(+)}}` cannot "win" against
     # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:
