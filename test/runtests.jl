@@ -1,7 +1,29 @@
-using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted
+using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, ArrayLayouts
+import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
+            PaddedLayout, ApplyLayout, BroadcastLayout, AddArray, LazyLayout
 
-include("memorylayouttests.jl")
+@testset "Lazy MemoryLayout" begin
+    @testset "ApplyArray" begin
+        A = [1.0 2; 3 4]
+        @test eltype(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))) == Float64
+        @test @inferred(MemoryLayout(typeof(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
+            ApplyLayout{typeof(+)}()
+    end
+
+    @testset "BroadcastArray" begin
+        A = [1.0 2; 3 4]
+        
+        @test @inferred(MemoryLayout(typeof(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
+            BroadcastLayout{typeof(+)}()
+
+        @test MemoryLayout(typeof(Diagonal(BroadcastArray(exp,randn(5))))) == DiagonalLayout{LazyLayout}()
+    end
+
+    @testset "Vcat" begin
+        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{FillLayout}()
+        @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
+    end
+end
 include("applytests.jl")
 include("multests.jl")
 include("ldivtests.jl")

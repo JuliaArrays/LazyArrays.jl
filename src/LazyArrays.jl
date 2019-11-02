@@ -3,7 +3,7 @@ module LazyArrays
 # Use README as the docstring of the module:
 @doc read(joinpath(dirname(@__DIR__), "README.md"), String) LazyArrays
 
-using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays
+using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays, ArrayLayouts
 import LinearAlgebra.BLAS
 
 import Base: AbstractArray, AbstractMatrix, AbstractVector, 
@@ -45,6 +45,11 @@ import FillArrays: AbstractFill, getindex_value
 
 import StaticArrays: StaticArrayStyle
 
+import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, 
+                        transposelayout, conjlayout, sublayout,
+                        reshapedlayout, diagonallayout, adjointlayout,
+                        check_mul_axes, _mul_eltype, colsupport, rowsupport
+
 if VERSION < v"1.2-"
     import Base: has_offset_axes
     require_one_based_indexing(A...) = !has_offset_axes(A...) || throw(ArgumentError("offset arrays are not supported but got an array with index other than 1"))
@@ -56,7 +61,7 @@ export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum,
         applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
 
-include("memorylayout.jl")
+
 include("lazyapplying.jl")
 include("lazybroadcasting.jl")
 include("linalg/linalg.jl")

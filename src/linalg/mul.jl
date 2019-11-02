@@ -12,15 +12,6 @@ const MulMatrix{T, Args} = MulArray{T, 2, Args}
 
 Mul(A...) = applied(*, A...)
 
-check_mul_axes(A) = nothing
-_check_mul_axes(::Number, ::Number) = nothing
-_check_mul_axes(::Number, _) = nothing
-_check_mul_axes(_, ::Number) = nothing
-_check_mul_axes(A, B) = axes(A,2) == axes(B,1) || throw(DimensionMismatch("Second axis of A, $(axes(A,2)), and first axis of B, $(axes(B,1)) must match"))
-function check_mul_axes(A, B, C...) 
-    _check_mul_axes(A, B)
-    check_mul_axes(B, C...)
-end
 
 check_applied_axes(A::Mul) = check_mul_axes(A.args...)
 
@@ -36,9 +27,6 @@ ndims(::Type{<:Mul{<:Any,Args}}) where Args = _mul_ndims(Args)
 length(M::Mul) = prod(size(M))
 size(M::Mul) = length.(axes(M))
 
-@inline _mul_eltype(A) = A
-@inline _mul_eltype(A, B) = Base.promote_op(*, A, B)
-@inline _mul_eltype(A, B, C, D...) = _mul_eltype(Base.promote_op(*, A, B), C, D...)
 
 @inline _eltypes() = tuple()
 @inline _eltypes(A, B...) = tuple(eltype(A), _eltypes(B...)...)
@@ -117,28 +105,6 @@ struct FlattenMulStyle <: ApplyStyle end
 
 copy(A::Mul{FlattenMulStyle}) = materialize(flatten(A))
 
-
-rowsupport(_, A, k) = axes(A,2)
-""""
-    rowsupport(A, k)
-
-gives an iterator containing the possible non-zero entries in the k-th row of A.
-"""
-rowsupport(A, k) = rowsupport(MemoryLayout(typeof(A)), A, k)
-rowsupport(A) = rowsupport(A, axes(A,1))
-
-colsupport(_, A, j) = axes(A,1)
-
-""""
-    colsupport(A, j)
-
-gives an iterator containing the possible non-zero entries in the j-th column of A.
-"""
-colsupport(A, j) = colsupport(MemoryLayout(typeof(A)), A, j)
-colsupport(A) = colsupport(A, axes(A,2))
-
-rowsupport(::ZerosLayout, A, _) = 1:0
-colsupport(::ZerosLayout, A, _) = 1:0
 
 
 ####
@@ -221,7 +187,7 @@ __mul_args_cols(jr, z, y...) =
     (__mul_args_cols(colsupport(z,jr), y...)..., jr)
 _mul_args_cols(jr, z, y...) = __mul_args_cols(colsupport(z,jr), y...)
 
-subarraylayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
+sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 
 call(::ApplyLayout{typeof(*)}, V::SubArray) = *
 
@@ -278,3 +244,29 @@ end
 
 broadcasted(::DefaultArrayStyle{N}, ::typeof(/), b::ApplyArray{<:Number,N,typeof(*)}, a::Number) where N =
         ApplyArray(*, most(b.args)..., broadcast(/,last(b.args),a))
+
+for Typ in (:Lmul, :Rmul)
+    @eval $Typ(M::Mul) = $Typ(M.args...)
+end
+
+
+
+##
+# L/Rmul
+##
+
+struct LmulStyle <: AbstractArrayApplyStyle end
+struct RmulStyle <: AbstractArrayApplyStyle end
+
+similar(M::Applied{LmulStyle}, ::Type{T}) where T = similar(Lmul(M), T)
+copy(M::Applied{LmulStyle}) = copy(Lmul(M))
+
+similar(M::Applied{RmulStyle}, ::Type{T}) where T = similar(Rmul(M), T)
+copy(M::Applied{RmulStyle}) = copy(Rmul(M))
+
+
+@inline copyto!(dest::AbstractVecOrMat, M::Mul{LmulStyle}) = copyto!(dest, Lmul(M.args...))
+@inline copyto!(dest::AbstractVecOrMat, M::Mul{RmulStyle}) = copyto!(dest, Rmul(M.args...))
+
+@inline materialize!(M::Mul{LmulStyle}) = materialize!(Lmul(M))
+@inline materialize!(M::Mul{RmulStyle}) = materialize!(Rmul(M))
