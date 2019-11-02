@@ -5,3 +5,6 @@ include("lazymul.jl")
 include("add.jl")
 include("factorizations.jl")
 
+
+mulapplystyle(::TriangularLayout, ::AbstractStridedLayout) = LmulStyle()
+mulapplystyle(::AbstractStridedLayout, ::TriangularLayout) = RmulStyle()

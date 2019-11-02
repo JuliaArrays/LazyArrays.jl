@@ -267,12 +267,6 @@ end
 # on the memory layout
 ###
 
-@inline sub_materialize(_, V) = Array(V)
-@inline sub_materialize(V::SubArray) = sub_materialize(MemoryLayout(typeof(V)), V)
-
-@inline lazy_getindex(A, I...) = sub_materialize(view(A, I...))
-
-
 @inline getindex(A::LazyMatrix, kr::Colon, jr::Colon) = lazy_getindex(A, kr, jr)
 @inline getindex(A::LazyMatrix, kr::Colon, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
 @inline getindex(A::LazyMatrix, kr::AbstractUnitRange, jr::Colon) = lazy_getindex(A, kr, jr)

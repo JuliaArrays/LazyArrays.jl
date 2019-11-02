@@ -46,9 +46,9 @@ import FillArrays: AbstractFill, getindex_value
 import StaticArrays: StaticArrayStyle
 
 import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, 
-                        transposelayout, conjlayout, sublayout,
+                        transposelayout, conjlayout, sublayout, triangularlayout, triangulardata,
                         reshapedlayout, diagonallayout, adjointlayout,
-                        check_mul_axes, _mul_eltype, colsupport, rowsupport
+                        check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport
 
 if VERSION < v"1.2-"
     import Base: has_offset_axes

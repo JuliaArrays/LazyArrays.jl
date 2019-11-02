@@ -84,15 +84,6 @@ macro lazymul(Typ)
     esc(ret)
 end
 
-macro lazylmul(Typ)
-    esc(quote
-        LinearAlgebra.lmul!(A::$Typ, x::AbstractVector) = LazyArrays.materialize!(LazyArrays.Lmul(A,x))
-        LinearAlgebra.lmul!(A::$Typ, x::AbstractMatrix) = LazyArrays.materialize!(LazyArrays.Lmul(A,x))
-        LinearAlgebra.lmul!(A::$Typ, x::StridedVector) = LazyArrays.materialize!(LazyArrays.Lmul(A,x))
-        LinearAlgebra.lmul!(A::$Typ, x::StridedMatrix) = LazyArrays.materialize!(LazyArrays.Lmul(A,x))
-    end)
-end
-
 macro lazyldiv(Typ)
     esc(quote
         LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
