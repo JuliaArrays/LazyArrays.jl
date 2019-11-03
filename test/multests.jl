@@ -897,8 +897,6 @@ end
         B = SymTridiagonal(randn(5),randn(4))
         @test MemoryLayout(typeof(B)) == SymTridiagonalLayout{DenseColumnMajor}()
         @test apply(*,A,B) == A*B
-
-
     end
 end
 
