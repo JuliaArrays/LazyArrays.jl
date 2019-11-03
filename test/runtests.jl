@@ -36,14 +36,33 @@ include("broadcasttests.jl")
 
     A = randn(3,2)
     B = randn(4,6)
-    K = Kron(A,B)
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == kron(A,B)
-    K = Kron(A,B')
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B')) == kron(A,B')
-    K = Kron(A',B)
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B)) == kron(A',B)
-    K = Kron(A',B')
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B')) == kron(A',B')
+    K, k = Kron(A,B), kron(A,B)
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == k
+    @test det(K) == 0  # kronecker of rectangular factors
+    @test tr(K) ≈ tr(k)
+
+    K, k = Kron(A,B'), kron(A,B')
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B')) == k
+    @test_throws DimensionMismatch det(K)
+    @test_throws DimensionMismatch tr(K)
+
+    K, k = Kron(A',B), kron(A',B)
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B)) == k
+    @test_throws DimensionMismatch det(K)
+    @test_throws DimensionMismatch tr(K)
+
+    K, k = Kron(A',B'), kron(A',B')
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B')) == k
+    @test det(K) == 0  # kronecker of rectangular factors
+    @test tr(K) ≈ tr(k)
+
+    A = randn(3,3)
+    B = randn(6,6)
+    C = randn(2,2)
+    K, k = Kron(A,B,C), kron(A,B,C)
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B,C)) == k
+    @test det(K) ≈ det(k)
+    @test tr(K) ≈ tr(k)
 
     A = randn(3,2)
     B = randn(4,6)
@@ -134,7 +153,7 @@ end
     end
 
     @testset "colsupport past size" begin
-        C = cache(Zeros(5,5)); C[5,1]; 
+        C = cache(Zeros(5,5)); C[5,1];
         @test colsupport(C,3) == 1:0
     end
 end
