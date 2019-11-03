@@ -30,7 +30,6 @@ function det(K::Kron{<:Any, 2})
     d = 1.
     s = size(K, 1)
 
-    not_square = []
     for A in K.args
         if size(A, 1) == size(A, 2)
             dA = det(A)
