@@ -39,6 +39,7 @@ include("broadcasttests.jl")
     K, k = Kron(A,B), kron(A,B)
     @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == k
     @test det(K) == 0  # kronecker of rectangular factors
+    @test isapprox(det(k), det(K); atol=eps(eltype(K)), rtol=0)
     @test tr(K) ≈ tr(k)
 
     K, k = Kron(A,B'), kron(A,B')
@@ -54,6 +55,7 @@ include("broadcasttests.jl")
     K, k = Kron(A',B'), kron(A',B')
     @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B')) == k
     @test det(K) == 0  # kronecker of rectangular factors
+    @test isapprox(det(k), det(K); atol=eps(eltype(K)), rtol=0)
     @test tr(K) ≈ tr(k)
 
     A = randn(3,3)
