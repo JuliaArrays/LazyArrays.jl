@@ -11,7 +11,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 [compat]
 FillArrays = "0.7,0.8"
 MacroTools = "0.4.5,0.5"
-StaticArrays = "0.8,0.9,0.10,0.11"
+StaticArrays = "0.8,0.9,0.10,0.11,0.12"
 julia = "1"
 
 [extras]
