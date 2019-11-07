@@ -2,6 +2,7 @@ name = "LazyArrays"
 uuid = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 version = "0.14"
 
+
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
@@ -13,7 +14,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ArrayLayouts = "0.1"
 FillArrays = "0.8"
 MacroTools = "0.5"
-StaticArrays = "0.11"
+StaticArrays = "0.11, 0.12"
 julia = "1"
 
 [extras]
