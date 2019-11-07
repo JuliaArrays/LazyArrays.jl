@@ -540,8 +540,8 @@ end
 # subarrays
 ###
 
-subarraylayout(::ApplyLayout{typeof(vcat)}, _) = ApplyLayout{typeof(vcat)}()
-subarraylayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
+sublayout(::ApplyLayout{typeof(vcat)}, _) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
 
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) = 
     view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
@@ -623,13 +623,26 @@ materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}})
 
 ## print
 
+_replace_in_print_matrix(A::AbstractArray, k, j, s) = replace_in_print_matrix(A, k, j, s)
+_replace_in_print_matrix(_, k, j, s) = s
+
 function replace_in_print_matrix(f::Vcat{<:Any,1}, k::Integer, j::Integer, s::AbstractString)
     @assert j == 1
     κ = k
     for A in f.args
         n = length(A)
-        κ ≤ n && return replace_in_print_matrix(A, κ, 1, s)
+        κ ≤ n && return _replace_in_print_matrix(A, κ, 1, s)
         κ -= n
     end
     throw(BoundsError(f, k))
+end
+
+function replace_in_print_matrix(f::Vcat{<:Any,2}, k::Integer, j::Integer, s::AbstractString)
+    κ = k
+    for A in f.args
+        n = size(A,1)
+        κ ≤ n && return _replace_in_print_matrix(A, κ, j, s)
+        κ -= n
+    end
+    throw(BoundsError(f, (k,j)))
 end

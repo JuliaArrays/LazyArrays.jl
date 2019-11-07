@@ -68,7 +68,6 @@ similar(M::Applied) = similar(M, eltype(M))
 
 axes(A::Applied, j) = axes(A)[j]
 
-struct ApplyBroadcastStyle <: BroadcastStyle end
 struct ApplyArrayBroadcastStyle{N} <: Broadcast.AbstractArrayStyle{N} end
 ApplyArrayBroadcastStyle{N}(::Val{N}) where N = ApplyArrayBroadcastStyle{N}()
 
@@ -87,10 +86,7 @@ BroadcastStyle(::ApplyArrayBroadcastStyle{M}, b::DefaultArrayStyle{N}) where {M,
 similar(bc::Broadcasted{ApplyArrayBroadcastStyle{N}}, ::Type{ElType}) where {N,ElType} =
     similar(Array{ElType}, axes(bc))
 
-@inline function copyto!(dest::AbstractArray, bc::Broadcasted{ApplyBroadcastStyle}) 
-    @assert length(bc.args) == 1
-    copyto!(dest, first(bc.args))
-end
+
 @inline function copyto!(dest::AbstractArray, bc::Broadcasted{ApplyArrayBroadcastStyle{N}}) where N 
     if length(bc.args) == 1
         copyto!(dest, first(bc.args))
@@ -217,7 +213,7 @@ MemoryLayout(::Type{<:LazyArray}) = LazyArrayLayout()
 
 transposelayout(L::LazyLayout) = L
 conjlayout(L::LazyLayout) = L
-subarraylayout(L::LazyLayout, _) = L
+sublayout(L::LazyLayout, _) = L
 reshapedlayout(::LazyLayout, _) = LazyLayout()
 
 combine_mul_styles(::LazyLayout) = LazyArrayApplyStyle()
@@ -270,12 +266,6 @@ end
 # this uses a lazy-materialize idiom to construct a matrix based
 # on the memory layout
 ###
-
-@inline sub_materialize(_, V) = Array(V)
-@inline sub_materialize(V::SubArray) = sub_materialize(MemoryLayout(typeof(V)), V)
-
-@inline lazy_getindex(A, I...) = sub_materialize(view(A, I...))
-
 
 @inline getindex(A::LazyMatrix, kr::Colon, jr::Colon) = lazy_getindex(A, kr, jr)
 @inline getindex(A::LazyMatrix, kr::Colon, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)

@@ -1,10 +1,9 @@
 include("mul.jl")
-include("lazymul.jl")
 include("muladd.jl")
-include("lmul.jl")
-include("ldiv.jl")
+include("inv.jl")
+include("lazymul.jl")
 include("add.jl")
-include("factorizations.jl")
 
-include("diagonal.jl")
-include("triangular.jl")
+
+mulapplystyle(::TriangularLayout, ::AbstractStridedLayout) = LmulStyle()
+mulapplystyle(::AbstractStridedLayout, ::TriangularLayout) = RmulStyle()
