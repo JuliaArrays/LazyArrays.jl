@@ -1,7 +1,29 @@
-using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
-import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted
+using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, ArrayLayouts
+import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
+            PaddedLayout, ApplyLayout, BroadcastLayout, AddArray, LazyLayout
 
-include("memorylayouttests.jl")
+@testset "Lazy MemoryLayout" begin
+    @testset "ApplyArray" begin
+        A = [1.0 2; 3 4]
+        @test eltype(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))) == Float64
+        @test @inferred(MemoryLayout(typeof(AddArray(A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
+            ApplyLayout{typeof(+)}()
+    end
+
+    @testset "BroadcastArray" begin
+        A = [1.0 2; 3 4]
+        
+        @test @inferred(MemoryLayout(typeof(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
+            BroadcastLayout{typeof(+)}()
+
+        @test MemoryLayout(typeof(Diagonal(BroadcastArray(exp,randn(5))))) == DiagonalLayout{LazyLayout}()
+    end
+
+    @testset "Vcat" begin
+        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{FillLayout}()
+        @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
+    end
+end
 include("applytests.jl")
 include("multests.jl")
 include("ldivtests.jl")
@@ -36,14 +58,35 @@ include("broadcasttests.jl")
 
     A = randn(3,2)
     B = randn(4,6)
-    K = Kron(A,B)
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == kron(A,B)
-    K = Kron(A,B')
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B')) == kron(A,B')
-    K = Kron(A',B)
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B)) == kron(A',B)
-    K = Kron(A',B')
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B')) == kron(A',B')
+    K, k = Kron(A,B), kron(A,B)
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == k
+    @test det(K) == 0  # kronecker of rectangular factors
+    @test isapprox(det(k), det(K); atol=eps(eltype(K)), rtol=0)
+    @test tr(K) ≈ tr(k)
+
+    K, k = Kron(A,B'), kron(A,B')
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B')) == k
+    @test_throws DimensionMismatch det(K)
+    @test_throws DimensionMismatch tr(K)
+
+    K, k = Kron(A',B), kron(A',B)
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B)) == k
+    @test_throws DimensionMismatch det(K)
+    @test_throws DimensionMismatch tr(K)
+
+    K, k = Kron(A',B'), kron(A',B')
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B')) == k
+    @test det(K) == 0  # kronecker of rectangular factors
+    @test isapprox(det(k), det(K); atol=eps(eltype(K)), rtol=0)
+    @test tr(K) ≈ tr(k)
+
+    A = randn(3,3)
+    B = randn(6,6)
+    C = randn(2,2)
+    K, k = Kron(A,B,C), kron(A,B,C)
+    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B,C)) == k
+    @test det(K) ≈ det(k)
+    @test tr(K) ≈ tr(k)
 
     A = randn(3,2)
     B = randn(4,6)
@@ -135,7 +178,7 @@ end
     end
 
     @testset "colsupport past size" begin
-        C = cache(Zeros(5,5)); C[5,1]; 
+        C = cache(Zeros(5,5)); C[5,1];
         @test colsupport(C,1) == Base.OneTo(5)
         @test colsupport(C,3) == 1:0
         @test rowsupport(C,1) == Base.OneTo(1)
@@ -236,12 +279,12 @@ end
         v == BroadcastVector(exp, [1,2,3]) == exp.([1,2,3])
 
     Base.IndexStyle(typeof(BroadcastVector(exp, [1,2,3]))) == IndexLinear()
-    
+
     bc = broadcasted(exp,[1 2; 3 4])
     M = BroadcastArray(exp, [1 2; 3 4])
     @test BroadcastArray(bc) == BroadcastMatrix(bc) == BroadcastMatrix{Float64,typeof(exp),typeof(bc.args)}(bc) ==
         M == BroadcastMatrix(BroadcastMatrix(bc)) == BroadcastMatrix(exp,[1 2; 3 4]) == exp.([1 2; 3 4])
-    
+
     @test exp.(v') isa BroadcastMatrix
     @test exp.(transpose(v)) isa BroadcastMatrix
     @test exp.(M') isa BroadcastMatrix

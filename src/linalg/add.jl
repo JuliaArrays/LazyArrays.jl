@@ -44,15 +44,6 @@ getindex(M::Add, k::Integer, j::Integer) = sum(getindex.(M.args, k, j))
 getindex(M::Add, k::CartesianIndex{1}) = M[convert(Int, k)]
 getindex(M::Add, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 
-zero!(A::AbstractArray{T}) where T = fill!(A,zero(T))
-function zero!(A::AbstractArray{<:AbstractArray}) 
-    for a in A
-        zero!(a)
-    end
-    A
-end
-
-_fill_lmul!(β, A::AbstractArray{T}) where T = iszero(β) ? zero!(A) : lmul!(β, A)
 for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
     # `MulAdd{ApplyLayout{typeof(+)}}` cannot "win" against
     # `MatMulMatAdd` and `MatMulVecAdd` hence `@eval`:
@@ -89,7 +80,7 @@ end
 _view_tuple(a, b::Tuple) = view(a, b...)
 for op in (:+, :-)
     @eval begin
-        subarraylayout(a::ApplyLayout{typeof($op)}, _) = a
+        sublayout(a::ApplyLayout{typeof($op)}, _) = a
         arguments(::ApplyLayout{typeof($op)}, a::SubArray) =
             _view_tuple.(arguments(parent(a)), Ref(parentindices(a)))
         call(::ApplyLayout{typeof($op)}, a::SubArray) = $op            

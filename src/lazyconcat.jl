@@ -540,8 +540,8 @@ end
 # subarrays
 ###
 
-subarraylayout(::ApplyLayout{typeof(vcat)}, _) = ApplyLayout{typeof(vcat)}()
-subarraylayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
+sublayout(::ApplyLayout{typeof(vcat)}, _) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
 
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) = 
     view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
