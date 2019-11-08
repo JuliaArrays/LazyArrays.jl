@@ -23,6 +23,42 @@ axes(a::Kron{<:Any,1}) = (OneTo(size(a,1)),)
 axes(a::Kron{<:Any,2}) = (OneTo(size(a,1)), OneTo(size(a,2)))
 axes(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> OneTo(size(a, M)), Val(N)))
 
+
+function det(K::Kron{<:Any, 2})
+    (size(K, 1) == size(K, 2)) || throw(DimensionMismatch("matrix is not square: dimensions are $(size(K))"))
+
+    d = 1.
+    s = size(K, 1)
+
+    for A in K.args
+        if size(A, 1) == size(A, 2)
+            dA = det(A)
+            if iszero(dA)
+                return dA
+            end
+            d *= dA^(s ÷ size(A, 1))
+        else
+            # The Kronecker Product of rectangular matrices, if it is square, will
+            # have determinant zero. This can be shown by using the fact that
+            # rank(A ⊗ B) = rank(A)rank(B) and showing that this is strictly less
+            # than the number of rows in the resulting Kronecker matrix. Hence,
+            # since A ⊗ B does not have full rank, its determinant must be zero.
+            return zero(d)
+        end
+    end
+    return d
+end
+
+function tr(K::Kron{<:Any, 2})
+    (size(K, 1) == size(K, 2)) || throw(DimensionMismatch("matrix is not square: dimensions are $(size(K))"))
+    if all(A -> (size(A, 1) == size(A, 2)), K.args)  # check if all component matrices are square
+        return prod(tr.(K.args))
+    else
+        return sum(diag(K))
+    end
+end
+
+
 getindex(K::Kron{T,1,<:Tuple{<:AbstractVector}}, k::Int) where T =
     first(K.args)[k]
 

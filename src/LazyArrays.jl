@@ -6,7 +6,7 @@ module LazyArrays
 using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays, ArrayLayouts
 import LinearAlgebra.BLAS
 
-import Base: AbstractArray, AbstractMatrix, AbstractVector, 
+import Base: AbstractArray, AbstractMatrix, AbstractVector,
         ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
              RangeIndex, BroadcastStyle, copyto!, length, broadcastable, axes,
              getindex, eltype, tail, IndexStyle, IndexLinear, getproperty,
@@ -36,8 +36,8 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!, eltypes
 
-import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, Abuf, Bbuf, Cbuf, dot, factorize, qr, lu, cholesky, 
-                        norm2, norm1, normInf, normMinusInf
+import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, Abuf, Bbuf, Cbuf, dot, factorize, qr, lu, cholesky,
+                        norm2, norm1, normInf, normMinusInf, det, tr
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
@@ -55,8 +55,8 @@ if VERSION < v"1.2-"
     import Base: has_offset_axes
     require_one_based_indexing(A...) = !has_offset_axes(A...) || throw(ArgumentError("offset arrays are not supported but got an array with index other than 1"))
 else
-    import Base: require_one_based_indexing    
-end             
+    import Base: require_one_based_indexing
+end
 
 export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum,
