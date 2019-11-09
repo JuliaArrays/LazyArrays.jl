@@ -31,7 +31,8 @@ Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
 
-@propagate_inbounds @inline function getindex(f::Vcat{T,1}, k::Integer) where T
+@propagate_inbounds @inline function vcat_getindex(f, k::Integer)
+    T = eltype(f)
     κ = k
     for A in f.args
         n = length(A)
@@ -41,7 +42,8 @@ Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
     throw(BoundsError(f, k))
 end
 
-@propagate_inbounds @inline function getindex(f::Vcat{T,2}, k::Integer, j::Integer) where T
+@propagate_inbounds @inline function vcat_getindex(f, k::Integer, j::Integer)
+    T = eltype(f)
     κ = k
     for A in f.args
         n = size(A,1)
@@ -50,6 +52,11 @@ end
     end
     throw(BoundsError(f, (k,j)))
 end
+
+@propagate_inbounds @inline getindex(f::Vcat{<:Any,1}, k::Integer) = vcat_getindex(f, k)
+@propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::Integer) = vcat_getindex(f, k, j)
+getindex(f::Applied{DefaultArrayApplyStyle,typeof(vcat)}, k::Integer)= vcat_getindex(f, k)
+getindex(f::Applied{DefaultArrayApplyStyle,typeof(vcat)}, k::Integer, j::Integer)= vcat_getindex(f, k, j)
 
 @propagate_inbounds @inline function setindex!(f::Vcat{T,1}, v, k::Integer) where T
     κ = k
