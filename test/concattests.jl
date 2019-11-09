@@ -137,6 +137,12 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
         @test vec(A) == vec(Matrix(A))
         @test A' == Matrix(A)'
         @test transpose(A) == transpose(Matrix(A))
+
+        @testset "getindex bug" begin
+            A = randn(3,3)
+            H = Hcat(A,A)
+            @test H[1,1] == applied(hcat,A,A)[1,1] == A[1,1]
+        end
     end
 
     @testset "Special pads" begin

@@ -93,7 +93,8 @@ ndims(::Applied{<:Any,typeof(hcat)}) = 2
 size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
 Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
 
-function getindex(f::Hcat{T}, k::Integer, j::Integer) where T
+function hcat_getindex(f, k::Integer, j::Integer)
+    T = eltype(f)
     ξ = j
     for A in f.args
         n = size(A,2)
@@ -102,6 +103,9 @@ function getindex(f::Hcat{T}, k::Integer, j::Integer) where T
     end
     throw(BoundsError(f, (k,j)))
 end
+
+getindex(f::Hcat, k::Integer, j::Integer) = hcat_getindex(f, k, j)
+getindex(f::Applied{DefaultArrayApplyStyle,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(f, k, j)
 
 function setindex!(f::Hcat{T}, v, k::Integer, j::Integer) where T
     ξ = j
