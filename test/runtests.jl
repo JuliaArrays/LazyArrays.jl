@@ -104,6 +104,35 @@ include("broadcasttests.jl")
 
     K = @inferred(Kron{Float64}(Eye{Float64}(1), zeros(4)))
     @test Array(K) == zeros(4,1)
+
+    @testset "Applied bug" begin
+        A = randn(5,5)
+        K = Kron(A,A)
+        k = applied(kron,A,A)
+        @test K[1,1] == k[1,1] == A[1,1]^2
+        x = randn(5)
+        K = Kron(A,x)
+        k = applied(kron,A,x)
+        @test K[1,1] == k[1,1] == A[1,1]*x[1]      
+        K = Kron(x,x)
+        k = applied(kron,x,x)
+        @test K[1] == k[1] == x[1]^2
+        K = Kron(A)
+        k = applied(kron,A)
+        @test K[1,1] == k[1,1] == A[1,1]
+        K = Kron(x)
+        k = applied(kron,x)
+        @test K[1] == k[1] == x[1]
+    end
+
+    @testset "triple vector" begin
+        x = randn(5)
+        y = randn(6)
+        z = randn(4)
+        K = Kron(x,y,z)
+        @test K[1] == K[1,1] == x[1]y[1]z[1]
+        @test K == kron(x,y,z)
+    end
 end
 
 @testset "Cache" begin
