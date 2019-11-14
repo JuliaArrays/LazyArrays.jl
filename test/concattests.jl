@@ -1,5 +1,6 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, Test
-import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, MulAdd, Applied, ApplyLayout, arguments
+import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, 
+                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -143,6 +144,15 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, M
             H = Hcat(A,A)
             @test H[1,1] == applied(hcat,A,A)[1,1] == A[1,1]
         end
+    end
+
+    @testset "DefaultApplyStyle" begin
+        v = Applied{DefaultApplyStyle}(vcat, (1, zeros(3)))
+        @test v[1] == 1
+        v = Applied{DefaultApplyStyle}(vcat, (1, zeros(3,1)))
+        @test v[1,1] == 1
+        H = Applied{DefaultApplyStyle}(hcat, (1, zeros(1,3)))
+        @test H[1,1] == 1
     end
 
     @testset "Special pads" begin
