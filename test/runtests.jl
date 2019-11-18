@@ -234,6 +234,17 @@ end
         @test f.(x , s) isa CachedArray
         @test f.(x , s) == f.(Vector(x), Vector(s))
     end
+
+    @testset "padded CachedVector getindex" begin
+        v = CachedArray([1,2,3],Zeros{Int}(1000))
+        @test v[3:100] == [3; zeros(Int,97)]
+        @test v[3:100] isa CachedArray{Int,1,Vector{Int},Zeros{Int,1,Tuple{Base.OneTo{Int}}}}
+        @test v[4:end] isa CachedArray{Int,1,Vector{Int},Zeros{Int,1,Tuple{Base.OneTo{Int}}}}
+        @test all(iszero,v[4:end])
+        @test isempty(v[4:0])
+        v = CachedArray([1,2,3],Fill{Int}(1,1000))
+        @test v[3:100] == [3; ones(97)]
+    end
 end
 
 @testset "Diff and Cumsum" begin

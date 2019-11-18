@@ -163,6 +163,10 @@ replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractStri
 ###
 
 zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = zero!(A.data)
+function getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector) where T
+    @boundscheck checkbounds(A, I)
+    CachedArray(A.data[I ∩ OneTo(A.datasize[1])], A.array[OneTo(length(I))])
+end
 
 ###
 # MemoryLayout
