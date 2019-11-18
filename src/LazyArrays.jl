@@ -49,7 +49,7 @@ import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv,
                         transposelayout, conjlayout, sublayout, triangularlayout, triangulardata,
                         reshapedlayout, diagonallayout, adjointlayout, sub_materialize,
                         check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport,
-                        _fill_lmul!, @lazylmul, scalarone, scalarzero, fillzeros, zero!
+                        _fill_lmul!, @lazylmul, scalarone, scalarzero, fillzeros, zero!, lazy_getindex
 
 if VERSION < v"1.2-"
     import Base: has_offset_axes
