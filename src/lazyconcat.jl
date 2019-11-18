@@ -596,7 +596,7 @@ end
 _view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
 _view_hcat(a, kr, jr) = view(a, kr, jr)
 
-function arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2})
+function arguments(::ApplyLayout{typeof(hcat)}, V::SubArray)
     A = parent(V)
     kr,jr = parentindices(V)
     sz = size.(arguments(A),2)

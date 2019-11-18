@@ -400,5 +400,10 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
         @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(hcat)}
         VERSION ≥ v"1.1" && @inferred(arguments(V))
         @test arguments(V)[1] == reshape(3:5,3,1)
+
+        v = view(A,2,1:5)
+        @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(hcat)}
+        @test arguments(v) == ([2], zeros(4))
+        @test A[2,1:5] == copy(v)
     end
 end

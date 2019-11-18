@@ -222,3 +222,11 @@ function broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector)
     CachedArray(broadcast(op, Adat, Bdat), broadcast(op, A.array, B.array))
 end
 
+###
+# norm
+###
+
+norm1(a::CachedVector) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1]+1:end]),1)
+norm2(a::CachedVector) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
+normInf(a::CachedVector) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
+normp(a::CachedVector, p) = (norm(paddeddata(a),2)^p + norm(@view(a.array[a.datasize[1]+1:end]),2)^p)^inv(p)
