@@ -303,7 +303,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
         @test materialize!(MulAdd(1.1,A,B,2.2,[5.0 6; 7 8])) ≈ 1.1*Matrix(A)*Matrix(B)+2.2*[5.0 6; 7 8]
     end
 
-    @testset "broadcast Vcat" begin
+    @testset "broadcast" begin
         x = Vcat(1:2, [1,1,1,1,1], 3)
         y = 1:8
         f = (x,y) -> cos(x*y)
@@ -328,6 +328,13 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
         @test Vcat(1, Ones(5))  + Vcat(2, Fill(2.0,5)) ≡ Vcat(3, Fill(3.0,5))
         @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡
             Vcat(SVector(5,7,9), Fill(3.0,5))
+
+        H = Hcat(1, zeros(1,10))            
+        @test H/2 isa Hcat
+        @test 2\H isa Hcat
+        @test H./Ref(2) isa Hcat
+        @test Ref(2).\H isa Hcat
+        @test H/2  == H./Ref(2) == 2\H == Ref(2) .\ H == [1/2 zeros(1,10)]
     end
 
     @testset "maximum/minimum Vcat" begin

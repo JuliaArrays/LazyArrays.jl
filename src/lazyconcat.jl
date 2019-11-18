@@ -289,14 +289,18 @@ BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
 broadcasted(::LazyArrayStyle, op, A::Vcat) =
     Vcat(broadcast(x -> broadcast(op, x), A.args)...)
 
-broadcasted(::LazyArrayStyle, op, A::Vcat, c::Number) =
-    Vcat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
-broadcasted(::LazyArrayStyle, op, c::Number, A::Vcat) =
-    Vcat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
-broadcasted(::LazyArrayStyle, op, A::Vcat, c::Ref) =
-    Vcat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
-broadcasted(::LazyArrayStyle, op, c::Ref, A::Vcat) =
-    Vcat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)    
+for Cat in (:Vcat, :Hcat)    
+    @eval begin
+        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Number) =
+            $Cat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
+        broadcasted(::LazyArrayStyle, op, c::Number, A::$Cat) =
+            $Cat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
+        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Ref) =
+            $Cat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
+        broadcasted(::LazyArrayStyle, op, c::Ref, A::$Cat) =
+            $Cat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)    
+    end
+end
 
 
 # determine indices of components of a vcat
