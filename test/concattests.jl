@@ -1,6 +1,6 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, Test
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, 
-                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle
+                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -402,8 +402,8 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
         @test arguments(V)[1] == reshape(3:5,3,1)
 
         v = view(A,2,1:5)
-        @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(hcat)}
+        @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(vcat)}
         @test arguments(v) == ([2], zeros(4))
-        @test A[2,1:5] == copy(v)
+        @test A[2,1:5] == copy(v) == sub_materialize(v)
     end
 end

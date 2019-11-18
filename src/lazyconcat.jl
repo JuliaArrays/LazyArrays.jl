@@ -477,7 +477,7 @@ function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{type
  ####
 
 
- most(a) = reverse(tail(reverse(a)))
+most(a) = reverse(tail(reverse(a)))
 colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))
 
 
@@ -556,6 +556,8 @@ end
 
 sublayout(::ApplyLayout{typeof(vcat)}, _) = ApplyLayout{typeof(vcat)}()
 sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
+# a row-slice of an Hcat is equivalent to a Vcat
+sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Number,AbstractVector}}) = ApplyLayout{typeof(vcat)}()
 
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) = 
     view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
@@ -575,14 +577,17 @@ _view_vcat(a::Number, kr) = Fill(a,length(kr))
 _view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
 _view_vcat(a, kr...) = view(a, kr...)
 
-function arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1})
-    A = parent(V)
+function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V)
     kr = parentindices(V)[1]
     sz = size.(arguments(A),1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
     _view_vcat.(arguments(A), skr2)
 end
+_vcat_sub_arguments(::ApplyLayout{typeof(hcat)}, A, V) = arguments(ApplyLayout{typeof(hcat)}(), V)
+
+_vcat_sub_arguments(A, V) = _vcat_sub_arguments(MemoryLayout(typeof(A)), A, V)
+arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1}) = _vcat_sub_arguments(parent(V), V)
 
 function arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
     A = parent(V)
@@ -628,6 +633,7 @@ function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     end
     ret
 end
+
 # temporarily allocate. In the future, we add a loop over arguments
 materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) = 
     materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))
