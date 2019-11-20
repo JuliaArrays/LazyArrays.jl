@@ -244,6 +244,18 @@ end
         @test isempty(v[4:0])
         v = CachedArray([1,2,3],Fill{Int}(1,1000))
         @test v[3:100] == [3; ones(97)]
+        @test norm(v) == norm(Array(v)) == norm(v,2)
+        @test norm(v,1) == norm(Array(v),1)
+        @test norm(v,Inf) == norm(Array(v),Inf)
+        @test norm(v,3) == norm(Array(v),3)
+    end
+
+    @testset "ambiguity broadcast" begin
+        c = cache(1:100)
+        v = Vcat([1,2,3],0:96)
+        z = Zeros(100)
+        @test v .+ c == c .+ v == Array(c) + Array(v)
+        @test z .+ c == c .+ z == Array(c)
     end
 end
 

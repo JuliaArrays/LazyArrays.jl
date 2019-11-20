@@ -289,14 +289,18 @@ BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
 broadcasted(::LazyArrayStyle, op, A::Vcat) =
     Vcat(broadcast(x -> broadcast(op, x), A.args)...)
 
-broadcasted(::LazyArrayStyle, op, A::Vcat, c::Number) =
-    Vcat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
-broadcasted(::LazyArrayStyle, op, c::Number, A::Vcat) =
-    Vcat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
-broadcasted(::LazyArrayStyle, op, A::Vcat, c::Ref) =
-    Vcat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
-broadcasted(::LazyArrayStyle, op, c::Ref, A::Vcat) =
-    Vcat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)    
+for Cat in (:Vcat, :Hcat)    
+    @eval begin
+        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Number) =
+            $Cat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
+        broadcasted(::LazyArrayStyle, op, c::Number, A::$Cat) =
+            $Cat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
+        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Ref) =
+            $Cat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
+        broadcasted(::LazyArrayStyle, op, c::Ref, A::$Cat) =
+            $Cat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)    
+    end
+end
 
 
 # determine indices of components of a vcat
@@ -314,7 +318,7 @@ function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
     ApplyVector(vcat, broadcast((a,b) -> broadcast(op,a,b), A.args, B_arrays)...)
 end
-
+ 
 function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
     kr = _vcat_axes(axes.(B.args)...)
     A_arrays = _vcat_getindex_eval(A,kr...)
@@ -324,6 +328,14 @@ end
 # Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) =
     Broadcasted{LazyArrayStyle}(op, (A, B))
+
+# ambiguities
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::Vcat{<:Any,1}) = cache_broadcast(op, A, B)
+
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1})=
+    broadcast(DefaultArrayStyle{1}(), *, a, b)
+
 
 
 function +(A::Vcat, B::Vcat)
@@ -477,7 +489,7 @@ function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{type
  ####
 
 
- most(a) = reverse(tail(reverse(a)))
+most(a) = reverse(tail(reverse(a)))
 colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))
 
 
@@ -556,6 +568,8 @@ end
 
 sublayout(::ApplyLayout{typeof(vcat)}, _) = ApplyLayout{typeof(vcat)}()
 sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
+# a row-slice of an Hcat is equivalent to a Vcat
+sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Number,AbstractVector}}) = ApplyLayout{typeof(vcat)}()
 
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) = 
     view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
@@ -575,14 +589,17 @@ _view_vcat(a::Number, kr) = Fill(a,length(kr))
 _view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
 _view_vcat(a, kr...) = view(a, kr...)
 
-function arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1})
-    A = parent(V)
+function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V)
     kr = parentindices(V)[1]
     sz = size.(arguments(A),1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
     _view_vcat.(arguments(A), skr2)
 end
+_vcat_sub_arguments(::ApplyLayout{typeof(hcat)}, A, V) = arguments(ApplyLayout{typeof(hcat)}(), V)
+
+_vcat_sub_arguments(A, V) = _vcat_sub_arguments(MemoryLayout(typeof(A)), A, V)
+arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1}) = _vcat_sub_arguments(parent(V), V)
 
 function arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
     A = parent(V)
@@ -596,7 +613,7 @@ end
 _view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
 _view_hcat(a, kr, jr) = view(a, kr, jr)
 
-function arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2})
+function arguments(::ApplyLayout{typeof(hcat)}, V::SubArray)
     A = parent(V)
     kr,jr = parentindices(V)
     sz = size.(arguments(A),2)
@@ -628,6 +645,7 @@ function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     end
     ret
 end
+
 # temporarily allocate. In the future, we add a loop over arguments
 materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) = 
     materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))

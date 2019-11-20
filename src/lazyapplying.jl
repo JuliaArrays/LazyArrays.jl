@@ -26,7 +26,7 @@ arguments(a::AbstractArray) = arguments(MemoryLayout(typeof(a)), a)
 
 @inline check_applied_axes(A::Applied) = nothing
 
-function instantiate(A::Applied{Style}) where Style
+@inline function instantiate(A::Applied{Style}) where Style
     check_applied_axes(A)
     Applied{Style}(A.f, map(instantiate, A.args))
 end
@@ -45,20 +45,20 @@ end
 @inline apply(f, args...) = materialize(applied(f, args...))
 @inline apply!(f, args...) = materialize!(applied(f, args...))
 
-materialize(A::Applied) = copy(instantiate(A))
-materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
+@inline materialize(A::Applied) = copy(instantiate(A))
+@inline materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
 
 # the following materialzes the args and calls materialize again, unless it hasn't
 # changed in which case it falls back to the default
-_default_materialize(A::App, ::App) where App = A.f(A.args...)
-_default_materialize(A, _) = materialize(A)
+@inline _default_materialize(A::App, ::App) where App = A.f(A.args...)
+@inline _default_materialize(A, _) = materialize(A)
 # copy(A::Applied{DefaultApplyStyle}) = A.f(A.args...)
-copy(A::Applied) = _default_materialize(materializeargs(A), A)
+@inline copy(A::Applied) = _default_materialize(materializeargs(A), A)
 
 @inline copyto!(dest, M::Applied) = copyto!(dest, materialize(M))
 @inline copyto!(dest::AbstractArray, M::Applied) = copyto!(dest, materialize(M))
 
-broadcastable(M::Applied) = M
+@inline broadcastable(M::Applied) = M
 
 
 
@@ -66,7 +66,7 @@ similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}, axes) where {T,N} = Ar
 similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 similar(M::Applied) = similar(M, eltype(M))
 
-axes(A::Applied, j) = axes(A)[j]
+@inline axes(A::Applied, j) = axes(A)[j]
 
 struct ApplyArrayBroadcastStyle{N} <: Broadcast.AbstractArrayStyle{N} end
 ApplyArrayBroadcastStyle{N}(::Val{N}) where N = ApplyArrayBroadcastStyle{N}()
