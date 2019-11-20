@@ -249,6 +249,14 @@ end
         @test norm(v,Inf) == norm(Array(v),Inf)
         @test norm(v,3) == norm(Array(v),3)
     end
+
+    @testset "ambiguity broadcast" begin
+        c = cache(1:100)
+        v = Vcat([1,2,3],0:96)
+        z = Zeros(100)
+        @test v .+ c == c .+ v == Array(c) + Array(v)
+        @test z .+ c == c .+ z == Array(c)
+    end
 end
 
 @testset "Diff and Cumsum" begin

@@ -199,19 +199,22 @@ broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) =
     CachedArray(broadcast(op, c, paddeddata(A)), broadcast(op, c, A.array)) 
 
 
-function broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector)
+function cache_broadcast(op, A::CachedVector, B)
     dat = paddeddata(A)
     n = length(dat)
     m = length(B)
     CachedArray(broadcast(op, dat, view(B,1:n)), broadcast(op, A.array, B))
 end
 
-function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector)
+function cache_broadcast(op, A, B::CachedVector)
     dat = paddeddata(B)
     n = length(dat)
     m = length(A)
     CachedArray(broadcast(op, view(A,1:n), dat), broadcast(op, A, B.array))
 end
+
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = cache_broadcast(op, A, B)
 
 function broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector)
     n = max(A.datasize[1],B.datasize[1])

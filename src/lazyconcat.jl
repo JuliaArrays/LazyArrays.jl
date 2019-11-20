@@ -318,20 +318,7 @@ function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
     ApplyVector(vcat, broadcast((a,b) -> broadcast(op,a,b), A.args, B_arrays)...)
 end
-
-function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector)
-    dat = paddeddata(B)
-    n = length(dat)
-    m = length(A)
-    CachedArray(broadcast(op, view(A,1:n), dat), broadcast(op, A, B.array))
-end
-
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1})=
-    broadcast(DefaultArrayStyle{1}(), *, a, b)
-
-    
-
-
+ 
 function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
     kr = _vcat_axes(axes.(B.args)...)
     A_arrays = _vcat_getindex_eval(A,kr...)
@@ -341,6 +328,14 @@ end
 # Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) =
     Broadcasted{LazyArrayStyle}(op, (A, B))
+
+# ambiguities
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::Vcat{<:Any,1}) = cache_broadcast(op, A, B)
+
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1})=
+    broadcast(DefaultArrayStyle{1}(), *, a, b)
+
 
 
 function +(A::Vcat, B::Vcat)
