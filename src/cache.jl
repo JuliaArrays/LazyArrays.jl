@@ -147,12 +147,16 @@ function convexunion(a::AbstractVector, b::AbstractVector)
     min(minimum(a),minimum(b)):max(maximum(a),maximum(b))
 end
 
-colsupport(A::CachedMatrix, i) = 
+function colsupport(A::CachedMatrix, i) 
+    isempty(i) && return 1:0
     minimum(i) ≤ A.datasize[2] ? convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1])) : colsupport(A.array, i)
+end
 colsupport(A::CachedVector, i) = 
     convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1]))
-rowsupport(A::CachedMatrix, i) = 
+function rowsupport(A::CachedMatrix, i) 
+    isempty(i) && return 1:0
     minimum(i) ≤ A.datasize[1] ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i) ∩ Base.OneTo(A.datasize[2])) : rowsupport(A.array, i)
+end
 
 replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractString) =
     i in colsupport(A,j) ? s : replace_with_centered_mark(s)
