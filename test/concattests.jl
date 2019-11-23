@@ -413,4 +413,21 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
         @test arguments(v) == ([2], zeros(4))
         @test A[2,1:5] == copy(v) == sub_materialize(v)
     end
+
+    @testset "Padded subarrays" begin
+        a = Vcat([1,2,3],[4,5,6])
+        @test sub_materialize(view(a,2:6)) == a[2:6]
+        a = Vcat([1,2,3], Zeros(10))
+        c = cache(Zeros(10)); c[1:3] = 1:3;
+        v = view(a,2:4)
+        w = view(c,2:4);
+        @test MemoryLayout(typeof(a)) isa PaddedLayout{DenseColumnMajor}
+        @test MemoryLayout(typeof(v)) isa PaddedLayout{DenseColumnMajor}
+        @test sub_materialize(v) == a[2:4] == sub_materialize(w)
+        @test sub_materialize(v) isa Vcat
+        @test sub_materialize(w) isa Vcat
+        A = Vcat(Eye(2), Zeros(10,2))
+        V = view(A, 1:5, 1:2)
+        @test sub_materialize(V) == A[1:5,1:2] 
+    end
 end
