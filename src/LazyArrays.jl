@@ -71,5 +71,6 @@ include("lazyconcat.jl")
 include("lazysetoperations.jl")
 include("lazyoperations.jl")
 include("lazymacro.jl")
+include("interlace.jl")
 
 end # module
