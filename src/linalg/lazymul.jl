@@ -18,6 +18,22 @@ macro lazymul(Typ)
         Base.:*(A::$Typ, B::AbstractMatrix, C...) = LazyArrays.apply(*,A,B,C...)
         Base.:*(A::$Typ, B::AbstractVector) = LazyArrays.apply(*,A,B)
         Base.:*(A::AbstractMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+        Base.:*(A::LinearAlgebra.AdjointAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+        Base.:*(A::LinearAlgebra.TransposeAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+    end
+    if Typ ≠ :ApplyMatrix
+        ret = quote
+            $ret
+            Base.:*(A::$Typ, B::LazyArrays.ApplyMatrix, C...) = LazyArrays.apply(*,A,B,C...)
+            Base.:*(A::LazyArrays.ApplyMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+        end
+    end
+    if Typ ≠ :BroadcastMatrix && Typ ≠ :ApplyMatrix
+        ret = quote
+            $ret
+            Base.:*(A::$Typ, B::LazyArrays.BroadcastMatrix, C...) = LazyArrays.apply(*,A,B,C...)
+            Base.:*(A::LazyArrays.BroadcastMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+        end
     end
     for Struc in (:AbstractTriangular, :Diagonal)
         ret = quote
@@ -51,35 +67,38 @@ macro lazymul(Typ)
             Base.:*(A::LinearAlgebra.AbstractTriangular, B::$Mod{<:Any,<:$Typ}, C...) = LazyArrays.apply(*,A,B, C...)
             Base.:*(A::$Mod{<:Any,<:$Typ}, B::LinearAlgebra.AbstractTriangular, C...) = LazyArrays.apply(*,A,B, C...)
         end
+        if Typ ≠ :ApplyMatrix
+            ret = quote
+                $ret
+                Base.:*(A::$Mod{<:Any,<:$Typ}, B::ApplyMatrix, C...) = LazyArrays.apply(*,A,B, C...)
+            end
+        end
+        if Typ ≠ :BroadcastMatrix && Typ ≠ :ApplyMatrix
+            ret = quote
+                $ret
+                Base.:*(A::$Mod{<:Any,<:$Typ}, B::BroadcastMatrix, C...) = LazyArrays.apply(*,A,B, C...)
+            end
+        end
     end
 
     esc(ret)
 end
 
-macro lazylmul(Typ)
-    esc(quote
-        LinearAlgebra.lmul!(A::$Typ, x::AbstractVector) = copyto!(x, LazyArrays.Mul(A,x))
-        LinearAlgebra.lmul!(A::$Typ, x::AbstractMatrix) = copyto!(x, LazyArrays.Mul(A,x))
-        LinearAlgebra.lmul!(A::$Typ, x::StridedVector) = copyto!(x, LazyArrays.Mul(A,x))
-        LinearAlgebra.lmul!(A::$Typ, x::StridedMatrix) = copyto!(x, LazyArrays.Mul(A,x))
-    end)
-end
-
 macro lazyldiv(Typ)
     esc(quote
-        LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = (x .= LazyArrays.Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = (x .= LazyArrays.Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = (x .= LazyArrays.Ldiv(A,x))
-        LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = (x .= LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractVector) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::AbstractMatrix) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedVector) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
+        LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
 
         Base.:\(A::$Typ, x::AbstractVector) = LazyArrays.apply(\,A,x)
         Base.:\(A::$Typ, x::AbstractMatrix) = LazyArrays.apply(\,A,x)
     end)
 end
 
-@lazymul ApplyArray
-@lazylmul ApplyArray
-@lazyldiv ApplyArray
-@lazymul BroadcastArray
-@lazylmul BroadcastArray
-@lazyldiv BroadcastArray
+@lazymul ApplyMatrix
+@lazylmul ApplyMatrix
+@lazyldiv ApplyMatrix
+@lazymul BroadcastMatrix
+@lazylmul BroadcastMatrix
+@lazyldiv BroadcastMatrix
