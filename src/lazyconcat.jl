@@ -576,8 +576,10 @@ arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice
 arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) =
     view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
 
-copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:Vcat{T,N}}) where {T,N} = vcat_copyto!(dest, arguments(src)...)
-copyto!(dest::AbstractMatrix{T}, src::SubArray{T,2,<:Hcat{T}}) where T = hcat_copyto!(dest, arguments(src)...)
+copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:Vcat{T,N}}) where {T,N} = 
+    vcat_copyto!(dest, arguments(ApplyLayout{typeof(vcat)}(), src)...)
+copyto!(dest::AbstractMatrix{T}, src::SubArray{T,2,<:Hcat{T}}) where T = 
+    hcat_copyto!(dest, arguments(ApplyLayout{typeof(hcat)}(), src)...)
 
 
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
@@ -597,32 +599,35 @@ function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V)
     _view_vcat.(arguments(A), skr2)
 end
 _vcat_sub_arguments(::ApplyLayout{typeof(hcat)}, A, V) = arguments(ApplyLayout{typeof(hcat)}(), V)
+_vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
 
 _vcat_sub_arguments(A, V) = _vcat_sub_arguments(MemoryLayout(typeof(A)), A, V)
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1}) = _vcat_sub_arguments(parent(V), V)
 
-function arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
+function arguments(L::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
     A = parent(V)
+    args = arguments(L, A)
     kr,jr = parentindices(V)
-    sz = size.(arguments(A),1)
+    sz = size.(args,1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
-    _view_vcat.(arguments(A), skr2, Ref(jr))
+    _view_vcat.(args, skr2, Ref(jr))
 end
 
 _view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
 _view_hcat(a, kr, jr) = view(a, kr, jr)
 
-function arguments(::ApplyLayout{typeof(hcat)}, V::SubArray)
+function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     A = parent(V)
+    args = arguments(L, A)
     kr,jr = parentindices(V)
-    sz = size.(arguments(A),2)
+    sz = size.(args,2)
     sjr = intersect.(_argsindices(sz), Ref(jr))
     sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
-    _view_hcat.(arguments(A), Ref(kr), sjr2)
+    _view_hcat.(args, Ref(kr), sjr2)
 end
 
-function sub_materialize(::ApplyLayout{typeof(vcat)}, V)
+function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix)
     ret = similar(V)
     n = 0
     _,jr = parentindices(V)
@@ -652,6 +657,26 @@ materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}})
 materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) =
     materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))
 
+sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange}} = 
+    PaddedLayout{typeof(sublayout(L(), I))}()
+sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,AbstractUnitRange}} = 
+    PaddedLayout{typeof(sublayout(L(), I))}()    
+
+function sub_materialize(::PaddedLayout, v::AbstractVector{T}) where T
+    A = parent(v)
+    dat = paddeddata(A)
+    (kr,) = parentindices(v)
+    kr2 = kr ∩ axes(dat,1)
+    Vcat(lazy_getindex(dat, kr2), Zeros{T}(length(kr) - length(kr2)))
+end
+
+function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}) where T
+    A = parent(v)
+    dat = paddeddata(A)
+    kr,jr = parentindices(v)
+    kr2 = kr ∩ axes(dat,1)
+    Vcat(lazy_getindex(dat, kr2, jr), Zeros{T}(length(kr) - length(kr2), length(jr)))
+end
 
 ## print
 
