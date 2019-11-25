@@ -289,7 +289,7 @@ BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
 broadcasted(::LazyArrayStyle, op, A::Vcat) =
     Vcat(broadcast(x -> broadcast(op, x), A.args)...)
 
-for Cat in (:Vcat, :Hcat)    
+for Cat in (:Vcat, :Hcat)
     @eval begin
         broadcasted(::LazyArrayStyle, op, A::$Cat, c::Number) =
             $Cat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
@@ -298,7 +298,7 @@ for Cat in (:Vcat, :Hcat)
         broadcasted(::LazyArrayStyle, op, A::$Cat, c::Ref) =
             $Cat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
         broadcasted(::LazyArrayStyle, op, c::Ref, A::$Cat) =
-            $Cat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)    
+            $Cat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)
     end
 end
 
@@ -318,7 +318,7 @@ function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
     ApplyVector(vcat, broadcast((a,b) -> broadcast(op,a,b), A.args, B_arrays)...)
 end
- 
+
 function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
     kr = _vcat_axes(axes.(B.args)...)
     A_arrays = _vcat_getindex_eval(A,kr...)
@@ -440,7 +440,7 @@ for op in (:maximum, :minimum)
     @eval $op(V::Vcat) = $op($op.(V.args))
 end
 
-function in(x, V::Vcat) 
+function in(x, V::Vcat)
     for a in V.args
         in(x, a) && return true
     end
@@ -448,12 +448,12 @@ function in(x, V::Vcat)
 end
 
 _fill!(a, x) = fill!(a,x)
-function _fill!(a::Number, x) 
+function _fill!(a::Number, x)
     a == x || throw(ArgumentError("Cannot set $a to $x"))
     a
 end
 
-function fill!(V::Union{Vcat,Hcat}, x) 
+function fill!(V::Union{Vcat,Hcat}, x)
     for a in V.args
         _fill!(a, x)
     end
@@ -546,8 +546,8 @@ function materialize(d::Dot{<:PaddedLayout,<:PaddedLayout,<:AbstractVector{T},<:
     convert(promote_type(T,V), dot(view(a,1:m), view(b,1:m)))
 end
 
-dot(a::CachedArray, b::AbstractArray) = materialize(Dot(a,b)) 
-dot(a::LazyArray, b::AbstractArray) = materialize(Dot(a,b)) 
+dot(a::CachedArray, b::AbstractArray) = materialize(Dot(a,b))
+dot(a::LazyArray, b::AbstractArray) = materialize(Dot(a,b))
 
 
 ###
@@ -571,9 +571,9 @@ sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
 # a row-slice of an Hcat is equivalent to a Vcat
 sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Number,AbstractVector}}) = ApplyLayout{typeof(vcat)}()
 
-arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) = 
+arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) =
     view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
-arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = 
+arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) =
     view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
 
 copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:Vcat{T,N}}) where {T,N} = 
@@ -638,7 +638,7 @@ function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix)
     end
     ret
 end
-    
+
 function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     ret = similar(V)
     n = 0
@@ -652,10 +652,10 @@ function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
 end
 
 # temporarily allocate. In the future, we add a loop over arguments
-materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) = 
+materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) =
     materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))
-materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) = 
-    materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))    
+materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) =
+    materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))
 
 sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange}} = 
     PaddedLayout{typeof(sublayout(L(), I))}()

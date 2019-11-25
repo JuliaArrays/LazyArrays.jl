@@ -29,6 +29,8 @@ BroadcastArray(bc::Broadcasted{S}) where S =
     _BroadcastArray(instantiate(Broadcasted{S}(bc.f, _broadcast2broadcastarray(bc.args...))))
 
 BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
+BroadcastArray{T,N}(f, A...) where {T,N} = BroadcastArray{T,N,typeof(f),typeof(A)}(f, A)
+
 BroadcastMatrix(f, A...) = BroadcastMatrix(broadcasted(f, A...))
 BroadcastVector(f, A...) = BroadcastVector(broadcasted(f, A...))
 
