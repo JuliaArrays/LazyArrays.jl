@@ -5,7 +5,7 @@ end
 
 
 _sortunion(inds...) = sort!(union(inds...))
-function _sortunion(inds::Vararg{StepRange,N}) where N
+function _sortunion(inds::Vararg{AbstractRange,N}) where N
     all(isequal(N), map(step, inds)) || throw(ArgumentError("incompatible"))
     sort([map(first, inds)...]) == OneTo(N) || throw(ArgumentError("incompatible"))
     n = mapreduce(length, +, inds)
