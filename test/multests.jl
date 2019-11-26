@@ -1073,4 +1073,15 @@ end
         @test MemoryLayout(typeof(transpose(V))) isa ApplyLayout{typeof(*)}
         @test transpose(V) == ApplyArray(transpose(V))
     end
+
+    @testset "row-vec * fix" begin
+        A = ApplyArray(*,[1 2; 3 4], Vcat(Fill(1,1,3),Fill(2,1,3)))
+        V = view(A, 2, 1:2)
+        @test arguments(V) == ([1 2; 1 2], [3,4])
+        @test ApplyArray(V) == Array(V) == A[2,1:2] == Array(A)[2,1:2]
+
+        V = view(A, 1:2, 2)
+        @test arguments(V) == ([1 2; 3 4], [1,2])
+        @test ApplyArray(V) == Array(V) == A[1:2,2] == Array(A)[1:2,2]
+    end
 end

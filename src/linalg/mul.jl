@@ -191,28 +191,33 @@ sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 
 call(::ApplyLayout{typeof(*)}, V::SubArray) = *
 
-function _mat_mul_arguments(V)
-    P = parent(V)
-    kr, jr = parentindices(V)
-    as = arguments(P)
-    kjr = intersect.(_mul_args_rows(kr, as...), _mul_args_cols(jr, reverse(as)...))
-    view.(as, (kr, kjr...), (kjr..., jr))
+function _mat_mul_arguments(args, (kr,jr))
+    kjr = intersect.(_mul_args_rows(kr, args...), _mul_args_cols(jr, reverse(args)...))
+    view.(args, (kr, kjr...), (kjr..., jr))
 end
-
 
 _vec_mul_view(a...) = view(a...)
 _vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
 
-function _vec_mul_arguments(V)
-    P = parent(V)
-    kr, = parentindices(V)
-    as = arguments(P)
-    kjr = intersect.(_mul_args_rows(kr, as...), _mul_args_cols(Base.OneTo(1), reverse(as)...))
-    _vec_mul_view.(as, (kr, kjr...), (kjr..., :))
+_to_range(a::AbstractVector) = a
+_to_range(a) = a:a
+
+# this is a vector view of a MulVector
+function _vec_mul_arguments(args, (kr,))
+    kjr = intersect.(_mul_args_rows(kr, args...), _mul_args_cols(Base.OneTo(1), reverse(args)...))
+    _vec_mul_view.(args, (_to_range(kr), kjr...), (kjr..., :))
 end
 
-arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V)
-arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
+# this is a vector view of a MulMatrix
+_vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) = 
+    _mat_mul_arguments(args, (kr,jr))
+
+# this is a row-vector view
+_vec_mul_arguments(args, (kr,jr)::Tuple{Number,AbstractVector}) =
+    _vec_mul_arguments(reverse(map(transpose, args)), (jr,kr))
+
+arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(arguments(parent(V)), parentindices(V))
+arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(arguments(parent(V)), parentindices(V))
 
 @inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
 @inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} = 
