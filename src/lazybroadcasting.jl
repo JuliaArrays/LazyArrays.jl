@@ -40,6 +40,8 @@ BroadcastMatrix(A::BroadcastMatrix) = A
 
 Broadcasted(A::BroadcastArray) = instantiate(broadcasted(A.f, A.args...))
 
+@inline BroadcastArray(A::AbstractArray) = BroadcastArray(call(A), arguments(A)...)
+
 axes(A::BroadcastArray) = axes(Broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
 
@@ -174,3 +176,34 @@ for op in (:+, :-)
         rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(size(A)), A.args, j)...)
     end
 end
+
+
+###
+# SubArray
+###
+
+call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
+
+sublayout(b::BroadcastLayout, _) = b
+
+
+_broadcastviewinds(::Tuple{}, inds) = ()
+_broadcastviewinds(sz, inds) = 
+    tuple(isone(sz[1]) ? OneTo(sz[1]) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
+
+_broadcastview(a, inds) = view(a, _broadcastviewinds(size(a), inds)...)
+
+function arguments(b::BroadcastLayout, V::SubArray)
+    args = arguments(parent(V))
+    _broadcastview.(args, Ref(parentindices(V)))
+end
+
+###
+# Transpose
+###
+
+call(b::BroadcastLayout, a::AdjOrTrans) = call(b, parent(a))
+
+transposelayout(b::BroadcastLayout) = b
+arguments(b::BroadcastLayout, A::Adjoint) = map(adjoint, arguments(b, parent(A)))
+arguments(b::BroadcastLayout, A::Transpose) = map(transpose, arguments(b, parent(A)))
