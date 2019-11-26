@@ -32,6 +32,8 @@ BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
 BroadcastMatrix(f, A...) = BroadcastMatrix(broadcasted(f, A...))
 BroadcastVector(f, A...) = BroadcastVector(broadcasted(f, A...))
 
+BroadcastArray{T,N}(f, A...) where {T,N} = BroadcastArray{T,N,typeof(f),typeof(A)}(f, A)
+
 BroadcastArray(b::BroadcastArray) = b
 BroadcastVector(A::BroadcastVector) = A
 BroadcastMatrix(A::BroadcastMatrix) = A
