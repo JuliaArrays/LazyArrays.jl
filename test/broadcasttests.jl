@@ -1,5 +1,6 @@
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Test
 import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle
+import Base: broadcasted
 
 @testset "Broadcasting" begin
     @testset "BroadcastArray" begin
