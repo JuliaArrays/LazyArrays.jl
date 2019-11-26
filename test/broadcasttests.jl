@@ -1,5 +1,5 @@
-using LazyArrays, ArrayLayouts, Test
-import LazyArrays: BroadcastLayout, arguments
+using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Test
+import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle
 
 @testset "Broadcasting" begin
     @testset "BroadcastArray" begin
@@ -112,13 +112,13 @@ import LazyArrays: BroadcastLayout, arguments
     @testset "Sub-broadcast" begin
         A = BroadcastArray(exp,randn(5,5))
         V = view(A, 1:2,2:3)
-        @test MemoryLayout(typeof(A)) isa BroadcastLayout{typeof(exp)}
+        @test MemoryLayout(typeof(V)) isa BroadcastLayout{typeof(exp)}
         @test BroadcastArray(V) == A[1:2,2:3] == Array(A)[1:2,2:3]
 
         B = BroadcastArray(-, randn(5,5), randn(5))
         V = view(B, 1:2,2:3)
-        @test MemoryLayout(typeof(A)) isa BroadcastLayout{typeof(exp)}
-        @test BroadcastArray(V) == A[1:2,2:3] == Array(A)[1:2,2:3]
+        @test MemoryLayout(typeof(V)) isa BroadcastLayout{typeof(-)}
+        @test BroadcastArray(V) == B[1:2,2:3] == Array(B)[1:2,2:3]
     end
 
     @testset "AdjTrans" begin
