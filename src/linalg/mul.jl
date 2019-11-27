@@ -199,13 +199,10 @@ end
 _vec_mul_view(a...) = view(a...)
 _vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
 
-_to_range(a::AbstractVector) = a
-_to_range(a) = a:a
-
 # this is a vector view of a MulVector
 function _vec_mul_arguments(args, (kr,))
     kjr = intersect.(_mul_args_rows(kr, args...), _mul_args_cols(Base.OneTo(1), reverse(args)...))
-    _vec_mul_view.(args, (_to_range(kr), kjr...), (kjr..., :))
+    _vec_mul_view.(args, (kr, kjr...), (kjr..., :))
 end
 
 # this is a vector view of a MulMatrix
@@ -216,8 +213,11 @@ _vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) =
 _vec_mul_arguments(args, (kr,jr)::Tuple{Number,AbstractVector}) =
     _vec_mul_arguments(reverse(map(transpose, args)), (jr,kr))
 
-arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(arguments(parent(V)), parentindices(V))
-arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(arguments(parent(V)), parentindices(V))
+_mat_mul_arguments(V) = _mat_mul_arguments(arguments(parent(V)), parentindices(V))
+_vec_mul_arguments(V) = _vec_mul_arguments(arguments(parent(V)), parentindices(V))
+
+arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V)
+arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
 
 @inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
 @inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} = 

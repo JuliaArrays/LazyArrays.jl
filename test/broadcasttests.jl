@@ -126,21 +126,27 @@ import Base: broadcasted
         A = BroadcastArray(exp,randn(5,5))
         @test MemoryLayout(typeof(transpose(A))) isa BroadcastLayout{typeof(exp)}
         @test MemoryLayout(typeof(A')) isa BroadcastLayout{typeof(exp)}
-        @test BroadcastArray(A') == A' == Array(A)'
+        @test BroadcastArray(A') == BroadcastArray(transpose(A)) == A' == Array(A)'
 
         B = BroadcastArray(-, randn(5,5), randn(5))
         @test MemoryLayout(typeof(transpose(B))) isa BroadcastLayout{typeof(-)}
         @test MemoryLayout(typeof(B')) isa BroadcastLayout{typeof(-)}  
-        @test BroadcastArray(B') == B' == Array(B)'      
+        @test BroadcastArray(B') == BroadcastArray(transpose(B)) == B' == Array(B)'      
 
-        V = view(B', 1:2,1:3)
-        @test MemoryLayout(typeof(V)) isa BroadcastLayout{typeof(-)}
-        @test arguments(V) == (B.args[1][1:3,1:2]', permutedims(B.args[2][1:3]))
-        @test BroadcastArray(V) == V == (Array(B)')[1:2,1:3]
+        Vc = view(B', 1:2,1:3)
+        Vt = view(transpose(B), 1:2,1:3)
+        @test MemoryLayout(typeof(Vc)) isa BroadcastLayout{typeof(-)}
+        @test MemoryLayout(typeof(Vt)) isa BroadcastLayout{typeof(-)}
+        @test arguments(Vc) == (B.args[1][1:3,1:2]', permutedims(B.args[2][1:3]))
+        @test arguments(Vt) == (transpose(B.args[1][1:3,1:2]), permutedims(B.args[2][1:3]))
+        @test BroadcastArray(Vc) == BroadcastArray(Vt) == Vc == Vt == (Array(B)')[1:2,1:3]
         
-        V = view(B,1:3,1:2)'
-        @test MemoryLayout(typeof(V)) isa BroadcastLayout{typeof(-)}
-        @test arguments(V) == (B.args[1][1:3,1:2]', permutedims(B.args[2][1:3]))
-        @test BroadcastArray(V) == V == (Array(B)')[1:2,1:3]
+        Vc = view(B,1:3,1:2)'
+        Vt = transpose(view(B,1:3,1:2))
+        @test MemoryLayout(typeof(Vc)) isa BroadcastLayout{typeof(-)}
+        @test MemoryLayout(typeof(Vt)) isa BroadcastLayout{typeof(-)}
+        @test arguments(Vc) == (B.args[1][1:3,1:2]', permutedims(B.args[2][1:3]))
+        @test arguments(Vt) == (transpose(B.args[1][1:3,1:2]), permutedims(B.args[2][1:3]))
+        @test BroadcastArray(Vc) == BroadcastArray(Vt) == Vc == (Array(B)')[1:2,1:3]      
     end
 end
