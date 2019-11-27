@@ -191,25 +191,30 @@ sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 
 call(::ApplyLayout{typeof(*)}, V::SubArray) = *
 
-function _mat_mul_arguments(V)
-    P = parent(V)
-    kr, jr = parentindices(V)
-    as = arguments(P)
-    kjr = intersect.(_mul_args_rows(kr, as...), _mul_args_cols(jr, reverse(as)...))
-    view.(as, (kr, kjr...), (kjr..., jr))
+function _mat_mul_arguments(args, (kr,jr))
+    kjr = intersect.(_mul_args_rows(kr, args...), _mul_args_cols(jr, reverse(args)...))
+    view.(args, (kr, kjr...), (kjr..., jr))
 end
-
 
 _vec_mul_view(a...) = view(a...)
 _vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
 
-function _vec_mul_arguments(V)
-    P = parent(V)
-    kr, = parentindices(V)
-    as = arguments(P)
-    kjr = intersect.(_mul_args_rows(kr, as...), _mul_args_cols(Base.OneTo(1), reverse(as)...))
-    _vec_mul_view.(as, (kr, kjr...), (kjr..., :))
+# this is a vector view of a MulVector
+function _vec_mul_arguments(args, (kr,))
+    kjr = intersect.(_mul_args_rows(kr, args...), _mul_args_cols(Base.OneTo(1), reverse(args)...))
+    _vec_mul_view.(args, (kr, kjr...), (kjr..., :))
 end
+
+# this is a vector view of a MulMatrix
+_vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) = 
+    _mat_mul_arguments(args, (kr,jr))
+
+# this is a row-vector view
+_vec_mul_arguments(args, (kr,jr)::Tuple{Number,AbstractVector}) =
+    _vec_mul_arguments(reverse(map(transpose, args)), (jr,kr))
+
+_mat_mul_arguments(V) = _mat_mul_arguments(arguments(parent(V)), parentindices(V))
+_vec_mul_arguments(V) = _vec_mul_arguments(arguments(parent(V)), parentindices(V))
 
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V)
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
