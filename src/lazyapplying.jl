@@ -184,7 +184,7 @@ AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, ma
 
 @inline axes(A::ApplyArray) = axes(Applied(A))
 @inline size(A::ApplyArray) = map(length, axes(A))
-@inline copy(A::ApplyArray) = ApplyArray(A.f, map(copy,A.args)...)
+@inline copy(A::ApplyArray{T,N}) where {T,N} = ApplyArray{T,N}(A.f, map(copy,A.args)...)
 
 
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
