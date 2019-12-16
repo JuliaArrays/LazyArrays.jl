@@ -87,11 +87,11 @@ function Base._prod(f, A::BroadcastArray, ::Colon)
 end
 
 
-BroadcastStyle(::Type{<:BroadcastArray{<:Any,N}}) where N = LazyArrayStyle{N}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:BroadcastVector{<:Any}}}) where N = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:BroadcastVector{<:Any}}}) where N = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:BroadcastMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:BroadcastMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:LazyArray{<:Any,N}}) where N = LazyArrayStyle{N}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyVector{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
 BroadcastStyle(L::LazyArrayStyle{N}, ::StaticArrayStyle{N}) where N = L
 BroadcastStyle(::StaticArrayStyle{N}, L::LazyArrayStyle{N})  where N = L
 

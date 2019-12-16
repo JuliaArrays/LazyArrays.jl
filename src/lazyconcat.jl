@@ -703,3 +703,7 @@ function replace_in_print_matrix(f::Vcat{<:Any,2}, k::Integer, j::Integer, s::Ab
     end
     throw(BoundsError(f, (k,j)))
 end
+
+# searchsorted
+
+# function searchsorted(f::Vcat{<:Any,1}
