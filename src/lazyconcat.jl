@@ -660,14 +660,17 @@ materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}})
 sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange}} = 
     PaddedLayout{typeof(sublayout(L(), I))}()
 sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,AbstractUnitRange}} = 
-    PaddedLayout{typeof(sublayout(L(), I))}()    
+    PaddedLayout{typeof(sublayout(L(), I))}() 
+    
+_lazy_getindex(dat, kr2) = lazy_getindex(dat, kr2)    
+_lazy_getindex(dat::Number, kr2) = dat
 
 function sub_materialize(::PaddedLayout, v::AbstractVector{T}) where T
     A = parent(v)
     dat = paddeddata(A)
     (kr,) = parentindices(v)
     kr2 = kr ∩ axes(dat,1)
-    Vcat(lazy_getindex(dat, kr2), Zeros{T}(length(kr) - length(kr2)))
+    Vcat(_lazy_getindex(dat, kr2), Zeros{T}(length(kr) - length(kr2)))
 end
 
 function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}) where T

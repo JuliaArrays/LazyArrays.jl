@@ -55,6 +55,8 @@ size(A::BroadcastArray) = map(length, axes(A))
 
 getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
     BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)
+getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) =
+    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)    
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
 
