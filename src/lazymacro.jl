@@ -64,6 +64,10 @@ app_expr_impl(x) = x
 function app_expr_impl(ex::Expr)
     # walk down chain of calls and lazy-ify them
     if is_call(ex)
+        if isexpr(ex.args[1], :$)
+            # eagerly evaluate the call
+            return Expr(:call, ex.args[1].args[1], ex.args[2:end]...)
+        end
         return :($applied($(app_expr_impl.(ex.args)...)))
     else
         return lazy_expr(ex)
