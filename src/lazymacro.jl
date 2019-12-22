@@ -15,10 +15,17 @@ Broadcast.materialize(x::LazyCast) = x.value
 
 is_call(ex) = isexpr(ex, :call) && !is_dotcall(ex)
 
-is_dotcall(ex) =
-    (isexpr(ex, :.) && isexpr(ex.args[2], :tuple)) ||
-    (isexpr(ex, :call) && ex.args[1] isa Symbol && startswith(String(ex.args[1]), "."))
-# e.g., `f.(x, y, z)` or `x .+ y .+ z`
+is_dotcall(ex) = is_dotcall_fn(ex) || is_dotcall_op(ex)
+
+is_dotcall_fn(ex) = (isexpr(ex, :.) && isexpr(ex.args[2], :tuple))
+# e.g., `f.(x, y, z)`
+
+function is_dotcall_op(ex)
+    ex isa Expr && !isempty(ex.args) || return false
+    op = ex.args[1]
+    return op isa Symbol && Base.isoperator(op) && startswith(string(op), ".")
+end
+# e.g., `x .+ y .+ z`
 
 lazy_expr(x) = x
 function lazy_expr(ex::Expr)
@@ -40,12 +47,12 @@ end
 bc_expr_impl(x) = x
 function bc_expr_impl(ex::Expr)
     # walk down chain of dot calls
-    if ex.head == :. && ex.args[2].head === :tuple
+    if is_dotcall_fn(ex)
         @assert length(ex.args) == 2  # argument is always expressed as a tuple
         f = ex.args[1]  # function name
         args = ex.args[2].args
         return Expr(ex.head, lazy_expr(f), Expr(:tuple, bc_expr_impl.(args)...))
-    elseif ex.head == :call && startswith(String(ex.args[1]), ".")
+    elseif is_dotcall_op(ex)
         f = ex.args[1]  # function name (e.g., `.+`)
         args = ex.args[2:end]
         return Expr(ex.head, lazy_expr(f), bc_expr_impl.(args)...)
