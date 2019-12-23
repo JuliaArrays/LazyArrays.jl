@@ -21,7 +21,7 @@ is_dotcall_fn(ex) = (isexpr(ex, :.) && isexpr(ex.args[2], :tuple))
 # e.g., `f.(x, y, z)`
 
 function is_dotcall_op(ex)
-    ex isa Expr && !isempty(ex.args) || return false
+    isexpr(ex, :call) && !isempty(ex.args) || return false
     op = ex.args[1]
     return op isa Symbol && Base.isoperator(op) && startswith(string(op), ".")
 end
