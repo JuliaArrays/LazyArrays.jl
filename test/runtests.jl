@@ -157,6 +157,7 @@ end
     @test cache(C) isa CachedArray{Int,2,Matrix{Int},typeof(A)}
     C2 = cache(C)
     @test C2.data !== C.data
+    @test C[1:2,1:2] == [1 11; 2 12]
 
     A = reshape(1:10^3, 10,10,10)
     C = cache(A)
@@ -256,6 +257,21 @@ end
         z = Zeros(100)
         @test v .+ c == c .+ v == Array(c) + Array(v)
         @test z .+ c == c .+ z == Array(c)
+    end
+
+    @testset "Fill" begin
+        c = cache(Fill(1,10))
+        @test c[2:3] isa LazyArrays.CachedVector{Int,Vector{Int},Fill{Int,1,Tuple{Base.OneTo{Int}}}}
+        @test c[[2,4,6]] isa LazyArrays.CachedVector{Int,Vector{Int},Fill{Int,1,Tuple{Base.OneTo{Int}}}}
+    end
+
+    @testset "linalg" begin
+        c = cache(Fill(3,3,3))
+        @test fill(2,1,3) * c == fill(18,1,3)
+        @test ApplyMatrix(exp,fill(3,3,3)) * c == exp(fill(3,3,3)) * fill(3,3,3)
+        @test BroadcastMatrix(exp,fill(3,3,3)) * c == exp.(fill(3,3,3)) * fill(3,3,3)
+        @test fill(2,3)' * c == fill(18,1,3)
+        @test fill(2,3,1)' * c == fill(18,1,3)
     end
 end
 
