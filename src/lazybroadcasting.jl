@@ -23,6 +23,7 @@ BroadcastMatrix(bc::Broadcasted) = BroadcastMatrix{combine_eltypes(bc.f, bc.args
 
 _broadcast2broadcastarray() = ()
 _broadcast2broadcastarray(a, b...) = tuple(a, _broadcast2broadcastarray(b...)...)
+_broadcast2broadcastarray(a::Broadcasted{DefaultArrayStyle{0}}, b...) = tuple(materialize(a), _broadcast2broadcastarray(b...)...)
 _broadcast2broadcastarray(a::Broadcasted, b...) = tuple(BroadcastArray(a), _broadcast2broadcastarray(b...)...)
 
 _BroadcastArray(bc::Broadcasted) = BroadcastArray{combine_eltypes(bc.f, bc.args)}(bc)

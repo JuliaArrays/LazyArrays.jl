@@ -344,4 +344,7 @@ end
 
     bc = BroadcastArray(broadcasted(+, 1:10, broadcasted(sin, 1:10)))
     @test bc[1:10] == (1:10) .+ sin.(1:10)
+    
+    bc = BroadcastArray(broadcasted(+,1:10,broadcasted(+,1,2)))
+    @test bc.args[2] == 3
 end
