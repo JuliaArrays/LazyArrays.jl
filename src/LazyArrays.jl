@@ -60,10 +60,11 @@ end
 
 export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum,
-        applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
+        applied, materialize, materialize!, @materialize, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
 
 
 include("lazyapplying.jl")
+include("materialize_dsl.jl")
 include("lazybroadcasting.jl")
 include("linalg/linalg.jl")
 include("cache.jl")
