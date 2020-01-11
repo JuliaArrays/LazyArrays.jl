@@ -159,11 +159,11 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector
         B = ApplyMatrix(exp,A)
         C = BroadcastMatrix(exp,A)
         x = cache(Fill(3,2))
-        @test A*x == A*Vector(x)
-        @test B*x == Matrix(B)*Vector(x)
-        @test C*x == Matrix(C)*Vector(x)
-        @test A'x == Matrix(A)'Vector(x)
-        @test B'x == Matrix(B)'Vector(x)
-        @test C'x == Matrix(C)'Vector(x)
+        @test A*x ≈ A*Vector(x)
+        @test B*x ≈ Matrix(B)*Vector(x)
+        @test C*x ≈ Matrix(C)*Vector(x)
+        @test A'x ≈ Matrix(A)'Vector(x)
+        @test B'x ≈ Matrix(B)'Vector(x)
+        @test C'x ≈ Matrix(C)'Vector(x)
     end
 end
