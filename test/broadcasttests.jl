@@ -20,7 +20,8 @@ import Base: broadcasted
         B = BroadcastArray(exp, A)
         
         @test Matrix(B) == exp.(A)
-
+        @test B[1] == exp(A[1,1])
+        @test B[7] == exp(A[1,2])
 
         C = BroadcastArray(+, A, 2)
         @test C == A .+ 2
@@ -50,7 +51,7 @@ import Base: broadcasted
         A = Vcat([[1 2; 3 4]], [[4 5; 6 7]])
         @test A .+ Ref(I) == Ref(I) .+ A == Vcat([[2 2; 3 5]], [[5 5; 6 8]])
 
-        @test_broken BroadcastArray(*,1.1,[1 2])[1] == 1.1
+        @test BroadcastArray(*,1.1,[1 2])[1] == 1.1
 
         B = BroadcastArray(*, Diagonal(randn(5)), randn(5,5))
         @test B == broadcast(*,B.args...)

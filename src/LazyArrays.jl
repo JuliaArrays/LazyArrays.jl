@@ -37,7 +37,7 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         materialize!, eltypes
 
 import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, Abuf, Bbuf, Cbuf, dot, factorize, qr, lu, cholesky,
-                        norm2, norm1, normInf, normMinusInf, det, tr, AdjOrTrans
+                        norm2, norm1, normInf, normp, normMinusInf, det, tr, AdjOrTrans
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
@@ -71,5 +71,8 @@ include("lazyconcat.jl")
 include("lazysetoperations.jl")
 include("lazyoperations.jl")
 include("lazymacro.jl")
+
+# support x^2
+Base.to_power_type(x::LazyArray) = x
 
 end # module
