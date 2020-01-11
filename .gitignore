@@ -3,3 +3,4 @@
 *.jl.mem
 deps/deps.jl
 .DS_Store
+Manifest.toml
