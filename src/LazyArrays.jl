@@ -37,7 +37,7 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         materialize!, eltypes
 
 import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, Abuf, Bbuf, Cbuf, dot, factorize, qr, lu, cholesky,
-                        norm2, norm1, normInf, normMinusInf, det, tr, AdjOrTrans
+                        norm2, norm1, normInf, normMinusInf, det, logdet, logabsdet, tr, AdjOrTrans
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
@@ -45,7 +45,7 @@ import FillArrays: AbstractFill, getindex_value
 
 import StaticArrays: StaticArrayStyle
 
-import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, 
+import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv,
                         transposelayout, conjlayout, sublayout, triangularlayout, triangulardata,
                         reshapedlayout, diagonallayout, adjointlayout, sub_materialize,
                         check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport,

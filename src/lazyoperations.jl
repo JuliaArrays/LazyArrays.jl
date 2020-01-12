@@ -24,11 +24,12 @@ axes(a::Kron{<:Any,2}) = (OneTo(size(a,1)), OneTo(size(a,2)))
 axes(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> OneTo(size(a, M)), Val(N)))
 
 
-function det(K::Kron{<:Any, 2})
-    (size(K, 1) == size(K, 2)) || throw(DimensionMismatch("matrix is not square: dimensions are $(size(K))"))
+diag(K::Kron{<:Any, 2}) = kron(diag.(K.args)...)
 
-    d = 1.
-    s = size(K, 1)
+
+function det(K::Kron{T, 2}) where T<:Number
+    s = checksquare(K)
+    d = one(T)
 
     for A in K.args
         if size(A, 1) == size(A, 2)
@@ -41,16 +42,59 @@ function det(K::Kron{<:Any, 2})
             # The Kronecker Product of rectangular matrices, if it is square, will
             # have determinant zero. This can be shown by using the fact that
             # rank(A ⊗ B) = rank(A)rank(B) and showing that this is strictly less
-            # than the number of rows in the resulting Kronecker matrix. Hence,
+            # than the number of rows/cols in the resulting Kronecker matrix. Hence,
             # since A ⊗ B does not have full rank, its determinant must be zero.
-            return zero(d)
+            return zero(T)
         end
     end
     return d
 end
 
+
+function logdet(K::Kron{T, 2}) where T<:Number
+    s = checksquare(K)
+    d = zero(T)
+
+    for A in K.args
+        if size(A, 1) == size(A, 2)
+            ldA = logdet(A)
+            if isinf(ldA)
+                return ldA
+            end
+            d += (s ÷ size(A, 1)) * ldA
+        else
+            # see definition of det above for explanation
+            return float(T)(-Inf)
+        end
+    end
+    return d
+end
+
+
+function logabsdet(K::Kron{T, 2}) where T<:Number
+    s = checksquare(K)
+    d = zero(T)
+    sgn = one(T)
+
+    for A in K.args
+        if size(A, 1) == size(A, 2)
+            ldA, sgnA = logabsdet(A)
+            if isinf(ldA)
+                return ldA, sgnA
+            end
+            d += (s ÷ size(A, 1)) * ldA
+            sgn *= sgnA
+        else
+            # see definition of det above for explanation
+            return float(T)(-Inf), zero(T)
+        end
+    end
+    return d, sgn
+end
+
+
 function tr(K::Kron{<:Any, 2})
-    (size(K, 1) == size(K, 2)) || throw(DimensionMismatch("matrix is not square: dimensions are $(size(K))"))
+    checksquare(K)
     if all(A -> (size(A, 1) == size(A, 2)), K.args)  # check if all component matrices are square
         return prod(tr.(K.args))
     else

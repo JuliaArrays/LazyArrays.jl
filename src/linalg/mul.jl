@@ -55,10 +55,10 @@ size(M::Mul) = length.(axes(M))
 # *(A, B::Mul) = apply(*,A, B.args...)
 ⋆(A...) = Mul(A...)
 
-function show(io::IO, A::Mul) 
-    if length(A.args) == 0 
+function show(io::IO, A::Mul)
+    if length(A.args) == 0
         print(io, "⋆()")
-        return 
+        return
     end
     print(io, first(A.args))
     for a in A.args[2:end]
@@ -121,7 +121,7 @@ function _mul_colsupport(j, Z::AbstractArray, Y...)
     rws = colsupport(Z,j)
     a = size(Z,1)+1
     b = 0
-    for k in rws 
+    for k in rws
         cs = _mul_colsupport(k, Y...)
         a = min(a,first(cs))
         b = max(b,last(cs))
@@ -164,12 +164,12 @@ function getindex(M::Mul, k::Integer, j::Integer)
     ret
 end
 
-@propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer, j::Integer) = 
+@propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer, j::Integer) =
     Applied{DefaultArrayApplyStyle}(A)[k,j]
 
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
-flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
- 
+flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))
+
 adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
 transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
 
@@ -179,11 +179,11 @@ transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
 
 # determine rows/cols of multiplication
 __mul_args_rows(kr, a) = (kr,)
-__mul_args_rows(kr, a, b...) = 
+__mul_args_rows(kr, a, b...) =
     (kr, __mul_args_rows(rowsupport(a,kr), b...)...)
 _mul_args_rows(kr, a, b...) = __mul_args_rows(rowsupport(a,kr), b...)
 __mul_args_cols(jr, z) = (jr,)
-__mul_args_cols(jr, z, y...) = 
+__mul_args_cols(jr, z, y...) =
     (__mul_args_cols(colsupport(z,jr), y...)..., jr)
 _mul_args_cols(jr, z, y...) = __mul_args_cols(colsupport(z,jr), y...)
 
@@ -206,7 +206,7 @@ function _vec_mul_arguments(args, (kr,))
 end
 
 # this is a vector view of a MulMatrix
-_vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) = 
+_vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) =
     _mat_mul_arguments(args, (kr,jr))
 
 # this is a row-vector view
@@ -220,11 +220,11 @@ arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
 
 @inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
-@inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} = 
+@inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} =
     copyto!(dest, Applied(src))
 
 ##
-# adoint Mul
+# adjoint Mul
 ##
 
 adjointlayout(::Type, ::ApplyLayout{typeof(*)}) = ApplyLayout{typeof(*)}()
@@ -238,9 +238,9 @@ arguments(::ApplyLayout{typeof(*)}, V::Transpose) = reverse(transpose.(arguments
 
 
 
-## 
+##
 # * specialcase
-##    
+##
 
 for op in (:*, :\)
     @eval broadcasted(::DefaultArrayStyle{N}, ::typeof($op), a::Number, b::ApplyArray{<:Number,N,typeof(*)}) where N =
@@ -286,7 +286,7 @@ for op in (:factorize, :qr, :lu, :cholesky)
     @eval begin
         $op(B::LazyMatrix) = apply($op, B)
         ApplyStyle(::typeof($op), B::Type{<:AbstractMatrix}) = factorizestyle(MemoryLayout(B))
-        materialize(A::Applied{DefaultArrayApplyStyle,typeof($op),<:Tuple{<:AbstractMatrix{T}}}) where T = 
+        materialize(A::Applied{DefaultArrayApplyStyle,typeof($op),<:Tuple{<:AbstractMatrix{T}}}) where T =
             Base.invoke($op, Tuple{AbstractMatrix{T}}, A.args...)
 
         eltype(A::Applied{<:Any,typeof($op)}) = float(eltype(first(A.args)))
