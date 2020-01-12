@@ -1,6 +1,6 @@
 ## CachedOperator
 
-mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} <: AbstractArray{T,N}
+mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} <: LazyArray{T,N}
     data::DM
     array::M
     datasize::NTuple{N,Int}
@@ -72,6 +72,8 @@ function getindex(A::CachedArray, I...)
     resizedata!(A, _maximum.(axes(A), I)...)
     A.data[I...]
 end
+
+@inline getindex(A::CachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
 
 getindex(A::CachedVector, ::Colon) = copy(A)
 getindex(A::CachedVector, ::Slice) = copy(A)
@@ -147,6 +149,9 @@ function convexunion(a::AbstractVector, b::AbstractVector)
     min(minimum(a),minimum(b)):max(maximum(a),maximum(b))
 end
 
+convexunion(a::AbstractVector, b::AbstractVector, c::AbstractVector...) = 
+    convexunion(convexunion(a,b), c...)
+
 function colsupport(A::CachedMatrix, i) 
     isempty(i) && return 1:0
     minimum(i) ≤ A.datasize[2] ? convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1])) : colsupport(A.array, i)
@@ -167,10 +172,15 @@ replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractStri
 ###
 
 zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = zero!(A.data)
-function getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector) where T
+function _cached_getindex_vector(A, I)
     @boundscheck checkbounds(A, I)
     CachedArray(A.data[I ∩ OneTo(A.datasize[1])], A.array[OneTo(length(I))])
 end
+
+getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector) where T = 
+    _cached_getindex_vector(A, I)
+getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractUnitRange) where T = 
+    _cached_getindex_vector(A, I)    
 
 ###
 # MemoryLayout
@@ -236,4 +246,16 @@ end
 norm1(a::CachedVector) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1]+1:end]),1)
 norm2(a::CachedVector) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
 normInf(a::CachedVector) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
-normp(a::CachedVector, p) = (norm(paddeddata(a),2)^p + norm(@view(a.array[a.datasize[1]+1:end]),2)^p)^inv(p)
+normp(a::CachedVector, p) = (norm(paddeddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
+
+####
+# algebra
+####
+
+@lazymul CachedMatrix
+*(A::AbstractMatrix, b::CachedVector) = apply(*, A, b)
+*(A::ApplyMatrix, b::CachedVector) = apply(*, A, b)
+*(A::BroadcastMatrix, b::CachedVector) = apply(*, A, b)
+*(A::Adjoint{<:Any,<:AbstractMatrix{T}}, b::CachedVector) where T = apply(*, A, b)
+*(A::Adjoint{<:Any,<:ApplyMatrix{T}}, b::CachedVector) where T = apply(*, A, b)
+*(A::Adjoint{<:Any,<:BroadcastMatrix{T}}, b::CachedVector) where T = apply(*, A, b)

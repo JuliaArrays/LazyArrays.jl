@@ -209,7 +209,7 @@ abstract type AbstractLazyLayout <: MemoryLayout end
 struct LazyLayout <: AbstractLazyLayout end
 
 
-MemoryLayout(::Type{<:LazyArray}) = LazyArrayLayout()
+MemoryLayout(::Type{<:LazyArray}) = LazyLayout()
 
 transposelayout(L::LazyLayout) = L
 conjlayout(L::LazyLayout) = L
@@ -269,6 +269,7 @@ end
 
 @inline getindex(A::LazyMatrix, kr::Colon, jr::Colon) = lazy_getindex(A, kr, jr)
 @inline getindex(A::LazyMatrix, kr::Colon, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
+@inline getindex(A::LazyVector, kr::AbstractUnitRange) = lazy_getindex(A, kr)
 @inline getindex(A::LazyMatrix, kr::AbstractUnitRange, jr::Colon) = lazy_getindex(A, kr, jr)
 @inline getindex(A::LazyMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
 

@@ -26,7 +26,7 @@ end
 @inline ndims(A::Applied{<:Any,typeof(vcat),Tuple{}}) = 1
 @inline axes(f::Vcat{<:Any,1,Tuple{}}) = (OneTo(0),)
 @inline axes(f::Vcat{<:Any,1}) = tuple(OneTo(+(map(length,f.args)...)))
-@inline axes(f::Vcat{<:Any,2}) = (OneTo(+(map(a -> size(a,1), f.args)...)), OneTo(size(f.args[1],2)))
+@inline axes(f::Vcat{<:Any,2}) = (OneTo(+(map(a -> size(a,1), f.args)...)), axes(f.args[1],2))
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
@@ -660,14 +660,17 @@ materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}})
 sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange}} = 
     PaddedLayout{typeof(sublayout(L(), I))}()
 sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,AbstractUnitRange}} = 
-    PaddedLayout{typeof(sublayout(L(), I))}()    
+    PaddedLayout{typeof(sublayout(L(), I))}() 
+    
+_lazy_getindex(dat, kr2) = lazy_getindex(dat, kr2)    
+_lazy_getindex(dat::Number, kr2) = dat
 
 function sub_materialize(::PaddedLayout, v::AbstractVector{T}) where T
     A = parent(v)
     dat = paddeddata(A)
     (kr,) = parentindices(v)
     kr2 = kr ∩ axes(dat,1)
-    Vcat(lazy_getindex(dat, kr2), Zeros{T}(length(kr) - length(kr2)))
+    Vcat(_lazy_getindex(dat, kr2), Zeros{T}(length(kr) - length(kr2)))
 end
 
 function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}) where T
@@ -703,3 +706,7 @@ function replace_in_print_matrix(f::Vcat{<:Any,2}, k::Integer, j::Integer, s::Ab
     end
     throw(BoundsError(f, (k,j)))
 end
+
+# searchsorted
+
+# function searchsorted(f::Vcat{<:Any,1}
