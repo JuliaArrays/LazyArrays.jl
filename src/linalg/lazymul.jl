@@ -88,3 +88,5 @@ end
 @lazyldiv LazyMatrix
 
 *(A::Adjoint{<:Any,<:AbstractMatrix{T}}, b::LazyVector) where T = apply(*,A,b)
+*(A::LazyMatrix, b::LazyVector) where T = apply(*,A,b)
+*(A::AbstractMatrix, b::LazyVector) where T = apply(*,A,b)
