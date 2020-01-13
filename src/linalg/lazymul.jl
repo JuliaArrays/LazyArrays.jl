@@ -17,22 +17,16 @@ macro lazymul(Typ)
         Base.:*(A::$Typ, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
         Base.:*(A::$Typ, B::AbstractMatrix, C...) = LazyArrays.apply(*,A,B,C...)
         Base.:*(A::$Typ, B::AbstractVector) = LazyArrays.apply(*,A,B)
+        Base.:*(A::$Typ, B::LazyArrays.LazyVector) = LazyArrays.apply(*,A,B)
         Base.:*(A::AbstractMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
         Base.:*(A::LinearAlgebra.AdjointAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
         Base.:*(A::LinearAlgebra.TransposeAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
     end
-    if Typ ≠ :ApplyMatrix
+    if Typ ≠ :LazyMatrix
         ret = quote
             $ret
-            Base.:*(A::$Typ, B::LazyArrays.ApplyMatrix, C...) = LazyArrays.apply(*,A,B,C...)
-            Base.:*(A::LazyArrays.ApplyMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
-        end
-    end
-    if Typ ≠ :BroadcastMatrix && Typ ≠ :ApplyMatrix
-        ret = quote
-            $ret
-            Base.:*(A::$Typ, B::LazyArrays.BroadcastMatrix, C...) = LazyArrays.apply(*,A,B,C...)
-            Base.:*(A::LazyArrays.BroadcastMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+            Base.:*(A::$Typ, B::LazyArrays.LazyMatrix, C...) = LazyArrays.apply(*,A,B,C...)
+            Base.:*(A::LazyArrays.LazyMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
         end
     end
     for Struc in (:AbstractTriangular, :Diagonal)
@@ -57,6 +51,7 @@ macro lazymul(Typ)
             Base.:*(A::$Mod{<:Any,<:$Typ}, B::AbstractMatrix, C...) = LazyArrays.apply(*,A,B, C...)
             Base.:*(A::AbstractMatrix, B::$Mod{<:Any,<:$Typ}, C...) = LazyArrays.apply(*,A,B, C...)
             Base.:*(A::$Mod{<:Any,<:$Typ}, B::AbstractVector, C...) = LazyArrays.apply(*,A,B, C...)
+            Base.:*(A::$Mod{<:Any,<:$Typ}, B::LazyArrays.LazyVector, C...) = LazyArrays.apply(*,A,B, C...)
 
             Base.:*(A::$Mod{<:Any,<:$Typ}, B::$Typ, C...) = LazyArrays.apply(*,A,B, C...)
             Base.:*(A::$Typ, B::$Mod{<:Any,<:$Typ}, C...) = LazyArrays.apply(*,A,B, C...)
@@ -67,16 +62,10 @@ macro lazymul(Typ)
             Base.:*(A::LinearAlgebra.AbstractTriangular, B::$Mod{<:Any,<:$Typ}, C...) = LazyArrays.apply(*,A,B, C...)
             Base.:*(A::$Mod{<:Any,<:$Typ}, B::LinearAlgebra.AbstractTriangular, C...) = LazyArrays.apply(*,A,B, C...)
         end
-        if Typ ≠ :ApplyMatrix
+        if Typ ≠ :LazyMatrix
             ret = quote
                 $ret
-                Base.:*(A::$Mod{<:Any,<:$Typ}, B::ApplyMatrix, C...) = LazyArrays.apply(*,A,B, C...)
-            end
-        end
-        if Typ ≠ :BroadcastMatrix && Typ ≠ :ApplyMatrix
-            ret = quote
-                $ret
-                Base.:*(A::$Mod{<:Any,<:$Typ}, B::BroadcastMatrix, C...) = LazyArrays.apply(*,A,B, C...)
+                Base.:*(A::$Mod{<:Any,<:$Typ}, B::LazyArrays.LazyMatrix, C...) = LazyArrays.apply(*,A,B, C...)
             end
         end
     end
@@ -96,10 +85,10 @@ macro lazyldiv(Typ)
     end)
 end
 
+@lazymul LazyMatrix
+@lazylmul LazyMatrix
+@lazyldiv LazyMatrix
 
-@lazymul ApplyMatrix
-@lazylmul ApplyMatrix
-@lazyldiv ApplyMatrix
-@lazymul BroadcastMatrix
-@lazylmul BroadcastMatrix
-@lazyldiv BroadcastMatrix
+
+*(A::AbstractMatrix, b::LazyVector) where T = apply(*,A,b)
+*(A::Adjoint{<:Any,<:AbstractMatrix{T}}, b::LazyVector) where T = apply(*,A,b)

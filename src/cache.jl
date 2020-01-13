@@ -247,15 +247,3 @@ norm1(a::CachedVector) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1
 norm2(a::CachedVector) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
 normInf(a::CachedVector) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
 normp(a::CachedVector, p) = (norm(paddeddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
-
-####
-# algebra
-####
-
-@lazymul CachedMatrix
-*(A::AbstractMatrix, b::CachedVector) = apply(*, A, b)
-*(A::ApplyMatrix, b::CachedVector) = apply(*, A, b)
-*(A::BroadcastMatrix, b::CachedVector) = apply(*, A, b)
-*(A::Adjoint{<:Any,<:AbstractMatrix{T}}, b::CachedVector) where T = apply(*, A, b)
-*(A::Adjoint{<:Any,<:ApplyMatrix{T}}, b::CachedVector) where T = apply(*, A, b)
-*(A::Adjoint{<:Any,<:BroadcastMatrix{T}}, b::CachedVector) where T = apply(*, A, b)
