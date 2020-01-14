@@ -3,7 +3,7 @@ module LazyArrays
 # Use README as the docstring of the module:
 @doc read(joinpath(dirname(@__DIR__), "README.md"), String) LazyArrays
 
-using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays, ArrayLayouts
+using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays, ArrayLayouts, SparseArrays
 import LinearAlgebra.BLAS
 
 import Base: AbstractArray, AbstractMatrix, AbstractVector,
@@ -37,7 +37,7 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         materialize!, eltypes
 
 import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, Abuf, Bbuf, Cbuf, dot, factorize, qr, lu, cholesky,
-                        norm2, norm1, normInf, normp, normMinusInf, det, logdet, logabsdet, tr, AdjOrTrans
+                        norm2, norm1, normInf, normp, normMinusInf, diag, det, logdet, logabsdet, tr, AdjOrTrans
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
