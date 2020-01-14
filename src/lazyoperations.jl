@@ -113,8 +113,8 @@ function diag(K::Kron{<:Any, 2})
 end
 
 
-function LazyArrays.materialize(M::Applied{
-    LazyArrays.MulAddStyle, typeof(*),
+function materialize(M::Applied{
+    MulAddStyle, typeof(*),
     Tuple{Kron{T,2,NTuple{2, MT}}, VT}
 } where {T, VT<:AbstractVector, MT<:AbstractMatrix})
     K, v = M.args
@@ -124,8 +124,8 @@ function LazyArrays.materialize(M::Applied{
 end
 
 
-function LazyArrays.materialize(M::Applied{
-    LazyArrays.MulAddStyle, typeof(*),
+function materialize(M::Applied{
+    MulAddStyle, typeof(*),
     Tuple{Kron{T,2,NTuple{N, MT}}, MVT}
 }) where {T, N, MVT<:AbstractVecOrMat, MT<:AbstractMatrix}
 
@@ -189,7 +189,7 @@ function LazyArrays.materialize(M::Applied{
         # this means that the component matrices were all dense AND they had no
         # zero rows/cols
         return _shuffle_algorithm(K, p, eltype(M))
-    else
+    end
 
     nnz_m = [issparse(X_h) ? nnz(X_h) : prod(size(X_h)) for X_h in K_shrunk_factors]
     modified_cost = 2*sum([
