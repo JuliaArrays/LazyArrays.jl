@@ -21,8 +21,10 @@ BroadcastArray{T}(bc::Broadcasted{<:Union{Nothing,BroadcastStyle},<:Tuple{Vararg
 BroadcastVector(bc::Broadcasted) = BroadcastVector{combine_eltypes(bc.f, bc.args)}(bc)  
 BroadcastMatrix(bc::Broadcasted) = BroadcastMatrix{combine_eltypes(bc.f, bc.args)}(bc)
 
-_broadcast2broadcastarray(a, b...) = tuple(a, b...)
-_broadcast2broadcastarray(a::Broadcasted, b...) = tuple(BroadcastArray(a), b...)
+_broadcast2broadcastarray() = ()
+_broadcast2broadcastarray(a, b...) = tuple(a, _broadcast2broadcastarray(b...)...)
+_broadcast2broadcastarray(a::Broadcasted{DefaultArrayStyle{0}}, b...) = tuple(materialize(a), _broadcast2broadcastarray(b...)...)
+_broadcast2broadcastarray(a::Broadcasted, b...) = tuple(BroadcastArray(a), _broadcast2broadcastarray(b...)...)
 
 _BroadcastArray(bc::Broadcasted) = BroadcastArray{combine_eltypes(bc.f, bc.args)}(bc)
 BroadcastArray(bc::Broadcasted{S}) where S =
@@ -46,7 +48,9 @@ axes(A::BroadcastArray) = axes(Broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
 
 
-@propagate_inbounds getindex(A::BroadcastArray, kj::Int...) = Broadcasted(A)[kj...]
+@propagate_inbounds getindex(A::BroadcastArray{<:Any,N}, kj::Vararg{Int,N}) where N = Broadcasted(A)[kj...]
+
+
 
 
 @propagate_inbounds _broadcast_getindex_range(A::Union{Ref,AbstractArray{<:Any,0},Number}, I) = A[] # Scalar-likes can just ignore all indices
@@ -55,6 +59,8 @@ size(A::BroadcastArray) = map(length, axes(A))
 
 getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
     BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)
+getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) =
+    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)    
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
 
@@ -87,11 +93,11 @@ function Base._prod(f, A::BroadcastArray, ::Colon)
 end
 
 
-BroadcastStyle(::Type{<:BroadcastArray{<:Any,N}}) where N = LazyArrayStyle{N}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:BroadcastVector{<:Any}}}) where N = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:BroadcastVector{<:Any}}}) where N = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:BroadcastMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:BroadcastMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:LazyArray{<:Any,N}}) where N = LazyArrayStyle{N}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyVector{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
 BroadcastStyle(L::LazyArrayStyle{N}, ::StaticArrayStyle{N}) where N = L
 BroadcastStyle(::StaticArrayStyle{N}, L::LazyArrayStyle{N})  where N = L
 

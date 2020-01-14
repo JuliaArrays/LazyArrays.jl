@@ -430,4 +430,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
         V = view(A, 1:5, 1:2)
         @test sub_materialize(V) == A[1:5,1:2] 
     end
+
+    @testset "searchsorted" begin
+        a = Vcat(1:10_000, [10_000_000_000,12_000_000_000])
+        # searchsortedfirst(a, 6_000_000_001)
+    end
 end
