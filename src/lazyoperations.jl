@@ -24,12 +24,28 @@ axes(a::Kron{<:Any,2}) = (OneTo(size(a,1)), OneTo(size(a,2)))
 axes(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> OneTo(size(a, M)), Val(N)))
 
 
+issquare(M::AbstractMatrix) = (size(M, 1) == size(M, 2))
+
+adjoint(K::Kron{<:Any, 2}) = Kron(adjoint.(K.args)...)
+transpose(K::Kron{<:Any, 2}) = Kron(transpose.(K.args)...)
+pinv(K::Kron{<:Number, 2}) = Kron(pinv.(K.args)...)
+function inv(K::Kron{<:Number, 2})
+    n = checksquare(K)
+
+    # see det below for why the presence of rectangular factors renders
+    # the kronecker product singular
+    all(issquare, K.args) || throw(LinearAlgebra.SingularException(n))
+
+    return Kron(inv.(K.args)...)
+end
+
+
 function det(K::Kron{T, 2}) where T<:Number
     s = checksquare(K)
     d = one(T)
 
     for A in K.args
-        if size(A, 1) == size(A, 2)
+        if issquare(A)
             dA = det(A)
             if iszero(dA)
                 return dA
@@ -53,7 +69,7 @@ function logdet(K::Kron{T, 2}) where T<:Number
     d = zero(T)
 
     for A in K.args
-        if size(A, 1) == size(A, 2)
+        if issquare(A)
             ldA = logdet(A)
             if isinf(ldA)
                 return ldA
@@ -74,7 +90,7 @@ function logabsdet(K::Kron{T, 2}) where T<:Number
     sgn = one(T)
 
     for A in K.args
-        if size(A, 1) == size(A, 2)
+        if issquare(A)
             ldA, sgnA = logabsdet(A)
             if isinf(ldA)
                 return ldA, sgnA
@@ -92,7 +108,7 @@ end
 
 function tr(K::Kron{<:Any, 2})
     checksquare(K)
-    if all(A -> (size(A, 1) == size(A, 2)), K.args)  # check if all component matrices are square
+    if all(issquare, K.args)
         return prod(tr.(K.args))
     else
         return sum(diag(K))
@@ -101,12 +117,12 @@ end
 
 
 function diag(K::Kron{<:Any, 2})
-    if all(A -> (size(A, 1) == size(A, 2)), K.args)  # check if all component matrices are square
+    if all(issquare, K.args)
         return kron(diag.(K.args)...)
     else
         d = similar(K.args[1], minimum(size(K)))
-        for i in 1:length(d)
-            d[i] = K[i,i]
+        @inbounds for i in 1:length(d)
+            d[i] = K[i, i]
         end
         return d
     end
@@ -124,10 +140,28 @@ function materialize(M::Applied{
 end
 
 
+
+abstract type ShuffleAlgorithm end
+struct Shuffle <: ShuffleAlgorithm end
+struct ModifiedShuffle <: ShuffleAlgorithm end
+
+shuffle_algorithm_type(::Type) = Shuffle()
+shuffle_algorithm_type(::Type{<:AbstractArray}) = ModifiedShuffle()
+shuffle_algorithm_type(::Type{<:ApplyArray}) = Shuffle()
+
+
 function materialize(M::Applied{
     MulAddStyle, typeof(*),
     Tuple{Kron{T,2,NTuple{N, MT}}, MVT}
 }) where {T, N, MVT<:AbstractVecOrMat, MT<:AbstractMatrix}
+    algo_type = shuffle_algorithm_type(MT)
+    return shuffle_algorithm(algo_type, M.args[1], M.args[2], eltype(M))
+end
+
+
+function shuffle_algorithm(
+    ::ModifiedShuffle, K::Kron{T,2,NTuple{N, MT}}, p::AbstractVecOrMat, OT::Type{<:Number}
+) where {T, N, MT<:AbstractMatrix}
 
     K, p = M.args
 
@@ -140,7 +174,7 @@ function materialize(M::Applied{
     end
 
     output_sizes = (ndims(p) > 1) ? (size(K, 1), size(p, 2)) : (size(K,1),)
-    q = fill!(similar(p, output_sizes), zero(eltype(M)))
+    q = fill!(similar(p, OT, output_sizes), zero(OT))
     if any(iszero, K.args)
         return q
     end
@@ -188,7 +222,7 @@ function materialize(M::Applied{
     if is_dense
         # this means that the component matrices were all dense AND they had no
         # zero rows/cols
-        return _shuffle_algorithm(K, p, eltype(M))
+        return shuffle_algorithm(Shuffle(), K, p, OT)
     end
 
     nnz_m = [issparse(X_h) ? nnz(X_h) : prod(size(X_h)) for X_h in K_shrunk_factors]
@@ -199,7 +233,7 @@ function materialize(M::Applied{
     ])
 
     if trad_cost <= modified_cost
-        return _shuffle_algorithm(K, p, eltype(M))
+        return shuffle_algorithm(Shuffle(), K, p, OT)
     end
 
     R_indices = Iterators.product(reverse(R_H)...)
@@ -220,15 +254,16 @@ function materialize(M::Applied{
 
     K_ = Kron(K_shrunk_factors...)
     if ndims(p) == 1
-        q[r_indices] = _shuffle_algorithm(K_, p[c_indices], eltype(M))
+        q[r_indices] = shuffle_algorithm(Shuffle(), K_, p[c_indices], OT)
     else
-        q[r_indices, :] = _shuffle_algorithm(K_, p[c_indices, :], eltype(M))
+        q[r_indices, :] = shuffle_algorithm(Shuffle(), K_, p[c_indices, :], OT)
     end
 
     return q
 end
 
-function _shuffle_algorithm(K::Kron{T,2} where T, p::AbstractVecOrMat, OT::Type{<:Number})
+
+function shuffle_algorithm(::Shuffle, K::Kron{T,2} where T, p::AbstractVecOrMat, OT::Type{<:Number})
     q = copy!(similar(p, OT), p)
     r = [size(m, 1) for m in K.args]
     c = [size(m, 2) for m in K.args]
@@ -245,10 +280,15 @@ function _shuffle_algorithm(K::Kron{T,2} where T, p::AbstractVecOrMat, OT::Type{
         i_right ÷= c_h
 
         if X_h != I
+            if all_square
+                q′ = q
+            else
+                size_ = prod(r[1:h]) * prod(c[h+1:H]))
+                output_sizes = (ndims(p) > 1) ? (size_, size(p, 2)) : (size_,)
+                q′ = fill!(similar(p, OT, output_sizes), zero(OT))
+            end
+
             base_i, base_j = 0, 0
-
-            q′ = all_square ? q : zeros(eltype(q), prod(r[1:h]) * prod(c[h+1:H]))
-
             for i_l in 1:i_left
                 for i_r in 1:i_right
                     slc_in  = base_i + i_r : i_right : base_i + i_r + (c_h-1)*i_right
