@@ -170,6 +170,23 @@ include("cachetests.jl")
         @test res_mat ≈ (k * X)
     end
 
+    @testset "kron-by-kron mul" begin
+        A, B = randn(3, 4), rand(4, 6)
+        C, D = randn(4, 5), rand(6, 4)
+
+        K1, K2 = Kron(A, B), Kron(C, D)
+        @test (K1 * K2) ≈ (kron(A, B) * kron(C, D))
+    end
+
+
+    @testset "kron-by-kron mul (unaligned)" begin
+        A, B = randn(3, 8), rand(4, 3)
+        C, D = randn(4, 5), rand(6, 4)
+
+        K1, K2 = Kron(A, B), Kron(C, D)
+        @test (K1 * K2) ≈ (kron(A, B) * kron(C, D))
+    end
+
 end
 
 @testset "Diff and Cumsum" begin

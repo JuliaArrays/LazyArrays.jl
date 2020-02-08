@@ -110,10 +110,28 @@ function diag(K::Kron{<:Any, 2})
 end
 
 
+_compatible_sizes((A, B)) = (size(A, 2) == size(B, 1))
+
+
+function materialize(M::Applied{
+    MulAddStyle, typeof(*),
+    NTuple{2, Kron{T,2,NTuple{2, MT}}}
+}) where {T, MT<:AbstractMatrix}
+    A, B = M.args
+    if (length(A.args) == length(B.args)) && all(_compatible_sizes, zip(A.args, B.args))
+        factors = [(A_i * B_i) for (A_i, B_i) in zip(A.args, B.args)]
+        return kron(factors...)
+    else
+        algo_type = shuffle_algorithm_type(MT)
+        return shuffle_algorithm(algo_type, A, B, eltype(M))
+    end
+end
+
+
 function materialize(M::Applied{
     MulAddStyle, typeof(*),
     Tuple{Kron{T,2,NTuple{2, MT}}, VT}
-} where {T, VT<:AbstractVector, MT<:AbstractMatrix})
+}) where {T, VT<:AbstractVector, MT<:AbstractMatrix}
     K, v = M.args
     A, B = K.args
     V = reshape(v, size(B, 2), size(A, 2))
