@@ -283,7 +283,7 @@ function shuffle_algorithm(::Shuffle, K::Kron{T,2} where T, p::AbstractVecOrMat,
             if all_square
                 q′ = q
             else
-                size_ = prod(r[1:h]) * prod(c[h+1:H]))
+                size_ = prod(r[1:h]) * prod(c[h+1:H])
                 output_sizes = (ndims(p) > 1) ? (size_, size(p, 2)) : (size_,)
                 q′ = fill!(similar(p, OT, output_sizes), zero(OT))
             end
