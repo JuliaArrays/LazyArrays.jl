@@ -64,26 +64,6 @@ function det(K::Kron{T, 2}) where T<:Number
 end
 
 
-function logdet(K::Kron{T, 2}) where T<:Number
-    s = checksquare(K)
-    d = zero(T)
-
-    for A in K.args
-        if issquare(A)
-            ldA = logdet(A)
-            if isinf(ldA)
-                return ldA
-            end
-            d += (s ÷ size(A, 1)) * ldA
-        else
-            # see definition of det above for explanation
-            return float(T)(-Inf)
-        end
-    end
-    return d
-end
-
-
 function logabsdet(K::Kron{T, 2}) where T<:Number
     s = checksquare(K)
     d = zero(T)
@@ -95,8 +75,9 @@ function logabsdet(K::Kron{T, 2}) where T<:Number
             if isinf(ldA)
                 return ldA, sgnA
             end
-            d += (s ÷ size(A, 1)) * ldA
-            sgn *= sgnA
+            p = (s ÷ size(A, 1))
+            d += p * ldA
+            sgn *= sgnA ^ p
         else
             # see definition of det above for explanation
             return float(T)(-Inf), zero(T)

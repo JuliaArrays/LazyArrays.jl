@@ -87,7 +87,11 @@ include("cachetests.jl")
     C = randn(2,2)
     K, k = Kron(A,B,C), kron(A,B,C)
     @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B,C)) == k
+
+    @test logdet(K) ≈ logdet(k)
+    @test all(logabsdet(K) .≈ logabsdet(k))
     @test det(K) ≈ det(k)
+    @test diag(K) ≈ diag(k)
     @test tr(K) ≈ tr(k)
 
     A = randn(3,2)
