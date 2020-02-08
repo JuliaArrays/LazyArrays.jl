@@ -135,7 +135,7 @@ function materialize(M::Applied{
 } where {T, VT<:AbstractVector, MT<:AbstractMatrix})
     K, v = M.args
     A, B = K.args
-    V = reshape(v, size(B, 1), size(A, 1))
+    V = reshape(v, size(B, 2), size(A, 2))
     return vec(B * V * transpose(A))
 end
 
@@ -162,8 +162,6 @@ end
 function shuffle_algorithm(
     ::ModifiedShuffle, K::Kron{T,2,NTuple{N, MT}}, p::AbstractVecOrMat, OT::Type{<:Number}
 ) where {T, N, MT<:AbstractMatrix}
-
-    K, p = M.args
 
     if size(K, 2) != size(p, 1)
         if ndims(p) > 1

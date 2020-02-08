@@ -12,7 +12,7 @@ import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcas
 
     @testset "BroadcastArray" begin
         A = [1.0 2; 3 4]
-        
+
         @test @inferred(MemoryLayout(typeof(BroadcastArray(+, A, Fill(0, (2, 2)), Zeros(2, 2))))) ==
             BroadcastLayout{typeof(+)}()
 
@@ -24,6 +24,7 @@ import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcas
         @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
     end
 end
+
 include("applytests.jl")
 include("multests.jl")
 include("ldivtests.jl")
@@ -114,7 +115,7 @@ include("cachetests.jl")
         x = randn(5)
         K = Kron(A,x)
         k = applied(kron,A,x)
-        @test K[1,1] == k[1,1] == A[1,1]*x[1]      
+        @test K[1,1] == k[1,1] == A[1,1]*x[1]
         K = Kron(x,x)
         k = applied(kron,x,x)
         @test K[1] == k[1] == x[1]^2
@@ -134,6 +135,37 @@ include("cachetests.jl")
         @test K[1] == K[1,1] == x[1]y[1]z[1]
         @test K == kron(x,y,z)
     end
+
+    @testset "2-factor kron-mul" begin
+        A, B = randn(4, 4), randn(3, 2)
+        K, k = Kron(A, B), kron(A, B)
+        x = randn(size(k, 2))
+        X = randn(size(k, 2), 7)
+
+        res_vec = K * x
+        @test size(res_vec, 1) == size(K, 1) == size(k, 1)
+        @test res_vec ≈ (k * x)
+
+        res_mat = K * X
+        @test size(res_mat, 1) == size(K, 1) == size(k, 1)
+        @test res_mat ≈ (k * X)
+    end
+
+    @testset "3-factor kron-mul" begin
+        A, B, C = randn(4, 4), randn(3, 2), randn(5, 6)
+        K, k = Kron(A, B, C), kron(A, B, C)
+        x = randn(size(k, 2))
+        X = randn(size(k, 2), 8)
+
+        res_vec = K * x
+        @test size(res_vec, 1) == size(K, 1) == size(k, 1)
+        @test res_vec ≈ (k * x)
+
+        res_mat = K * X
+        @test size(res_mat, 1) == size(K, 1) == size(k, 1)
+        @test res_mat ≈ (k * X)
+    end
+
 end
 
 @testset "Diff and Cumsum" begin
@@ -221,7 +253,7 @@ end
 
     bc = BroadcastArray(broadcasted(+, 1:10, broadcasted(sin, 1:10)))
     @test bc[1:10] == (1:10) .+ sin.(1:10)
-    
+
     bc = BroadcastArray(broadcasted(+,1:10,broadcasted(+,1,2)))
     @test bc.args[2] == 3
 end
