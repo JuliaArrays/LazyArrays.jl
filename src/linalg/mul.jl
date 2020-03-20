@@ -193,7 +193,7 @@ call(::ApplyLayout{typeof(*)}, V::SubArray) = *
 
 function _mat_mul_arguments(args, (kr,jr))
     kjr = intersect.(_mul_args_rows(kr, args...), _mul_args_cols(jr, reverse(args)...))
-    view.(args, (kr, kjr...), (kjr..., jr))
+    map(view, args, (kr, kjr...), (kjr..., jr))
 end
 
 _vec_mul_view(a...) = view(a...)
