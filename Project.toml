@@ -10,7 +10,7 @@ MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-ArrayLayouts = "0.1"
+ArrayLayouts = "0.1, 0.2"
 FillArrays = "0.8"
 MacroTools = "0.5"
 StaticArrays = "0.11, 0.12"
