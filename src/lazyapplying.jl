@@ -143,7 +143,7 @@ getindex(A::Applied, kj...) = materialize(A)[kj...]
 Wrap a lazy object that wraps a computation producing an array to an
 array.
 """
-abstract type LazyArray{T,N} <: AbstractArray{T,N} end
+abstract type LazyArray{T,N} <: LayoutArray{T,N} end
 
 const LazyMatrix{T} = LazyArray{T,2}
 const LazyVector{T} = LazyArray{T,1}
@@ -267,12 +267,6 @@ end
 # on the memory layout
 ###
 
-@inline getindex(A::LazyMatrix, kr::Colon, jr::Colon) = lazy_getindex(A, kr, jr)
-@inline getindex(A::LazyMatrix, kr::Colon, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
-@inline getindex(A::LazyVector, kr::AbstractUnitRange) = lazy_getindex(A, kr)
-@inline getindex(A::LazyMatrix, kr::AbstractUnitRange, jr::Colon) = lazy_getindex(A, kr, jr)
-@inline getindex(A::LazyMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
-
 @inline copyto!(dest::AbstractArray{T,N}, src::ApplyArray{T,N}) where {T,N} = copyto!(dest, Applied(src))
 @inline copyto!(dest::AbstractArray, src::ApplyArray) = copyto!(dest, Applied(src))    
 
@@ -294,6 +288,8 @@ for tri in (:tril, :triu)
     @eval begin 
         ndims(::Applied{<:Any,typeof($tri)}) = 2
         eltype(A::Applied{<:Any,typeof($tri)}) = eltype(first(A.args))
+        $tri(A::LazyMatrix) = ApplyMatrix($tri, A)
+        $tri(A::LazyMatrix, k::Integer) = ApplyMatrix($tri, A, k)
     end
 end
 
@@ -303,7 +299,20 @@ getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix}}, k::Integer, j
 getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T = 
     j ≥ k+A.args[2] ? A.args[1][k,j] : zero(T)    
 
+getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix}}, k::Integer, j::Integer) where T = 
+    j ≤ k ? A.args[1][k,j] : zero(T)
+
+getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T = 
+    j ≤ k+A.args[2] ? A.args[1][k,j] : zero(T)    
+
+
 replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(triu),<:Tuple{<:AbstractMatrix}}, i::Integer, j::Integer, s::AbstractString) =
     j ≥ i ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)
 replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(triu),<:Tuple{<:AbstractMatrix,<:Integer}}, i::Integer, j::Integer, s::AbstractString) =
     j ≥ i+A.args[2] ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)    
+
+
+replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(tril),<:Tuple{<:AbstractMatrix}}, i::Integer, j::Integer, s::AbstractString) =
+    j ≤ i ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)
+replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, i::Integer, j::Integer, s::AbstractString) =
+    j ≤ i+A.args[2] ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)    

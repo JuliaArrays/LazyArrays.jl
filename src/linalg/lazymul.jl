@@ -86,7 +86,6 @@ macro lazyldiv(Typ)
 end
 
 @lazymul LazyMatrix
-@lazylmul LazyMatrix
 @lazyldiv LazyMatrix
 
 

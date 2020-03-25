@@ -662,7 +662,7 @@ sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange}} =
 sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,AbstractUnitRange}} = 
     PaddedLayout{typeof(sublayout(L(), I))}() 
     
-_lazy_getindex(dat, kr2) = lazy_getindex(dat, kr2)    
+_lazy_getindex(dat, kr2) = layout_getindex(dat, kr2)    
 _lazy_getindex(dat::Number, kr2) = dat
 
 function sub_materialize(::PaddedLayout, v::AbstractVector{T}) where T
@@ -678,7 +678,7 @@ function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}) where T
     dat = paddeddata(A)
     kr,jr = parentindices(v)
     kr2 = kr ∩ axes(dat,1)
-    Vcat(lazy_getindex(dat, kr2, jr), Zeros{T}(length(kr) - length(kr2), length(jr)))
+    Vcat(layout_getindex(dat, kr2, jr), Zeros{T}(length(kr) - length(kr2), length(jr)))
 end
 
 ## print

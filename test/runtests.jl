@@ -199,6 +199,10 @@ end
     A = ApplyArray(tril,randn(2,2),-1)
     @test A isa ApplyArray{Float64}
     @test A == tril(A.args[1],-1)
+
+    A = ApplyMatrix(exp,randn(2,2))
+    @test triu(A) isa ApplyMatrix{Float64,typeof(triu)}
+    @test tril(A) isa ApplyMatrix{Float64,typeof(tril)}
 end
 
 @testset "BroadcastArray" begin
