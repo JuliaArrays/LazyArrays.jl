@@ -189,16 +189,30 @@ end
 @testset "triu/tril" begin
     A = ApplyArray(triu,randn(2,2))
     @test A isa ApplyArray{Float64}
+    @test A[2,1] == 0
+    @test A[1,1] == A.args[1][1,1]
     @test A == triu(A.args[1])
     A = ApplyArray(tril,randn(2,2))
     @test A isa ApplyArray{Float64}
+    @test A[1,2] == 0
+    @test A[1,1] == A.args[1][1,1]
     @test A == tril(A.args[1])
     A = ApplyArray(triu,randn(2,2),1)
+    @test A[1,1] == 0
+    @test A[1,2] == A.args[1][1,2]
     @test A isa ApplyArray{Float64}
     @test A == triu(A.args[1],1)
     A = ApplyArray(tril,randn(2,2),-1)
     @test A isa ApplyArray{Float64}
+    @test A[1,1] == 0
+    @test A[2,1] == A.args[1][2,1]
     @test A == tril(A.args[1],-1)
+
+    A = ApplyMatrix(exp,randn(2,2))
+    @test triu(A) isa ApplyMatrix{Float64,typeof(triu)}
+    @test tril(A) isa ApplyMatrix{Float64,typeof(tril)}
+    @test triu(A,1) isa ApplyMatrix{Float64,typeof(triu)}
+    @test tril(A,1) isa ApplyMatrix{Float64,typeof(tril)}
 end
 
 @testset "BroadcastArray" begin
