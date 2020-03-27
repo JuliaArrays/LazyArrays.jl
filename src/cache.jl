@@ -97,7 +97,9 @@ end
 
 ## Array caching
 
-function resizedata!(B::CachedVector{T,Vector{T}}, n::Integer) where T<:Number
+resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
+
+function resizedata!(::DenseColumnMajor, _, B::AbstractVector{T}, n) where T<:Number
     @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
@@ -117,7 +119,7 @@ function resizedata!(B::CachedVector{T,Vector{T}}, n::Integer) where T<:Number
     B
 end
 
-function resizedata!(B::CachedArray{T,N,Array{T,N}},nm::Vararg{Integer,N}) where {T<:Number,N}
+function resizedata!(::DenseColumnMajor, _, B::AbstractArray{T,N}, nm::Vararg{Integer,N}) where {T<:Number,N}
     @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary

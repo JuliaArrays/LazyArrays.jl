@@ -220,8 +220,6 @@ arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
 
 @inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
-@inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} = 
-    copyto!(dest, Applied(src))
 
 ##
 # adoint Mul

@@ -64,10 +64,6 @@ getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) =
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
 
-
-copyto!(dest::AbstractArray{<:Any,N}, bc::BroadcastArray{<:Any,N}) where N = 
-    copyto!(dest, Broadcasted(bc))
-
 # Replacement for #18.
 # Could extend this to other similar reductions in Base... or apply at lower level? 
 # for (fname, op) in [(:sum, :add_sum), (:prod, :mul_prod),
@@ -121,6 +117,9 @@ broadcastlayout(::Type, _, _, ::LazyLayout) = LazyLayout()
 broadcastlayout(::Type, _, _, _, ::LazyLayout) = LazyLayout()
 MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = 
     broadcastlayout(F, tuple_type_memorylayouts(Args)...)
+
+_copyto!(_, ::BroadcastLayout, dest::AbstractArray{<:Any,N}, bc::AbstractArray{<:Any,N}) where N = 
+    copyto!(dest, Broadcasted(bc))    
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting
 for op in (+, -, big)

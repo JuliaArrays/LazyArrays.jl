@@ -98,13 +98,9 @@ function _kron2!(R, K)
     R
 end
 
-copyto!(R::AbstractMatrix, K::Kron{<:Any,2,<:Tuple{<:AbstractMatrix,<:AbstractMatrix}}) =
+_copyto!(_, ::ApplyLayout{typeof(kron)}, R::AbstractMatrix, K::AbstractMatrix) =
     _kron2!(R, K)
-copyto!(R::AbstractVector, K::Kron{<:Any,1,<:Tuple{<:AbstractVector,<:AbstractVector}}) =
-    _kron2!(R, K)
-copyto!(R::AbstractMatrix{T}, K::Kron{T,2,<:Tuple{<:AbstractMatrix,<:AbstractMatrix}}) where T =
-    _kron2!(R, K)
-copyto!(R::AbstractVector{T}, K::Kron{T,1,<:Tuple{<:AbstractVector,<:AbstractVector}}) where T =
+_copyto!(_, ::ApplyLayout{typeof(kron)}, R::AbstractVector, K::AbstractVector) =
     _kron2!(R, K)
 
 

@@ -130,7 +130,8 @@ end
 
 ## copyto!
 # based on Base/array.jl, Base/abstractarray.jl
-copyto!(dest::AbstractArray, V::Vcat) = vcat_copyto!(dest, arguments(V)...)
+_copyto!(_, LAY::ApplyLayout{typeof(vcat)}, dest::AbstractArray{<:Any,N}, V::AbstractArray{<:Any,N}) where N = 
+    vcat_copyto!(dest, arguments(LAY, V)...)
 function vcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest,1)
@@ -206,7 +207,8 @@ function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
     return arr
 end
 
-copyto!(dest::AbstractMatrix, H::Hcat) = hcat_copyto!(dest, arguments(H)...)
+_copyto!(_, LAY::ApplyLayout{typeof(hcat)}, dest::AbstractMatrix, H::AbstractMatrix) = 
+    hcat_copyto!(dest, arguments(LAY,H)...)
 function hcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest, 1)
@@ -515,7 +517,7 @@ end
 
 # special copyto! since `similar` of a padded returns a cached
 for Typ in (:Number, :AbstractVector)
-    @eval function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:$Typ,<:Zeros}}) where T
+    @eval function _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::AbstractVector)
         length(src) ≤ length(dest)  || throw(BoundsError())
         a,_ = src.args
         n = length(a)
@@ -525,7 +527,7 @@ for Typ in (:Number, :AbstractVector)
     end
 end
 
-function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::CachedVector{V,Vector{V},<:Zeros{V,1}}) where {T,V}
+function _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector, src::CachedVector)
     length(src) ≤ length(dest)  || throw(BoundsError())
     n = src.datasize[1]
     resizedata!(dest, n)
@@ -575,12 +577,6 @@ arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice
     view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
 arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = 
     view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
-
-copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:Vcat{T,N}}) where {T,N} = 
-    vcat_copyto!(dest, arguments(ApplyLayout{typeof(vcat)}(), src)...)
-copyto!(dest::AbstractMatrix{T}, src::SubArray{T,2,<:Hcat{T}}) where T = 
-    hcat_copyto!(dest, arguments(ApplyLayout{typeof(hcat)}(), src)...)
-
 
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
 _vcat_firstinds(sz) = (1, (1 .+ most(_vcat_lastinds(sz)))...)
