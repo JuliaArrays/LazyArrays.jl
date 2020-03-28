@@ -19,6 +19,7 @@ end
 
 call(a) = a.f
 call(_, a) = a.f
+call(LAY, a::SubArray) = call(LAY, parent(a))
 call(a::AbstractArray) = call(MemoryLayout(typeof(a)), a)
 arguments(a) = a.args
 arguments(_, a) = a.args
