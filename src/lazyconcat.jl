@@ -587,13 +587,22 @@ _view_vcat(a::Number, kr) = Fill(a,length(kr))
 _view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
 _view_vcat(a, kr...) = view(a, kr...)
 
-function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V)
-    kr = parentindices(V)[1]
+function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr)
     sz = size.(arguments(A),1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
     _view_vcat.(arguments(A), skr2)
 end
+
+function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr, jr)
+    sz = size.(arguments(A),1)
+    skr = intersect.(_argsindices(sz), Ref(kr))
+    skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
+    _view_vcat.(arguments(A), skr2, Ref(jr))
+end
+
+_vcat_sub_arguments(LAY::ApplyLayout{typeof(vcat)}, A, V) = _vcat_sub_arguments(LAY, A, V, parentindices(V)...)
+
 _vcat_sub_arguments(::ApplyLayout{typeof(hcat)}, A, V) = arguments(ApplyLayout{typeof(hcat)}(), V)
 _vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
 

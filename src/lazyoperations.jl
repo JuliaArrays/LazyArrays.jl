@@ -85,7 +85,7 @@ getindex(K::Applied{DefaultArrayApplyStyle,typeof(kron)}, k::Integer, j::Integer
 ## Adapted from julia/stdlib/LinearAlgebra/src/dense.jl kron definition
 function _kron2!(R, K)
     size(R) == size(K) || throw(DimensionMismatch("Matrices have wrong dimensions"))
-    a,b = K.args
+    a,b = arguments(K)
     require_one_based_indexing(a, b)
     m = 1
     @inbounds for j = 1:size(a,2), l = 1:size(b,2), i = 1:size(a,1)

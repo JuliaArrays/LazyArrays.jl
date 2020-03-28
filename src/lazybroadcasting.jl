@@ -40,7 +40,8 @@ BroadcastArray(b::BroadcastArray) = b
 BroadcastVector(A::BroadcastVector) = A
 BroadcastMatrix(A::BroadcastMatrix) = A
 
-Broadcasted(A::BroadcastArray) = instantiate(broadcasted(A.f, A.args...))
+Broadcasted(A::BroadcastArray) = instantiate(broadcasted(call(A), arguments(A)...))
+Broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = instantiate(broadcasted(call(A), arguments(A)...))
 
 @inline BroadcastArray(A::AbstractArray) = BroadcastArray(call(A), arguments(A)...)
 

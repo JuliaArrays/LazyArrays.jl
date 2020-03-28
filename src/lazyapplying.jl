@@ -274,7 +274,7 @@ end
 
 @inline _copyto!(_, ::ApplyLayout, dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = 
     copyto!(dest, Applied(src))
-@inline _copyto!(_, ::ApplyLayout, dest::AbstractArray, src::ApplyArray) = copyto!(dest, Applied(src))    
+@inline _copyto!(_, ::ApplyLayout, dest::AbstractArray, src::AbstractArray) = copyto!(dest, Applied(src))    
 
 # avoid infinite-loop
 _base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)
