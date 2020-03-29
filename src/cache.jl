@@ -4,7 +4,14 @@ mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} <: 
     data::DM
     array::M
     datasize::NTuple{N,Int}
+    function CachedArray{T,N,DM,M}(data::DM, array::M, datasize::NTuple{N,Int}) where {T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}}
+        any(<(0), datasize) && throw(ArgumentError("Datasize must be 0 or more"))
+        new{T,N,DM,M}(data, array, datasize)
+    end
 end
+
+CachedArray(data::DM, array::M, datasize::NTuple{N,Int}) where {T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} =
+    CachedArray{T,N,DM,M}(data, array, datasize)
 
 const CachedVector{T,DM<:AbstractVector{T},M<:AbstractVector{T}} = CachedArray{T,1,DM,M}
 const CachedMatrix{T,DM<:AbstractMatrix{T},M<:AbstractMatrix{T}} = CachedArray{T,2,DM,M}
