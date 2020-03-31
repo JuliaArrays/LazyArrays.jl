@@ -517,23 +517,30 @@ end
 
 # special copyto! since `similar` of a padded returns a cached
 for Typ in (:Number, :AbstractVector)
-    @eval function _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::AbstractVector)
-        length(src) ≤ length(dest)  || throw(BoundsError())
-        a,_ = src.args
-        n = length(a)
-        resizedata!(dest, n) # make sure we are padded enough
-        copyto!(view(dest.data,OneTo(n)), a)
-        dest
+    @eval begin
+        function _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::AbstractVector)
+            length(src) ≤ length(dest)  || throw(BoundsError())
+            a,_ = src.args
+            n = length(a)
+            resizedata!(dest, n) # make sure we are padded enough
+            copyto!(view(dest.data,OneTo(n)), a)
+            dest
+        end
+        _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::CachedVector) =
+            _padded_copyto!(dest, src)
     end
 end
 
-function _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector, src::CachedVector)
+function _padded_copyto!(dest::CachedVector, src::CachedVector)
     length(src) ≤ length(dest)  || throw(BoundsError())
     n = src.datasize[1]
     resizedata!(dest, n)
     copyto!(view(dest.data,OneTo(n)), view(src.data,OneTo(n)))
     dest
 end
+
+_copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector, src::CachedVector) = 
+    _padded_copyto!(dest, src)
 
 struct Dot{StyleA,StyleB,ATyp,BTyp}
     A::ATyp
