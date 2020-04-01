@@ -153,6 +153,6 @@ import Base: broadcasted
 
     @testset "copy to TrackedArray" begin
         a = LazyArray(broadcasted(+, param(rand(3, 3)), 1))
-        @test copy(a) isa TrackedArray
+        @test @inferred(copy(a)) isa TrackedArray
     end
 end
