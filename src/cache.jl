@@ -5,7 +5,9 @@ mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} <: 
     array::M
     datasize::NTuple{N,Int}
     function CachedArray{T,N,DM,M}(data::DM, array::M, datasize::NTuple{N,Int}) where {T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}}
-        any(<(0), datasize) && throw(ArgumentError("Datasize must be 0 or more"))
+        for d in datasize
+            d < 0 && throw(ArgumentError("Datasize must be 0 or more"))
+        end
         new{T,N,DM,M}(data, array, datasize)
     end
 end
