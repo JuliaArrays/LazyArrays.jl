@@ -108,7 +108,7 @@ end
 
 resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
 
-function resizedata!(::DenseColumnMajor, _, B::AbstractVector{T}, n) where T<:Number
+function resizedata!(_, _, B::AbstractVector, n)
     @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
@@ -116,7 +116,7 @@ function resizedata!(::DenseColumnMajor, _, B::AbstractVector{T}, n) where T<:Nu
     ν, = B.datasize
     n = max(ν,n)
     if n > length(B.data) # double memory to avoid O(n^2) growing
-        B.data = Array{T}(undef, min(2n,length(B.array)))
+        B.data = similar(B.data, min(2n,length(B.array)))
         B.data[axes(olddata,1)] = olddata
     end
 
@@ -128,7 +128,7 @@ function resizedata!(::DenseColumnMajor, _, B::AbstractVector{T}, n) where T<:Nu
     B
 end
 
-function resizedata!(::DenseColumnMajor, _, B::AbstractArray{T,N}, nm::Vararg{Integer,N}) where {T<:Number,N}
+function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) where N
     @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
@@ -136,7 +136,7 @@ function resizedata!(::DenseColumnMajor, _, B::AbstractArray{T,N}, nm::Vararg{In
     νμ = size(olddata)
     nm = max.(νμ,nm)
     if νμ ≠ nm
-        B.data = Array{T}(undef, nm)
+        B.data = similar(B.data, nm...)
         B.data[axes(olddata)...] = olddata
     end
 

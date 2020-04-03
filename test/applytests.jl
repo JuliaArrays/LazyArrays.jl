@@ -1,6 +1,6 @@
 using LazyArrays, FillArrays, Test
 import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
-            ApplyArray, ApplyMatrix, ApplyVector, LazyArrayApplyStyle
+            ApplyArray, ApplyMatrix, ApplyVector, LazyArrayApplyStyle, ApplyLayout, call
 
 @testset "Applying" begin
     @testset "Applied" begin
@@ -59,5 +59,13 @@ import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
         @test copyto!(c, a) == a == c
         @test copyto!(similar(a), a) == a
         @test_throws ErrorException copyto!(c, Array(a))
+    end
+
+    @testset "view" begin
+        a = ApplyArray(+,[1,2,3],[3,4,5])
+        v = view(a,1:2)
+        @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(+)}
+        @test call(v) == call(a) == +
+        @test Array(v) == a[1:2] == Array(a)[1:2]
     end
 end
