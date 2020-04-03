@@ -213,3 +213,11 @@ call(b::BroadcastLayout, a::AdjOrTrans) = call(b, parent(a))
 transposelayout(b::BroadcastLayout) = b
 arguments(b::BroadcastLayout, A::Adjoint) = map(adjoint, arguments(b, parent(A)))
 arguments(b::BroadcastLayout, A::Transpose) = map(transpose, arguments(b, parent(A)))
+
+##
+# copy
+##
+
+_broadcasted(b::BroadcastArray) = broadcasted(b.f, _broadcasted.(b.args)...)
+_broadcasted(b) = b
+Base.copy(b::BroadcastArray) = materialize(_broadcasted(b))

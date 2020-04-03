@@ -1,4 +1,4 @@
-using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Test
+using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Tracker, Test
 import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle
 import Base: broadcasted
 
@@ -149,5 +149,10 @@ import Base: broadcasted
         @test arguments(Vc) == (B.args[1][1:3,1:2]', permutedims(B.args[2][1:3]))
         @test arguments(Vt) == (transpose(B.args[1][1:3,1:2]), permutedims(B.args[2][1:3]))
         @test BroadcastArray(Vc) == BroadcastArray(Vt) == Vc == (Array(B)')[1:2,1:3]      
+    end
+
+    @testset "copy to TrackedArray" begin
+        a = LazyArray(broadcasted(+, param(rand(3, 3)), 1))
+        @test @inferred(copy(a)) isa TrackedArray
     end
 end
