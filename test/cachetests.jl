@@ -166,4 +166,12 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector
         @test B'x ≈ Matrix(B)'Vector(x)
         @test C'x ≈ Matrix(C)'Vector(x)
     end
+
+    @testset "copyto!" begin
+        a = CachedArray([1,2,3], Zeros{Int}(8));
+        b = CachedArray(Int[], Zeros{Int}(8));
+        c = CachedArray(Float64[], Zeros{Float64}(8));
+        @test copyto!(b, a) == a == b
+        @test copyto!(c, a) == a == c
+    end
 end

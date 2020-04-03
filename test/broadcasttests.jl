@@ -6,7 +6,7 @@ import Base: broadcasted
     @testset "BroadcastArray" begin
         a = randn(6)
         b = BroadcastArray(exp, a)
-        @test BroadcastArray(b) == BroadcastVector(b) == b
+        @test BroadcastArray(b) == BroadcastVector(b) == b == copyto!(similar(b), b)
 
         @test b ==  Vector(b) == exp.(a)
         @test b[2:5] isa BroadcastVector
