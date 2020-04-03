@@ -435,4 +435,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
         a = Vcat(1:10_000, [10_000_000_000,12_000_000_000])
         # searchsortedfirst(a, 6_000_000_001)
     end
+
+    @testset "args with hcat and view" begin
+        A = Vcat(fill(2.0,1,10),ApplyArray(hcat, Zeros(1), fill(3.0,1,9)))
+        @test arguments(view(A,:,10)) == ([2.0], [3.0])
+    end
 end

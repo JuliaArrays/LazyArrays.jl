@@ -83,9 +83,8 @@ getindex(K::Applied{DefaultArrayApplyStyle,typeof(kron)}, k::Integer, j::Integer
 
 
 ## Adapted from julia/stdlib/LinearAlgebra/src/dense.jl kron definition
-function _kron2!(R, K)
-    size(R) == size(K) || throw(DimensionMismatch("Matrices have wrong dimensions"))
-    a,b = K.args
+function _kron!(R, a, b)
+    size(R) == size(Kron(a,b)) || throw(DimensionMismatch("Matrices have wrong dimensions"))
     require_one_based_indexing(a, b)
     m = 1
     @inbounds for j = 1:size(a,2), l = 1:size(b,2), i = 1:size(a,1)
@@ -98,14 +97,14 @@ function _kron2!(R, K)
     R
 end
 
-copyto!(R::AbstractMatrix, K::Kron{<:Any,2,<:Tuple{<:AbstractMatrix,<:AbstractMatrix}}) =
-    _kron2!(R, K)
-copyto!(R::AbstractVector, K::Kron{<:Any,1,<:Tuple{<:AbstractVector,<:AbstractVector}}) =
-    _kron2!(R, K)
-copyto!(R::AbstractMatrix{T}, K::Kron{T,2,<:Tuple{<:AbstractMatrix,<:AbstractMatrix}}) where T =
-    _kron2!(R, K)
-copyto!(R::AbstractVector{T}, K::Kron{T,1,<:Tuple{<:AbstractVector,<:AbstractVector}}) where T =
-    _kron2!(R, K)
+_kron!(R, a) = copyto!(R, a)
+
+_kron!(R, a, b, c, d...) = _copyto!(UnknownLayout(), UnknownLayout(), R, Kron(a,b,c,d...))
+
+_copyto!(_, ::ApplyLayout{typeof(kron)}, R::AbstractMatrix, K::AbstractMatrix) =
+    _kron!(R, arguments(K)...)
+_copyto!(_, ::ApplyLayout{typeof(kron)}, R::AbstractVector, K::AbstractVector) =
+    _kron!(R, arguments(K)...)
 
 
 struct Diff{T, N, Arr} <: LazyArray{T, N}

@@ -19,6 +19,7 @@ end
 
 call(a) = a.f
 call(_, a) = a.f
+call(LAY, a::SubArray) = call(LAY, parent(a))
 call(a::AbstractArray) = call(MemoryLayout(typeof(a)), a)
 arguments(a) = a.args
 arguments(_, a) = a.args
@@ -267,8 +268,12 @@ end
 # on the memory layout
 ###
 
-@inline copyto!(dest::AbstractArray{T,N}, src::ApplyArray{T,N}) where {T,N} = copyto!(dest, Applied(src))
-@inline copyto!(dest::AbstractArray, src::ApplyArray) = copyto!(dest, Applied(src))    
+function _copyto!(::LAY, ::LAY, dest::AbstractArray{<:Any,N}, src::AbstractArray{<:Any,N}) where {LAY<:ApplyLayout,N} 
+    map(copyto!, arguments(dest), arguments(src))
+    dest
+end
+
+@inline _copyto!(_, ::ApplyLayout, dest::AbstractArray, src::AbstractArray) = copyto!(dest, Applied(src))    
 
 # avoid infinite-loop
 _base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)

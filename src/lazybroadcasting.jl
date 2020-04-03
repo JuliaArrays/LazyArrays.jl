@@ -40,7 +40,8 @@ BroadcastArray(b::BroadcastArray) = b
 BroadcastVector(A::BroadcastVector) = A
 BroadcastMatrix(A::BroadcastMatrix) = A
 
-Broadcasted(A::BroadcastArray) = instantiate(broadcasted(A.f, A.args...))
+Broadcasted(A::BroadcastArray) = instantiate(broadcasted(call(A), arguments(A)...))
+Broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = instantiate(broadcasted(call(A), arguments(A)...))
 
 @inline BroadcastArray(A::AbstractArray) = BroadcastArray(call(A), arguments(A)...)
 
@@ -63,10 +64,6 @@ getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) =
     BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)    
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
-
-
-copyto!(dest::AbstractArray{<:Any,N}, bc::BroadcastArray{<:Any,N}) where N = 
-    copyto!(dest, Broadcasted(bc))
 
 # Replacement for #18.
 # Could extend this to other similar reductions in Base... or apply at lower level? 
@@ -121,6 +118,9 @@ broadcastlayout(::Type, _, _, ::LazyLayout) = LazyLayout()
 broadcastlayout(::Type, _, _, _, ::LazyLayout) = LazyLayout()
 MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = 
     broadcastlayout(F, tuple_type_memorylayouts(Args)...)
+
+_copyto!(_, ::BroadcastLayout, dest::AbstractArray{<:Any,N}, bc::AbstractArray{<:Any,N}) where N = 
+    copyto!(dest, Broadcasted(bc))    
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting
 for op in (+, -, big)

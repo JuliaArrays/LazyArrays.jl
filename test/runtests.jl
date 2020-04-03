@@ -39,7 +39,7 @@ include("cachetests.jl")
     A = [1,2,3]
     B = [4,5,6,7]
 
-    @test_throws MethodError Array(@inferred(Kron(A))) == A
+    @test Array(@inferred(Kron(A))) == A == copyto!(similar(A), Kron(A))
     K = @inferred(Kron(A,B))
     @test size(K) == (12,)
     @test size(K,1) == 12
@@ -51,11 +51,11 @@ include("cachetests.jl")
     K = @inferred(Kron(A,B))
     @test K isa Kron{Float64}
     @test all(K.args .=== (A,B))
-    @test [K[k] for k=1:length(K)] == Array(K) == Array(Kron{Float64}(A,B)) == kron(A,B)
+    @test [K[k] for k=1:length(K)] == Array(K) == Array(Kron{Float64}(A,B)) == kron(A,B) == copyto!(similar(K), K)
 
-    # C = [7,8,9,10,11]
-    # K = Kron(A,B,C)
-    # @time [K[k] for k=1:length(K)] == Array(Kron(A,B)) == kron(A,B)
+    C = [7,8,9,10,11]
+    K = Kron(A,B,C)
+    @test [K[k] for k=1:length(K)] == Array(K) == kron(A,B,C) == copyto!(similar(K), K)
 
     A = randn(3,2)
     B = randn(4,6)

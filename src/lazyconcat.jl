@@ -130,7 +130,8 @@ end
 
 ## copyto!
 # based on Base/array.jl, Base/abstractarray.jl
-copyto!(dest::AbstractArray, V::Vcat) = vcat_copyto!(dest, arguments(V)...)
+_copyto!(_, LAY::ApplyLayout{typeof(vcat)}, dest::AbstractArray{<:Any,N}, V::AbstractArray{<:Any,N}) where N = 
+    vcat_copyto!(dest, arguments(LAY, V)...)
 function vcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest,1)
@@ -206,7 +207,8 @@ function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
     return arr
 end
 
-copyto!(dest::AbstractMatrix, H::Hcat) = hcat_copyto!(dest, arguments(H)...)
+_copyto!(_, LAY::ApplyLayout{typeof(hcat)}, dest::AbstractMatrix, H::AbstractMatrix) = 
+    hcat_copyto!(dest, arguments(LAY,H)...)
 function hcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest, 1)
@@ -515,23 +517,30 @@ end
 
 # special copyto! since `similar` of a padded returns a cached
 for Typ in (:Number, :AbstractVector)
-    @eval function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::Vcat{<:Any,1,<:Tuple{<:$Typ,<:Zeros}}) where T
-        length(src) ≤ length(dest)  || throw(BoundsError())
-        a,_ = src.args
-        n = length(a)
-        resizedata!(dest, n) # make sure we are padded enough
-        copyto!(view(dest.data,OneTo(n)), a)
-        dest
+    @eval begin
+        function _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::AbstractVector)
+            length(src) ≤ length(dest)  || throw(BoundsError())
+            a,_ = src.args
+            n = length(a)
+            resizedata!(dest, n) # make sure we are padded enough
+            copyto!(view(dest.data,OneTo(n)), a)
+            dest
+        end
+        _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::CachedVector) =
+            _padded_copyto!(dest, src)
     end
 end
 
-function copyto!(dest::CachedVector{T,Vector{T},<:Zeros{T,1}}, src::CachedVector{V,Vector{V},<:Zeros{V,1}}) where {T,V}
+function _padded_copyto!(dest::CachedVector, src::CachedVector)
     length(src) ≤ length(dest)  || throw(BoundsError())
     n = src.datasize[1]
     resizedata!(dest, n)
     copyto!(view(dest.data,OneTo(n)), view(src.data,OneTo(n)))
     dest
 end
+
+_copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector, src::CachedVector) = 
+    _padded_copyto!(dest, src)
 
 struct Dot{StyleA,StyleB,ATyp,BTyp}
     A::ATyp
@@ -576,12 +585,6 @@ arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice
 arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = 
     view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
 
-copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:Vcat{T,N}}) where {T,N} = 
-    vcat_copyto!(dest, arguments(ApplyLayout{typeof(vcat)}(), src)...)
-copyto!(dest::AbstractMatrix{T}, src::SubArray{T,2,<:Hcat{T}}) where T = 
-    hcat_copyto!(dest, arguments(ApplyLayout{typeof(hcat)}(), src)...)
-
-
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
 _vcat_firstinds(sz) = (1, (1 .+ most(_vcat_lastinds(sz)))...)
 
@@ -591,13 +594,22 @@ _view_vcat(a::Number, kr) = Fill(a,length(kr))
 _view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
 _view_vcat(a, kr...) = view(a, kr...)
 
-function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V)
-    kr = parentindices(V)[1]
+function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr)
     sz = size.(arguments(A),1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
     _view_vcat.(arguments(A), skr2)
 end
+
+function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr, jr)
+    sz = size.(arguments(A),1)
+    skr = intersect.(_argsindices(sz), Ref(kr))
+    skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
+    _view_vcat.(arguments(A), skr2, Ref(jr))
+end
+
+_vcat_sub_arguments(LAY::ApplyLayout{typeof(vcat)}, A, V) = _vcat_sub_arguments(LAY, A, V, parentindices(V)...)
+
 _vcat_sub_arguments(::ApplyLayout{typeof(hcat)}, A, V) = arguments(ApplyLayout{typeof(hcat)}(), V)
 _vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
 

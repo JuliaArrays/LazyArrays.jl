@@ -220,8 +220,6 @@ arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
 
 @inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
-@inline copyto!(dest::AbstractArray{T,N}, src::SubArray{T,N,<:ApplyArray{T,N,typeof(*)}}) where {T,N} = 
-    copyto!(dest, Applied(src))
 
 ##
 # adoint Mul
@@ -280,15 +278,3 @@ copy(M::Applied{RmulStyle}) = copy(Rmul(M))
 mulapplystyle(::QLayout, _) = LmulStyle()
 mulapplystyle(::QLayout, ::LazyLayout) = LazyArrayApplyStyle()
 
-factorizestyle(_) = DefaultArrayApplyStyle()
-
-for op in (:factorize, :qr, :lu, :cholesky)
-    @eval begin
-        $op(B::LazyMatrix) = apply($op, B)
-        ApplyStyle(::typeof($op), B::Type{<:AbstractMatrix}) = factorizestyle(MemoryLayout(B))
-        materialize(A::Applied{DefaultArrayApplyStyle,typeof($op),<:Tuple{<:AbstractMatrix{T}}}) where T = 
-            Base.invoke($op, Tuple{AbstractMatrix{T}}, A.args...)
-
-        eltype(A::Applied{<:Any,typeof($op)}) = float(eltype(first(A.args)))
-    end
-end
