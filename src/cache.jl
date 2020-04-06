@@ -4,7 +4,16 @@ mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} <: 
     data::DM
     array::M
     datasize::NTuple{N,Int}
+    function CachedArray{T,N,DM,M}(data::DM, array::M, datasize::NTuple{N,Int}) where {T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}}
+        for d in datasize
+            d < 0 && throw(ArgumentError("Datasize must be 0 or more"))
+        end
+        new{T,N,DM,M}(data, array, datasize)
+    end
 end
+
+CachedArray(data::DM, array::M, datasize::NTuple{N,Int}) where {T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} =
+    CachedArray{T,N,DM,M}(data, array, datasize)
 
 const CachedVector{T,DM<:AbstractVector{T},M<:AbstractVector{T}} = CachedArray{T,1,DM,M}
 const CachedMatrix{T,DM<:AbstractMatrix{T},M<:AbstractMatrix{T}} = CachedArray{T,2,DM,M}
@@ -73,7 +82,7 @@ function getindex(A::CachedArray, I...)
     A.data[I...]
 end
 
-@inline getindex(A::CachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = lazy_getindex(A, kr, jr)
+@inline getindex(A::CachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
 
 getindex(A::CachedVector, ::Colon) = copy(A)
 getindex(A::CachedVector, ::Slice) = copy(A)
@@ -97,7 +106,9 @@ end
 
 ## Array caching
 
-function resizedata!(B::CachedVector{T,Vector{T}}, n::Integer) where T<:Number
+resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
+
+function resizedata!(_, _, B::AbstractVector, n)
     @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
@@ -105,7 +116,7 @@ function resizedata!(B::CachedVector{T,Vector{T}}, n::Integer) where T<:Number
     ν, = B.datasize
     n = max(ν,n)
     if n > length(B.data) # double memory to avoid O(n^2) growing
-        B.data = Array{T}(undef, min(2n,length(B.array)))
+        B.data = similar(B.data, min(2n,length(B.array)))
         B.data[axes(olddata,1)] = olddata
     end
 
@@ -117,7 +128,7 @@ function resizedata!(B::CachedVector{T,Vector{T}}, n::Integer) where T<:Number
     B
 end
 
-function resizedata!(B::CachedArray{T,N,Array{T,N}},nm::Vararg{Integer,N}) where {T<:Number,N}
+function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) where N
     @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
@@ -125,7 +136,7 @@ function resizedata!(B::CachedArray{T,N,Array{T,N}},nm::Vararg{Integer,N}) where
     νμ = size(olddata)
     nm = max.(νμ,nm)
     if νμ ≠ nm
-        B.data = Array{T}(undef, nm)
+        B.data = similar(B.data, nm...)
         B.data[axes(olddata)...] = olddata
     end
 
@@ -247,15 +258,3 @@ norm1(a::CachedVector) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1
 norm2(a::CachedVector) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
 normInf(a::CachedVector) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
 normp(a::CachedVector, p) = (norm(paddeddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
-
-####
-# algebra
-####
-
-@lazymul CachedMatrix
-*(A::AbstractMatrix, b::CachedVector) = apply(*, A, b)
-*(A::ApplyMatrix, b::CachedVector) = apply(*, A, b)
-*(A::BroadcastMatrix, b::CachedVector) = apply(*, A, b)
-*(A::Adjoint{<:Any,<:AbstractMatrix{T}}, b::CachedVector) where T = apply(*, A, b)
-*(A::Adjoint{<:Any,<:ApplyMatrix{T}}, b::CachedVector) where T = apply(*, A, b)
-*(A::Adjoint{<:Any,<:BroadcastMatrix{T}}, b::CachedVector) where T = apply(*, A, b)

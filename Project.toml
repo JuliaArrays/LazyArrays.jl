@@ -1,6 +1,6 @@
 name = "LazyArrays"
 uuid = "5078a376-72f3-5289-bfd5-ec5146d43c02"
-version = "0.14.11"
+version = "0.16.2"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -12,14 +12,15 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-ArrayLayouts = "0.1"
+ArrayLayouts = "0.2.1"
 FillArrays = "0.8"
 MacroTools = "0.5"
 StaticArrays = "0.11, 0.12"
 julia = "1"
 
 [extras]
+Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Tracker", "Test"]

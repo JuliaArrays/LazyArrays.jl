@@ -1,5 +1,5 @@
 using LazyArrays, LinearAlgebra
-import LazyArrays: @lazymul, @lazylmul, @lazyldiv, materialize!, MemoryLayout, triangulardata, LazyLayout, LazyArrayApplyStyle, UnknownLayout
+import LazyArrays: @lazymul, @lazyldiv, materialize!, MemoryLayout, triangulardata, LazyLayout, LazyArrayApplyStyle, UnknownLayout
 
 # used to test general matrix backends
 struct MyMatrix{T} <: AbstractMatrix{T}
@@ -28,35 +28,6 @@ LinearAlgebra.factorize(A::MyMatrix) = factorize(A.A)
 
 @lazymul MyMatrix
 @lazyldiv MyMatrix
-
-struct MyUpperTriangular{T} <: AbstractMatrix{T}
-    A::UpperTriangular{T,Matrix{T}}
-end
-
-MyUpperTriangular{T}(::UndefInitializer, n::Int, m::Int) where T = MyUpperTriangular{T}(UpperTriangular(Array{T}(undef, n, m)))
-MyUpperTriangular(A::AbstractMatrix{T}) where T = MyUpperTriangular{T}(UpperTriangular(Matrix{T}(A)))
-Base.convert(::Type{MyUpperTriangular{T}}, A::MyUpperTriangular{T}) where T = A
-Base.convert(::Type{MyUpperTriangular{T}}, A::MyUpperTriangular) where T = MyUpperTriangular(convert(AbstractArray{T}, A.A))
-Base.convert(::Type{MyUpperTriangular}, A::MyUpperTriangular)= A
-Base.convert(::Type{AbstractArray{T}}, A::MyUpperTriangular) where T = MyUpperTriangular(convert(AbstractArray{T}, A.A))
-Base.convert(::Type{AbstractMatrix{T}}, A::MyUpperTriangular) where T = MyUpperTriangular(convert(AbstractArray{T}, A.A))
-Base.convert(::Type{MyUpperTriangular{T}}, A::AbstractArray{T}) where T = MyUpperTriangular{T}(A)
-Base.convert(::Type{MyUpperTriangular{T}}, A::AbstractArray) where T = MyUpperTriangular{T}(convert(AbstractArray{T}, A))
-Base.convert(::Type{MyUpperTriangular}, A::AbstractArray{T}) where T = MyUpperTriangular{T}(A)
-Base.getindex(A::MyUpperTriangular, kj...) = A.A[kj...]
-Base.getindex(A::MyUpperTriangular, ::Colon, j::AbstractVector) = MyUpperTriangular(A.A[:,j])
-Base.setindex!(A::MyUpperTriangular, v, kj...) = setindex!(A.A, v, kj...)
-Base.size(A::MyUpperTriangular) = size(A.A)
-Base.similar(::Type{MyUpperTriangular{T}}, m::Int, n::Int) where T = MyUpperTriangular{T}(undef, m, n)
-Base.similar(::MyUpperTriangular{T}, m::Int, n::Int) where T = MyUpperTriangular{T}(undef, m, n)
-Base.similar(::MyUpperTriangular, ::Type{T}, m::Int, n::Int) where T = MyUpperTriangular{T}(undef, m, n)
-LinearAlgebra.factorize(A::MyUpperTriangular) = factorize(A.A)
-
-MemoryLayout(::Type{MyUpperTriangular{T}}) where T = MemoryLayout(UpperTriangular{T,Matrix{T}})
-triangulardata(A::MyUpperTriangular) = triangulardata(A.A)
-
-@lazylmul MyUpperTriangular
-
 
 struct MyLazyArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
@@ -118,17 +89,6 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test MyMatrix(A) * BroadcastArray(exp,B) ≈ apply(*, MyMatrix(A),BroadcastArray(exp,B)) ≈ A*exp.(B)
         @test BroadcastArray(exp,A) * MyMatrix(B)  ≈ apply(*, BroadcastArray(exp,A), MyMatrix(B)) ≈ exp.(A)*B
         @test BroadcastArray(exp,A) * BroadcastArray(exp,B) ≈ apply(*, BroadcastArray(exp,A),BroadcastArray(exp,B)) ≈ exp.(A)*exp.(B)
-    end
-
-    @testset "lmul!" begin
-        A = randn(5,5)
-        B = randn(5,5)
-        x = randn(5)
-
-        @test lmul!(MyUpperTriangular(A), copy(x)) ≈ MyUpperTriangular(A) * x
-        @test lmul!(MyUpperTriangular(A), copy(B)) ≈ MyUpperTriangular(A) * B
-
-        @test_skip lmul!(MyUpperTriangular(A),view(copy(B),collect(1:5),1:5)) ≈ MyUpperTriangular(A) * B
     end
 
     @testset "\\" begin
