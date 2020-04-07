@@ -174,8 +174,21 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector
         @test copyto!(b, a) == a == b
         @test copyto!(c, a) == a == c
 
+        @test copyto!(a, Zeros{Int}(8)) == zeros(8)
+        a = CachedArray([1,2,3], Zeros{Int}(8));        
+        copyto!(view(a,3:8), Zeros{Int}(6))
+        @test a == [1; 2; zeros(6)]
+
         a = CachedArray([3,missing], Zeros{Union{Int,Missing}}(4))
         b = CachedArray(Union{Int,Missing}[], Zeros{Union{Int,Missing}}(4))
         @test all(copyto!(b, a) .=== a .=== b)
+
+        a = CachedArray([1,2,3], Zeros{Int}(8));
+        copyto!(view(a,1:2), [4,5])
+        @test a[1:2] == [4,5]
+        a = CachedArray(Int[], Zeros{Int}(8));
+        copyto!(view(a,1:2), view(Vcat([4,5],Zeros(6)),1:2))
+        
+
     end
 end

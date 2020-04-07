@@ -90,4 +90,5 @@ end
 
 
 *(A::AbstractMatrix, b::LazyVector) where T = apply(*,A,b)
+*(A::LinearAlgebra.AdjointAbsVec, b::LazyVector) where T = first(apply(*,A,b))
 *(A::Adjoint{<:Any,<:AbstractMatrix{T}}, b::LazyVector) where T = apply(*,A,b)

@@ -520,12 +520,22 @@ for Typ in (:Number, :AbstractVector)
     @eval begin
         function _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::AbstractVector)
             length(src) ≤ length(dest)  || throw(BoundsError())
-            a,_ = src.args
+            a = paddeddata(src)
             n = length(a)
             resizedata!(dest, n) # make sure we are padded enough
             copyto!(view(dest.data,OneTo(n)), a)
             dest
         end
+        function _copyto!(::PaddedLayout, ::PaddedLayout, dest::SubArray{<:Any,1,<:CachedVector{<:$Typ}}, src::AbstractVector)
+            length(src) ≤ length(dest)  || throw(BoundsError())
+            a = paddeddata(src)
+            n = length(a)
+            k = first(parentindices(dest)[1])
+            resizedata!(parent(dest), k+n-1) # make sure we are padded enough
+            copyto!(view(parent(dest).data,k:k+n-1), a)
+            dest
+        end
+
         _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::CachedVector) =
             _padded_copyto!(dest, src)
     end
@@ -541,6 +551,11 @@ end
 
 _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector, src::CachedVector) = 
     _padded_copyto!(dest, src)
+
+function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::AbstractVector)    
+    zero!(paddeddata(dest))
+    dest
+end
 
 struct Dot{StyleA,StyleB,ATyp,BTyp}
     A::ATyp
@@ -673,24 +688,32 @@ sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange}} =
     PaddedLayout{typeof(sublayout(L(), I))}()
 sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,AbstractUnitRange}} = 
     PaddedLayout{typeof(sublayout(L(), I))}() 
-    
-_lazy_getindex(dat, kr2) = layout_getindex(dat, kr2)    
-_lazy_getindex(dat::Number, kr2) = dat
+
+_lazy_getindex(dat, kr...) = view(dat, kr...)    
+_lazy_getindex(dat::Number, _) = dat
+
+function paddeddata(S::SubArray{<:Any,1}) 
+    dat = paddeddata(parent(S))
+    (kr,) = parentindices(S)
+    kr2 = kr ∩ axes(dat,1)
+    _lazy_getindex(dat, kr2)
+end  
+
+function paddeddata(S::SubArray{<:Any,2}) 
+    dat = paddeddata(parent(S))
+    (kr,jr) = parentindices(S)
+    kr2 = kr ∩ axes(dat,1)
+    _lazy_getindex(dat, kr2, jr)
+end
 
 function sub_materialize(::PaddedLayout, v::AbstractVector{T}) where T
-    A = parent(v)
-    dat = paddeddata(A)
-    (kr,) = parentindices(v)
-    kr2 = kr ∩ axes(dat,1)
-    Vcat(_lazy_getindex(dat, kr2), Zeros{T}(length(kr) - length(kr2)))
+    dat = paddeddata(v)
+    Vcat(dat, Zeros{T}(length(v) - length(dat)))
 end
 
 function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}) where T
-    A = parent(v)
-    dat = paddeddata(A)
-    kr,jr = parentindices(v)
-    kr2 = kr ∩ axes(dat,1)
-    Vcat(layout_getindex(dat, kr2, jr), Zeros{T}(length(kr) - length(kr2), length(jr)))
+    dat = paddeddata(v)
+    Vcat(dat, Zeros{T}(size(v,1) - size(dat,1), size(dat,2)))
 end
 
 ## print
