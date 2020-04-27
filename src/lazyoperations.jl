@@ -113,14 +113,21 @@ end
 _compatible_sizes((A, B)) = (size(A, 2) == size(B, 1))
 
 
+# Implements the mixed-produce property for the Kronecker product and matrix
+# multiplication
 function materialize(M::Applied{
     MulAddStyle, typeof(*),
     NTuple{2, Kron{T,2,NTuple{2, MT}}}
 }) where {T, MT<:AbstractMatrix}
     A, B = M.args
+    # Keeping it simple for now, but could potentially make this "alignment"-check
+    # more precise. For example, if one factor of A has 6 columns and it's aligned
+    # with two factors of B with 2 and 3 rows, then we can still use the
+    # mixed-product property after explicitly computing the Kronecker product of
+    # the two factors of B (or maybe just deferring to the shuffle algorithm)
     if (length(A.args) == length(B.args)) && all(_compatible_sizes, zip(A.args, B.args))
         factors = [(A_i * B_i) for (A_i, B_i) in zip(A.args, B.args)]
-        return kron(factors...)
+        return Kron(factors...)
     else
         algo_type = shuffle_algorithm_type(MT)
         return shuffle_algorithm(algo_type, A, B, eltype(M))
@@ -128,6 +135,8 @@ function materialize(M::Applied{
 end
 
 
+# Implements Roth's lemma aka the "vec-trick" for multiplying a 2-factor Kron
+# matrix to a vector
 function materialize(M::Applied{
     MulAddStyle, typeof(*),
     Tuple{Kron{T,2,NTuple{2, MT}}, VT}

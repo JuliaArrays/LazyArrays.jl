@@ -175,7 +175,9 @@ include("cachetests.jl")
         C, D = randn(4, 5), rand(6, 4)
 
         K1, K2 = Kron(A, B), Kron(C, D)
-        @test (K1 * K2) ≈ (kron(A, B) * kron(C, D))
+        res = K1 * K2
+        @test res ≈ (kron(A, B) * kron(C, D))
+        @test res isa Kron
     end
 
 
@@ -184,7 +186,9 @@ include("cachetests.jl")
         C, D = randn(4, 5), rand(6, 4)
 
         K1, K2 = Kron(A, B), Kron(C, D)
-        @test (K1 * K2) ≈ (kron(A, B) * kron(C, D))
+        res = K1 * K2
+        @test res ≈ (kron(A, B) * kron(C, D))
+        @test res isa Matrix
     end
 
 end
