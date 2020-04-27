@@ -1084,4 +1084,14 @@ end
         @test arguments(V) == ([1 2; 3 4], [1,2])
         @test ApplyArray(V) == Array(V) == A[1:2,2] == Array(A)[1:2,2]
     end
+
+    @testset "argument type inferrence" begin
+        n = 10
+        L = ApplyArray(*,fill(3.0,n), ones(1,n))
+        A,B = @inferred(arguments(L))
+        V = view(L,1:3,1:3)
+        a,b = @inferred(arguments(V))
+        @test a == view(A,1:3,Base.OneTo(1))
+        @test b == view(B,Base.OneTo(1),1:3)
+    end
 end
