@@ -51,7 +51,7 @@ convert(::Type{AbstractArray{T}}, S::CachedArray{T}) where {T} = S
 convert(::Type{AbstractArray{T}}, S::CachedArray) where {T} =
     CachedArray(convert(AbstractArray{T}, S.data), convert(AbstractArray{T}, S.array), S.datasize)
 
-
+axes(A::CachedArray) = axes(A.array)
 size(A::CachedArray) = size(A.array)
 length(A::CachedArray) = length(A.array)
 
