@@ -68,4 +68,19 @@ import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
         @test call(v) == call(a) == +
         @test Array(v) == a[1:2] == Array(a)[1:2]
     end
+
+    @testset "rot180" begin
+        A = randn(3,2)
+        R = ApplyArray(rot180, A)
+        @test eltype(R) == Float64
+        @test R == rot180(A)
+
+        R = ApplyArray(rotl90, A)
+        @test eltype(R) == Float64
+        @test R == rotl90(A)
+
+        R = ApplyArray(rotr90, A)
+        @test eltype(R) == Float64
+        @test R == rotr90(A)
+    end
 end

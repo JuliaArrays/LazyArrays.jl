@@ -170,3 +170,20 @@ copyto!(x::AbstractArray{<:Any,N}, C::Cumsum{<:Any,N}) where N = cumsum!(x, C.v)
 
 # keep lazy
 cumsum(a::LazyArray; kwds...) = Cumsum(a; kwds...)
+
+
+## Rotations
+
+for op in (:rot180, :rotl90, :rotr90)
+    @eval begin 
+        ndims(::Applied{<:Any,typeof($op)}) = 2
+        eltype(A::Applied{<:Any,typeof($op)}) = eltype(A.args...)
+    end
+end
+size(A::Applied{<:Any,typeof(rot180)}) = size(A.args...)
+size(A::Applied{<:Any,typeof(rotl90)}) = reverse(size(A.args...))
+size(A::Applied{<:Any,typeof(rotr90)}) = reverse(size(A.args...))
+
+getindex(A::Applied{<:Any,typeof(rot180)}, k::Int, j::Int) = A.args[1][end-k+1,end-j+1]
+getindex(A::Applied{<:Any,typeof(rotl90)}, k::Int, j::Int) = A.args[1][j,end-k+1]
+getindex(A::Applied{<:Any,typeof(rotr90)}, k::Int, j::Int) = A.args[1][end-j+1,k]
