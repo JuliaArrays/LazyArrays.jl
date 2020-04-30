@@ -188,7 +188,24 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector
         @test a[1:2] == [4,5]
         a = CachedArray(Int[], Zeros{Int}(8));
         copyto!(view(a,1:2), view(Vcat([4,5],Zeros(6)),1:2))
-        
+    end
 
+    @testset "fill!/lmul!/rmul!" begin
+        a = CachedArray(Zeros{Float64}(100_000_000));
+        a[3] = 4;
+        fill!(a, 0.0);
+        @test a.datasize[1] == 3
+        @test a[1:3] == zeros(3)
+        a[3] = 4;
+        rmul!(a, 2.0);
+        @test a.datasize[1] == 3
+        @test a[1:3] == [0,0,8]
+        lmul!(2.0, a);
+        @test a.datasize[1] == 3
+        @test a[1:3] == [0,0,16]
+
+        @test_throws ArgumentError fill!(a, 1.0)
+        @test_throws ArgumentError rmul!(a, Inf)
+        @test_throws ArgumentError lmul!(Inf, a)
     end
 end
