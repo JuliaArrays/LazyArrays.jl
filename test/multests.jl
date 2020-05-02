@@ -3,6 +3,7 @@ import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTr
                     MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
                     FlattenMulStyle, RmulStyle, Rmul, ApplyLayout, arguments
 import Base.Broadcast: materialize, materialize!, broadcasted
+import MatrixFactorizations: QRCompactWYQLayout, AdjQRCompactWYQLayout
 
 @testset "Matrix * Vector" begin
     @testset "eltype" begin
@@ -906,7 +907,7 @@ end
         b = randn(3)
         B = randn(3,3)
         Q,R = qr(A)
-        @test MemoryLayout(typeof(Q)) == QLayout()
+        @test MemoryLayout(typeof(Q)) isa QRCompactWYQLayout
         @test all(Q*b .=== apply(*,Q,b))
         @test all(Q*B .=== copyto!(similar(B,5,3),Lmul(Q,B)) .=== copyto!(similar(B,5,3),applied(*,Q,B)) .=== apply(*,Q,B))
         @test all(Q*B*b .=== apply(*,Q,B,b))
@@ -922,7 +923,7 @@ end
         @test all(Q*B .=== apply(*,Q,B))
         @test all(Q*B*b .=== apply(*,Q,B,b))
 
-        @test MemoryLayout(typeof(Q')) == QLayout()
+        @test MemoryLayout(typeof(Q')) isa AdjQRCompactWYQLayout
         @test all(Q'b .=== apply(*,Q',b))
         @test all(Q'B .=== apply(*,Q',B))
         @test all(Q'B*b .=== apply(*,Q',B,b))

@@ -1,6 +1,7 @@
-using LazyArrays, FillArrays, Test
-import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
+using LazyArrays, FillArrays, ArrayLayouts, Test
+import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied, arguments,
             ApplyArray, ApplyMatrix, ApplyVector, LazyArrayApplyStyle, ApplyLayout, call
+import ArrayLayouts: StridedLayout
 
 @testset "Applying" begin
     @testset "Applied" begin
@@ -74,7 +75,10 @@ import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
         R = ApplyArray(rot180, A)
         @test eltype(R) == Float64
         @test size(R) == size(A)
-        @test R == rot180(A)
+        @test MemoryLayout(R) isa StridedLayout
+        @test strides(R) == (-1,-3)
+        @test pointer(R) == pointer(view(A,3,2))
+        @test R == rot180(A) == copyto!(similar(A),R)
 
         R = ApplyArray(rotl90, A)
         @test eltype(R) == Float64
@@ -85,5 +89,11 @@ import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
         @test eltype(R) == Float64
         @test size(R) == (2,3)
         @test R == rotr90(A)
+
+        B = randn(2,3)
+        R = ApplyArray(rot180, ApplyArray(*, A, B))
+        @test MemoryLayout(R) isa ApplyLayout{typeof(*)}
+        @test arguments(R) == (rot180(A), rot180(B))
+        @test R ≈ rot180(A*B)
     end
 end

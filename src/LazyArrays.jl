@@ -3,7 +3,7 @@ module LazyArrays
 # Use README as the docstring of the module:
 @doc read(joinpath(dirname(@__DIR__), "README.md"), String) LazyArrays
 
-using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays, ArrayLayouts
+using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays, ArrayLayouts, MatrixFactorizations
 import LinearAlgebra.BLAS
 
 import Base: AbstractArray, AbstractMatrix, AbstractVector,
@@ -30,7 +30,8 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
       similar, @_gc_preserve_end, @_gc_preserve_begin,
       @nexprs, @ncall, @ntuple, tuple_type_tail,
-      all, any, isbitsunion, issubset, replace_in_print_matrix, replace_with_centered_mark
+      all, any, isbitsunion, issubset, replace_in_print_matrix, replace_with_centered_mark,
+      unsafe_convert, strides
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
@@ -50,7 +51,8 @@ import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv,
                         transposelayout, conjlayout, sublayout, triangularlayout, triangulardata,
                         reshapedlayout, diagonallayout, adjointlayout, sub_materialize,
                         check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport,
-                        _fill_lmul!, scalarone, scalarzero, fillzeros, zero!, layout_getindex, _copyto!
+                        _fill_lmul!, scalarone, scalarzero, fillzeros, zero!, layout_getindex, _copyto!,
+                        AbstractQLayout, StridedLayout
 
 if VERSION < v"1.2-"
     import Base: has_offset_axes
