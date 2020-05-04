@@ -74,7 +74,8 @@ end
     v
 end
 
-_maximum(ax, I) = maximum(I)
+_maximum(ax, I::AbstractUnitRange{Int}) = maximum(I)
+_maximum(ax, I) = maximum(ax[I])
 _maximum(ax, ::Colon) = maximum(ax)
 function getindex(A::CachedArray, I...)
     @boundscheck checkbounds(A, I...)
@@ -83,6 +84,7 @@ function getindex(A::CachedArray, I...)
 end
 
 @inline getindex(A::CachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
+@inline getindex(A::CachedMatrix, kr::AbstractVector, jr::AbstractVector) = layout_getindex(A, kr, jr)
 
 getindex(A::CachedVector, ::Colon) = copy(A)
 getindex(A::CachedVector, ::Slice) = copy(A)
