@@ -74,7 +74,8 @@ end
     v
 end
 
-_maximum(ax, I) = maximum(I)
+_maximum(ax, I::AbstractUnitRange{Int}) = maximum(I)
+_maximum(ax, I) = maximum(ax[I])
 _maximum(ax, ::Colon) = maximum(ax)
 function getindex(A::CachedArray, I...)
     @boundscheck checkbounds(A, I...)
@@ -83,6 +84,7 @@ function getindex(A::CachedArray, I...)
 end
 
 @inline getindex(A::CachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
+@inline getindex(A::CachedMatrix, kr::AbstractVector, jr::AbstractVector) = layout_getindex(A, kr, jr)
 
 getindex(A::CachedVector, ::Colon) = copy(A)
 getindex(A::CachedVector, ::Slice) = copy(A)
@@ -258,3 +260,25 @@ norm1(a::CachedVector) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1
 norm2(a::CachedVector) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
 normInf(a::CachedVector) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
 normp(a::CachedVector, p) = (norm(paddeddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
+
+###
+# fill!/lmul!/rmul!
+###
+
+function fill!(a::CachedArray, x) 
+    fill!(a.data, x)
+    fill!(a.array, x)
+    a
+end
+
+function rmul!(a::CachedArray, x::Number) 
+    rmul!(a.data, x)
+    rmul!(a.array, x)
+    a
+end
+
+function lmul!(x::Number, a::CachedArray) 
+    lmul!(x, a.data)
+    lmul!(x, a.array)
+    a
+end

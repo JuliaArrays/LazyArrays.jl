@@ -275,6 +275,5 @@ copy(M::Applied{RmulStyle}) = copy(Rmul(M))
 @inline materialize!(M::Mul{RmulStyle}) = materialize!(Rmul(M))
 
 
-mulapplystyle(::QLayout, _) = LmulStyle()
-mulapplystyle(::QLayout, ::LazyLayout) = LazyArrayApplyStyle()
-
+mulapplystyle(::AbstractQLayout, _) = LmulStyle()
+mulapplystyle(::AbstractQLayout, ::LazyLayout) = LazyArrayApplyStyle()
