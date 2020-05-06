@@ -153,4 +153,10 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test MemoryLayout(typeof(view(A,1:2,1:2))) isa LazyLayout
         @test MemoryLayout(typeof(reshape(A,4))) isa LazyLayout
     end
+
+    @testset "QR" begin
+        B = MyMatrix(randn(3,3))
+        Q = qr(randn(3,3)).Q
+        @test Q * B ≈ Q*B.A
+    end
 end

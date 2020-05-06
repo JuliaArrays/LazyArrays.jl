@@ -19,6 +19,7 @@ macro lazymul(Typ)
         Base.:*(A::$Typ, B::AbstractVector) = LazyArrays.apply(*,A,B)
         Base.:*(A::$Typ, B::LazyArrays.LazyVector) = LazyArrays.apply(*,A,B)
         Base.:*(A::AbstractMatrix, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
+        Base.:*(A::LinearAlgebra.AbstractQ, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
         Base.:*(A::LinearAlgebra.AdjointAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
         Base.:*(A::LinearAlgebra.TransposeAbsVec, B::$Typ, C...) = LazyArrays.apply(*,A,B,C...)
     end

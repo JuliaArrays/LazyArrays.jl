@@ -155,4 +155,12 @@ import Base: broadcasted
         a = LazyArray(broadcasted(+, param(rand(3, 3)), 1))
         @test @inferred(copy(a)) isa TrackedArray
     end
+
+    @testset "Number .* A" begin
+        a = randn(5)
+        A = BroadcastArray(*, 2, a)
+        V = view(A,1:3)
+        @test arguments(V) == (2,a[1:3])
+        @test BroadcastArray(V) == V == 2a[1:3]
+    end
 end
