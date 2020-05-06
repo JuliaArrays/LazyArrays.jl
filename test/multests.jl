@@ -1,6 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
-                    MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, QLayout, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
+                    MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
                     FlattenMulStyle, RmulStyle, Rmul, ApplyLayout, arguments
 import Base.Broadcast: materialize, materialize!, broadcasted
 import MatrixFactorizations: QRCompactWYQLayout, AdjQRCompactWYQLayout

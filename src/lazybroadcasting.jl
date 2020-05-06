@@ -198,6 +198,7 @@ _broadcastviewinds(sz, inds) =
     tuple(isone(sz[1]) ? OneTo(sz[1]) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
 
 _broadcastview(a, inds) = view(a, _broadcastviewinds(size(a), inds)...)
+_broadcastview(a::Number, inds) = a
 
 function arguments(b::BroadcastLayout, V::SubArray)
     args = arguments(parent(V))
