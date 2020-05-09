@@ -40,7 +40,7 @@ LazyArrays.MemoryLayout(::Type{<:MyLazyArray}) = LazyLayout()
 LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
 
 @testset "lazymul/ldiv tests" begin
-    @testset "*/" begin
+    @testset "*" begin
         A = randn(5,5)
         B = randn(5,5)
         x = randn(5)

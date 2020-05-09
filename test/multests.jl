@@ -1,7 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
                     MulAddStyle, Applied, ApplyStyle, LmulStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
-                    FlattenMulStyle, RmulStyle, Rmul, ApplyLayout, arguments
+                    FlattenMulStyle, RmulStyle, Rmul, ApplyLayout, arguments, colsupport, rowsupport
 import Base.Broadcast: materialize, materialize!, broadcasted
 import MatrixFactorizations: QRCompactWYQLayout, AdjQRCompactWYQLayout
 
@@ -1094,5 +1094,12 @@ end
         a,b = @inferred(arguments(V))
         @test a == view(A,1:3,Base.OneTo(1))
         @test b == view(B,Base.OneTo(1),1:3)
+    end
+
+    @testset "Mul colsupport" begin
+        D = ApplyArray(*,Diagonal(randn(5)),Diagonal(randn(5)),Diagonal(randn(5)))
+        D̃ = Applied(*,Diagonal(randn(5)),Diagonal(randn(5)),Diagonal(randn(5)))
+        @test colsupport(D,3) == colsupport(D̃,3) == 3:3
+        @test rowsupport(D,3) == rowsupport(D̃,3) == 3:3
     end
 end
