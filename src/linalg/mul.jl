@@ -117,20 +117,18 @@ _mul(A,B,C...) = Mul(A,B,C...)
 _mul_colsupport(j, Z) = colsupport(Z,j)
 _mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
 _mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
-function _mul_colsupport(j, Z::AbstractArray, Y...)
-    rws = colsupport(Z,j)
-    a = size(Z,1)+1
-    b = 0
-    for k in rws 
-        cs = _mul_colsupport(k, Y...)
-        a = min(a,first(cs))
-        b = max(b,last(cs))
-    end
-    a:b
-end
+_mul_colsupport(j, Z::AbstractArray, Y...) = _mul_colsupport(colsupport(Z,j), Y...)
 
 colsupport(B::Mul, j) = _mul_colsupport(j, reverse(B.args)...)
 colsupport(B::MulArray, j) = _mul_colsupport(j, reverse(B.args)...)
+
+_mul_rowsupport(j, A) = rowsupport(A,j)
+_mul_rowsupport(j, A::AbstractArray) = rowsupport(A,j)
+_mul_rowsupport(j, A, B...) = axes(A,1) # default is return all
+_mul_rowsupport(j, A::AbstractArray, B...) = _mul_rowsupport(rowsupport(A,j), B...)
+
+rowsupport(B::Mul, j) = _mul_rowsupport(j, B.args...)
+rowsupport(B::MulArray, j) = _mul_rowsupport(j, B.args...)
 
 
 function _getindex(M::Mul, ::Tuple{<:Any}, k::Integer)
