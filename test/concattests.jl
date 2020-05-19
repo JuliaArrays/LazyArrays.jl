@@ -1,5 +1,5 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, Test
-import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, 
+import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call,
                     MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize
 
 @testset "concat" begin
@@ -411,6 +411,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
         v = view(A,2,1:5)
         @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(vcat)}
         @test arguments(v) == ([2], zeros(4))
+        @test @inferred(call(v)) == vcat
         @test A[2,1:5] == copy(v) == sub_materialize(v)
     end
 
@@ -439,5 +440,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
     @testset "args with hcat and view" begin
         A = Vcat(fill(2.0,1,10),ApplyArray(hcat, Zeros(1), fill(3.0,1,9)))
         @test arguments(view(A,:,10)) == ([2.0], [3.0])
+    end
+
+    @testset "union" begin
+        a = Vcat([1,3,4],5:7)
+        b = Vcat([1,3,4],5:7)
+        union(a,b)
     end
 end

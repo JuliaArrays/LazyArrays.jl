@@ -19,7 +19,6 @@ end
 
 call(a) = a.f
 call(_, a) = a.f
-call(LAY, a::SubArray) = call(LAY, parent(a))
 call(a::AbstractArray) = call(MemoryLayout(typeof(a)), a)
 arguments(a) = a.args
 arguments(_, a) = a.args
@@ -225,6 +224,8 @@ result_mul_style(_, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
 
 struct  ApplyLayout{F} <: MemoryLayout end
 
+call(::ApplyLayout{F}, a) where F = F.instance
+
 applylayout(::Type{F}, args...) where F = ApplyLayout{F}()
 
 MemoryLayout(::Type{Applied{Style,F,Args}}) where {Style,F,Args} = 
@@ -246,9 +247,6 @@ end
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, _2) where N = DefaultArrayStyle{N}()
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::LazyLayout) where N = LazyArrayStyle{N}()
 BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
-
-replace_in_print_matrix(A::LazyMatrix, i::Integer, j::Integer, s::AbstractString) =
-    i in colsupport(A,j) ? s : replace_with_centered_mark(s)
 
 ### 
 # Number special cases
@@ -309,15 +307,3 @@ getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix}}, k::Integer, j
 
 getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T = 
     j ≤ k+A.args[2] ? A.args[1][k,j] : zero(T)    
-
-
-replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(triu),<:Tuple{<:AbstractMatrix}}, i::Integer, j::Integer, s::AbstractString) =
-    j ≥ i ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)
-replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(triu),<:Tuple{<:AbstractMatrix,<:Integer}}, i::Integer, j::Integer, s::AbstractString) =
-    j ≥ i+A.args[2] ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)    
-
-
-replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(tril),<:Tuple{<:AbstractMatrix}}, i::Integer, j::Integer, s::AbstractString) =
-    j ≤ i ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)
-replace_in_print_matrix(A::ApplyMatrix{<:Any,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, i::Integer, j::Integer, s::AbstractString) =
-    j ≤ i+A.args[2] ? replace_in_print_matrix(A.args[1], i, j, s) : replace_with_centered_mark(s)    
