@@ -97,4 +97,23 @@ end
     @test bc.args[1].args isa Tuple{Applied, Int}
 end
 
+@testset "@~ and \$" begin
+    A = ones(1, 1)
+    x = [1]
+
+    # Use `$` to evaluate a sub-expression eagerly
+    bc = @~ A .+ $Ref(x)
+    @test bc isa Broadcasted
+    @test bc.args[1] === A
+    @test bc.args[2] isa Ref  # not Applied
+    @test bc.args[2][] === x
+
+    # Use `$$` when combined with `@.`
+    bc = @~ @. A + $$Ref(x)
+    @test bc isa Broadcasted
+    @test bc.args[1] === A
+    @test bc.args[2] isa Ref  # not Applied
+    @test bc.args[2][] === x
+end
+
 end  # module
