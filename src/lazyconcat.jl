@@ -2,6 +2,12 @@
 # Similar to Iterators.Flatten and some code has been reused from julia/base/iterators.jl
 
 
+# This fixes type inference issues in v1.0
+for op in  (:hcat, :vcat)
+    @eval call(::ApplyLayout{typeof($op)}, _) = $op
+end
+
+
 const Vcat{T,N,I<:Tuple} = ApplyArray{T,N,typeof(vcat),I}
 
 Vcat(A...) = ApplyArray(vcat, A...)

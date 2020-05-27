@@ -90,6 +90,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
     @testset "Hcat" begin
         A = @inferred(Hcat(1:10, 2:11))
         @test_throws BoundsError A[1,3]
+        @test @inferred(call(A)) == hcat
         @test @inferred(size(A)) == (10,2)
         @test @inferred(A[5]) == @inferred(A[5,1]) == 5
         @test @inferred(A[11]) == @inferred(A[1,2]) == 2
