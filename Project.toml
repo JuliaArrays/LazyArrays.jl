@@ -16,6 +16,7 @@ ArrayLayouts = "0.2.3, 0.3"
 FillArrays = "0.8.8"
 MacroTools = "0.5"
 MatrixFactorizations = "0.4"
+Revise = "2.7"
 StaticArrays = "0.11, 0.12"
 julia = "1"
 
