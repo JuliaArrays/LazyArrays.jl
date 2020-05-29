@@ -20,8 +20,9 @@ StaticArrays = "0.11, 0.12"
 julia = "1"
 
 [extras]
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 
 [targets]
-test = ["Tracker", "Test"]
+test = ["Base64", "Tracker", "Test"]

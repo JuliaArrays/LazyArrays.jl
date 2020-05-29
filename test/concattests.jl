@@ -465,4 +465,5 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         V = Vcat(Diagonal([1,2,3]), Zeros(3,3))
         @test stringmime("text/plain", H) == "3×6 ApplyArray{Float64,2,typeof(hcat),Tuple{Diagonal{$Int,Array{$Int,1}},Zeros{Float64,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}}}}:\n 1.0   ⋅    ⋅    ⋅    ⋅    ⋅ \n  ⋅   2.0   ⋅    ⋅    ⋅    ⋅ \n  ⋅    ⋅   3.0   ⋅    ⋅    ⋅ "
         @test stringmime("text/plain", V) == "6×3 ApplyArray{Float64,2,typeof(vcat),Tuple{Diagonal{$Int,Array{$Int,1}},Zeros{Float64,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}}}}:\n 1.0   ⋅    ⋅ \n 0.0  2.0   ⋅ \n 0.0  0.0  3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
+    end
 end
