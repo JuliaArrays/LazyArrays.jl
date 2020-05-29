@@ -1,4 +1,4 @@
-using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, Test
+using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call,
                     MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize
 
@@ -448,4 +448,21 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Vcat([1,3,4],5:7)
         union(a,b)
     end
+
+    @testset "col/rowsupport" begin
+        H = Hcat(Diagonal([1,2,3]), Zeros(3,3), Diagonal([1,2,3]))
+        V = Vcat(Diagonal([1,2,3]), Zeros(3,3), Diagonal([1,2,3]))
+        @test colsupport(H,2) == rowsupport(V,2) == 2:2
+        @test colsupport(H,4) == rowsupport(V,4) == 1:0
+        @test colsupport(H,8) == rowsupport(V,8) == 2:2
+        @test colsupport(H,10) == rowsupport(V,10)== 1:0
+        @test rowsupport(H,1) == colsupport(V,1) == 1:7
+        @test rowsupport(H,2) == colsupport(V,2) == 2:8
+    end
+
+    @testset "print" begin
+        H = Hcat(Diagonal([1,2,3]), Zeros(3,3))
+        V = Vcat(Diagonal([1,2,3]), Zeros(3,3))
+        @test stringmime("text/plain", H) == "3×6 ApplyArray{Float64,2,typeof(hcat),Tuple{Diagonal{$Int,Array{$Int,1}},Zeros{Float64,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}}}}:\n 1.0   ⋅    ⋅    ⋅    ⋅    ⋅ \n  ⋅   2.0   ⋅    ⋅    ⋅    ⋅ \n  ⋅    ⋅   3.0   ⋅    ⋅    ⋅ "
+        @test stringmime("text/plain", V) == "6×3 ApplyArray{Float64,2,typeof(vcat),Tuple{Diagonal{$Int,Array{$Int,1}},Zeros{Float64,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}}}}:\n 1.0   ⋅    ⋅ \n 0.0  2.0   ⋅ \n 0.0  0.0  3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
 end
