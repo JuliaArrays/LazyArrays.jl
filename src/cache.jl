@@ -176,9 +176,6 @@ function rowsupport(A::CachedMatrix, i)
     minimum(i) ≤ A.datasize[1] ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i) ∩ Base.OneTo(A.datasize[2])) : rowsupport(A.array, i)
 end
 
-replace_in_print_matrix(A::CachedMatrix, i::Integer, j::Integer, s::AbstractString) =
-    i in colsupport(A,j) ? s : replace_with_centered_mark(s)
-
 
 ###
 # special for zero cache

@@ -178,8 +178,8 @@ rowsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport
 
 for op in (:+, :-)
     @eval begin
-        colsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(size(A)), A.args, j)...)
-        rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(size(A)), A.args, j)...)
+        rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(size(A)), A.args, Ref(j))...)
+        colsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(size(A)), A.args, Ref(j))...)
     end
 end
 

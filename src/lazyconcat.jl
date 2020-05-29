@@ -2,6 +2,12 @@
 # Similar to Iterators.Flatten and some code has been reused from julia/base/iterators.jl
 
 
+# This fixes type inference issues in v1.0
+for op in  (:hcat, :vcat)
+    @eval call(::ApplyLayout{typeof($op)}, _) = $op
+end
+
+
 const Vcat{T,N,I<:Tuple} = ApplyArray{T,N,typeof(vcat),I}
 
 Vcat(A...) = ApplyArray(vcat, A...)
@@ -30,6 +36,12 @@ end
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
+function ==(a::Vcat{T,1,II}, b::Vcat{T,1,II}) where {T,II}
+    if !all(map(length,arguments(a)) .== map(length,arguments(b))) 
+        return Base.invoke(==, NTuple{2,AbstractArray}, a, b)
+    end
+    all(arguments(a) .== arguments(b))
+end
 
 @propagate_inbounds @inline function vcat_getindex(f, k::Integer)
     T = eltype(f)
@@ -494,6 +506,27 @@ function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{type
 most(a) = reverse(tail(reverse(a)))
 colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))
 
+function rowsupport(V::Vcat, k)
+    ξ = k
+    for A in arguments(V)
+        n = size(A,1)
+        ξ ≤ n && return rowsupport(A, ξ)
+        ξ -= n
+    end
+    return 1:0
+end
+
+function colsupport(H::Hcat, j)
+    ξ = j
+    for A in arguments(H)
+        n = size(A,2)
+        ξ ≤ n && return colsupport(A, ξ)
+        ξ -= n
+    end
+    return 1:0
+end
+
+rowsupport(M::Hcat, k) = first(rowsupport(first(M.args),k)):(size(Hcat(most(M.args)...),2)+last(rowsupport(last(M.args),k)))
 
 
 ###
@@ -665,7 +698,9 @@ function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix)
     end
     ret
 end
-    
+
+sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector) = ApplyArray(V)
+
 function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     ret = similar(V)
     n = 0
@@ -721,7 +756,7 @@ end
 _replace_in_print_matrix(A::AbstractArray, k, j, s) = replace_in_print_matrix(A, k, j, s)
 _replace_in_print_matrix(_, k, j, s) = s
 
-function replace_in_print_matrix(f::Vcat{<:Any,1}, k::Integer, j::Integer, s::AbstractString)
+function layout_replace_in_print_matrix(::ApplyLayout{typeof(vcat)}, f::AbstractVector, k, j, s)
     @assert j == 1
     κ = k
     for A in f.args
@@ -732,7 +767,7 @@ function replace_in_print_matrix(f::Vcat{<:Any,1}, k::Integer, j::Integer, s::Ab
     throw(BoundsError(f, k))
 end
 
-function replace_in_print_matrix(f::Vcat{<:Any,2}, k::Integer, j::Integer, s::AbstractString)
+function layout_replace_in_print_matrix(::ApplyLayout{typeof(vcat)}, f::AbstractMatrix, k, j, s)
     κ = k
     for A in f.args
         n = size(A,1)
@@ -744,4 +779,13 @@ end
 
 # searchsorted
 
-# function searchsorted(f::Vcat{<:Any,1}
+function searchsortedfirst(f::Vcat{<:Any,1}, x)
+    n = 0
+    for a in arguments(f)
+        m = length(a)
+        r = searchsortedfirst(a, x)
+        r ≤ m && return n + r
+        n += m
+    end
+    return n+1
+end

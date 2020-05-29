@@ -1,5 +1,5 @@
-using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, Test
-import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, 
+using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
+import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call,
                     MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize
 
 @testset "concat" begin
@@ -90,6 +90,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
     @testset "Hcat" begin
         A = @inferred(Hcat(1:10, 2:11))
         @test_throws BoundsError A[1,3]
+        @test @inferred(call(A)) == hcat
         @test @inferred(size(A)) == (10,2)
         @test @inferred(A[5]) == @inferred(A[5,1]) == 5
         @test @inferred(A[11]) == @inferred(A[1,2]) == 2
@@ -411,6 +412,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
         v = view(A,2,1:5)
         @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(vcat)}
         @test arguments(v) == ([2], zeros(4))
+        @test @inferred(call(v)) == vcat
         @test A[2,1:5] == copy(v) == sub_materialize(v)
     end
 
@@ -439,5 +441,37 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!,
     @testset "args with hcat and view" begin
         A = Vcat(fill(2.0,1,10),ApplyArray(hcat, Zeros(1), fill(3.0,1,9)))
         @test arguments(view(A,:,10)) == ([2.0], [3.0])
+    end
+
+    @testset "union" begin
+        a = Vcat([1,3,4],5:7)
+        b = Vcat([1,3,4],5:7)
+        union(a,b)
+    end
+
+    @testset "col/rowsupport" begin
+        H = Hcat(Diagonal([1,2,3]), Zeros(3,3), Diagonal([1,2,3]))
+        V = Vcat(Diagonal([1,2,3]), Zeros(3,3), Diagonal([1,2,3]))
+        @test colsupport(H,2) == rowsupport(V,2) == 2:2
+        @test colsupport(H,4) == rowsupport(V,4) == 1:0
+        @test colsupport(H,8) == rowsupport(V,8) == 2:2
+        @test colsupport(H,10) == rowsupport(V,10)== 1:0
+        @test rowsupport(H,1) == colsupport(V,1) == 1:7
+        @test rowsupport(H,2) == colsupport(V,2) == 2:8
+    end
+
+    @testset "print" begin
+        H = Hcat(Diagonal([1,2,3]), Zeros(3,3))
+        V = Vcat(Diagonal([1,2,3]), Zeros(3,3))
+        @test stringmime("text/plain", H) == "3×6 ApplyArray{Float64,2,typeof(hcat),Tuple{Diagonal{$Int,Array{$Int,1}},Zeros{Float64,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}}}}:\n 1.0   ⋅    ⋅    ⋅    ⋅    ⋅ \n  ⋅   2.0   ⋅    ⋅    ⋅    ⋅ \n  ⋅    ⋅   3.0   ⋅    ⋅    ⋅ "
+        @test stringmime("text/plain", V) == "6×3 ApplyArray{Float64,2,typeof(vcat),Tuple{Diagonal{$Int,Array{$Int,1}},Zeros{Float64,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}}}}:\n 1.0   ⋅    ⋅ \n 0.0  2.0   ⋅ \n 0.0  0.0  3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
+    end
+
+    @testset "==" begin
+        A = Vcat([1,2],[0])
+        B = Vcat([1,2],[0])
+        C = Vcat([1],[2,0])
+        @test A == B == C == [1,2,0]
+        @test A ≠ [1,2,4]
     end
 end
