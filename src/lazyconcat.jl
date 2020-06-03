@@ -756,25 +756,19 @@ end
 _replace_in_print_matrix(A::AbstractArray, k, j, s) = replace_in_print_matrix(A, k, j, s)
 _replace_in_print_matrix(_, k, j, s) = s
 
-function layout_replace_in_print_matrix(::ApplyLayout{typeof(vcat)}, f::AbstractVector, k, j, s)
-    @assert j == 1
+function layout_replace_in_print_matrix(LAY::ApplyLayout{typeof(vcat)}, f::AbstractVecOrMat, k, j, s)
     κ = k
-    for A in f.args
-        n = length(A)
-        κ ≤ n && return _replace_in_print_matrix(A, κ, 1, s)
-        κ -= n
-    end
-    throw(BoundsError(f, k))
-end
-
-function layout_replace_in_print_matrix(::ApplyLayout{typeof(vcat)}, f::AbstractMatrix, k, j, s)
-    κ = k
-    for A in f.args
+    for A in arguments(LAY, f)
         n = size(A,1)
         κ ≤ n && return _replace_in_print_matrix(A, κ, j, s)
         κ -= n
     end
     throw(BoundsError(f, (k,j)))
+end
+
+function layout_replace_in_print_matrix(::PaddedLayout, f::AbstractVecOrMat, k, j, s)
+    data = paddeddata(f)
+    k in axes(data,1) ? _replace_in_print_matrix(data, k, j, s) : Base.replace_with_centered_mark(s)
 end
 
 # searchsorted

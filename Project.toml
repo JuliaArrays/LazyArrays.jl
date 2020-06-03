@@ -1,6 +1,6 @@
 name = "LazyArrays"
 uuid = "5078a376-72f3-5289-bfd5-ec5146d43c02"
-version = "0.16.10"
+version = "0.16.11"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -11,7 +11,7 @@ MatrixFactorizations = "a3b82374-2e81-5b9e-98ce-41277c0e4c87"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-ArrayLayouts = "0.2.3, 0.3"
+ArrayLayouts = "0.3.4"
 FillArrays = "0.8.8"
 MacroTools = "0.5"
 MatrixFactorizations = "0.4"
