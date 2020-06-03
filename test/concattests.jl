@@ -464,12 +464,12 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         H = Hcat(Diagonal([1,2,3]), Zeros(3,3))
         V = Vcat(Diagonal([1,2,3]), Zeros(3,3))
         @test stringmime("text/plain", H) == "3×6 ApplyArray{Float64,2,typeof(hcat),Tuple{Diagonal{$Int,Array{$Int,1}},Zeros{Float64,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}}}}:\n 1.0   ⋅    ⋅    ⋅    ⋅    ⋅ \n  ⋅   2.0   ⋅    ⋅    ⋅    ⋅ \n  ⋅    ⋅   3.0   ⋅    ⋅    ⋅ "
-        @test stringmime("text/plain", V) == "6×3 ApplyArray{Float64,2,typeof(vcat),Tuple{Diagonal{$Int,Array{$Int,1}},Zeros{Float64,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}}}}:\n 1.0   ⋅    ⋅ \n 0.0  2.0   ⋅ \n 0.0  0.0  3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
+        @test stringmime("text/plain", V) == "6×3 ApplyArray{Float64,2,typeof(vcat),Tuple{Diagonal{$Int,Array{$Int,1}},Zeros{Float64,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}}}}:\n 1.0   ⋅    ⋅ \n  ⋅   2.0   ⋅ \n  ⋅    ⋅   3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
         v = Vcat(1, Zeros(3))
         @test colsupport(v,1) == 1:1
         @test stringmime("text/plain", v) == "4-element ApplyArray{Float64,1,typeof(vcat),Tuple{$Int,Zeros{Float64,1,Tuple{Base.OneTo{$Int}}}}}:\n 1.0\n  ⋅ \n  ⋅ \n  ⋅ "
         A = Vcat(Ones{Int}(1,3), Diagonal(1:3))
-        @test stringmime("text/plain", A) == "4×3 ApplyArray{Int64,2,typeof(vcat),Tuple{Ones{Int64,2,Tuple{Base.OneTo{Int64},Base.OneTo{Int64}}},Diagonal{Int64,UnitRange{Int64}}}}:\n 1  1  1\n 1  ⋅  ⋅\n ⋅  2  ⋅\n ⋅  ⋅  3"
+        @test stringmime("text/plain", A) == "4×3 ApplyArray{$Int,2,typeof(vcat),Tuple{Ones{$Int,2,Tuple{Base.OneTo{$Int},Base.OneTo{$Int}}},Diagonal{$Int,UnitRange{$Int}}}}:\n 1  1  1\n 1  ⋅  ⋅\n ⋅  2  ⋅\n ⋅  ⋅  3"
     end
 
     @testset "==" begin
