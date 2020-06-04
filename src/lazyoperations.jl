@@ -166,6 +166,8 @@ function getindex(Q::Cumsum, k::Integer, j::Integer)
     end
 end
 
+==(a::Cumsum{<:Any,1}, b::Cumsum{<:Any,1}) = a.v == b.v
+
 copyto!(x::AbstractArray{<:Any,N}, C::Cumsum{<:Any,N}) where N = cumsum!(x, C.v)
 
 # keep lazy
