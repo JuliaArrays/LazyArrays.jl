@@ -458,6 +458,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test colsupport(H,10) == rowsupport(V,10)== 1:0
         @test rowsupport(H,1) == colsupport(V,1) == 1:7
         @test rowsupport(H,2) == colsupport(V,2) == 2:8
+        @test colsupport(H,3:4) == rowsupport(V,3:4) == Base.OneTo(3)
     end
 
     @testset "print" begin

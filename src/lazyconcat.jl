@@ -506,7 +506,7 @@ function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{type
 most(a) = reverse(tail(reverse(a)))
 colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))
 
-function rowsupport(V::Vcat, k)
+function rowsupport(V::Vcat, k::Integer)
     ξ = k
     for A in arguments(V)
         n = size(A,1)
@@ -516,7 +516,7 @@ function rowsupport(V::Vcat, k)
     return 1:0
 end
 
-function colsupport(H::Hcat, j)
+function colsupport(H::Hcat, j::Integer)
     ξ = j
     for A in arguments(H)
         n = size(A,2)
