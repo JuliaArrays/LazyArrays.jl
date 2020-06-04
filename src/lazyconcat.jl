@@ -741,12 +741,12 @@ function paddeddata(S::SubArray{<:Any,2})
     _lazy_getindex(dat, kr2, jr)
 end
 
-function sub_materialize(::PaddedLayout, v::AbstractVector{T}) where T
+function sub_materialize(::PaddedLayout, v::AbstractVector{T}, _) where T
     dat = paddeddata(v)
     Vcat(dat, Zeros{T}(length(v) - length(dat)))
 end
 
-function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}) where T
+function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}, _) where T
     dat = paddeddata(v)
     Vcat(dat, Zeros{T}(size(v,1) - size(dat,1), size(dat,2)))
 end
