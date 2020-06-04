@@ -143,6 +143,7 @@ end
     @test y == cumsum(Vector(x)) == Cumsum(x)
     @test @inferred(diff(x)) == diff(Vector(x)) == Diff(x)
     @test diff(x) isa Vcat
+    @test Cumsum(x) == Cumsum(x)
 
     @test sum(x) == sum(Vector(x)) == last(y)
     @test cumsum(Vcat(4)) === Vcat(4)
@@ -153,6 +154,8 @@ end
     @test Cumsum(A; dims=2) == cumsum(A; dims=2)
     @test Diff(A; dims=1) == diff(A; dims=1)
     @test Diff(A; dims=2) == diff(A; dims=2)
+
+    @test Cumsum(A; dims=1) == Cumsum(A; dims=1)
 
     @test_broken cumsum(Vcat(Int[], 1:5)) == cumsum(1:5)
 

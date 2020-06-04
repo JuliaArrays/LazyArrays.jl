@@ -506,7 +506,7 @@ function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{type
 most(a) = reverse(tail(reverse(a)))
 colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))
 
-function rowsupport(V::Vcat, k)
+function rowsupport(V::Vcat, k::Integer)
     ξ = k
     for A in arguments(V)
         n = size(A,1)
@@ -516,7 +516,7 @@ function rowsupport(V::Vcat, k)
     return 1:0
 end
 
-function colsupport(H::Hcat, j)
+function colsupport(H::Hcat, j::Integer)
     ξ = j
     for A in arguments(H)
         n = size(A,2)
@@ -741,12 +741,12 @@ function paddeddata(S::SubArray{<:Any,2})
     _lazy_getindex(dat, kr2, jr)
 end
 
-function sub_materialize(::PaddedLayout, v::AbstractVector{T}) where T
+function sub_materialize(::PaddedLayout, v::AbstractVector{T}, _) where T
     dat = paddeddata(v)
     Vcat(dat, Zeros{T}(length(v) - length(dat)))
 end
 
-function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}) where T
+function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}, _) where T
     dat = paddeddata(v)
     Vcat(dat, Zeros{T}(size(v,1) - size(dat,1), size(dat,2)))
 end
