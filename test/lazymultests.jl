@@ -1,4 +1,4 @@
-using LazyArrays, LinearAlgebra
+using LazyArrays, ArrayLayouts, LinearAlgebra
 import LazyArrays: @lazymul, @lazyldiv, materialize!, MemoryLayout, triangulardata, LazyLayout, LazyArrayApplyStyle, UnknownLayout
 
 # used to test general matrix backends
@@ -29,7 +29,7 @@ LinearAlgebra.factorize(A::MyMatrix) = factorize(A.A)
 @lazymul MyMatrix
 @lazyldiv MyMatrix
 
-struct MyLazyArray{T,N} <: AbstractArray{T,N}
+struct MyLazyArray{T,N} <: LazyArray{T,N}
     data::Array{T,N}
 end
 
@@ -113,7 +113,6 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test_throws DimensionMismatch apply(\,MyMatrix(C),randn(4,3))
     end
 
-
     @testset "Lazy" begin
         A = MyLazyArray(randn(2,2))
         B = MyLazyArray(randn(2,2))
@@ -158,5 +157,16 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         B = MyMatrix(randn(3,3))
         Q = qr(randn(3,3)).Q
         @test Q * B ≈ Q*B.A
+    end
+
+    @testset "ambiguities" begin
+        A = randn(5,5)
+        b = MyLazyArray(randn(5))
+        c = randn(5)
+        @test A*b isa ApplyVector{Float64,typeof(*)}
+        @test UpperTriangular(A)*b isa ApplyVector{Float64,typeof(*)}
+        @test A*b ≈ A*Vector(b)
+        @test UpperTriangular(A)*b ≈ UpperTriangular(A)*Vector(b)
+        @test c'b ≈ c'Vector(b)
     end
 end

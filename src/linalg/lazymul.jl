@@ -92,6 +92,7 @@ end
 @lazyldiv LazyMatrix
 
 
+*(A::AbstractTriangular, b::LazyVector) where T = apply(*,A,b)
 *(A::AbstractMatrix, b::LazyVector) where T = apply(*,A,b)
 *(A::LayoutMatrix, b::LazyVector) where T = apply(*,A,b)
 *(A::LinearAlgebra.AdjointAbsVec, b::LazyVector) where T = first(apply(*,A,b))
