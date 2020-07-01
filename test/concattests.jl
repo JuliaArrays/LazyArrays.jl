@@ -30,7 +30,8 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{Int}(undef, 31)
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{Int}(undef, 30)
-        @test_broken @allocated(copyto!(b, A)) == 0
+        copyto!(b, A)
+		@test_broken @allocated(copyto!(b, A)) == 0
         @test @allocated(copyto!(b, A)) ≤ 200
         @test b == vcat(A.args...)
         @test copy(A) === A
@@ -48,7 +49,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{Float64}(undef, 7,10)
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{Float64}(undef, 6,10)
-        @test_broken @allocated(copyto!(b, A)) == 0
+		@test_broken @allocated(copyto!(b, A)) == 0
         VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) ≤ 200
         @test b == vcat(A.args...)
         @test copy(A) isa Vcat
@@ -67,7 +68,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{ComplexF64}(undef, 7,10)
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{ComplexF64}(undef, 6,10)
-        @test_broken @allocated(copyto!(b, A)) == 0
+		@test_broken @allocated(copyto!(b, A)) == 0
         VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) ≤ 200
         @test b == vcat(A.args...)
         @test copy(A) isa Vcat
@@ -97,7 +98,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{Int}(undef, 11, 2)
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{Int}(undef, 10, 2)
-        @test_broken @allocated(copyto!(b, A)) == 0
+		@test_broken @allocated(copyto!(b, A)) == 0
         @test @allocated(copyto!(b, A)) ≤ 200
         @test b == hcat(A.args...)
         @test copy(A) === A
@@ -110,7 +111,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{Int}(undef, 10, 2)
         copyto!(b, A)
         @test b == hcat(A.args...)
-        @test_broken @allocated(copyto!(b, A)) == 0
+        if VERSION ≥ v"1.5"
+	        @test @allocated(copyto!(b, A)) == 0
+		end
         @test @allocated(copyto!(b, A)) ≤ 100
         @test copy(A) isa Hcat
         @test copy(A) == A
