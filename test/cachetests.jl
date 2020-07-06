@@ -1,5 +1,5 @@
-using LazyArrays, FillArrays, Test
-import LazyArrays: CachedArray, CachedMatrix, CachedVector
+using LazyArrays, FillArrays, ArrayLayouts, Test
+import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout
 
 @testset "Cache" begin
     @testset "basics" begin
@@ -109,6 +109,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector
         @test v[3:100] == [3; zeros(Int,97)]
         @test v[3:100] isa CachedArray{Int,1,Vector{Int},Zeros{Int,1,Tuple{Base.OneTo{Int}}}}
         @test v[4:end] isa CachedArray{Int,1,Vector{Int},Zeros{Int,1,Tuple{Base.OneTo{Int}}}}
+        @test MemoryLayout(v) isa PaddedLayout
         @test all(iszero,v[4:end])
         @test isempty(v[4:0])
         @test norm(v) == norm(Array(v)) == norm(v,2)
