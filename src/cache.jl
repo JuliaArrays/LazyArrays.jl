@@ -253,10 +253,16 @@ end
 # norm
 ###
 
-norm1(a::CachedVector) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1]+1:end]),1)
-norm2(a::CachedVector) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
-normInf(a::CachedVector) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
-normp(a::CachedVector, p) = (norm(paddeddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
+# allow overloading for special backends, e.g., padded
+_norm2(_, a) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
+_norm1(_, a) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1]+1:end]),1)
+_normInf(_, a) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
+_normp(_, a, p) = (norm(paddeddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
+
+norm1(a::CachedVector) = _norm1(MemoryLayout(a), a)
+norm2(a::CachedVector) = _norm2(MemoryLayout(a), a)
+normInf(a::CachedVector) = _normInf(MemoryLayout(a), a)
+normp(a::CachedVector, p) = _normp(MemoryLayout(a), a, p)
 
 ###
 # fill!/lmul!/rmul!
