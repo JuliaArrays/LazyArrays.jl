@@ -618,6 +618,11 @@ for Cat in (:Vcat, :Hcat)
     @eval normp(a::$Cat, p) = norm(norm.(a.args, p), p)
 end
 
+_norm2(::PaddedLayout, a) = norm(paddeddata(a),2)
+_norm1(::PaddedLayout, a) = norm(paddeddata(a),1)
+_normInf(::PaddedLayout, a) = norm(paddeddata(a),Inf)
+_normp(::PaddedLayout, a, p) = norm(paddeddata(a),p)
+
 
 ###
 # subarrays
