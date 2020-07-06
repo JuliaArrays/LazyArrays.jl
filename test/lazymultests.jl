@@ -163,10 +163,13 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         A = randn(5,5)
         b = MyLazyArray(randn(5))
         c = randn(5)
+        c̃ = complex.(c)
         @test A*b isa ApplyVector{Float64,typeof(*)}
         @test UpperTriangular(A)*b isa ApplyVector{Float64,typeof(*)}
         @test A*b ≈ A*Vector(b)
         @test UpperTriangular(A)*b ≈ UpperTriangular(A)*Vector(b)
-        @test c'b ≈ c'Vector(b)
+        @test c'b ≈ c̃'b ≈ c'Vector(b)
+        @test transpose(c)b ≈ transpose(c̃)b ≈ transpose(c)Vector(b)
+         
     end
 end

@@ -31,7 +31,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{Int}(undef, 30)
         copyto!(b, A)
-		@test_broken @allocated(copyto!(b, A)) == 0
+        @test_broken @allocated(copyto!(b, A)) == 0
         @test @allocated(copyto!(b, A)) ≤ 200
         @test b == vcat(A.args...)
         @test copy(A) === A
@@ -49,7 +49,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{Float64}(undef, 7,10)
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{Float64}(undef, 6,10)
-		@test_broken @allocated(copyto!(b, A)) == 0
+        @test_broken @allocated(copyto!(b, A)) == 0
         VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) ≤ 200
         @test b == vcat(A.args...)
         @test copy(A) isa Vcat
@@ -68,7 +68,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{ComplexF64}(undef, 7,10)
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{ComplexF64}(undef, 6,10)
-		@test_broken @allocated(copyto!(b, A)) == 0
+        @test_broken @allocated(copyto!(b, A)) == 0
         VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) ≤ 200
         @test b == vcat(A.args...)
         @test copy(A) isa Vcat
@@ -98,7 +98,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{Int}(undef, 11, 2)
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{Int}(undef, 10, 2)
-		@test_broken @allocated(copyto!(b, A)) == 0
+        @test_broken @allocated(copyto!(b, A)) == 0
         @test @allocated(copyto!(b, A)) ≤ 200
         @test b == hcat(A.args...)
         @test copy(A) === A
@@ -112,8 +112,8 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         copyto!(b, A)
         @test b == hcat(A.args...)
         if VERSION ≥ v"1.5"
-	        @test @allocated(copyto!(b, A)) == 0
-		end
+            @test @allocated(copyto!(b, A)) == 0
+        end
         @test @allocated(copyto!(b, A)) ≤ 100
         @test copy(A) isa Hcat
         @test copy(A) == A
@@ -202,8 +202,8 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
     end
 
     @testset "Empty Vcat" begin
-        @test @inferred(Vcat{Int}([1])) == [1]        
-        @test @inferred(Vcat{Int}()) == Int[]        
+        @test @inferred(Vcat{Int}([1])) == [1]
+        @test @inferred(Vcat{Int}()) == Int[]
     end
 
     @testset "in" begin
@@ -271,7 +271,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test_throws TypeError any(Vcat(1))
     end
 
-    @testset "isbitsunion #45" begin 
+    @testset "isbitsunion #45" begin
         @test copyto!(Vector{Vector{Int}}(undef,6), Vcat([[1], [2], [3]], [[1], [2], [3]])) ==
             [[1], [2], [3], [1], [2], [3]]
 
@@ -286,7 +286,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
     @testset "Mul" begin
         A = Hcat([1.0 2.0],[3.0 4.0])
         B = Vcat([1.0,2.0],[3.0,4.0])
-    
+
         @test MemoryLayout(typeof(A)) isa ApplyLayout{typeof(hcat)}
         @test MemoryLayout(typeof(B)) isa ApplyLayout{typeof(vcat)}
         @test A*B == Matrix(A)*Vector(B) == mul!(Vector{Float64}(undef,1),A,B) == (Vector{Float64}(undef,1) .= @~ A*B)
@@ -333,7 +333,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡
             Vcat(SVector(5,7,9), Fill(3.0,5))
 
-        H = Hcat(1, zeros(1,10))            
+        H = Hcat(1, zeros(1,10))
         @test H/2 isa Hcat
         @test 2\H isa Hcat
         @test H./Ref(2) isa Hcat
@@ -378,7 +378,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = cache(Zeros(13));
         a[3] = 2; b[3] = 2; b[5]=0;
         @test a == b
-    end 
+    end
 
     @testset "norm" begin
         for a in (Vcat(1,2,Fill(5,3)), Hcat([1,2],randn(2,2)), Vcat(1,Float64[])),
@@ -433,7 +433,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test sub_materialize(w) isa Vcat
         A = Vcat(Eye(2), Zeros(10,2))
         V = view(A, 1:5, 1:2)
-        @test sub_materialize(V) == A[1:5,1:2] 
+        @test sub_materialize(V) == A[1:5,1:2]
     end
 
     @testset "searchsorted" begin
