@@ -301,3 +301,15 @@ copy(M::Applied{RmulStyle}) = copy(Rmul(M))
 
 mulapplystyle(::AbstractQLayout, _) = LmulStyle()
 mulapplystyle(::AbstractQLayout, ::LazyLayout) = LazyArrayApplyStyle()
+
+
+##
+# Powers
+##
+
+ndims(::Type{<:Applied{<:Any,typeof(^),<:Tuple{<:AbstractMatrix,<:Number}}}) = 2
+ndims(::Applied{<:Any,typeof(^),<:Tuple{<:AbstractMatrix,<:Number}}) = 2
+size(A::Applied{<:Any,typeof(^),<:Tuple{<:AbstractMatrix,<:Number}}) = size(A.args[1])
+axes(A::Applied{<:Any,typeof(^),<:Tuple{<:AbstractMatrix,<:Number}}) = axes(A.args[1])
+eltype(::Applied{<:Any,typeof(^),<:Tuple{<:AbstractMatrix{T},<:Integer}}) where T = T
+eltype(::Applied{<:Any,typeof(^),<:Tuple{<:AbstractMatrix{T},<:Number}}) where T = complex(T)
