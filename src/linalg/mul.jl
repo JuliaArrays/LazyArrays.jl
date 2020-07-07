@@ -17,11 +17,16 @@ check_applied_axes(A::Mul) = check_mul_axes(A.args...)
 
 size(M::Mul, p::Int) = size(M)[p]
 axes(M::Mul, p::Int) = axes(M)[p]
-ndims(M::Mul) = ndims(last(M.args))
 
-_mul_ndims(::Type{Tuple{A}}) where A = ndims(A)
-_mul_ndims(::Type{Tuple{A,B}}) where {A,B} = ndims(B)
-ndims(::Type{<:Mul{<:Any,Args}}) where Args = _mul_ndims(Args)
+_mul_ndims(z::Number, y, x...) = _mul_ndims(y, x...)
+_mul_ndims(z, y...) = ndims(z)
+ndims(M::Mul) = _mul_ndims(reverse(M.args)...)
+
+# a hack for now
+_mul_type_ndims(::Type{Tuple{A}}) where A = ndims(A)
+_mul_type_ndims(::Type{Tuple{A,B}}) where {A,B} = ndims(B)
+_mul_type_ndims(::Type{Tuple{A,B}}) where {A,B<:Number} = ndims(A)
+ndims(::Type{<:Mul{<:Any,Args}}) where Args = _mul_type_ndims(Args)
 
 
 length(M::Mul) = prod(size(M))
@@ -118,6 +123,9 @@ _mul_colsupport(j, Z) = colsupport(Z,j)
 _mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
 _mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
 _mul_colsupport(j, Z::AbstractArray, Y...) = _mul_colsupport(colsupport(Z,j), Y...)
+_mul_colsupport(j, Z::Number) = j
+_mul_colsupport(j, Z::Number, Y...) = _mul_colsupport(j, Y...)
+
 
 colsupport(B::Mul, j) = _mul_colsupport(j, reverse(B.args)...)
 colsupport(B::MulArray, j) = _mul_colsupport(j, reverse(B.args)...)
@@ -126,6 +134,9 @@ _mul_rowsupport(j, A) = rowsupport(A,j)
 _mul_rowsupport(j, A::AbstractArray) = rowsupport(A,j)
 _mul_rowsupport(j, A, B...) = axes(A,1) # default is return all
 _mul_rowsupport(j, A::AbstractArray, B...) = _mul_rowsupport(rowsupport(A,j), B...)
+_mul_rowsupport(j, Z::Number) = j
+_mul_rowsupport(j, Z::Number, Y...) = _mul_rowsupport(j, Y...)
+
 
 rowsupport(B::Mul, j) = _mul_rowsupport(j, B.args...)
 rowsupport(B::MulArray, j) = _mul_rowsupport(j, B.args...)
@@ -150,14 +161,27 @@ getindex(M::Mul, k::CartesianIndex{1}) = M[convert(Int, k)]
 getindex(M::Mul, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 
 
+@inline _mul_getindex(A, B, k, ℓ, j) = A[k,ℓ] * B[ℓ,j]
+@inline _mul_getindex(A::Number, B, k, ℓ, j) = A * B[ℓ,j]
+@inline _mul_getindex(A, B::Number, k, ℓ, j) = A[k,ℓ] * B
 
+_mul_checkbounds(A, kr, jr) = checkbounds(A, kr, jr)
+_mul_checkbounds(A::Number, kr, jr) = nothing
+
+_mul_getindex_colsupport(B, j) = colsupport(B, j)
+_mul_getindex_colsupport(B::Number, j) = j:j
+_mul_getindex_rowsupport(B, j) = rowsupport(B, j)
+_mul_getindex_rowsupport(B::Number, j) = j:j
 
 function getindex(M::Mul, k::Integer, j::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
     ret = zero(eltype(M))
-    @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
-        ret += A[k,ℓ] * B[ℓ,j]
+    ℓr = _mul_getindex_rowsupport(A,k) ∩ _mul_getindex_colsupport(B,j)
+    _mul_checkbounds(A,:,ℓr)
+    _mul_checkbounds(B,ℓr,:)
+    @inbounds for ℓ in ℓr
+        ret += _mul_getindex(A, B, k, ℓ, j)
     end
     ret
 end

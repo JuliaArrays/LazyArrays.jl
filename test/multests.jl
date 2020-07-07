@@ -1102,4 +1102,23 @@ end
         @test colsupport(D,3) == colsupport(D̃,3) == 3:3
         @test rowsupport(D,3) == rowsupport(D̃,3) == 3:3
     end
+    @testset "Number * Array" begin
+        A = randn(10,10)
+        App = Applied(*, 2, A)
+        @test @inferred(ndims(typeof(App))) == @inferred(ndims(App)) == 2
+        B = ApplyArray(*, 2, A)
+        @test ndims(B) == 2
+        @test colsupport(B,1) ≡ Base.OneTo(10)
+        @test rowsupport(B,1) ≡ Base.OneTo(10)
+        @test B == 2A
+
+        A = randn(10,10)
+        App = Applied(*, A, 2)
+        @test @inferred(ndims(typeof(App))) == @inferred(ndims(App)) == 2
+        B = ApplyArray(*, A, 2)
+        @test ndims(B) == 2
+        @test colsupport(B,1) ≡ Base.OneTo(10)
+        @test rowsupport(B,1) ≡ Base.OneTo(10)
+        @test B == 2A
+    end
 end
