@@ -426,14 +426,16 @@ _dotplus(a,b) = broadcast(+, a, b)
 
 @inline _cumsum(x::Number) = x
 @inline _cumsum(x) = cumsum(x)
-@generated function _vcat_cumsum(x...)
-    N = length(x)
-    ret = quote
-        @nexprs $N d->(c_d = _cumsum(x[d]))
-        d_1 = c_1
-        @nexprs $(N-1) k->(d_{k+1} = broadcast(+, last(d_k), c_{k+1}))
-        @ntuple $N d
-    end
+_cumsum_last(x::AbstractVector{T}) where T = isempty(x) ? zero(T) : last(x)
+_cumsum_last(x) = last(x)
+
+_tuple_cumsum() = ()
+_tuple_cumsum(a) = (a,)
+_tuple_cumsum(a, b...) = (a, broadcast(+,a,_tuple_cumsum(b...))...)
+function _vcat_cumsum(x...)
+    cs = map(_cumsum,x)
+    cslasts = tuple(0,_tuple_cumsum(map(_cumsum_last,most(cs))...)...)
+    map((a,b) -> broadcast(+,a,b), cslasts, cs)
 end
 
 @inline cumsum(V::Vcat{<:Any,1}) = ApplyVector(vcat,_vcat_cumsum(V.args...)...)
