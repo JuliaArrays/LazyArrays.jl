@@ -484,19 +484,4 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test A == B == C == [1,2,0]
         @test A ≠ [1,2,4]
     end
-
-    @testset "cumsum" begin
-        a = Vcat([1,2,3], Fill(2,100_000_000))
-        @test @inferred(cumsum(a))[end] == sum(a) == 200000006
-        a = Vcat(2, Fill(2,100_000_000))
-        @test @inferred(cumsum(a))[end] == sum(a) == 200000002
-        a = Vcat(Int[], [1,2,3])
-        @test @inferred(cumsum(a)) == cumsum(Vector(a))
-        a = Vcat(1, [1,2], [4,5,6])
-        @test @inferred(cumsum(a)) == cumsum(Vector(a))
-        a = Vcat(1, Int[], [4,5,6])
-        @test cumsum(a) == cumsum(Vector(a))
-        a = Vcat(1, Int[], Int[], [4,5,6])
-        @test cumsum(a) == cumsum(Vector(a))
-    end
 end

@@ -428,6 +428,8 @@ _dotplus(a,b) = broadcast(+, a, b)
 @inline _cumsum(x) = cumsum(x)
 _cumsum_last(x::AbstractVector{T}) where T = isempty(x) ? zero(T) : last(x)
 _cumsum_last(x) = last(x)
+
+_tuple_cumsum() = ()
 _tuple_cumsum(a) = (a,)
 _tuple_cumsum(a, b...) = (a, broadcast(+,a,_tuple_cumsum(b...))...)
 function _vcat_cumsum(x...)

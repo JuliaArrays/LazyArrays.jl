@@ -157,10 +157,27 @@ end
 
     @test Cumsum(A; dims=1) == Cumsum(A; dims=1)
 
-    @test_broken cumsum(Vcat(Int[], 1:5)) == cumsum(1:5)
+    a = Vcat([1,2,3], Fill(2,100_000_000))
+    @test @inferred(cumsum(a))[end] == sum(a) == 200000006
+    a = Vcat(2, Fill(2,100_000_000))
+    @test @inferred(cumsum(a))[end] == sum(a) == 200000002
+
+    @testset "empty" begin
+        @test cumsum(Vcat(Int[], 1:5)) == cumsum(1:5)
+        a = Vcat(Int[], [1,2,3])
+        @test @inferred(cumsum(a)) == cumsum(Vector(a))
+        a = Vcat(1, [1,2], [4,5,6])
+        @test @inferred(cumsum(a)) == cumsum(Vector(a))
+        a = Vcat(1, Int[], [4,5,6])
+        @test cumsum(a) == cumsum(Vector(a))
+        a = Vcat(1, Int[], Int[], [4,5,6])
+        @test cumsum(a) == cumsum(Vector(a))
+    end
 
     @test cumsum(BroadcastArray(exp, 1:10)) === Cumsum(BroadcastArray(exp, 1:10))
     @test cumsum(ApplyArray(+, 1:10)) === Cumsum(ApplyArray(+, 1:10))
+
+
 end
 
 @testset "col/rowsupport" begin
