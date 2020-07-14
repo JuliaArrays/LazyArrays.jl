@@ -248,17 +248,6 @@ function _cache_broadcast(::CachedLayout, ::CachedLayout, op, A, B)
     CachedArray(broadcast(op, Adat, Bdat), broadcast(op, A.array, B.array))
 end
 
-function _cache_broadcast(::PaddedLayout, ::PaddedLayout, op, A, B)
-    a,b = paddeddata(A),paddeddata(B)
-    n,m = length(a),length(b)
-    dat = if n ≤ m
-        [broadcast(op, a, view(b,1:n)); broadcast(op, zero(eltype(A)), @view(b[n+1:end]))]
-    else
-        [broadcast(op, view(a,1:m), b); broadcast(op, @view(a[m+1:end]), zero(eltype(B)))]
-    end
-    CachedArray(dat, Zeros{eltype(dat)}(length(A)))
-end
-
 cache_broadcast(op, A, B) = _cache_broadcast(MemoryLayout(A), MemoryLayout(B), op, A, B)
 
 broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = cache_broadcast(op, A, B)

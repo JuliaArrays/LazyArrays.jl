@@ -203,8 +203,8 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout
         copyto!(view(a,3:8), Zeros{Int}(6))
         @test a == [1; 2; zeros(6)]
 
-        a = CachedArray([3,missing], Zeros{Union{Int,Missing}}(4))
-        b = CachedArray(Union{Int,Missing}[], Zeros{Union{Int,Missing}}(4))
+        a = CachedArray([3,missing], Zeros{Union{Int,Missing}}(4));
+        b = CachedArray(Union{Int,Missing}[], Zeros{Union{Int,Missing}}(4));
         @test all(copyto!(b, a) .=== a .=== b)
 
         a = CachedArray([1,2,3], Zeros{Int}(8));
