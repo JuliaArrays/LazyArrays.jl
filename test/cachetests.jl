@@ -163,13 +163,32 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout
         A = randn(2,2)
         B = ApplyMatrix(exp,A)
         C = BroadcastMatrix(exp,A)
+        D = Diagonal(randn(2))
         x = cache(Fill(3,2))
         @test A*x ≈ A*Vector(x)
         @test B*x ≈ Matrix(B)*Vector(x)
         @test C*x ≈ Matrix(C)*Vector(x)
+        @test D*x ≈ Matrix(D)*Vector(x)
         @test A'x ≈ Matrix(A)'Vector(x)
         @test B'x ≈ Matrix(B)'Vector(x)
         @test C'x ≈ Matrix(C)'Vector(x)
+
+        @testset "padded" begin
+            z = cache(Zeros(2));
+            @test MemoryLayout(z) isa PaddedLayout
+            @test A*z ≈ A*Vector(z)
+            @test B*z ≈ Matrix(B)*Vector(z)
+            @test C*z ≈ Matrix(C)*Vector(z)
+            @test D*z ≈ Matrix(D)*Vector(z)
+            @test A'z ≈ Matrix(A)'Vector(z)
+            @test B'z ≈ Matrix(B)'Vector(z)
+            @test C'z ≈ Matrix(C)'Vector(z)
+
+            p = Vcat([1,2],Zeros(3)) + cache(Zeros(5))
+            @test MemoryLayout(p) isa PaddedLayout
+            @test p isa CachedVector{Float64,Vector{Float64},<:Zeros}
+            @test p == [1; 2; zeros(3)]
+        end
     end
 
     @testset "copyto!" begin

@@ -790,3 +790,7 @@ function searchsortedfirst(f::Vcat{<:Any,1}, x)
     end
     return n+1
 end
+
+
+# avoid ambiguity in LazyBandedMatrices
+mulapplystyle(::DiagonalLayout, ::PaddedLayout) = LmulStyle()

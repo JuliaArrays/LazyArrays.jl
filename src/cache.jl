@@ -196,7 +196,9 @@ getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::Abstrac
 # MemoryLayout
 ####
 
-cachedlayout(_, _) = UnknownLayout()
+struct CachedLayout{Data,Array} <: MemoryLayout end
+
+cachedlayout(::Data, ::Array) where {Data,Array} = CachedLayout{Data,Array}()
 MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayout(MemoryLayout(DAT), MemoryLayout(ARR))
 
 
@@ -223,24 +225,21 @@ broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) =
     CachedArray(broadcast(op, c, paddeddata(A)), broadcast(op, c, A.array)) 
 
 
-function cache_broadcast(op, A::CachedVector, B)
+function _cache_broadcast(::CachedLayout, _, op, A, B)
     dat = paddeddata(A)
     n = length(dat)
     m = length(B)
     CachedArray(broadcast(op, dat, view(B,1:n)), broadcast(op, A.array, B))
 end
 
-function cache_broadcast(op, A, B::CachedVector)
+function _cache_broadcast(_, ::CachedLayout, op, A, B)
     dat = paddeddata(B)
     n = length(dat)
     m = length(A)
     CachedArray(broadcast(op, view(A,1:n), dat), broadcast(op, A, B.array))
 end
 
-broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = cache_broadcast(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = cache_broadcast(op, A, B)
-
-function broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector)
+function _cache_broadcast(::CachedLayout, ::CachedLayout, op, A, B)
     n = max(A.datasize[1],B.datasize[1])
     resizedata!(A,n)
     resizedata!(B,n)
@@ -248,6 +247,24 @@ function broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector)
     Bdat = view(paddeddata(B),1:n)
     CachedArray(broadcast(op, Adat, Bdat), broadcast(op, A.array, B.array))
 end
+
+function _cache_broadcast(::PaddedLayout, ::PaddedLayout, op, A, B)
+    a,b = paddeddata(A),paddeddata(B)
+    n,m = length(a),length(b)
+    dat = if n ≤ m
+        [broadcast(op, a, view(b,1:n)); broadcast(op, zero(eltype(A)), @view(b[n+1:end]))]
+    else
+        [broadcast(op, view(a,1:m), b); broadcast(op, @view(a[m+1:end]), zero(eltype(B)))]
+    end
+    CachedArray(dat, Zeros{eltype(dat)}(length(A)))
+end
+
+cache_broadcast(op, A, B) = _cache_broadcast(MemoryLayout(A), MemoryLayout(B), op, A, B)
+
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector) = cache_broadcast(op, A, B)
+
 
 ###
 # norm
