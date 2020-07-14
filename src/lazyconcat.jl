@@ -607,15 +607,15 @@ end
 function _cache_broadcast(_, ::PaddedLayout, op, A, B)
     b = paddeddata(B)
     m = length(b)
-    dat = [broadcast(op, view(A,1:m), b); broadcast(op, @view(A[m+1:end]), zero(eltype(B)))]
-    CachedArray(dat, broadcast(op, Zeros{eltype(A)}(length(A)), Zeros{eltype(B)}(length(B))))
+    zB = zero(eltype(B))
+    CachedArray(broadcast(op, view(A,1:m), b), broadcast(op, A, zB))
 end
 
 function _cache_broadcast(::PaddedLayout, _, op, A, B)
     a = paddeddata(A)
     n = length(a)
-    dat = [broadcast(op, a, view(B,1:n)); broadcast(op, zero(eltype(A)), @view(B[n+1:end]))]
-    CachedArray(dat, broadcast(op, Zeros{eltype(A)}(length(A)), Zeros{eltype(B)}(length(B))))
+    zA = zero(eltype(A))
+    CachedArray(broadcast(op, a, view(B,1:n)), broadcast(op, zA, B))
 end
 
 function _cache_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
