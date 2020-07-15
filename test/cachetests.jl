@@ -1,5 +1,5 @@
 using LazyArrays, FillArrays, ArrayLayouts, Test
-import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout
+import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout
 
 @testset "Cache" begin
     @testset "basics" begin
@@ -163,13 +163,32 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout
         A = randn(2,2)
         B = ApplyMatrix(exp,A)
         C = BroadcastMatrix(exp,A)
+        D = Diagonal(randn(2))
         x = cache(Fill(3,2))
         @test A*x ≈ A*Vector(x)
         @test B*x ≈ Matrix(B)*Vector(x)
         @test C*x ≈ Matrix(C)*Vector(x)
+        @test D*x ≈ Matrix(D)*Vector(x)
         @test A'x ≈ Matrix(A)'Vector(x)
         @test B'x ≈ Matrix(B)'Vector(x)
         @test C'x ≈ Matrix(C)'Vector(x)
+
+        @testset "padded" begin
+            z = cache(Zeros(2));
+            @test MemoryLayout(z) isa PaddedLayout
+            @test A*z ≈ A*Vector(z)
+            @test B*z ≈ Matrix(B)*Vector(z)
+            @test C*z ≈ Matrix(C)*Vector(z)
+            @test D*z ≈ Matrix(D)*Vector(z)
+            @test A'z ≈ Matrix(A)'Vector(z)
+            @test B'z ≈ Matrix(B)'Vector(z)
+            @test C'z ≈ Matrix(C)'Vector(z)
+
+            p = Vcat([1,2],Zeros(3)) + cache(Zeros(5))
+            @test MemoryLayout(p) isa PaddedLayout
+            @test p isa CachedVector{Float64,Vector{Float64},<:Zeros}
+            @test p == [1; 2; zeros(3)]
+        end
     end
 
     @testset "copyto!" begin
@@ -180,12 +199,12 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout
         @test copyto!(c, a) == a == c
 
         @test copyto!(a, Zeros{Int}(8)) == zeros(8)
-        a = CachedArray([1,2,3], Zeros{Int}(8));        
+        a = CachedArray([1,2,3], Zeros{Int}(8));
         copyto!(view(a,3:8), Zeros{Int}(6))
         @test a == [1; 2; zeros(6)]
 
-        a = CachedArray([3,missing], Zeros{Union{Int,Missing}}(4))
-        b = CachedArray(Union{Int,Missing}[], Zeros{Union{Int,Missing}}(4))
+        a = CachedArray([3,missing], Zeros{Union{Int,Missing}}(4));
+        b = CachedArray(Union{Int,Missing}[], Zeros{Union{Int,Missing}}(4));
         @test all(copyto!(b, a) .=== a .=== b)
 
         a = CachedArray([1,2,3], Zeros{Int}(8));
@@ -212,5 +231,44 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout
         @test_throws ArgumentError fill!(a, 1.0)
         @test_throws ArgumentError rmul!(a, Inf)
         @test_throws ArgumentError lmul!(Inf, a)
+    end
+
+    @testset "Padded broadcast" begin
+        a = CachedArray([1,2,3], Zeros{Int}(8));
+        r = a .- a;
+        @test MemoryLayout(r) isa PaddedLayout
+        @test r.datasize[1] == 3
+        @test r == Vector(a) - Vector(a)
+
+        a = CachedArray([1,2,3], Zeros{Int}(8));
+        b = Fill(2,8);
+        r = a .- b;
+        @test MemoryLayout(r) isa CachedLayout{DenseColumnMajor,FillLayout}
+        @test r.datasize[1] == 3
+        @test r == Vector(a) - Vector(b)
+
+        a = CachedArray([1,2,3], Zeros{Int}(8));
+        b = Fill(2,8);
+        r = b .- a;
+        @test MemoryLayout(r) isa CachedLayout{DenseColumnMajor,FillLayout}
+        @test r.datasize[1] == 3
+        @test r == Vector(b) - Vector(a)
+
+        a = CachedArray([1,2,3], Zeros{Int}(8));
+        b = CachedArray([1,2],Fill(2,8));
+        r = a .- b;
+        @test MemoryLayout(r) isa CachedLayout{DenseColumnMajor,FillLayout}
+        @test r.datasize[1] == 3
+        @test r == Vector(a) - Vector(b)
+
+        b = CachedArray([1,2,3], Zeros{Int}(8));
+        a = CachedArray([1,2],Fill(2,8));
+        r = a .- b;
+        @test MemoryLayout(r) isa CachedLayout{DenseColumnMajor,FillLayout}
+        @test r.datasize[1] == 3
+        @test r == Vector(a) - Vector(b)
+
+        a = CachedArray([1,2,3], Zeros{Int}(8));
+        @test_throws DimensionMismatch a .+ CachedArray([1,2],Fill(2,6))
     end
 end

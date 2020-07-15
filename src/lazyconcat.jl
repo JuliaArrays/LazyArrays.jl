@@ -592,6 +592,56 @@ function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::Abst
     dest
 end
 
+# special case handle broadcasting with padded and cached arrays
+function _cache_broadcast(::PaddedLayout, ::PaddedLayout, op, A, B)
+    a,b = paddeddata(A),paddeddata(B)
+    n,m = length(a),length(b)
+    dat = if n ≤ m
+        [broadcast(op, a, view(b,1:n)); broadcast(op, zero(eltype(A)), @view(b[n+1:end]))]
+    else
+        [broadcast(op, view(a,1:m), b); broadcast(op, @view(a[m+1:end]), zero(eltype(B)))]
+    end
+    CachedArray(dat, broadcast(op, Zeros{eltype(A)}(length(A)), Zeros{eltype(B)}(length(B))))
+end
+
+function _cache_broadcast(_, ::PaddedLayout, op, A, B)
+    b = paddeddata(B)
+    m = length(b)
+    zB = zero(eltype(B))
+    CachedArray(broadcast(op, view(A,1:m), b), broadcast(op, A, zB))
+end
+
+function _cache_broadcast(::PaddedLayout, _, op, A, B)
+    a = paddeddata(A)
+    n = length(a)
+    zA = zero(eltype(A))
+    CachedArray(broadcast(op, a, view(B,1:n)), broadcast(op, zA, B))
+end
+
+function _cache_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
+    a,b = paddeddata(A),paddeddata(B)
+    n = length(a)
+    resizedata!(B,n)
+    Bdata = paddeddata(B)
+    b = view(Bdata,1:n)
+    zA = zero(eltype(A))
+    CachedArray([broadcast(op, a, b); broadcast(op, zA, @view(Bdata[n+1:end]))], broadcast(op, zA, B.array))
+end
+
+function _cache_broadcast(::CachedLayout, ::PaddedLayout, op, A, B)
+    b = paddeddata(B)
+    n = length(b)
+    resizedata!(A,n)
+    Adata = paddeddata(A)
+    a = view(Adata,1:n)
+    zB = zero(eltype(B))
+    CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB)], broadcast(op, A.array, zB))
+end
+
+###
+# Dot
+###
+
 struct Dot{StyleA,StyleB,ATyp,BTyp}
     A::ATyp
     B::BTyp
@@ -790,3 +840,7 @@ function searchsortedfirst(f::Vcat{<:Any,1}, x)
     end
     return n+1
 end
+
+
+# avoid ambiguity in LazyBandedMatrices
+mulapplystyle(::DiagonalLayout, ::PaddedLayout) = LmulStyle()
