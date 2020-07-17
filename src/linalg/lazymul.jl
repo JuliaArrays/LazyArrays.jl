@@ -84,7 +84,9 @@ macro lazyldiv(Typ)
         LinearAlgebra.ldiv!(A::$Typ, x::StridedMatrix) = LazyArrays.materialize!(LazyArrays.Ldiv(A,x))
 
         Base.:\(A::$Typ, x::AbstractVector) = LazyArrays.apply(\,A,x)
+        Base.:\(A::$Typ, x::LayoutVector) = LazyArrays.apply(\,A,x)        
         Base.:\(A::$Typ, x::AbstractMatrix) = LazyArrays.apply(\,A,x)
+        Base.:\(A::$Typ, x::LayoutMatrix) = LazyArrays.apply(\,A,x)
     end)
 end
 
