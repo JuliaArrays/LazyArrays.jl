@@ -656,9 +656,42 @@ function materialize(d::Dot{<:PaddedLayout,<:PaddedLayout,<:AbstractVector{T},<:
     convert(promote_type(T,V), dot(view(a,1:m), view(b,1:m)))
 end
 
-dot(a::CachedArray, b::AbstractArray) = materialize(Dot(a,b))
 dot(a::LazyArray, b::AbstractArray) = materialize(Dot(a,b))
+dot(a::SubArray{<:Any,N,<:LazyArray}, b::AbstractArray) where N = materialize(Dot(a,b))
 
+
+###
+# Dot
+###
+
+struct Axpy{StyleX,StyleY,T,XTyp,YTyp}
+    α::T
+    X::XTyp
+    Y::YTyp
+end
+
+Axpy(α::T, X::XTyp, Y::YTyp) where {T,XTyp,YTyp} = Axpy{typeof(MemoryLayout(XTyp)), typeof(MemoryLayout(YTyp)), T, XTyp, YTyp}(α, X, Y)
+materialize!(d::Axpy{<:Any,<:Any,<:Number,<:AbstractArray,<:AbstractArray}) = Base.invoke(BLAS.axpy!, Tuple{Number,AbstractArray,AbstractArray}, d.α, d.X, d.Y)
+function materialize!(d::Axpy{<:PaddedLayout,<:PaddedLayout,U,<:AbstractVector{T},<:AbstractVector{V}}) where {U,T,V}
+    x = paddeddata(d.X)
+    resizedata!(d.Y, length(x))
+    y = paddeddata(d.Y)
+    BLAS.axpy!(d.α, x, view(y,1:length(x)))
+    y
+end
+
+BLAS.axpy!(α, X::LazyArray, Y::AbstractArray) = materialize!(Axpy(α,X,Y))
+BLAS.axpy!(α, X::SubArray{<:Any,N,<:LazyArray}, Y::AbstractArray) where N = materialize!(Axpy(α,X,Y))
+
+
+###
+# l/rmul!
+###
+
+function materialize!(M::Lmul{ScalarLayout,<:PaddedLayout})
+    lmul!(M.A, paddeddata(M.B))
+    M.B
+end
 
 ###
 # norm

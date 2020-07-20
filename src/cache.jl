@@ -155,6 +155,11 @@ function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) whe
     B
 end
 
+# sub array
+function resizedata!(v::SubArray{<:Any,1,<:AbstractMatrix}, m::Integer)
+    resizedata!(parent(v), m, parentindices(v)[2])
+    v
+end
 
 function convexunion(a::AbstractVector, b::AbstractVector)
     isempty(a) && return b
@@ -249,7 +254,7 @@ function _cache_broadcast(::CachedLayout, ::CachedLayout, op, A, B)
 end
 
 function cache_broadcast(op, A, B)
-    if length(A) ≠ length(B) 
+    if length(A) ≠ length(B)
         (length(A) == 1 || length(B) == 1) && error("Internal error: Scalar-like broadcasting not yet supported.")
         throw(DimensionMismatch("arrays could not be broadcast to a common size; got a dimension with lengths $(length(A)) and $(length(B))"))
     end
@@ -259,6 +264,10 @@ end
 broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = cache_broadcast(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = cache_broadcast(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector) = cache_broadcast(op, A, B)
+
+broadcasted(::LazyArrayStyle, op, A::SubArray{<:Any,1,<:CachedMatrix}, B::AbstractVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::SubArray{<:Any,1,<:CachedMatrix}) = cache_broadcast(op, A, B)
+
 
 
 ###
@@ -297,3 +306,6 @@ function lmul!(x::Number, a::CachedArray)
     lmul!(x, a.array)
     a
 end
+
+lmul!(x::Number, a::SubArray{<:Any,N,<:CachedArray}) where N = ArrayLayouts.lmul!(x, a)
+rmul!(a::SubArray{<:Any,N,<:CachedArray}, x::Number) where N = ArrayLayouts.lmul!(a, x)
