@@ -608,14 +608,14 @@ end
 function _cache_broadcast(_, ::PaddedLayout, op, A, B)
     b = paddeddata(B)
     m = length(b)
-    zB = zero(eltype(B))
+    zB = Zeros{eltype(B)}(size(B)...)
     CachedArray(broadcast(op, view(A,1:m), b), broadcast(op, A, zB))
 end
 
 function _cache_broadcast(::PaddedLayout, _, op, A, B)
     a = paddeddata(A)
     n = length(a)
-    zA = zero(eltype(A))
+    zA = Zeros{eltype(A)}(size(A)...)
     CachedArray(broadcast(op, a, view(B,1:n)), broadcast(op, zA, B))
 end
 
@@ -625,7 +625,8 @@ function _cache_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
     resizedata!(B,n)
     Bdata = paddeddata(B)
     b = view(Bdata,1:n)
-    zA = zero(eltype(A))
+    zA1 = Zeros{eltype(A)}(size(Bdata,1)-n)
+    zA = Zeros{eltype(A)}(size(A)...)
     CachedArray([broadcast(op, a, b); broadcast(op, zA, @view(Bdata[n+1:end]))], broadcast(op, zA, B.array))
 end
 
@@ -635,8 +636,9 @@ function _cache_broadcast(::CachedLayout, ::PaddedLayout, op, A, B)
     resizedata!(A,n)
     Adata = paddeddata(A)
     a = view(Adata,1:n)
-    zB = zero(eltype(B))
-    CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB)], broadcast(op, A.array, zB))
+    zB1 = Zeros{eltype(B)}(size(Adata,1)-n)
+    zB = Zeros{eltype(B)}(size(B)...)
+    CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB1)], broadcast(op, A.array, zB))
 end
 
 ###
@@ -826,8 +828,10 @@ function paddeddata(S::SubArray{<:Any,1,<:AbstractVector})
 end
 
 function paddeddata(S::SubArray{<:Any,1,<:AbstractMatrix})
-    dat = paddeddata(parent(S))
+    P = parent(S)
     (kr,j) = parentindices(S)
+    resizedata!(P, 1, j) # ensure enough rows
+    dat = paddeddata(P)
     kr2 = kr ∩ axes(dat,1)
     _lazy_getindex(dat, kr2, j)
 end
