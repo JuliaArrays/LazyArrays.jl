@@ -544,6 +544,12 @@ sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
 paddeddata(A::CachedArray) = view(A.data,OneTo.(A.datasize)...)
 paddeddata(A::Vcat) = A.args[1]
 
+function _vcat_resizedata!(::PaddedLayout, B, m)
+    m ≤ length(paddeddata(B))  || throw(ArgumentError("Cannot resize"))
+    B
+end
+resizedata!(B::Vcat, m) = _vcat_resizedata!(MemoryLayout(B), B, m)
+
 function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
     length(A) == length(B) || return false
     n = max(A.datasize[1], B.datasize[1])
