@@ -11,7 +11,7 @@ MatrixFactorizations = "a3b82374-2e81-5b9e-98ce-41277c0e4c87"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-ArrayLayouts = "0.3.4"
+ArrayLayouts = "0.4"
 FillArrays = "0.8.8"
 MacroTools = "0.5"
 MatrixFactorizations = "0.4, 0.5"

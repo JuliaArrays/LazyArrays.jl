@@ -1,6 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, ArrayLayouts
 import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
             PaddedLayout, ApplyLayout, BroadcastLayout, AddArray, LazyLayout
+import ArrayLayouts: OnesLayout
 
 @testset "Lazy MemoryLayout" begin
     @testset "ApplyArray" begin
@@ -20,7 +21,7 @@ import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcas
     end
 
     @testset "Vcat" begin
-        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{FillLayout}()
+        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{OnesLayout}()
         @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
     end
 end

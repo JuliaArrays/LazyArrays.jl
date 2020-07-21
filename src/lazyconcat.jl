@@ -72,6 +72,9 @@ getindex(f::Applied{DefaultArrayApplyStyle,typeof(vcat)}, k::Integer, j::Integer
 getindex(f::Applied{<:Any,typeof(vcat)}, k::Integer)= vcat_getindex(f, k)
 getindex(f::Applied{<:Any,typeof(vcat)}, k::Integer, j::Integer)= vcat_getindex(f, k, j)
 
+
+# since its mutable we need to make a copy
+copy(f::Vcat) = Vcat(map(copy, f.args)...)
 @propagate_inbounds @inline function setindex!(f::Vcat{T,1}, v, k::Integer) where T
     κ = k
     for A in f.args
@@ -128,6 +131,9 @@ end
 getindex(f::Hcat, k::Integer, j::Integer) = hcat_getindex(f, k, j)
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(f, k, j)
 getindex(f::Applied{<:Any,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(f, k, j)
+
+# since its mutable we need to make a copy
+copy(f::Hcat) = Hcat(map(copy, f.args)...)
 
 function setindex!(f::Hcat{T}, v, k::Integer, j::Integer) where T
     ξ = j
