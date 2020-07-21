@@ -639,7 +639,7 @@ function _cache_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
     b = view(Bdata,1:n)
     zA1 = Zeros{eltype(A)}(size(Bdata,1)-n)
     zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray([broadcast(op, a, b); broadcast(op, zA, @view(Bdata[n+1:end]))], broadcast(op, zA, B.array))
+    CachedArray([broadcast(op, a, b); broadcast(op, zA1, @view(Bdata[n+1:end]))], broadcast(op, zA, B.array))
 end
 
 function _cache_broadcast(::CachedLayout, ::PaddedLayout, op, A, B)
