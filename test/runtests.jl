@@ -1,6 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, ArrayLayouts
 import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
-            PaddedLayout, ApplyLayout, BroadcastLayout, AddArray, LazyLayout
+    PaddedLayout, ApplyLayout, BroadcastLayout, AddArray, LazyLayout,
+    ApplyStyle
 
 @testset "Lazy MemoryLayout" begin
     @testset "ApplyArray" begin
@@ -25,6 +26,7 @@ import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcas
     end
 end
 include("applytests.jl")
+include("materialize_dsl.jl")
 include("multests.jl")
 include("ldivtests.jl")
 include("addtests.jl")
@@ -259,3 +261,4 @@ end
     bc = BroadcastArray(broadcasted(+,1:10,broadcasted(+,1,2)))
     @test bc.args[2] == 3
 end
+
