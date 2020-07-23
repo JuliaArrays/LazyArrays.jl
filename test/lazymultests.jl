@@ -1,8 +1,8 @@
 using LazyArrays, ArrayLayouts, LinearAlgebra
-import LazyArrays: @lazymul, @lazyldiv, materialize!, MemoryLayout, triangulardata, LazyLayout, LazyArrayApplyStyle, UnknownLayout
+import LazyArrays: @lazymul, @lazyldiv, materialize!, MemoryLayout, triangulardata, LazyLayout, LazyArrayApplyStyle, UnknownLayout, LazyMatrix
 
 # used to test general matrix backends
-struct MyMatrix{T} <: AbstractMatrix{T}
+struct MyMatrix{T} <: LazyMatrix{T}
     A::Matrix{T}
 end
 
@@ -25,14 +25,9 @@ Base.similar(::MyMatrix{T}, m::Int, n::Int) where T = MyMatrix{T}(undef, m, n)
 Base.similar(::MyMatrix, ::Type{T}, m::Int, n::Int) where T = MyMatrix{T}(undef, m, n)
 LinearAlgebra.factorize(A::MyMatrix) = factorize(A.A)
 
-
-@lazymul MyMatrix
-@lazyldiv MyMatrix
-
 struct MyLazyArray{T,N} <: LazyArray{T,N}
     data::Array{T,N}
 end
-
 
 Base.size(A::MyLazyArray) = size(A.data)
 Base.getindex(A::MyLazyArray, j::Int...) = A.data[j...]
@@ -45,11 +40,12 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         B = randn(5,5)
         x = randn(5)
         @test MyMatrix(A)*x ≈ apply(*,MyMatrix(A),x) ≈ A*x
+        @test MemoryLayout(MyMatrix(A)) isa LazyLayout
         @test all(MyMatrix(A)*MyMatrix(A) .=== apply(*,MyMatrix(A),MyMatrix(A)))
         @test all(MyMatrix(A)*A .=== apply(*,MyMatrix(A),A))
         @test all(A*MyMatrix(A) .=== apply(*,A,MyMatrix(A)))
         @test MyMatrix(A)*MyMatrix(A) ≈ MyMatrix(A)*A ≈ A*MyMatrix(A) ≈ A^2
-        
+
         @test MyMatrix(A)*MyMatrix(A)*MyMatrix(A) ≈ apply(*,MyMatrix(A),MyMatrix(A),MyMatrix(A)) ≈ A^3
 
         @test all(UpperTriangular(A) * MyMatrix(A) .=== apply(*,UpperTriangular(A), MyMatrix(A)))
@@ -170,6 +166,5 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test UpperTriangular(A)*b ≈ UpperTriangular(A)*Vector(b)
         @test c'b ≈ c̃'b ≈ c'Vector(b)
         @test transpose(c)b ≈ transpose(c̃)b ≈ transpose(c)Vector(b)
-         
     end
 end

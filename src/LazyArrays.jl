@@ -47,7 +47,7 @@ import FillArrays: AbstractFill, getindex_value
 
 import StaticArrays: StaticArrayStyle
 
-import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, 
+import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot,
                         transposelayout, conjlayout, sublayout, triangularlayout, triangulardata,
                         reshapedlayout, diagonallayout, adjointlayout, sub_materialize,
                         check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport,

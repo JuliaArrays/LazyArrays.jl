@@ -66,6 +66,10 @@ parent(A::PInvMatrix) = first(A.args)
 parent(A::InvMatrix) = first(A.args)
 axes(A::PInvMatrix) = reverse(axes(parent(A)))
 size(A::PInvMatrix) = map(length, axes(A))
+inv(A::InvMatrix) = parent(A)
+pinv(A::InvMatrix) = parent(A)
+pinv(A::PInvMatrix) = parent(A)
+
 
 @propagate_inbounds getindex(A::PInvMatrix{T}, k::Int, j::Int) where T =
     (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
@@ -73,19 +77,21 @@ size(A::PInvMatrix) = map(length, axes(A))
 @propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
     (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
-struct InvLayout{L} <: MemoryLayout end
-struct PInvLayout{L} <: MemoryLayout end
+
+abstract type AbstractInvLayout{L} <: MemoryLayout end
+struct InvLayout{L} <: AbstractInvLayout{L} end
+struct PInvLayout{L} <: AbstractInvLayout{L} end
 
 applylayout(::Type{typeof(inv)}, ::A) where A = InvLayout{A}()
 applylayout(::Type{typeof(pinv)}, ::A) where A = PInvLayout{A}()
 
-mulapplystyle(::InvLayout{A}, B) where A = ldivapplystyle(A, B)
-mulapplystyle(::PInvLayout{A}, B) where A = ldivapplystyle(A, B)
+mulapplystyle(::AbstractInvLayout{A}, B) where A = ldivapplystyle(A, B)
 
+copy(M::ArrayLayouts.Mul{<:AbstractInvLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 
 @inline function Ldiv(M::Mul)
     Ai,b = M.args
-    Ldiv(parent(Ai), b)
+    Ldiv(pinv(Ai), b)
 end
 Ldiv(A::Applied{<:Any,typeof(\)}) = Ldiv(A.args...)
 

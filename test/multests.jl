@@ -1009,6 +1009,8 @@ end
         @test M[5] == M[5,1]
         @test M[6] == M[1,2]
         @test Matrix(M) ≈ A^2
+        @test M^2 ≈ A^4
+        @test M^2 isa ApplyMatrix{Float64,typeof(*)}
         x = randn(5)
         @test x'M ≈ transpose(x)*M ≈ x'Matrix(M)
         @test_throws DimensionMismatch materialize(applied(*, randn(5,5), randn(4)))

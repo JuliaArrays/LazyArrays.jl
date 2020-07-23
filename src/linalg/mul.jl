@@ -106,7 +106,6 @@ struct FlattenMulStyle <: ApplyStyle end
 copy(A::Mul{FlattenMulStyle}) = materialize(flatten(A))
 
 
-
 ####
 # MulArray
 #####
@@ -277,3 +276,19 @@ copy(M::Applied{RmulStyle}) = copy(Rmul(M))
 
 mulapplystyle(::AbstractQLayout, _) = LmulStyle()
 mulapplystyle(::AbstractQLayout, ::LazyLayout) = LazyArrayApplyStyle()
+
+@inline ApplyArray(M::ArrayLayouts.Lmul) = ApplyArray(*, M.A, M.B)
+@inline ApplyArray(M::ArrayLayouts.Rmul) = ApplyArray(*, M.A, M.B)
+@inline ApplyArray(M::ArrayLayouts.Mul) = ApplyArray(*, M.A, M.B)
+@inline ApplyArray(M::ArrayLayouts.Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = ApplyArray(*, arguments(M.A)..., arguments(M.B)...)
+@inline ApplyArray(M::ArrayLayouts.Mul{ApplyLayout{typeof(*)}}) = ApplyArray(*, arguments(M.A)..., M.B)
+@inline ApplyArray(M::ArrayLayouts.Mul{<:Any,ApplyLayout{typeof(*)}}) = ApplyArray(*, M.A, arguments(M.B)...)
+
+@inline copy(M::ArrayLayouts.Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = ApplyArray(M)
+@inline copy(M::ArrayLayouts.Mul{<:AbstractLazyLayout}) = ApplyArray(M)
+@inline copy(M::ArrayLayouts.Mul{<:Any,<:AbstractLazyLayout}) = ApplyArray(M)
+@inline copy(M::ArrayLayouts.Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = ApplyArray(M)
+@inline copy(M::ArrayLayouts.Mul{<:Any,ApplyLayout{typeof(*)}}) = *(M.A, arguments(M.B)...)
+@inline copy(M::ArrayLayouts.Mul{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = ApplyArray(M)
+@inline copy(M::ArrayLayouts.Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = ApplyArray(M)
+@inline copy(M::ArrayLayouts.Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = ApplyArray(M)

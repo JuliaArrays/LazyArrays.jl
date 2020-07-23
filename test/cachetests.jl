@@ -1,4 +1,4 @@
-using LazyArrays, FillArrays, ArrayLayouts, Test
+using LazyArrays, FillArrays, ArrayLayouts, StaticArrays, Test
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout
 
 @testset "Cache" begin

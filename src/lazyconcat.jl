@@ -653,30 +653,17 @@ function _cache_broadcast(::CachedLayout, ::PaddedLayout, op, A, B)
     CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB1)], broadcast(op, A.array, zB))
 end
 
+
 ###
-# Dot
+# Dot/Axpy
 ###
 
-struct Dot{StyleA,StyleB,ATyp,BTyp}
-    A::ATyp
-    B::BTyp
-end
-
-Dot(A::ATyp,B::BTyp) where {ATyp,BTyp} = Dot{typeof(MemoryLayout(ATyp)), typeof(MemoryLayout(BTyp)), ATyp, BTyp}(A, B)
-materialize(d::Dot{<:Any,<:Any,<:AbstractArray,<:AbstractArray}) = Base.invoke(dot, Tuple{AbstractArray,AbstractArray}, d.A, d.B)
 function materialize(d::Dot{<:PaddedLayout,<:PaddedLayout,<:AbstractVector{T},<:AbstractVector{V}}) where {T,V}
     a,b = paddeddata(d.A), paddeddata(d.B)
     m = min(length(a), length(b))
     convert(promote_type(T,V), dot(view(a,1:m), view(b,1:m)))
 end
 
-dot(a::LazyArray, b::AbstractArray) = materialize(Dot(a,b))
-dot(a::SubArray{<:Any,N,<:LazyArray}, b::AbstractArray) where N = materialize(Dot(a,b))
-
-
-###
-# Dot
-###
 
 struct Axpy{StyleX,StyleY,T,XTyp,YTyp}
     α::T
