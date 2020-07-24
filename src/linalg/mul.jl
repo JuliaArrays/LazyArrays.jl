@@ -12,7 +12,6 @@ similar(M::Applied{MulStyle}, ::Type{T}) where T = similar(Mul(M), T)
 copy(M::Applied{MulStyle}) = copy(Mul(M))
 @inline copyto!(dest::AbstractArray, M::Applied{MulStyle}) = copyto!(dest, Mul(M))
 
-
 const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
 
 const MulVector{T, Args} = MulArray{T, 1, Args}
@@ -129,15 +128,15 @@ _mul_rowsupport(j, A::AbstractArray, B...) = _mul_rowsupport(rowsupport(A,j), B.
 rowsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_rowsupport(j, B.args...)
 rowsupport(B::MulArray, j) = _mul_rowsupport(j, B.args...)
 
+getindex(A::Applied{MulStyle,typeof(*)}, k...) = Mul(A)[k...]
+getindex(A::Applied{MulStyle,typeof(*)}, k::Integer) = Mul(A)[k]
+getindex(A::Applied{MulStyle,typeof(*)}, k::CartesianIndex{1}) = Mul(A)[k]
+getindex(A::Applied{MulStyle,typeof(*)}, k::CartesianIndex{2}) = Mul(A)[k]
 
 function _getindex(M::Applied{<:Any,typeof(*)}, ::Tuple{<:Any}, k::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
-    ret = zero(eltype(M))
-    for j = rowsupport(A, k) ∩ colsupport(B,1)
-        ret += A[k,j] * B[j]
-    end
-    ret
+    Mul(A, B)[k]
 end
 
 _getindex(M::Applied{<:Any,typeof(*)}, ax, k::Integer) = M[Base._ind2sub(ax, k)...]
@@ -147,17 +146,10 @@ getindex(M::Applied{<:Any,typeof(*)}, k::Integer) = _getindex(M, axes(M), k)
 getindex(M::Applied{<:Any,typeof(*)}, k::CartesianIndex{1}) = M[convert(Int, k)]
 getindex(M::Applied{<:Any,typeof(*)}, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
 
-
-
-
 function getindex(M::Applied{<:Any,typeof(*)}, k::Integer, j::Integer)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
-    ret = zero(eltype(M))
-    @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
-        ret += A[k,ℓ] * B[ℓ,j]
-    end
-    ret
+    Mul(A,B)[k, j]
 end
 
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
