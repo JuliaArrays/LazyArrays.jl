@@ -263,6 +263,7 @@ end
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = ApplyArray(M)
+@inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout}) = copy(Dot(M))
 @inline copy(M::Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = ApplyArray(M)
 @inline copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = apply(*, M.A, arguments(M.B)...)
 @inline copy(M::Mul{ApplyLayout{typeof(*)}}) = apply(*, arguments(M.A)..., M.B)

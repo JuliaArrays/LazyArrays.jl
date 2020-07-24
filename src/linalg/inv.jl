@@ -89,8 +89,7 @@ similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
 @inline copyto!(dest::AbstractArray, M::Applied{LdivStyle}) = copyto!(dest, Ldiv(M))
 @inline materialize!(M::Applied{LdivStyle}) = materialize!(Ldiv(M))
 
-@propagate_inbounds getindex(A::Applied{<:Any,typeof(\)}, kj...) = 
-    materialize(Ldiv(A))[kj...]
+@propagate_inbounds getindex(A::Applied{<:Any,typeof(\)}, kj...) = Ldiv(A)[kj...]
 
 
 ###

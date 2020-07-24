@@ -17,6 +17,7 @@ Base.convert(::Type{MyMatrix{T}}, A::AbstractArray{T}) where T = MyMatrix{T}(A)
 Base.convert(::Type{MyMatrix{T}}, A::AbstractArray) where T = MyMatrix{T}(convert(AbstractArray{T}, A))
 Base.convert(::Type{MyMatrix}, A::AbstractArray{T}) where T = MyMatrix{T}(A)
 Base.getindex(A::MyMatrix, kj...) = A.A[kj...]
+Base.getindex(A::MyMatrix, ::Colon, j::Integer) = A.A[:,j]
 Base.getindex(A::MyMatrix, ::Colon, j::AbstractVector) = MyMatrix(A.A[:,j])
 Base.setindex!(A::MyMatrix, v, kj...) = setindex!(A.A, v, kj...)
 Base.size(A::MyMatrix) = size(A.A)
@@ -71,7 +72,7 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test all(UpperTriangular(A) * MyMatrix(A)' .=== apply(*,UpperTriangular(A), MyMatrix(A)'))
         @test all(MyMatrix(A)' * UpperTriangular(A) .=== apply(*,MyMatrix(A)',UpperTriangular(A)))
 
-
+        @test ApplyArray(\, MyMatrix(A), x)[1,1] ≈ (A\x)[1]
         @test MyMatrix(A)\x ≈ apply(\,MyMatrix(A),x) ≈ copyto!(similar(x),Ldiv(A,copy(x))) ≈ A\x
         @test eltype(applied(\,MyMatrix(A),x)) == eltype(apply(\,MyMatrix(A),x)) == eltype(MyMatrix(A)\x) == Float64
 
@@ -136,7 +137,7 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
 
         Ap = applied(*,A,x)
         @test copyto!(similar(Ap), Ap) == A*x
-        @test copyto!(similar(Ap,BigFloat), Ap) == A*x
+        @test copyto!(similar(Ap,BigFloat), Ap) ≈ A*x
 
         @test MemoryLayout(typeof(Diagonal(x))) isa DiagonalLayout{LazyLayout}
         @test MemoryLayout(typeof(Diagonal(ApplyArray(+,x,x)))) isa DiagonalLayout{LazyLayout}

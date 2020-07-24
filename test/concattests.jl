@@ -50,7 +50,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{Float64}(undef, 6,10)
         @test_broken @allocated(copyto!(b, A)) == 0
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) ≤ 200
+        @test @allocated(copyto!(b, A)) ≤ 200
         @test b == vcat(A.args...)
         @test copy(A) isa Vcat
         @test copy(A) == A
@@ -69,7 +69,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test_throws DimensionMismatch copyto!(b, A)
         b = Array{ComplexF64}(undef, 6,10)
         @test_broken @allocated(copyto!(b, A)) == 0
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) ≤ 200
+        @test @allocated(copyto!(b, A)) ≤ 200
         @test b == vcat(A.args...)
         @test copy(A) isa Vcat
         @test copy(A) == A
@@ -131,14 +131,14 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{Float64}(undef, 10, 3)
         copyto!(b, A)
         @test b == hcat(A.args...)
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) == 0
+        @test @allocated(copyto!(b, A)) == 0
         @test vec(A) == vec(Matrix(A))
 
         A = Hcat(randn(5).+im.*randn(5), randn(5,2).+im.*randn(5,2))
         b = Array{ComplexF64}(undef, 5, 3)
         copyto!(b, A)
         @test b == hcat(A.args...)
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) == 0
+        @test @allocated(copyto!(b, A)) == 0
         @test vec(A) == vec(Matrix(A))
         @test A' == Matrix(A)'
         @test transpose(A) == transpose(Matrix(A))
@@ -391,7 +391,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         A = Vcat(1,[2,3], Fill(5,10))
         V = view(A,3:5)
         @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
-        VERSION ≥ v"1.1" && @inferred(arguments(V))
+        @inferred(arguments(V))
         @test arguments(V)[1] ≡ Fill(1,0)
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
 
@@ -409,7 +409,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
         V = view(A,3:5,1:4)
         @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(hcat)}
-        VERSION ≥ v"1.1" && @inferred(arguments(V))
+        @inferred(arguments(V))
         @test arguments(V)[1] == reshape(3:5,3,1)
 
         v = view(A,2,1:5)

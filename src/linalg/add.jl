@@ -32,8 +32,6 @@ for op in (:+, :-)
         axes(M::Applied{<:Any, typeof($op)}) = axes(first(M.args))
 
         eltype(M::Applied{<:Any, typeof($op)}) = promote_type(map(eltype,M.args)...)
-
-        combine_mul_styles(::ApplyLayout{typeof($op)}) = IdentityMulStyle()
     end
 end
 

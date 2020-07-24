@@ -77,18 +77,16 @@ import Base: broadcasted
 
     @testset "vector*matrix broadcasting #27" begin
         H = [1., 0.]
-        @test Mul(H, H') .+ 1 == H*H' .+ 1
+        @test applied(*, H, H') .+ 1 == H*H' .+ 1
         B =  randn(2,2)
-        @test Mul(H, H') .+ B == H*H' .+ B
+        @test applied(*, H, H') .+ B == H*H' .+ B
     end
 
     @testset "BroadcastArray +" begin
         a = BroadcastArray(+, randn(400), randn(400))
         b = similar(a)
         copyto!(b, a)
-        if VERSION ≥ v"1.1"
-            @test @allocated(copyto!(b, a)) == 0
-        end
+        @test @allocated(copyto!(b, a)) == 0
         @test b == a
     end
 
