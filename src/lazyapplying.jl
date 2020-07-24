@@ -3,6 +3,12 @@
 abstract type ApplyStyle end
 abstract type AbstractArrayApplyStyle <: ApplyStyle end
 struct DefaultApplyStyle <: ApplyStyle end
+
+"""
+    DefaultArrayApplyStyle
+
+is like DefaultApplyStyle but indicates that the result is an array.
+"""
 struct DefaultArrayApplyStyle <: AbstractArrayApplyStyle end
 
 @inline ApplyStyle(f, args...) = DefaultApplyStyle()
@@ -191,7 +197,6 @@ struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
 copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 @propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Integer,N}) where {T,N} = convert(T, Applied(A)[kj...])::T
-@propagate_inbounds getindex(A::Applied{LazyArrayApplyStyle}, kj...) = materialize(Applied{DefaultArrayApplyStyle}(A))[kj...]
 
 for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
             :cosh, :sinh, :tanh, :csch, :sech, :coth,
@@ -216,10 +221,6 @@ conjlayout(L::LazyLayout) = L
 sublayout(L::LazyLayout, _) = L
 reshapedlayout(::LazyLayout, _) = LazyLayout()
 
-combine_mul_styles(::LazyLayout) = LazyArrayApplyStyle()
-result_mul_style(::LazyArrayApplyStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
-result_mul_style(::LazyArrayApplyStyle, _) = LazyArrayApplyStyle()
-result_mul_style(_, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
 
 
 struct  ApplyLayout{F} <: MemoryLayout end
@@ -276,7 +277,6 @@ end
 # avoid infinite-loop
 _base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)
 _base_copyto!(dest::AbstractArray, src::AbstractArray) = Base.invoke(copyto!, NTuple{2,AbstractArray}, dest, src)
-@inline copyto!(dest::AbstractArray, M::Applied{LazyArrayApplyStyle}) = _base_copyto!(dest, materialize(M))
 
 ## 
 # triu/tril

@@ -890,4 +890,4 @@ end
 
 
 # avoid ambiguity in LazyBandedMatrices
-mulapplystyle(::DiagonalLayout, ::PaddedLayout) = LmulStyle()
+copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))

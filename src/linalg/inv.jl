@@ -28,15 +28,10 @@ size(A::InvOrPInv, k) = size(A)[k]
 axes(A::InvOrPInv, k) = axes(A)[k]
 eltype(A::InvOrPInv) = Base.promote_op(inv, eltype(parent(A)))
 
-struct LdivApplyStyle <: ApplyStyle end
+# Use ArrayLayouts.ldiv instead of \
+struct LdivStyle <: ApplyStyle end
 
-
-ldivapplystyle(_, _) = LdivApplyStyle()
-ldivapplystyle(::LazyLayout, ::LazyLayout) = LazyArrayApplyStyle()
-ldivapplystyle(::LazyLayout, _) = LazyArrayApplyStyle()
-ldivapplystyle(_, ::LazyLayout) = LazyArrayApplyStyle()
-ApplyStyle(::typeof(\), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = 
-    ldivapplystyle(MemoryLayout(A), MemoryLayout(B))
+ApplyStyle(::typeof(\), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = LdivStyle()
 
 
 axes(M::Applied{Style,typeof(\)}) where Style = ldivaxes(M.args...)
@@ -85,23 +80,16 @@ struct PInvLayout{L} <: AbstractInvLayout{L} end
 applylayout(::Type{typeof(inv)}, ::A) where A = InvLayout{A}()
 applylayout(::Type{typeof(pinv)}, ::A) where A = PInvLayout{A}()
 
-mulapplystyle(::AbstractInvLayout{A}, B) where A = ldivapplystyle(A, B)
-
-copy(M::ArrayLayouts.Mul{<:AbstractInvLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
-
-@inline function Ldiv(M::Mul)
-    Ai,b = M.args
-    Ldiv(pinv(Ai), b)
-end
+copy(M::Mul{<:AbstractInvLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 Ldiv(A::Applied{<:Any,typeof(\)}) = Ldiv(A.args...)
 
 
-similar(M::Applied{LdivApplyStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
-@inline copy(M::Applied{LdivApplyStyle}) = copy(Ldiv(M))
-@inline copyto!(dest::AbstractArray, M::Applied{LdivApplyStyle}) = copyto!(dest, Ldiv(M))
-@inline materialize!(M::Applied{LdivApplyStyle}) = materialize!(Ldiv(M))
+similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
+@inline copy(M::Applied{LdivStyle}) = copy(Ldiv(M))
+@inline copyto!(dest::AbstractArray, M::Applied{LdivStyle}) = copyto!(dest, Ldiv(M))
+@inline materialize!(M::Applied{LdivStyle}) = materialize!(Ldiv(M))
 
-@propagate_inbounds getindex(A::Applied{LazyArrayApplyStyle,typeof(\)}, kj...) = 
+@propagate_inbounds getindex(A::Applied{<:Any,typeof(\)}, kj...) = 
     materialize(Ldiv(A))[kj...]
 
 
