@@ -1,5 +1,5 @@
 using LazyArrays, ArrayLayouts, LinearAlgebra
-import LazyArrays: @lazymul, @lazyldiv, materialize!, MemoryLayout, triangulardata, LazyLayout, UnknownLayout, LazyMatrix
+import LazyArrays: materialize!, MemoryLayout, triangulardata, LazyLayout, UnknownLayout, LazyMatrix
 
 # used to test general matrix backends
 struct MyMatrix{T} <: LazyMatrix{T}

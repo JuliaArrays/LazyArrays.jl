@@ -101,3 +101,8 @@ function copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}})
     args = arguments(L.B)
     apply(*, L.A \  first(args),  tail(args)...)
 end
+
+
+copy(L::Ldiv{<:AbstractLazyLayout,<:AbstractLazyLayout}) = ApplyArray(\, L.A, L.B)
+copy(L::Ldiv{<:AbstractLazyLayout}) = ApplyArray(\, L.A, L.B)
+copy(L::Ldiv{<:Any,<:AbstractLazyLayout}) = ApplyArray(\, L.A, L.B)

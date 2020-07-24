@@ -965,7 +965,7 @@ end
         A = ApplyArray(*,randn(2,2), randn(2,2))
         @test ApplyStyle(*,typeof(A),typeof(randn(2,2))) isa MulStyle
         @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*Fill(3,10) ≡ Fill(180,10)
-        @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10)) == Fill(36,10,10)
+        @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10)) == Fill(360,10,10)
     end
 end
 
@@ -1032,13 +1032,13 @@ end
         V = view(M,2:300)
         @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(*)}
         @test arguments(V) == (view(A,2:300,Base.OneTo(500)),view(b, Base.OneTo(500)))
-        @test Applied(V) isa Applied{MulAddStyle}
+        @test Applied(V) isa Applied{MulStyle}
         @test ApplyArray(V) ≈ (A*b)[2:300]
         c = similar(V)
         copyto!(c,Applied(V))
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(c,Applied(V))) ≤ 200
+        @test @allocated(copyto!(c,Applied(V))) ≤ 200
         copyto!(c, V)
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(c, V)) ≤ 200
+        @test @allocated(copyto!(c, V)) ≤ 200
         @test all(c .=== apply(*, arguments(V)...))
 
         B = randn(500,500)
@@ -1046,12 +1046,12 @@ end
         V = view(M,2:300,3:400)
         @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(*)}
         @test arguments(V) == (view(A,2:300,Base.OneTo(500)),view(B, Base.OneTo(500),3:400))
-        @test Applied(V) isa Applied{MulAddStyle}
+        @test Applied(V) isa Applied{MulStyle}
         c = similar(V)
         copyto!(c,Applied(V))
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(c,Applied(V))) ≤ 1000
+        @test @allocated(copyto!(c,Applied(V))) ≤ 1000
         copyto!(c, V)
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(c, V)) ≤ 1000
+        @test @allocated(copyto!(c, V)) ≤ 1000
         @test all(c .=== apply(*, arguments(V)...))
     end
 

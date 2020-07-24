@@ -83,10 +83,10 @@ ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = MulS
 
 materializes arrays iteratively, left-to-right.
 """
-lmaterialize(M::Applied{<:Any,typeof(*)}) = _lmaterialize(M.args...)
+@inline lmaterialize(M::Applied{<:Any,typeof(*)}) = _lmaterialize(M.args...)
 
-_lmaterialize(A, B) = apply(*,A,B)
-_lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
+@inline _lmaterialize(A, B) = apply(*,A,B)
+@inline _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 
 # arguments for something that is a *
 @inline _arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
@@ -101,8 +101,8 @@ _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 @inline flatten(A) = _mul(_flatten(_arguments(A)...)...)
 
 
-copy(M::Applied{DefaultArrayApplyStyle,typeof(*),<:Tuple{<:Any,<:Any}}) = copyto!(similar(M), M)
-copy(A::Applied{DefaultArrayApplyStyle,typeof(*)}) = flatten(lmaterialize(A))
+@inline copy(M::Applied{DefaultArrayApplyStyle,typeof(*),<:Tuple{<:Any,<:Any}}) = copyto!(similar(M), M)
+@inline copy(A::Applied{DefaultArrayApplyStyle,typeof(*)}) = flatten(lmaterialize(A))
 
 
 
@@ -264,11 +264,9 @@ end
 @inline copy(M::Mul{<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = ApplyArray(M)
-@inline copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = *(M.A, arguments(M.B)...)
+@inline copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = apply(*, M.A, arguments(M.B)...)
+@inline copy(M::Mul{ApplyLayout{typeof(*)}}) = apply(*, arguments(M.A)..., M.B)
+@inline copy(M::Mul{ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = ApplyArray(M)
 @inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = ApplyArray(M)
-
-copy(M::Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = lmaterialize(arguments(M.A)..., arguments(M.B)...)
-copy(M::Mul{ApplyLayout{typeof(*)}}) = lmaterialize(arguments(M.A)..., M.B)
-copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = lmaterialize(M.A, arguments(M.B)...)
