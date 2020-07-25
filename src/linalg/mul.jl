@@ -73,7 +73,19 @@ end
 # Matrix * Array
 ####
 
-
+combine_mul_styles(a) = a
+combine_mul_styles(a, b) = error("Overload for $a and $b")
+combine_mul_styles(::T, ::T) where T = T()
+combine_mul_styles(::MulStyle, ::MulStyle) = DefaultArrayApplyStyle()
+combine_mul_styles(::MulStyle, ::DefaultArrayApplyStyle) = DefaultArrayApplyStyle()
+combine_mul_styles(::DefaultArrayApplyStyle, ::MulStyle) = DefaultArrayApplyStyle()
+combine_mul_styles(::DefaultArrayApplyStyle, ::DefaultApplyStyle) = DefaultApplyStyle()
+combine_mul_styles(::DefaultApplyStyle, ::DefaultArrayApplyStyle) = DefaultApplyStyle()
+combine_mul_styles(a, b, c...) = combine_mul_styles(combine_mul_styles(a, b), c...)
+ApplyStyle(::typeof(*), a, b, c, d...) = combine_mul_styles(ApplyStyle(*, a, b),  ApplyStyle(*, c, d...))
+ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:Number}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = MulStyle()
 
 
@@ -110,7 +122,7 @@ materializes arrays iteratively, left-to-right.
 #####
 
 _mul(A) = A
-_mul(A,B,C...) = Applied(*,A,B,C...)
+_mul(A,B,C...) = ApplyArray(*,A,B,C...)
 
 _mul_colsupport(j, Z) = colsupport(Z,j)
 _mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
@@ -130,6 +142,7 @@ rowsupport(B::MulArray, j) = _mul_rowsupport(j, B.args...)
 
 getindex(A::Applied{MulStyle,typeof(*)}, k...) = Mul(A)[k...]
 getindex(A::Applied{MulStyle,typeof(*)}, k::Integer) = Mul(A)[k]
+getindex(A::Applied{MulStyle,typeof(*)}, k::Integer, j::Integer) = Mul(A)[k, j]
 getindex(A::Applied{MulStyle,typeof(*)}, k::CartesianIndex{1}) = Mul(A)[k]
 getindex(A::Applied{MulStyle,typeof(*)}, k::CartesianIndex{2}) = Mul(A)[k]
 
@@ -252,13 +265,26 @@ end
 @inline ApplyArray(M::Mul{ApplyLayout{typeof(*)}}) = ApplyArray(*, arguments(M.A)..., M.B)
 @inline ApplyArray(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = ApplyArray(*, M.A, arguments(M.B)...)
 
+_applylayout_lmaterialize(_, A) = A
+_applylayout_lmaterialize(_, A, B, C...) = applylayout_lmaterialize(A*B, C...)
+# means we want lazy mul
+_applylayout_lmaterialize(::ApplyLayout{typeof(*)}, A, B...) = ApplyArray(*, arguments(A), B...)
+applylayout_lmaterialize(A, B...) = _applylayout_lmaterialize(MemoryLayout(A), A, B...)
+
+_applylayout_rmaterialize(_, Z) = Z
+_applylayout_rmaterialize(_, Z, Y, X...) = applylayout_rmaterialize(Y*Z, X...)
+# means we want lazy mul
+_applylayout_rmaterialize(::ApplyLayout{typeof(*)}, Z, Y...) = ApplyArray(*, reverse(Y)..., Z)
+applylayout_rmaterialize(Z, Y...) = _applylayout_rmaterialize(MemoryLayout(Z), Z, Y...)
+
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout}) = copy(Dot(M))
 @inline copy(M::Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = ApplyArray(M)
-@inline copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = apply(*, M.A, arguments(M.B)...)
-@inline copy(M::Mul{ApplyLayout{typeof(*)}}) = apply(*, arguments(M.A)..., M.B)
+@inline copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = applylayout_lmaterialize(M.A, arguments(M.B)...)
+# ApplyArray(*, A, B) * C implicitely means we want A*B to be lazy, so materialize from the right
+@inline copy(M::Mul{ApplyLayout{typeof(*)}}) = applylayout_rmaterialize(M.B, reverse(arguments(M.A))...)
 @inline copy(M::Mul{ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = ApplyArray(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = ApplyArray(M)
 @inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = ApplyArray(M)
