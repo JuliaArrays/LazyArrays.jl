@@ -1,7 +1,24 @@
+"""
+   ApplyStyle
 
-
+is an abstract type whose subtypes indicate how a lazy function
+is materialized. The default is `DefaultApplyStyle` which indicates
+that `applied(f, A...)` is materialized as `f(A...)`.
+"""
 abstract type ApplyStyle end
+"""
+    AbstractArrayApplyStyle
+
+is an abstract type whose subtypes indicate how a lazy function
+is materialized, where the result is an `AbstractArray`.
+"""
 abstract type AbstractArrayApplyStyle <: ApplyStyle end
+"""
+DefaultApplyStyle
+
+indicate that a lazy function application `applied(f, A...)` 
+is materialized as `f(A...)`.
+"""
 struct DefaultApplyStyle <: ApplyStyle end
 
 """
@@ -14,6 +31,12 @@ struct DefaultArrayApplyStyle <: AbstractArrayApplyStyle end
 @inline ApplyStyle(f, args...) = DefaultApplyStyle()
 @inline ApplyStyle(f, ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
 
+"""
+    Applied(f, A...)
+
+is a lazy version of `f(A...)` that can be manipulated
+or materialized in a non-standard manner.
+"""
 struct Applied{Style, F, Args<:Tuple}
     f::F
     args::Args

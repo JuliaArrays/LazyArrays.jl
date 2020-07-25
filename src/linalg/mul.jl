@@ -274,7 +274,7 @@ applylayout_lmaterialize(A, B...) = _applylayout_lmaterialize(MemoryLayout(A), A
 _applylayout_rmaterialize(_, Z) = Z
 _applylayout_rmaterialize(_, Z, Y, X...) = applylayout_rmaterialize(Y*Z, X...)
 # means we want lazy mul
-_applylayout_rmaterialize(::ApplyLayout{typeof(*)}, Z, Y...) = ApplyArray(*, reverse(Y)..., Z)
+_applylayout_rmaterialize(::ApplyLayout{typeof(*)}, Z::AbstractArray, Y...) = ApplyArray(*, reverse(Y)..., Z)
 applylayout_rmaterialize(Z, Y...) = _applylayout_rmaterialize(MemoryLayout(Z), Z, Y...)
 
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = ApplyArray(M)
