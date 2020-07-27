@@ -83,7 +83,9 @@ combine_mul_styles(::DefaultArrayApplyStyle, ::DefaultApplyStyle) = DefaultApply
 combine_mul_styles(::DefaultApplyStyle, ::DefaultArrayApplyStyle) = DefaultApplyStyle()
 combine_mul_styles(a, b, c...) = combine_mul_styles(combine_mul_styles(a, b), c...)
 # We need to combine all branches to determine whether it can be  simplified
-ApplyStyle(::typeof(*), args...) = combine_mul_styles(ApplyStyle(*, most(args)...),  ApplyStyle(*, tail(args)...))
+ApplyStyle(::typeof(*), a) = DefaultApplyStyle()
+ApplyStyle(::typeof(*), a::AbstractArray) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), a, b...) = combine_mul_styles(ApplyStyle(*, a, most(b)...),  ApplyStyle(*, b...))
 @inline ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()

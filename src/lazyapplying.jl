@@ -64,6 +64,7 @@ end
 @inline _typesof(a, b...) = tuple(typeof(a), _typesof(b...)...)
 @inline _typesof(a, b) = tuple(typeof(a), typeof(b))
 @inline _typesof(a, b, c) = tuple(typeof(a), typeof(b), typeof(c))
+@inline combine_apply_style(f) = DefaultApplyStyle()
 @inline combine_apply_style(f, a...) = ApplyStyle(f, _typesof(a...)...)
 @inline combine_apply_style(f, a, b) = ApplyStyle(f, typeof(a), typeof(b))
 @inline combine_apply_style(f, a, b, c) = ApplyStyle(f, typeof(a), typeof(b), typeof(c))
