@@ -82,8 +82,10 @@ combine_mul_styles(::DefaultArrayApplyStyle, ::MulStyle) = DefaultArrayApplyStyl
 combine_mul_styles(::DefaultArrayApplyStyle, ::DefaultApplyStyle) = DefaultApplyStyle()
 combine_mul_styles(::DefaultApplyStyle, ::DefaultArrayApplyStyle) = DefaultApplyStyle()
 combine_mul_styles(a, b, c...) = combine_mul_styles(combine_mul_styles(a, b), c...)
-ApplyStyle(::typeof(*), a, b, c, d...) = combine_mul_styles(ApplyStyle(*, a, b),  ApplyStyle(*, c, d...))
-ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
+# We need to combine all branches to determine whether it can be  simplified
+ApplyStyle(::typeof(*), args...) = combine_mul_styles(ApplyStyle(*, most(args)...),  ApplyStyle(*, tail(args)...))
+@inline ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:Number}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = MulStyle()
@@ -100,16 +102,16 @@ materializes arrays iteratively, left-to-right.
 @inline _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 
 # arguments for something that is a *
-@inline _arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
-@inline _arguments(_, A) = (A,)
-@inline _arguments(A) = _arguments(MemoryLayout(typeof(A)), A)
+@inline _mul_arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
+@inline _mul_arguments(_, A) = (A,)
+@inline _mul_arguments(A) = _mul_arguments(MemoryLayout(typeof(A)), A)
 
 @inline __flatten(A::Tuple{<:Any}, B::Tuple) = (A..., _flatten(B...)...)
 @inline __flatten(A::Tuple, B::Tuple) = _flatten(A..., B...)
 
 @inline _flatten() = ()
-@inline _flatten(A, B...) = __flatten(_arguments(A), B)
-@inline flatten(A) = _mul(_flatten(_arguments(A)...)...)
+@inline _flatten(A, B...) = __flatten(_mul_arguments(A), B)
+@inline flatten(A) = _mul(_flatten(_mul_arguments(A)...)...)
 
 
 @inline copy(M::Applied{DefaultArrayApplyStyle,typeof(*),<:Tuple{<:Any,<:Any}}) = copyto!(similar(M), M)
@@ -268,24 +270,27 @@ end
 _applylayout_lmaterialize(_, A) = A
 _applylayout_lmaterialize(_, A, B, C...) = applylayout_lmaterialize(A*B, C...)
 # means we want lazy mul
-_applylayout_lmaterialize(::ApplyLayout{typeof(*)}, A, B...) = ApplyArray(*, arguments(A), B...)
+_applylayout_lmaterialize(::ApplyLayout{typeof(*)}, A, B...) = ApplyArray(*, arguments(A)..., B...)
 applylayout_lmaterialize(A, B...) = _applylayout_lmaterialize(MemoryLayout(A), A, B...)
 
 _applylayout_rmaterialize(_, Z) = Z
 _applylayout_rmaterialize(_, Z, Y, X...) = applylayout_rmaterialize(Y*Z, X...)
 # means we want lazy mul
-_applylayout_rmaterialize(::ApplyLayout{typeof(*)}, Z::AbstractArray, Y...) = ApplyArray(*, reverse(Y)..., Z)
+_applylayout_rmaterialize(::ApplyLayout{typeof(*)}, Z::AbstractArray, Y...) = ApplyArray(*, reverse(Y)..., arguments(Z)...)
 applylayout_rmaterialize(Z, Y...) = _applylayout_rmaterialize(MemoryLayout(Z), Z, Y...)
 
-@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = ApplyArray(M)
-@inline copy(M::Mul{<:AbstractLazyLayout}) = ApplyArray(M)
-@inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = ApplyArray(M)
-@inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout}) = copy(Dot(M))
-@inline copy(M::Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = ApplyArray(M)
+# Support QuasiArrays
+lazymaterialize(M::Mul{<:Any,<:Any,<:AbstractArray,<:AbstractArray}) = ApplyArray(M)
+
+@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(M)
+@inline copy(M::Mul{<:AbstractLazyLayout}) = lazymaterialize(M)
+@inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = lazymaterialize(M)
+@inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
+@inline copy(M::Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = apply(*, _flatten(arguments(M.A)..., arguments(M.B)...)...)
 @inline copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = applylayout_lmaterialize(M.A, arguments(M.B)...)
 # ApplyArray(*, A, B) * C implicitely means we want A*B to be lazy, so materialize from the right
 @inline copy(M::Mul{ApplyLayout{typeof(*)}}) = applylayout_rmaterialize(M.B, reverse(arguments(M.A))...)
-@inline copy(M::Mul{ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = ApplyArray(M)
-@inline copy(M::Mul{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = ApplyArray(M)
-@inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = ApplyArray(M)
-@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = ApplyArray(M)
+@inline copy(M::Mul{ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = apply(*, _flatten(arguments(M.A)..., M.B)...)
+@inline copy(M::Mul{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = apply(*, _flatten(M.A, arguments(M.B)...)...)
+@inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = lazymaterialize(M)
+@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = lazymaterialize(M)

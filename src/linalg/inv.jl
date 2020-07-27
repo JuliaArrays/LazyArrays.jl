@@ -95,12 +95,9 @@ similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
 ###
 # * layout
 ###
-
-function copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) 
-    args = arguments(L.B)
-    apply(*, L.A \  first(args),  tail(args)...)
-end
-
+_copy_ldiv_mul(A, B, C...) = apply(*, A \  B,  C...)
+copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(L.B)...)
+copy(L::Ldiv{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(L.B)...)
 
 copy(L::Ldiv{<:AbstractLazyLayout,<:AbstractLazyLayout}) = ApplyArray(\, L.A, L.B)
 copy(L::Ldiv{<:AbstractLazyLayout}) = ApplyArray(\, L.A, L.B)

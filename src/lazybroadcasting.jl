@@ -200,10 +200,11 @@ _broadcastviewinds(sz, inds) =
 _broadcastview(a, inds) = view(a, _broadcastviewinds(size(a), inds)...)
 _broadcastview(a::Number, inds) = a
 
-function arguments(b::BroadcastLayout, V::SubArray)
+function _broadcast_sub_arguments(V)
     args = arguments(parent(V))
     _broadcastview.(args, Ref(parentindices(V)))
 end
+arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
 
 ###
 # Transpose
