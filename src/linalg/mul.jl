@@ -9,7 +9,7 @@ struct MulStyle <: AbstractArrayApplyStyle end
 Mul(M::Applied) = Mul(M.args...)
 
 similar(M::Applied{MulStyle}, ::Type{T}) where T = similar(Mul(M), T)
-copy(M::Applied{MulStyle}) = copy(Mul(M))
+copy(M::Applied{MulStyle}) = mul(arguments(M)...)
 @inline copyto!(dest::AbstractArray, M::Applied{MulStyle}) = copyto!(dest, Mul(M))
 
 const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
