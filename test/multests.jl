@@ -967,6 +967,11 @@ end
         @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*Fill(3,10) ≡ Fill(180,10)
         @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10)) == Fill(360,10,10)
     end
+
+    @testset "copyto!" begin
+        A = ApplyArray(*,randn(2,2), randn(2,2))
+        copyto!(similar(A), A)
+    end
 end
 
 @testset "MulAdd" begin
