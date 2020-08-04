@@ -710,6 +710,26 @@ _norm1(::PaddedLayout, a) = norm(paddeddata(a),1)
 _normInf(::PaddedLayout, a) = norm(paddeddata(a),Inf)
 _normp(::PaddedLayout, a, p) = norm(paddeddata(a),p)
 
+function copy(D::Dot{<:PaddedLayout, <:PaddedLayout})
+    a = paddeddata(D.A)
+    b = paddeddata(D.B)
+    m = min(length(a), length(b))
+    dot(view(a, 1:m), view(b, 1:m))
+end
+
+function copy(D::Dot{<:PaddedLayout})
+    a = paddeddata(D.A)
+    m = length(a)
+    dot(a, view(D.B, 1:m))
+end
+
+function copy(D::Dot{<:Any, <:PaddedLayout})
+    b = paddeddata(D.B)
+    m = length(b)
+    dot(view(D.A, 1:m), b)
+end
+
+
 
 ###
 # subarrays
