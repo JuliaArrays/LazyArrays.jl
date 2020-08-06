@@ -345,5 +345,19 @@ getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, k::
 # this is needed for infinite diagonal block matrices
 copy(D::Diagonal{<:Any,<:LazyArray}) = Diagonal(copy(D.diag))
 map(::typeof(copy), D::Diagonal{<:Any,<:LazyArray}) = Diagonal(map(copy,D.diag))
-copy(D::Tridiagonal{<:Any,<:LazyArray}) = Tridiagonal(copy(D.dl), copy(D.d), copy(D.du), copy(D.du2))
-map(::typeof(copy), D::Tridiagonal{<:Any,<:LazyArray}) = Tridiagonal(map(copy,D.dl), map(copy,D.d), map(copy,D.du), map(copy,D.du2))
+function copy(D::Tridiagonal{<:Any,<:LazyArray})
+    if isdefined(D, :du2)
+        Tridiagonal(copy(D.dl), copy(D.d), copy(D.du), copy(D.du2))
+    else
+        Tridiagonal(copy(D.dl), copy(D.d), copy(D.du))
+    end
+end
+function map(::typeof(copy), D::Tridiagonal{<:Any,<:LazyArray})
+    if isdefined(D, :du2)
+        Tridiagonal(map(copy,D.dl), map(copy,D.d), map(copy,D.du), map(copy,D.du2))
+    else
+        Tridiagonal(map(copy,D.dl), map(copy,D.d), map(copy,D.du))
+    end
+end
+    
+

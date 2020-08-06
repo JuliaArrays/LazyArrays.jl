@@ -36,9 +36,14 @@ copy(M::Applied{MulAddStyle}) = copy(MulAdd(M))
 @inline copyto!(dest::AbstractArray, M::Applied{MulAddStyle}) = copyto!(dest, MulAdd(M))
 
 ###
-# DiagonalLayout
+# *DiagonalLayout
 ###
 
-diagonallayout(::LazyLayout) = DiagonalLayout{LazyLayout}()
-diagonallayout(::ApplyLayout) = DiagonalLayout{LazyLayout}()
-diagonallayout(::BroadcastLayout) = DiagonalLayout{LazyLayout}()    
+for (lay, Lay) in ((:diagonallayout, :DiagonalLayout), (:tridiagonallayout, :TridiagonalLayout), 
+                   (:bidiagonallayout, :BidiagonalLayout), (:symtridiagonallayout, :SymTridiagonalLayout))
+    @eval begin
+        $lay(::LazyLayout) = $Lay{LazyLayout}()
+        $lay(::ApplyLayout) = $Lay{LazyLayout}()
+        $lay(::BroadcastLayout) = $Lay{LazyLayout}()
+    end
+end
