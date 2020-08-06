@@ -269,20 +269,23 @@ end
 @inline ApplyArray(M::Mul{ApplyLayout{typeof(*)}}) = ApplyArray(*, arguments(M.A)..., M.B)
 @inline ApplyArray(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = ApplyArray(*, M.A, arguments(M.B)...)
 
+# Support QuasiArrays
+lazymaterialize(F, args::AbstractArray...) = copy(ApplyArray(F, args...))
+lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
+
 _applylayout_lmaterialize(_, A) = A
 _applylayout_lmaterialize(_, A, B, C...) = applylayout_lmaterialize(A*B, C...)
 # means we want lazy mul
-_applylayout_lmaterialize(::ApplyLayout{typeof(*)}, A, B...) = ApplyArray(*, arguments(A)..., B...)
+_applylayout_lmaterialize(::ApplyLayout{typeof(*)}, A, B...) = lazymaterialize(*, arguments(A)..., B...)
 applylayout_lmaterialize(A, B...) = _applylayout_lmaterialize(MemoryLayout(A), A, B...)
 
 _applylayout_rmaterialize(_, Z) = Z
 _applylayout_rmaterialize(_, Z, Y, X...) = applylayout_rmaterialize(Y*Z, X...)
 # means we want lazy mul
-_applylayout_rmaterialize(::ApplyLayout{typeof(*)}, Z::AbstractArray, Y...) = ApplyArray(*, reverse(Y)..., arguments(Z)...)
+_applylayout_rmaterialize(::ApplyLayout{typeof(*)}, Z::AbstractArray, Y...) = lazymaterialize(*, reverse(Y)..., arguments(Z)...)
 applylayout_rmaterialize(Z, Y...) = _applylayout_rmaterialize(MemoryLayout(Z), Z, Y...)
 
-# Support QuasiArrays
-lazymaterialize(M::Mul{<:Any,<:Any,<:AbstractArray,<:AbstractArray}) = copy(ApplyArray(M))
+
 
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(M)
 @inline copy(M::Mul{<:AbstractLazyLayout}) = lazymaterialize(M)
