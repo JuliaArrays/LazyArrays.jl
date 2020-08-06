@@ -65,6 +65,11 @@ getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) =
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
 
+# BroadcastArray are immutable
+copy(bc::BroadcastArray) = bc
+map(::typeof(copy), bc::BroadcastArray) = bc
+copy(bc::AdjOrTrans{<:Any,<:BroadcastArray}) = bc
+
 # Replacement for #18.
 # Could extend this to other similar reductions in Base... or apply at lower level? 
 # for (fname, op) in [(:sum, :add_sum), (:prod, :mul_prod),
@@ -215,11 +220,3 @@ call(b::BroadcastLayout, a::AdjOrTrans) = call(b, parent(a))
 transposelayout(b::BroadcastLayout) = b
 arguments(b::BroadcastLayout, A::Adjoint) = map(adjoint, arguments(b, parent(A)))
 arguments(b::BroadcastLayout, A::Transpose) = map(transpose, arguments(b, parent(A)))
-
-##
-# copy
-##
-
-_broadcasted(b::BroadcastArray) = broadcasted(b.f, _broadcasted.(b.args)...)
-_broadcasted(b) = b
-Base.copy(b::BroadcastArray) = materialize(_broadcasted(b))

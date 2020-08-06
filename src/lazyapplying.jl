@@ -214,7 +214,12 @@ AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, ma
 
 @inline axes(A::ApplyArray) = axes(Applied(A))
 @inline size(A::ApplyArray) = map(length, axes(A))
-@inline copy(A::ApplyArray{T,N}) where {T,N} = A # immutable arrays don't need to copy
+
+# immutable arrays don't need to copy.
+# Some special cases like vcat overload setindex! and therefore
+# need to also overload copy
+@inline copy(A::ApplyArray{T,N}) where {T,N} = A
+map(::typeof(copy), A::ApplyArray) = A
 
 
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
@@ -331,3 +336,14 @@ getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix}}, k::Integer, j
 
 getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T = 
     j ≤ k+A.args[2] ? A.args[1][k,j] : zero(T)    
+
+
+###
+# Diagonal
+###
+
+# this is needed for infinite diagonal block matrices
+copy(D::Diagonal{<:Any,<:LazyArray}) = Diagonal(copy(D.diag))
+map(::typeof(copy), D::Diagonal{<:Any,<:LazyArray}) = Diagonal(map(copy,D.diag))
+copy(D::Tridiagonal{<:Any,<:LazyArray}) = Tridiagonal(copy(D.dl), copy(D.d), copy(D.du), copy(D.du2))
+map(::typeof(copy), D::Tridiagonal{<:Any,<:LazyArray}) = Tridiagonal(map(copy,D.dl), map(copy,D.d), map(copy,D.du), map(copy,D.du2))

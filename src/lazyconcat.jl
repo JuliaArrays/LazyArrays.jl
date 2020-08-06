@@ -75,6 +75,8 @@ getindex(f::Applied{<:Any,typeof(vcat)}, k::Integer, j::Integer)= vcat_getindex(
 
 # since its mutable we need to make a copy
 copy(f::Vcat) = Vcat(map(copy, f.args)...)
+map(::typeof(copy), f::Vcat) = Vcat(map.(copy, f.args)...)
+
 @propagate_inbounds @inline function setindex!(f::Vcat{T,1}, v, k::Integer) where T
     κ = k
     for A in f.args

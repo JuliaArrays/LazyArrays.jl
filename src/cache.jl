@@ -309,3 +309,15 @@ end
 
 lmul!(x::Number, a::SubArray{<:Any,N,<:CachedArray}) where N = ArrayLayouts.lmul!(x, a)
 rmul!(a::SubArray{<:Any,N,<:CachedArray}, x::Number) where N = ArrayLayouts.lmul!(a, x)
+
+
+###
+# copy
+###
+
+# need to copy data to prevent mutation. `a.array` is never changed so does not need to be 
+# copied
+copy(a::CachedArray) = CachedArray(copy(a.data), a.array, a.datasize)
+copy(a::Adjoint{<:Any,<:CachedArray}) = copy(parent(a))'
+copy(a::Transpose{<:Any,<:CachedArray}) = transpose(copy(parent(a)))
+

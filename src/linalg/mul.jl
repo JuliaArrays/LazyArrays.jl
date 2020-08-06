@@ -282,7 +282,7 @@ _applylayout_rmaterialize(::ApplyLayout{typeof(*)}, Z::AbstractArray, Y...) = Ap
 applylayout_rmaterialize(Z, Y...) = _applylayout_rmaterialize(MemoryLayout(Z), Z, Y...)
 
 # Support QuasiArrays
-lazymaterialize(M::Mul{<:Any,<:Any,<:AbstractArray,<:AbstractArray}) = ApplyArray(M)
+lazymaterialize(M::Mul{<:Any,<:Any,<:AbstractArray,<:AbstractArray}) = copy(ApplyArray(M))
 
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(M)
 @inline copy(M::Mul{<:AbstractLazyLayout}) = lazymaterialize(M)

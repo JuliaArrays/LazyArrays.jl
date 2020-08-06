@@ -81,6 +81,8 @@ applylayout(::Type{typeof(inv)}, ::A) where A = InvLayout{A}()
 applylayout(::Type{typeof(pinv)}, ::A) where A = PInvLayout{A}()
 
 copy(M::Mul{<:AbstractInvLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
+copy(M::Mul{<:AbstractInvLayout,<:AbstractLazyLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
+@inline copy(M::Mul{<:AbstractInvLayout,ApplyLayout{typeof(*)}}) = applylayout_lmaterialize(M.A, arguments(M.B)...)
 Ldiv(A::Applied{<:Any,typeof(\)}) = Ldiv(A.args...)
 
 
