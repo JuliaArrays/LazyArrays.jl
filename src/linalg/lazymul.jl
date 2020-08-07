@@ -97,6 +97,7 @@ end
 *(A::AbstractMatrix, b::LazyVector) where T = apply(*,A,b)
 *(A::LayoutMatrix, b::LazyVector) where T = apply(*,A,b)
 *(A::LinearAlgebra.AdjointAbsVec, b::LazyVector) = first(apply(*,A,b))
+*(A::LinearAlgebra.AdjointAbsVec{<:Number}, b::LazyVector{<:Number}) = first(apply(*,A,b))
 *(A::LinearAlgebra.TransposeAbsVec, b::LazyVector) = first(apply(*,A,b))
 *(A::LinearAlgebra.AdjointAbsVec{T}, b::LazyVector{T}) where T<:Number = first(apply(*,A,b))
 *(A::LinearAlgebra.TransposeAbsVec{T}, b::LazyVector{T}) where T<:Real = first(apply(*,A,b))
