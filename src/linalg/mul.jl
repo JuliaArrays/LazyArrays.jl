@@ -176,14 +176,16 @@ transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
 ###
 
 # determine rows/cols of multiplication
+_mul_args_rowsupport(a,kr) = rowsupport(a,kr)
+_mul_args_colsupport(a,kr) = colsupport(a,kr)
 __mul_args_rows(kr, a) = (kr,)
 __mul_args_rows(kr, a, b...) = 
-    (kr, __mul_args_rows(rowsupport(a,kr), b...)...)
-_mul_args_rows(kr, a, b...) = __mul_args_rows(rowsupport(a,kr), b...)
+    (kr, __mul_args_rows(_mul_args_rowsupport(a,kr), b...)...)
+_mul_args_rows(kr, a, b...) = __mul_args_rows(_mul_args_rowsupport(a,kr), b...)
 __mul_args_cols(jr, z) = (jr,)
 __mul_args_cols(jr, z, y...) = 
-    (__mul_args_cols(colsupport(z,jr), y...)..., jr)
-_mul_args_cols(jr, z, y...) = __mul_args_cols(colsupport(z,jr), y...)
+    (__mul_args_cols(_mul_args_colsupport(z,jr), y...)..., jr)
+_mul_args_cols(jr, z, y...) = __mul_args_cols(_mul_args_colsupport(z,jr), y...)
 
 sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 

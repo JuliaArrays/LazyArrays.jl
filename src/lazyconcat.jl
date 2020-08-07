@@ -426,14 +426,16 @@ _dotplus(a,b) = broadcast(+, a, b)
 
 @inline _cumsum(x::Number) = x
 @inline _cumsum(x) = cumsum(x)
-@generated function _vcat_cumsum(x...)
-    N = length(x)
-    ret = quote
-        @nexprs $N d->(c_d = _cumsum(x[d]))
-        d_1 = c_1
-        @nexprs $(N-1) k->(d_{k+1} = broadcast(+, last(d_k), c_{k+1}))
-        @ntuple $N d
-    end
+_cumsum_last(x::AbstractVector{T}) where T = isempty(x) ? zero(T) : last(x)
+_cumsum_last(x) = last(x)
+
+_tuple_cumsum() = ()
+_tuple_cumsum(a) = (a,)
+_tuple_cumsum(a, b...) = (a, broadcast(+,a,_tuple_cumsum(b...))...)
+function _vcat_cumsum(x...)
+    cs = map(_cumsum,x)
+    cslasts = tuple(0,_tuple_cumsum(map(_cumsum_last,most(cs))...)...)
+    map((a,b) -> broadcast(+,a,b), cslasts, cs)
 end
 
 @inline cumsum(V::Vcat{<:Any,1}) = ApplyVector(vcat,_vcat_cumsum(V.args...)...)
@@ -590,6 +592,56 @@ function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::Abst
     dest
 end
 
+# special case handle broadcasting with padded and cached arrays
+function _cache_broadcast(::PaddedLayout, ::PaddedLayout, op, A, B)
+    a,b = paddeddata(A),paddeddata(B)
+    n,m = length(a),length(b)
+    dat = if n ≤ m
+        [broadcast(op, a, view(b,1:n)); broadcast(op, zero(eltype(A)), @view(b[n+1:end]))]
+    else
+        [broadcast(op, view(a,1:m), b); broadcast(op, @view(a[m+1:end]), zero(eltype(B)))]
+    end
+    CachedArray(dat, broadcast(op, Zeros{eltype(A)}(length(A)), Zeros{eltype(B)}(length(B))))
+end
+
+function _cache_broadcast(_, ::PaddedLayout, op, A, B)
+    b = paddeddata(B)
+    m = length(b)
+    zB = zero(eltype(B))
+    CachedArray(broadcast(op, view(A,1:m), b), broadcast(op, A, zB))
+end
+
+function _cache_broadcast(::PaddedLayout, _, op, A, B)
+    a = paddeddata(A)
+    n = length(a)
+    zA = zero(eltype(A))
+    CachedArray(broadcast(op, a, view(B,1:n)), broadcast(op, zA, B))
+end
+
+function _cache_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
+    a,b = paddeddata(A),paddeddata(B)
+    n = length(a)
+    resizedata!(B,n)
+    Bdata = paddeddata(B)
+    b = view(Bdata,1:n)
+    zA = zero(eltype(A))
+    CachedArray([broadcast(op, a, b); broadcast(op, zA, @view(Bdata[n+1:end]))], broadcast(op, zA, B.array))
+end
+
+function _cache_broadcast(::CachedLayout, ::PaddedLayout, op, A, B)
+    b = paddeddata(B)
+    n = length(b)
+    resizedata!(A,n)
+    Adata = paddeddata(A)
+    a = view(Adata,1:n)
+    zB = zero(eltype(B))
+    CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB)], broadcast(op, A.array, zB))
+end
+
+###
+# Dot
+###
+
 struct Dot{StyleA,StyleB,ATyp,BTyp}
     A::ATyp
     B::BTyp
@@ -617,6 +669,11 @@ for Cat in (:Vcat, :Hcat)
     end
     @eval normp(a::$Cat, p) = norm(norm.(a.args, p), p)
 end
+
+_norm2(::PaddedLayout, a) = norm(paddeddata(a),2)
+_norm1(::PaddedLayout, a) = norm(paddeddata(a),1)
+_normInf(::PaddedLayout, a) = norm(paddeddata(a),Inf)
+_normp(::PaddedLayout, a, p) = norm(paddeddata(a),p)
 
 
 ###
@@ -783,3 +840,7 @@ function searchsortedfirst(f::Vcat{<:Any,1}, x)
     end
     return n+1
 end
+
+
+# avoid ambiguity in LazyBandedMatrices
+mulapplystyle(::DiagonalLayout, ::PaddedLayout) = LmulStyle()

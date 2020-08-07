@@ -93,6 +93,7 @@ end
 
 
 *(A::AbstractTriangular, b::LazyVector) where T = apply(*,A,b)
+*(A::Diagonal, b::LazyVector) where T = apply(*,A,b)
 *(A::AbstractMatrix, b::LazyVector) where T = apply(*,A,b)
 *(A::LayoutMatrix, b::LazyVector) where T = apply(*,A,b)
 *(A::LinearAlgebra.AdjointAbsVec, b::LazyVector) = first(apply(*,A,b))
