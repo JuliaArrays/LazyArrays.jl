@@ -22,7 +22,7 @@ const CachedMatrix{T,DM<:AbstractMatrix{T},M<:AbstractMatrix{T}} = CachedArray{T
 #     CachedArray{T,N,typeof(data),typeof(array)}(data, array, sz)
 CachedArray(data::AbstractArray, array::AbstractArray) = CachedArray(data, array, size(data))
 
-# function CachedArray(::Type{Diagonal}, array::AbstractMatrix{T}) where T 
+# function CachedArray(::Type{Diagonal}, array::AbstractMatrix{T}) where T
 #     axes(array,1) == axes(array,2) || throw(DimensionMismatch("Matrix must be square to cache as diagonal"))
 #     CachedArray(Diagonal(Vector{T}(undef, size(array,1))), array)
 # end
@@ -156,22 +156,22 @@ function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) whe
 end
 
 
-function convexunion(a::AbstractVector, b::AbstractVector) 
+function convexunion(a::AbstractVector, b::AbstractVector)
     isempty(a) && return b
     isempty(b) && return a
     min(minimum(a),minimum(b)):max(maximum(a),maximum(b))
 end
 
-convexunion(a::AbstractVector, b::AbstractVector, c::AbstractVector...) = 
+convexunion(a::AbstractVector, b::AbstractVector, c::AbstractVector...) =
     convexunion(convexunion(a,b), c...)
 
-function colsupport(A::CachedMatrix, i) 
+function colsupport(A::CachedMatrix, i)
     isempty(i) && return 1:0
     minimum(i) ≤ A.datasize[2] ? convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1])) : colsupport(A.array, i)
 end
-colsupport(A::CachedVector, i) = 
+colsupport(A::CachedVector, i) =
     convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1]))
-function rowsupport(A::CachedMatrix, i) 
+function rowsupport(A::CachedMatrix, i)
     isempty(i) && return 1:0
     minimum(i) ≤ A.datasize[1] ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i) ∩ Base.OneTo(A.datasize[2])) : rowsupport(A.array, i)
 end
@@ -187,16 +187,18 @@ function _cached_getindex_vector(A, I)
     CachedArray(A.data[I ∩ OneTo(A.datasize[1])], A.array[OneTo(length(I))])
 end
 
-getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector) where T = 
+getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector) where T =
     _cached_getindex_vector(A, I)
-getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractUnitRange) where T = 
-    _cached_getindex_vector(A, I)    
+getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractUnitRange) where T =
+    _cached_getindex_vector(A, I)
 
 ###
 # MemoryLayout
 ####
 
-cachedlayout(_, _) = UnknownLayout()
+struct CachedLayout{Data,Array} <: MemoryLayout end
+
+cachedlayout(::Data, ::Array) where {Data,Array} = CachedLayout{Data,Array}()
 MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayout(MemoryLayout(DAT), MemoryLayout(ARR))
 
 
@@ -220,27 +222,24 @@ CachedArray(broadcast(op, c, paddeddata(A)), broadcast(op, c, A.array))
 broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Ref) =
     CachedArray(broadcast(op, paddeddata(A), c), broadcast(op, A.array, c))
 broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) =
-    CachedArray(broadcast(op, c, paddeddata(A)), broadcast(op, c, A.array)) 
+    CachedArray(broadcast(op, c, paddeddata(A)), broadcast(op, c, A.array))
 
 
-function cache_broadcast(op, A::CachedVector, B)
+function _cache_broadcast(::CachedLayout, _, op, A, B)
     dat = paddeddata(A)
     n = length(dat)
     m = length(B)
     CachedArray(broadcast(op, dat, view(B,1:n)), broadcast(op, A.array, B))
 end
 
-function cache_broadcast(op, A, B::CachedVector)
+function _cache_broadcast(_, ::CachedLayout, op, A, B)
     dat = paddeddata(B)
     n = length(dat)
     m = length(A)
     CachedArray(broadcast(op, view(A,1:n), dat), broadcast(op, A, B.array))
 end
 
-broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = cache_broadcast(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = cache_broadcast(op, A, B)
-
-function broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector)
+function _cache_broadcast(::CachedLayout, ::CachedLayout, op, A, B)
     n = max(A.datasize[1],B.datasize[1])
     resizedata!(A,n)
     resizedata!(B,n)
@@ -249,32 +248,51 @@ function broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector)
     CachedArray(broadcast(op, Adat, Bdat), broadcast(op, A.array, B.array))
 end
 
+function cache_broadcast(op, A, B)
+    if length(A) ≠ length(B) 
+        (length(A) == 1 || length(B) == 1) && error("Internal error: Scalar-like broadcasting not yet supported.")
+        throw(DimensionMismatch("arrays could not be broadcast to a common size; got a dimension with lengths $(length(A)) and $(length(B))"))
+    end
+    _cache_broadcast(MemoryLayout(A), MemoryLayout(B), op, A, B)
+end
+
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector) = cache_broadcast(op, A, B)
+
+
 ###
 # norm
 ###
 
-norm1(a::CachedVector) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1]+1:end]),1)
-norm2(a::CachedVector) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
-normInf(a::CachedVector) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
-normp(a::CachedVector, p) = (norm(paddeddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
+# allow overloading for special backends, e.g., padded
+_norm2(_, a) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
+_norm1(_, a) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1]+1:end]),1)
+_normInf(_, a) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
+_normp(_, a, p) = (norm(paddeddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
+
+norm1(a::CachedVector) = _norm1(MemoryLayout(a), a)
+norm2(a::CachedVector) = _norm2(MemoryLayout(a), a)
+normInf(a::CachedVector) = _normInf(MemoryLayout(a), a)
+normp(a::CachedVector, p) = _normp(MemoryLayout(a), a, p)
 
 ###
 # fill!/lmul!/rmul!
 ###
 
-function fill!(a::CachedArray, x) 
+function fill!(a::CachedArray, x)
     fill!(a.data, x)
     fill!(a.array, x)
     a
 end
 
-function rmul!(a::CachedArray, x::Number) 
+function rmul!(a::CachedArray, x::Number)
     rmul!(a.data, x)
     rmul!(a.array, x)
     a
 end
 
-function lmul!(x::Number, a::CachedArray) 
+function lmul!(x::Number, a::CachedArray)
     lmul!(x, a.data)
     lmul!(x, a.array)
     a
