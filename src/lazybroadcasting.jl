@@ -171,20 +171,22 @@ broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::AbstractArray{V,
 # support
 ###
 
-_broadcast_colsupport(sz, A::Number, j) = OneTo(sz[1])
-_broadcast_colsupport(sz, A::AbstractVector, j) = colsupport(A,j)
-_broadcast_colsupport(sz, A::AbstractMatrix, j) = size(A,1) == 1 ? OneTo(sz[1]) : colsupport(A,j)
-_broadcast_rowsupport(sz, A::Number, j) = OneTo(sz[2])
-_broadcast_rowsupport(sz, A::AbstractVector, j) = OneTo(sz[2])
-_broadcast_rowsupport(sz, A::AbstractMatrix, j) = size(A,2) == 1 ? OneTo(sz[2]) : rowsupport(A,j)
+_broadcast_colsupport(ax, ::Tuple{}, A, j) = ax[1]
+_broadcast_colsupport(ax, ::Tuple{<:Any}, A, j) = colsupport(A,j)
+_broadcast_colsupport(ax, Aax::Tuple{OneTo{Int},<:Any}, A, j) = length(Aax[1]) == 1 ? ax[1] : colsupport(A,j)
+_broadcast_colsupport(ax, ::Tuple{<:Any,<:Any}, A, j) = colsupport(A,j)
+_broadcast_rowsupport(ax, ::Tuple{}, A, j) = ax[2]
+_broadcast_rowsupport(ax, ::Tuple{<:Any}, A, j) = ax[2]
+_broadcast_rowsupport(ax, Aax::Tuple{<:Any,OneTo{Int}}, A, j) = length(Aax[2]) == 1 ? ax[2] : rowsupport(A,j)
+_broadcast_rowsupport(ax, ::Tuple{<:Any,<:Any}, A, j) = rowsupport(A,j)
 
-colsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(size(A)), A.args, j)...)
-rowsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(size(A)), A.args, j)...)
+colsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(axes(A)), axes.(A.args), A.args, j)...)
+rowsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(axes(A)), axes.(A.args), A.args, j)...)
 
 for op in (:+, :-)
     @eval begin
-        rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(size(A)), A.args, Ref(j))...)
-        colsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(size(A)), A.args, Ref(j))...)
+        rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(axes(A)), axes.(A.args), A.args, Ref(j))...)
+        colsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(axes(A)), axes.(A.args), A.args, Ref(j))...)
     end
 end
 
