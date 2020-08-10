@@ -95,16 +95,6 @@ ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:Number}) = DefaultArra
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = MulStyle()
 
 
-"""
-   lmaterialize(M::Applied{<:Any,typeof(*)})
-
-materializes arrays iteratively, left-to-right.
-"""
-@inline lmaterialize(M::Applied{<:Any,typeof(*)}) = _lmaterialize(M.args...)
-
-@inline _lmaterialize(A, B) = apply(*,A,B)
-@inline _lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
-
 # arguments for something that is a *
 @inline _mul_arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
 @inline _mul_arguments(_, A) = (A,)
@@ -112,14 +102,15 @@ materializes arrays iteratively, left-to-right.
 
 @inline __flatten(A::Tuple{<:Any}, B::Tuple) = (A..., _flatten(B...)...)
 @inline __flatten(A::Tuple, B::Tuple) = _flatten(A..., B...)
+@inline __flatten(A::Tuple{<:Any}, ::Tuple{}) = A
+@inline __flatten(A::Tuple, B::Tuple{}) = _flatten(A...)
 
 @inline _flatten() = ()
 @inline _flatten(A, B...) = __flatten(_mul_arguments(A), B)
+@inline _flatten(A) = __flatten(_mul_arguments(A), ())
 @inline flatten(A) = _mul(_flatten(_mul_arguments(A)...)...)
 
 
-@inline copy(M::Applied{DefaultArrayApplyStyle,typeof(*),<:Tuple{<:Any,<:Any}}) = copyto!(similar(M), M)
-@inline copy(A::Applied{DefaultArrayApplyStyle,typeof(*)}) = flatten(lmaterialize(A))
 
 
 
@@ -128,7 +119,7 @@ materializes arrays iteratively, left-to-right.
 #####
 
 _mul(A) = A
-_mul(A,B,C...) = ApplyArray(*,A,B,C...)
+_mul(A,B,C...) = lazymaterialize(*,A,B,C...)
 
 _mul_colsupport(j, Z) = colsupport(Z,j)
 _mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
@@ -146,29 +137,10 @@ _mul_rowsupport(j, A::AbstractArray, B...) = _mul_rowsupport(rowsupport(A,j), B.
 rowsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_rowsupport(j, B.args...)
 rowsupport(B::MulArray, j) = _mul_rowsupport(j, B.args...)
 
-getindex(A::Applied{MulStyle,typeof(*)}, k...) = Mul(A)[k...]
-getindex(A::Applied{MulStyle,typeof(*)}, k::Integer) = Mul(A)[k]
-getindex(A::Applied{MulStyle,typeof(*)}, k::Integer, j::Integer) = Mul(A)[k, j]
-getindex(A::Applied{MulStyle,typeof(*)}, k::CartesianIndex{1}) = Mul(A)[k]
-getindex(A::Applied{MulStyle,typeof(*)}, k::CartesianIndex{2}) = Mul(A)[k]
-
-function _getindex(M::Applied{<:Any,typeof(*)}, ::Tuple{<:Any}, k::Integer)
+function getindex(M::Applied{<:Any,typeof(*)}, k...)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
-    Mul(A, B)[k]
-end
-
-_getindex(M::Applied{<:Any,typeof(*)}, ax, k::Integer) = M[Base._ind2sub(ax, k)...]
-getindex(M::Applied{<:Any,typeof(*)}, k::Integer) = _getindex(M, axes(M), k)
-
-
-getindex(M::Applied{<:Any,typeof(*)}, k::CartesianIndex{1}) = M[convert(Int, k)]
-getindex(M::Applied{<:Any,typeof(*)}, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
-
-function getindex(M::Applied{<:Any,typeof(*)}, k::Integer, j::Integer)
-    A,Bs = first(M.args), tail(M.args)
-    B = _mul(Bs...)
-    Mul(A,B)[k, j]
+    Mul(A, B)[k...]
 end
 
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
@@ -289,16 +261,21 @@ lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 # In ContinuumArrays we use this for simplifying differential operators
 ###
 
-@inline islazy(::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = Val(true)
-@inline islazy(::Mul{<:AbstractLazyLayout}) = Val(true)
-@inline islazy(::Mul{<:Any,<:AbstractLazyLayout}) = Val(true)
-@inline islazy(::Mul) = Val(false)
+@inline _or(::Val{true}, ::Val{true}) = Val(true)
+@inline _or(::Val{true}, ::Val{false}) = Val(true)
+@inline _or(::Val{false}, ::Val{true}) = Val(true)
+@inline _or(::Val{false}, ::Val{false}) = Val(false)
 
 @inline _not(::Val{true}) = Val(false)
 @inline _not(::Val{false}) = Val(true)
 
+@inline _islazy(::AbstractLazyLayout) = Val(true)
+@inline _islazy(_) = Val(false)
+@inline islazy(A) = _islazy(MemoryLayout(A))
+@inline simplifiable(M::Mul) = _not(_or(islazy(M.A), islazy(M.B)))
+
 @inline simplifiable(::typeof(*), a) = Val(false)
-@inline simplifiable(::typeof(*), a, b) = _not(islazy(Mul(a,b)))
+@inline simplifiable(::typeof(*), a, b) = simplifiable(Mul(a,b))
 @inline simplifiable(::typeof(*), a...) = _most_simplifiable(*, simplifiable(*, most(a)...), a)
 @inline _most_simplifiable(::typeof(*), ::Val{true}, a) = Val(true)
 @inline _most_simplifiable(::typeof(*), ::Val{false}, a) = simplifiable(*, tail(a)...)
@@ -307,11 +284,11 @@ lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 @inline simplify(::typeof(*), args...) = _simplify(*, _flatten(args...)...)
 @inline _simplify(::typeof(*), a, b) = _twoarg_simplify(*, simplifiable(*, a, b), a, b)
 @inline _twoarg_simplify(::typeof(*), ::Val{false}, a, b) = lazymaterialize(*, a, b)
-@inline _twoarg_simplify(::typeof(*), ::Val{true}, a, b) = a*b
+@inline _twoarg_simplify(::typeof(*), ::Val{true}, a, b) = mul(a,b)
 @inline _simplify(::typeof(*), args...) = _most_simplify(simplifiable(*, most(args)...), args)
-@inline _most_simplify(::Val{true}, args) = _simplify(*, _mul_arguments(_simplify(*, most(args)...))..., last(args))
+@inline _most_simplify(::Val{true}, args) = *(_mul_arguments(_simplify(*, most(args)...))..., last(args))
 @inline _most_simplify(::Val{false}, args) = _tail_simplify(simplifiable(*, tail(args)...), args)
-@inline _tail_simplify(::Val{true}, args) = _simplify(*, first(args), _mul_arguments(_simplify(*, tail(args)...))...)
+@inline _tail_simplify(::Val{true}, args) = *(first(args), _mul_arguments(_simplify(*, tail(args)...))...)
 @inline _tail_simplify(::Val{false}, args) = lazymaterialize(*, args...)
 
 simplify(M::Mul) = simplify(*, M.A, M.B)
