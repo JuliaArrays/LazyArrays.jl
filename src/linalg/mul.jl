@@ -85,8 +85,9 @@ combine_mul_styles(a, b, c...) = combine_mul_styles(combine_mul_styles(a, b), c.
 # We need to combine all branches to determine whether it can be  simplified
 ApplyStyle(::typeof(*), a) = DefaultApplyStyle()
 ApplyStyle(::typeof(*), a::AbstractArray) = DefaultArrayApplyStyle()
-ApplyStyle(::typeof(*), a, b...) = combine_mul_styles(ApplyStyle(*, a, most(b)...),  ApplyStyle(*, b...))
-@inline ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
+_mul_ApplyStyle(a, b...) = combine_mul_styles(ApplyStyle(*, a, most(b)...),  ApplyStyle(*, b...))
+ApplyStyle(::typeof(*), a, b...) = _mul_ApplyStyle(a, b...)
+ApplyStyle(::typeof(*), a::Type{<:AbstractArray}, b::Type{<:AbstractArray}...) = _mul_ApplyStyle(a, b...)
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:Number}) = DefaultArrayApplyStyle()
@@ -295,7 +296,8 @@ applylayout_rmaterialize(Z, Y...) = _applylayout_rmaterialize(MemoryLayout(Z), Z
 @inline copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = applylayout_lmaterialize(M.A, arguments(M.B)...)
 # ApplyArray(*, A, B) * C implicitely means we want A*B to be lazy, so materialize from the right
 @inline copy(M::Mul{ApplyLayout{typeof(*)}}) = applylayout_rmaterialize(M.B, reverse(arguments(M.A))...)
-@inline copy(M::Mul{ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = lazymaterialize(*, _flatten(arguments(M.A)..., M.B)...)
-@inline copy(M::Mul{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = lazymaterialize(*, _flatten(M.A, arguments(M.B)...)...)
+# Some lazy arrays can simplify so we expand and multiply. We use apply as it supports `SimplifyStyle` in ContinuumArrays.jl
+@inline copy(M::Mul{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = applylayout_lmaterialize(M.A, arguments(M.B)...)
+@inline copy(M::Mul{ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = applylayout_rmaterialize(M.B, reverse(arguments(M.A))...)
 @inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = lazymaterialize(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = lazymaterialize(M)
