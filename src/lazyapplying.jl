@@ -252,7 +252,7 @@ reshapedlayout(::LazyLayout, _) = LazyLayout()
 
 
 
-struct  ApplyLayout{F} <: MemoryLayout end
+struct ApplyLayout{F} <: AbstractLazyLayout end
 
 call(::ApplyLayout{F}, a) where F = F.instance
 

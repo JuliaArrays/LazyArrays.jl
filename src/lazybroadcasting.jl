@@ -109,7 +109,7 @@ BroadcastStyle(::StaticArrayStyle{N}, L::LazyArrayStyle{N})  where N = L
 is returned by `MemoryLayout(A)` if a matrix `A` is a `BroadcastArray`.
 `F` is the typeof function that broadcast operation is applied.
 """
-struct BroadcastLayout{F} <: MemoryLayout end
+struct BroadcastLayout{F} <: AbstractLazyLayout end
 
 tuple_type_memorylayouts(::Type{I}) where I<:Tuple = MemoryLayout.(I.parameters)
 tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = (MemoryLayout(A),)
