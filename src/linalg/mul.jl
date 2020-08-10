@@ -7,6 +7,7 @@ via `Mul`.
 struct MulStyle <: AbstractArrayApplyStyle end
 
 Mul(M::Applied) = Mul(M.args...)
+arguments(M::Mul) = (M.A, M.B)
 
 similar(M::Applied{MulStyle}, ::Type{T}) where T = similar(Mul(M), T)
 copy(M::Applied{MulStyle}) = mul(arguments(M)...)
@@ -271,33 +272,65 @@ end
 @inline ApplyArray(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = ApplyArray(*, M.A, arguments(M.B)...)
 
 # Support QuasiArrays
-lazymaterialize(F, args::AbstractArray...) = copy(ApplyArray(F, args...))
+
+lazymaterialize(::typeof(*), a::AbstractArray) = a
+lazymaterialize(F::Function, args::AbstractArray...) = copy(ApplyArray(F, args...))
 lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 
-_applylayout_lmaterialize(_, A) = A
-_applylayout_lmaterialize(_, A, B, C...) = applylayout_lmaterialize(A*B, C...)
-# means we want lazy mul
-_applylayout_lmaterialize(::ApplyLayout{typeof(*)}, A, B...) = lazymaterialize(*, arguments(A)..., B...)
-applylayout_lmaterialize(A, B...) = _applylayout_lmaterialize(MemoryLayout(A), A, B...)
 
-_applylayout_rmaterialize(_, Z) = Z
-_applylayout_rmaterialize(_, Z, Y, X...) = applylayout_rmaterialize(Y*Z, X...)
-# means we want lazy mul
-_applylayout_rmaterialize(::ApplyLayout{typeof(*)}, Z::AbstractArray, Y...) = lazymaterialize(*, reverse(Y)..., arguments(Z)...)
-applylayout_rmaterialize(Z, Y...) = _applylayout_rmaterialize(MemoryLayout(Z), Z, Y...)
+### 
+# Simplify
+# Here we implement a simple routine for simplifying multiplication by expanding what can be expanded
 
+#
+# The method is given *(a, b, ..., y, z) for see if *(a, b, ..., y) can be simplified.
+# If so, simplify and start over. If not, see if *(b, ..., y, z) can  be simplified. If so,
+# simplify and start over. Of not, return a lazy version.
+# In ContinuumArrays we use this for simplifying differential operators
+###
+
+
+@inline islazy(::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = Val(true)
+@inline islazy(::Mul{<:AbstractLazyLayout}) = Val(true)
+@inline islazy(::Mul{<:Any,<:AbstractLazyLayout}) = Val(true)
+@inline islazy(::Mul) = Val(false)
+
+@inline _not(::Val{true}) = Val(false)
+@inline _not(::Val{false}) = Val(true)
+@inline _or(::Val{true}, ::Val{true}) = Val(true)
+@inline _or(::Val{true}, ::Val{false}) = Val(true)
+@inline _or(::Val{false}, ::Val{true}) = Val(true)
+@inline _or(::Val{false}, ::Val{false}) = Val(false)
+
+@inline simplifiable(::typeof(*), a) = Val(false)
+@inline simplifiable(::typeof(*), a, b) = _not(islazy(Mul(a,b)))
+@inline simplifiable(::typeof(*), a...) = _or(simplifiable(*, most(a)...), simplifiable(*, tail(a)...))
+
+# Flatten first
+@inline simplify(::typeof(*), args...) = _simplify(*, _flatten(args...)...)
+@inline _simplify(::typeof(*), a, b) = _twoarg_simplify(*, simplifiable(*, a, b), a, b)
+@inline _twoarg_simplify(::typeof(*), ::Val{false}, a, b) = lazymaterialize(*, a, b)
+@inline _twoarg_simplify(::typeof(*), ::Val{true}, a, b) = a*b
+@inline _simplify(::typeof(*), args...) = _most_simplify(simplifiable(*, most(args)...), args)
+@inline _most_simplify(::Val{true}, args) = _simplify(*, _mul_arguments(_simplify(*, most(args)...))..., last(args))
+@inline _most_simplify(::Val{false}, args) = _tail_simplify(simplifiable(*, tail(args)...), args)
+@inline _tail_simplify(::Val{true}, args) = _simplify(*, first(args), _mul_arguments(_simplify(*, tail(args)...))...)
+@inline _tail_simplify(::Val{false}, args) = lazymaterialize(*, args...)
+
+simplify(M::Mul) = simplify(*, M.A, M.B)
+simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 
 
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(M)
 @inline copy(M::Mul{<:AbstractLazyLayout}) = lazymaterialize(M)
 @inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = lazymaterialize(M)
 @inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
-@inline copy(M::Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = apply(*, _flatten(arguments(M.A)..., arguments(M.B)...)...)
-@inline copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = applylayout_lmaterialize(M.A, arguments(M.B)...)
+@inline copy(M::Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = simplify(M)
+@inline copy(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = simplify(M)
 # ApplyArray(*, A, B) * C implicitely means we want A*B to be lazy, so materialize from the right
-@inline copy(M::Mul{ApplyLayout{typeof(*)}}) = applylayout_rmaterialize(M.B, reverse(arguments(M.A))...)
+@inline copy(M::Mul{ApplyLayout{typeof(*)}}) = simplify(M)
 # Some lazy arrays can simplify so we expand and multiply. We use apply as it supports `SimplifyStyle` in ContinuumArrays.jl
-@inline copy(M::Mul{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = applylayout_lmaterialize(M.A, arguments(M.B)...)
-@inline copy(M::Mul{ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = applylayout_rmaterialize(M.B, reverse(arguments(M.A))...)
+@inline copy(M::Mul{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = simplify(M)
+@inline copy(M::Mul{ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = simplify(M)
 @inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = lazymaterialize(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = lazymaterialize(M)
