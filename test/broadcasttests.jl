@@ -149,9 +149,14 @@ import Base: broadcasted
         @test BroadcastArray(Vc) == BroadcastArray(Vt) == Vc == (Array(B)')[1:2,1:3]      
     end
 
-    @testset "copy to TrackedArray" begin
+    @testset "copy" begin
         a = LazyArray(broadcasted(+, param(rand(3, 3)), 1))
         @test @inferred(copy(a)) isa BroadcastArray{<:Tracker.TrackedReal}
+
+        a = randn(5)
+        A = BroadcastArray(*, 2, a)
+        @test copy(A) ≡ map(copy,A) ≡ A
+        @test copy(A') ≡ A'
     end
 
     @testset "Number .* A" begin

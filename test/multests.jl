@@ -1,7 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
                     MulStyle, MulAddStyle, Applied, ApplyStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
-                    Rmul, ApplyLayout, arguments, colsupport, rowsupport
+                    Rmul, ApplyLayout, arguments, colsupport, rowsupport, lazymaterialize
 import Base.Broadcast: materialize, materialize!, broadcasted
 import MatrixFactorizations: QRCompactWYQLayout, AdjQRCompactWYQLayout
 
@@ -1107,5 +1107,21 @@ end
         D̃ = Applied(*,Diagonal(randn(5)),Diagonal(randn(5)),Diagonal(randn(5)))
         @test colsupport(D,3) == colsupport(D̃,3) == 3:3
         @test rowsupport(D,3) == rowsupport(D̃,3) == 3:3
+    end
+
+    @testset "Constructors" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        M = ApplyArray(*,A, B)
+        b = randn(5)
+        @test ApplyArray(Mul(A,b)) ≈ lazymaterialize(Mul(A,b)) ≈ A*b
+        @test ApplyArray(Lmul(UpperTriangular(A),b)) ≈ UpperTriangular(A)b
+        @test ApplyArray(Rmul(A,UpperTriangular(B))) ≈ A*UpperTriangular(B)
+        @test ApplyArray(Mul(M,M)) ≈ A*B*A*B
+        @test ApplyArray(Mul(M,B)) ≈ A*B*B
+        @test ApplyArray(Mul(A,M)) ≈ A*A*B
+
+        @test materialize!(Lmul(applied(*,UpperTriangular(A),copy(b)))) ≈ UpperTriangular(A)b
+        @test materialize!(Rmul(applied(*,copy(A),UpperTriangular(B)))) ≈ A*UpperTriangular(B)
     end
 end

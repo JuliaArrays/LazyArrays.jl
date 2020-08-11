@@ -56,20 +56,6 @@ size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
 @inline axes(M::Applied{<:Any, typeof(*), Tuple{}}) = ()
 
 
-⋆(A...) = Applied(*, A...)
-
-function show(io::IO, A::Applied{<:Any,typeof(*)}) 
-    if length(A.args) == 0 
-        print(io, "⋆()")
-        return 
-    end
-    print(io, first(A.args))
-    for a in A.args[2:end]
-        print(io, '⋆', a)
-    end
-end
-
-
 ####
 # Matrix * Array
 ####
