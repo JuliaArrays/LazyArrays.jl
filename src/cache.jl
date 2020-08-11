@@ -308,7 +308,7 @@ function lmul!(x::Number, a::CachedArray)
 end
 
 lmul!(x::Number, a::SubArray{<:Any,N,<:CachedArray}) where N = ArrayLayouts.lmul!(x, a)
-rmul!(a::SubArray{<:Any,N,<:CachedArray}, x::Number) where N = ArrayLayouts.lmul!(a, x)
+rmul!(a::SubArray{<:Any,N,<:CachedArray}, x::Number) where N = ArrayLayouts.rmul!(a, x)
 
 
 ###

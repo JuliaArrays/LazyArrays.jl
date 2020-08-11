@@ -167,4 +167,29 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test c'b ≈ c̃'b ≈ c'Vector(b)
         @test transpose(c)b ≈ transpose(c̃)b ≈ transpose(c)Vector(b)
     end
+
+    @testset "InvMatrix" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        b = MyLazyArray(randn(5))
+        M = ApplyArray(*, B, b)
+        @test InvMatrix(A) * b ≈ A \ b
+        @test InvMatrix(A) * M ≈ A \ B * b
+
+        @test ArrayLayouts.ldiv(MyMatrix(A), M) ≈ A\ B * b
+    end
+
+    @testset "Tri/Diagonal" begin 
+        b = MyLazyArray(randn(5))
+        c = MyLazyArray(randn(4))
+        d = MyLazyArray(randn(3))
+        @test copy(Diagonal(b)) == Diagonal(copy(b))
+        @test map(copy, Diagonal(b))  == Diagonal(copy(b))
+        @test copy(Tridiagonal(c, b, c)) == Tridiagonal(copy(c), copy(b), copy(c))
+        @test copy(Tridiagonal(c, b, c, d)) == Tridiagonal(copy(c), copy(b), copy(c), copy(d))
+        @test copy(Tridiagonal(c, b, c, d)).du2 == d
+        @test map(copy, Tridiagonal(c, b, c)) == Tridiagonal(copy(c), copy(b), copy(c))
+        @test map(copy, Tridiagonal(c, b, c, d)) == Tridiagonal(copy(c), copy(b), copy(c), copy(d))
+        @test map(copy, Tridiagonal(c, b, c, d)).du2 == d
+    end
 end

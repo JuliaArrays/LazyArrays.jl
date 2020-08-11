@@ -231,6 +231,12 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test_throws ArgumentError fill!(a, 1.0)
         @test_throws ArgumentError rmul!(a, Inf)
         @test_throws ArgumentError lmul!(Inf, a)
+
+        # a = CachedArray(Ones{Float64}(100_000_000));
+        # lmul!(5, view(a, 1:3))
+        # @test a[1:5] == [fill(5,3); 1; 1]
+        # rmul!(view(a, 4:5), 6)
+        # @test a[1:7] == [fill(5,3); fill(6,2); fill(1,2)]
     end
 
     @testset "Padded broadcast" begin

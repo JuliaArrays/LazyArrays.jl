@@ -47,6 +47,9 @@ import ArrayLayouts: StridedLayout
         vc = copy(float.(v))
         ve = convert(Vector, vc)
         @test eltype(ve) == Float64
+
+        A = ApplyArray(exp, randn(5,5))
+        @test copy(A) ≡ map(copy,A) ≡ A
     end
 
     @testset "copyto!" begin
