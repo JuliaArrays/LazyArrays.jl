@@ -85,6 +85,7 @@ end
 
 @inline getindex(A::CachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
 @inline getindex(A::CachedMatrix, kr::AbstractVector, jr::AbstractVector) = layout_getindex(A, kr, jr)
+@inline getindex(A::CachedMatrix, ::Colon, j::Integer) = layout_getindex(A, :, j)
 
 getindex(A::CachedVector, ::Colon) = copy(A)
 getindex(A::CachedVector, ::Slice) = copy(A)
@@ -265,7 +266,9 @@ broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = cache_br
 broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = cache_broadcast(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector) = cache_broadcast(op, A, B)
 
+broadcasted(::LazyArrayStyle, op, A::SubArray{<:Any,1,<:CachedMatrix}, B::CachedVector) = cache_broadcast(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::SubArray{<:Any,1,<:CachedMatrix}, B::AbstractVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::SubArray{<:Any,1,<:CachedMatrix}) = cache_broadcast(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::SubArray{<:Any,1,<:CachedMatrix}) = cache_broadcast(op, A, B)
 
 

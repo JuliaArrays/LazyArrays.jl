@@ -289,7 +289,7 @@ end
 _vec(a) = a
 _vec(a::AbstractArray) = vec(a)
 _vec(a::Adjoint{<:Number,<:AbstractVector}) = _vec(parent(a))
-vec(A::Hcat) = Vcat(_vec.(A.args)...)
+vec(A::Hcat) = Vcat(map(_vec,A.args)...)
 
 _permutedims(a) = a
 _permutedims(a::AbstractArray) = permutedims(a)
@@ -356,6 +356,9 @@ broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = cache_bro
 broadcasted(::LazyArrayStyle, op, A::CachedVector, B::Vcat{<:Any,1}) = cache_broadcast(op, A, B)
 
 broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1})=
+    broadcast(DefaultArrayStyle{1}(), *, a, b)
+
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::Vcat{<:Any,1})=
     broadcast(DefaultArrayStyle{1}(), *, a, b)
 
 
@@ -660,12 +663,6 @@ end
 # Dot/Axpy
 ###
 
-function materialize(d::Dot{<:PaddedLayout,<:PaddedLayout,<:AbstractVector{T},<:AbstractVector{V}}) where {T,V}
-    a,b = paddeddata(d.A), paddeddata(d.B)
-    m = min(length(a), length(b))
-    convert(promote_type(T,V), dot(view(a,1:m), view(b,1:m)))
-end
-
 
 struct Axpy{StyleX,StyleY,T,XTyp,YTyp}
     α::T
@@ -696,6 +693,11 @@ function materialize!(M::Lmul{ScalarLayout,<:PaddedLayout})
     M.B
 end
 
+function materialize!(M::Rmul{<:PaddedLayout,ScalarLayout})
+    rmul!(paddeddata(M.A), M.B)
+    M.A
+end
+
 ###
 # norm
 ###
@@ -712,23 +714,24 @@ _norm1(::PaddedLayout, a) = norm(paddeddata(a),1)
 _normInf(::PaddedLayout, a) = norm(paddeddata(a),Inf)
 _normp(::PaddedLayout, a, p) = norm(paddeddata(a),p)
 
+
 function copy(D::Dot{<:PaddedLayout, <:PaddedLayout})
     a = paddeddata(D.A)
     b = paddeddata(D.B)
     m = min(length(a), length(b))
-    dot(view(a, 1:m), view(b, 1:m))
+    convert(eltype(D), dot(view(a, 1:m), view(b, 1:m)))
 end
 
 function copy(D::Dot{<:PaddedLayout})
     a = paddeddata(D.A)
     m = length(a)
-    dot(a, view(D.B, 1:m))
+    convert(eltype(D), dot(a, view(D.B, 1:m)))
 end
 
 function copy(D::Dot{<:Any, <:PaddedLayout})
     b = paddeddata(D.B)
     m = length(b)
-    dot(view(D.A, 1:m), b)
+    convert(eltype(D), dot(view(D.A, 1:m), b))
 end
 
 

@@ -93,15 +93,29 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test (x + y).array isa AbstractRange
         @test (x + y) == Vector(x) + Vector(y)
 
-        z = CachedArray([1,4],Zeros{Int}(8));
-        @test (x .+ z) isa CachedArray
-        @test (x + z) isa CachedArray
-        @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
+        @testset "Padded" begin
+            z = CachedArray([1,4],Zeros{Int}(8));
+            @test (x .+ z) isa CachedArray
+            @test (x + z) isa CachedArray
+            @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
+        end
 
-        # Lazy mixed with Static treats as Lazy
-        s = SVector(1,2,3,4,5,6,7,8)
-        @test f.(x , s) isa CachedArray
-        @test f.(x , s) == f.(Vector(x), Vector(s))
+        @testset "Lazy mixed with Static treats as Lazy" begin
+            s = SVector(1,2,3,4,5,6,7,8)
+            @test f.(x , s) isa CachedArray
+            @test f.(x , s) == f.(Vector(x), Vector(s))
+        end
+
+        @testset "sub-matrix" begin
+            A = cache(Zeros(8,8));
+            b = BroadcastVector(exp,randn(8))
+            @test view(A, :, 1) .+ x == x .+ view(A, :, 1) == A[:,1] .+ x
+            @test view(A, :, 1) .+ b == b .+ view(A, :, 1) == A[:,1] .+ b
+
+            A = cache(Zeros(8,8));
+            view(A, :, 2)[3] = 4
+            @test A[3,2] == 4
+        end
     end
 
     @testset "padded CachedVector getindex" begin
