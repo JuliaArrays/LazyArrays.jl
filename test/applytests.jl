@@ -6,11 +6,8 @@ import ArrayLayouts: StridedLayout
 @testset "Applying" begin
     @testset "Applied" begin
         @test applied(exp,1) isa Applied{DefaultApplyStyle}
-
         @test apply(randn) isa Float64
-
         @test materialize(applied(*, 1)) == apply(*,1) == 1
-
         @test apply(exp, 1) === exp(1)
         @test apply(exp, broadcasted(+, 1, 2)) === apply(exp, applied(+, 1, 2)) === exp(3)
     end
@@ -50,6 +47,9 @@ import ArrayLayouts: StridedLayout
         vc = copy(float.(v))
         ve = convert(Vector, vc)
         @test eltype(ve) == Float64
+
+        A = ApplyArray(exp, randn(5,5))
+        @test copy(A) ≡ map(copy,A) ≡ A
     end
 
     @testset "copyto!" begin

@@ -1,5 +1,5 @@
 using LazyArrays, LinearAlgebra, Test
-import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivApplyStyle, Applied, LazyLayout
+import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout
 import Base.Broadcast: materialize
 
 @testset "Ldiv" begin
@@ -9,9 +9,13 @@ import Base.Broadcast: materialize
         M = Ldiv(A,b)
         @test all(materialize(M) .=== (A\b) .=== materialize(applied(\,A,b)))
 
-        @test applied(\,A,b) isa Applied{LdivApplyStyle}
+        @test applied(\,A,b) isa Applied{LdivStyle}
+        @test applied(\,A,b)[1] ≈ (A\b)[1]
+        
+        @test parent(InvMatrix(A)) === inv(InvMatrix(A)) === pinv(InvMatrix(A)) === A
+        @test parent(PInvMatrix(A)) === pinv(InvMatrix(A)) === A
 
-        @test parent(InvMatrix(A)) === A
+        @test InvMatrix(A)[1,2] ≈ PInvMatrix(A)[1,2] ≈ inv(A)[1,2]
 
         @test all(copyto!(similar(b), Ldiv(A,b)) .===
                     (similar(b) .= Ldiv(A,b)) .=== InvMatrix(A) * b .===
@@ -97,5 +101,12 @@ import Base.Broadcast: materialize
         B = randn(5,5)
         b = 1:5
         @test apply(\,B,ApplyArray(*,A,b)) == B\A*b
+    end
+
+    @testset "Triangular ldiv" begin
+        A = randn(5,5)
+        b = randn(5)
+        L = applied(\, UpperTriangular(A), b)
+        @test copyto!(similar(L), L) ≈ UpperTriangular(A) \ b ≈ materialize!(L)
     end
 end

@@ -1,4 +1,4 @@
-using LazyArrays, FillArrays, ArrayLayouts, Test
+using LazyArrays, FillArrays, ArrayLayouts, StaticArrays, Test
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout
 
 @testset "Cache" begin
@@ -93,15 +93,29 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test (x + y).array isa AbstractRange
         @test (x + y) == Vector(x) + Vector(y)
 
-        z = CachedArray([1,4],Zeros{Int}(8));
-        @test (x .+ z) isa CachedArray
-        @test (x + z) isa CachedArray
-        @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
+        @testset "Padded" begin
+            z = CachedArray([1,4],Zeros{Int}(8));
+            @test (x .+ z) isa CachedArray
+            @test (x + z) isa CachedArray
+            @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
+        end
 
-        # Lazy mixed with Static treats as Lazy
-        s = SVector(1,2,3,4,5,6,7,8)
-        @test f.(x , s) isa CachedArray
-        @test f.(x , s) == f.(Vector(x), Vector(s))
+        @testset "Lazy mixed with Static treats as Lazy" begin
+            s = SVector(1,2,3,4,5,6,7,8)
+            @test f.(x , s) isa CachedArray
+            @test f.(x , s) == f.(Vector(x), Vector(s))
+        end
+
+        @testset "sub-matrix" begin
+            A = cache(Zeros(8,8));
+            b = BroadcastVector(exp,randn(8))
+            @test view(A, :, 1) .+ x == x .+ view(A, :, 1) == A[:,1] .+ x
+            @test view(A, :, 1) .+ b == b .+ view(A, :, 1) == A[:,1] .+ b
+
+            A = cache(Zeros(8,8));
+            view(A, :, 2)[3] = 4
+            @test A[3,2] == 4
+        end
     end
 
     @testset "padded CachedVector getindex" begin
@@ -231,6 +245,12 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test_throws ArgumentError fill!(a, 1.0)
         @test_throws ArgumentError rmul!(a, Inf)
         @test_throws ArgumentError lmul!(Inf, a)
+
+        a = CachedArray(Ones{Float64}(100_000_000));
+        lmul!(5, view(a, 1:3))
+        @test a[1:5] == [fill(5,3); 1; 1]
+        rmul!(view(a, 4:5), 6)
+        @test a[1:7] == [fill(5,3); fill(6,2); fill(1,2)]
     end
 
     @testset "Padded broadcast" begin

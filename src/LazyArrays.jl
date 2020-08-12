@@ -31,7 +31,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
       similar, @_gc_preserve_end, @_gc_preserve_begin,
       @nexprs, @ncall, @ntuple, tuple_type_tail,
       all, any, isbitsunion, issubset, replace_with_centered_mark, replace_in_print_matrix,
-      unsafe_convert, strides, union
+      unsafe_convert, strides, union, map, searchsortedfirst, searchsortedlast, searchsorted
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
@@ -47,23 +47,19 @@ import FillArrays: AbstractFill, getindex_value
 
 import StaticArrays: StaticArrayStyle
 
-import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, 
+import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot, Mul,
                         transposelayout, conjlayout, sublayout, triangularlayout, triangulardata,
-                        reshapedlayout, diagonallayout, adjointlayout, sub_materialize,
+                        reshapedlayout, diagonallayout, tridiagonallayout, symtridiagonallayout, bidiagonallayout, 
+                        adjointlayout, sub_materialize,
                         check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport,
                         _fill_lmul!, scalarone, scalarzero, fillzeros, zero!, layout_getindex, _copyto!,
                         AbstractQLayout, StridedLayout, layout_replace_in_print_matrix
 
-if VERSION < v"1.2-"
-    import Base: has_offset_axes
-    require_one_based_indexing(A...) = !has_offset_axes(A...) || throw(ArgumentError("offset arrays are not supported but got an array with index other than 1"))
-else
-    import Base: require_one_based_indexing
-end
+import Base: require_one_based_indexing
 
 export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum,
-        applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, ⋆, @~, LazyArray
+        applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, @~, LazyArray
 
 
 include("lazyapplying.jl")

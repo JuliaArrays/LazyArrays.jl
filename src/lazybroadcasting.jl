@@ -65,6 +65,11 @@ getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) =
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
 
+# BroadcastArray are immutable
+copy(bc::BroadcastArray) = bc
+map(::typeof(copy), bc::BroadcastArray) = bc
+copy(bc::AdjOrTrans{<:Any,<:BroadcastArray}) = bc
+
 # Replacement for #18.
 # Could extend this to other similar reductions in Base... or apply at lower level? 
 # for (fname, op) in [(:sum, :add_sum), (:prod, :mul_prod),
@@ -104,7 +109,7 @@ BroadcastStyle(::StaticArrayStyle{N}, L::LazyArrayStyle{N})  where N = L
 is returned by `MemoryLayout(A)` if a matrix `A` is a `BroadcastArray`.
 `F` is the typeof function that broadcast operation is applied.
 """
-struct BroadcastLayout{F} <: MemoryLayout end
+struct BroadcastLayout{F} <: AbstractLazyLayout end
 
 tuple_type_memorylayouts(::Type{I}) where I<:Tuple = MemoryLayout.(I.parameters)
 tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = (MemoryLayout(A),)
@@ -166,20 +171,22 @@ broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::AbstractArray{V,
 # support
 ###
 
-_broadcast_colsupport(sz, A::Number, j) = OneTo(sz[1])
-_broadcast_colsupport(sz, A::AbstractVector, j) = colsupport(A,j)
-_broadcast_colsupport(sz, A::AbstractMatrix, j) = size(A,1) == 1 ? OneTo(sz[1]) : colsupport(A,j)
-_broadcast_rowsupport(sz, A::Number, j) = OneTo(sz[2])
-_broadcast_rowsupport(sz, A::AbstractVector, j) = OneTo(sz[2])
-_broadcast_rowsupport(sz, A::AbstractMatrix, j) = size(A,2) == 1 ? OneTo(sz[2]) : rowsupport(A,j)
+_broadcast_colsupport(ax, ::Tuple{}, A, j) = ax[1]
+_broadcast_colsupport(ax, ::Tuple{<:Any}, A, j) = colsupport(A,j)
+_broadcast_colsupport(ax, Aax::Tuple{OneTo{Int},<:Any}, A, j) = length(Aax[1]) == 1 ? ax[1] : colsupport(A,j)
+_broadcast_colsupport(ax, ::Tuple{<:Any,<:Any}, A, j) = colsupport(A,j)
+_broadcast_rowsupport(ax, ::Tuple{}, A, j) = ax[2]
+_broadcast_rowsupport(ax, ::Tuple{<:Any}, A, j) = ax[2]
+_broadcast_rowsupport(ax, Aax::Tuple{<:Any,OneTo{Int}}, A, j) = length(Aax[2]) == 1 ? ax[2] : rowsupport(A,j)
+_broadcast_rowsupport(ax, ::Tuple{<:Any,<:Any}, A, j) = rowsupport(A,j)
 
-colsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(size(A)), A.args, j)...)
-rowsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(size(A)), A.args, j)...)
+colsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(axes(A)), axes.(A.args), A.args, j)...)
+rowsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(axes(A)), axes.(A.args), A.args, j)...)
 
 for op in (:+, :-)
     @eval begin
-        rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(size(A)), A.args, Ref(j))...)
-        colsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(size(A)), A.args, Ref(j))...)
+        rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(axes(A)), axes.(A.args), A.args, Ref(j))...)
+        colsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(axes(A)), axes.(A.args), A.args, Ref(j))...)
     end
 end
 
@@ -200,10 +207,11 @@ _broadcastviewinds(sz, inds) =
 _broadcastview(a, inds) = view(a, _broadcastviewinds(size(a), inds)...)
 _broadcastview(a::Number, inds) = a
 
-function arguments(b::BroadcastLayout, V::SubArray)
+function _broadcast_sub_arguments(V)
     args = arguments(parent(V))
     _broadcastview.(args, Ref(parentindices(V)))
 end
+arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
 
 ###
 # Transpose
@@ -214,11 +222,3 @@ call(b::BroadcastLayout, a::AdjOrTrans) = call(b, parent(a))
 transposelayout(b::BroadcastLayout) = b
 arguments(b::BroadcastLayout, A::Adjoint) = map(adjoint, arguments(b, parent(A)))
 arguments(b::BroadcastLayout, A::Transpose) = map(transpose, arguments(b, parent(A)))
-
-##
-# copy
-##
-
-_broadcasted(b::BroadcastArray) = broadcasted(b.f, _broadcasted.(b.args)...)
-_broadcasted(b) = b
-Base.copy(b::BroadcastArray) = materialize(_broadcasted(b))

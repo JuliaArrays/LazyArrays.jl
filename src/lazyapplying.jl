@@ -1,13 +1,42 @@
+"""
+   ApplyStyle
 
-
+is an abstract type whose subtypes indicate how a lazy function
+is materialized. The default is `DefaultApplyStyle` which indicates
+that `applied(f, A...)` is materialized as `f(A...)`.
+"""
 abstract type ApplyStyle end
+"""
+    AbstractArrayApplyStyle
+
+is an abstract type whose subtypes indicate how a lazy function
+is materialized, where the result is an `AbstractArray`.
+"""
 abstract type AbstractArrayApplyStyle <: ApplyStyle end
+"""
+DefaultApplyStyle
+
+indicate that a lazy function application `applied(f, A...)` 
+is materialized as `f(A...)`.
+"""
 struct DefaultApplyStyle <: ApplyStyle end
+
+"""
+    DefaultArrayApplyStyle
+
+is like DefaultApplyStyle but indicates that the result is an array.
+"""
 struct DefaultArrayApplyStyle <: AbstractArrayApplyStyle end
 
 @inline ApplyStyle(f, args...) = DefaultApplyStyle()
 @inline ApplyStyle(f, ::Type{<:AbstractArray}, args::Type{<:AbstractArray}...) = DefaultArrayApplyStyle()
 
+"""
+    Applied(f, A...)
+
+is a lazy version of `f(A...)` that can be manipulated
+or materialized in a non-standard manner.
+"""
 struct Applied{Style, F, Args<:Tuple}
     f::F
     args::Args
@@ -35,6 +64,7 @@ end
 @inline _typesof(a, b...) = tuple(typeof(a), _typesof(b...)...)
 @inline _typesof(a, b) = tuple(typeof(a), typeof(b))
 @inline _typesof(a, b, c) = tuple(typeof(a), typeof(b), typeof(c))
+@inline combine_apply_style(f) = DefaultApplyStyle()
 @inline combine_apply_style(f, a...) = ApplyStyle(f, _typesof(a...)...)
 @inline combine_apply_style(f, a, b) = ApplyStyle(f, typeof(a), typeof(b))
 @inline combine_apply_style(f, a, b, c) = ApplyStyle(f, typeof(a), typeof(b), typeof(c))
@@ -184,14 +214,18 @@ AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, ma
 
 @inline axes(A::ApplyArray) = axes(Applied(A))
 @inline size(A::ApplyArray) = map(length, axes(A))
-@inline copy(A::ApplyArray{T,N}) where {T,N} = ApplyArray{T,N}(A.f, map(copy,A.args)...)
+
+# immutable arrays don't need to copy.
+# Some special cases like vcat overload setindex! and therefore
+# need to also overload copy
+@inline copy(A::ApplyArray{T,N}) where {T,N} = A
+map(::typeof(copy), A::ApplyArray) = A
 
 
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
 copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
 
 @propagate_inbounds getindex(A::ApplyArray{T,N}, kj::Vararg{Integer,N}) where {T,N} = convert(T, Applied(A)[kj...])::T
-@propagate_inbounds getindex(A::Applied{LazyArrayApplyStyle}, kj...) = materialize(Applied{DefaultArrayApplyStyle}(A))[kj...]
 
 for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
             :cosh, :sinh, :tanh, :csch, :sech, :coth,
@@ -216,13 +250,9 @@ conjlayout(L::LazyLayout) = L
 sublayout(L::LazyLayout, _) = L
 reshapedlayout(::LazyLayout, _) = LazyLayout()
 
-combine_mul_styles(::LazyLayout) = LazyArrayApplyStyle()
-result_mul_style(::LazyArrayApplyStyle, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
-result_mul_style(::LazyArrayApplyStyle, _) = LazyArrayApplyStyle()
-result_mul_style(_, ::LazyArrayApplyStyle) = LazyArrayApplyStyle()
 
 
-struct  ApplyLayout{F} <: MemoryLayout end
+struct ApplyLayout{F} <: AbstractLazyLayout end
 
 call(::ApplyLayout{F}, a) where F = F.instance
 
@@ -276,7 +306,6 @@ end
 # avoid infinite-loop
 _base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)
 _base_copyto!(dest::AbstractArray, src::AbstractArray) = Base.invoke(copyto!, NTuple{2,AbstractArray}, dest, src)
-@inline copyto!(dest::AbstractArray, M::Applied{LazyArrayApplyStyle}) = _base_copyto!(dest, materialize(M))
 
 ## 
 # triu/tril
@@ -307,3 +336,28 @@ getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix}}, k::Integer, j
 
 getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T = 
     j ≤ k+A.args[2] ? A.args[1][k,j] : zero(T)    
+
+
+###
+# Diagonal
+###
+
+# this is needed for infinite diagonal block matrices
+copy(D::Diagonal{<:Any,<:LazyArray}) = Diagonal(copy(D.diag))
+map(::typeof(copy), D::Diagonal{<:Any,<:LazyArray}) = Diagonal(map(copy,D.diag))
+function copy(D::Tridiagonal{<:Any,<:LazyArray})
+    if isdefined(D, :du2)
+        Tridiagonal(copy(D.dl), copy(D.d), copy(D.du), copy(D.du2))
+    else
+        Tridiagonal(copy(D.dl), copy(D.d), copy(D.du))
+    end
+end
+function map(::typeof(copy), D::Tridiagonal{<:Any,<:LazyArray})
+    if isdefined(D, :du2)
+        Tridiagonal(map(copy,D.dl), map(copy,D.d), map(copy,D.du), map(copy,D.du2))
+    else
+        Tridiagonal(map(copy,D.dl), map(copy,D.d), map(copy,D.du))
+    end
+end
+    
+

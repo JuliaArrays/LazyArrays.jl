@@ -85,15 +85,18 @@ end
 
 @inline getindex(A::CachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
 @inline getindex(A::CachedMatrix, kr::AbstractVector, jr::AbstractVector) = layout_getindex(A, kr, jr)
+@inline getindex(A::CachedMatrix, ::Colon, j::Integer) = layout_getindex(A, :, j)
 
 getindex(A::CachedVector, ::Colon) = copy(A)
 getindex(A::CachedVector, ::Slice) = copy(A)
 
-function getindex(A::CachedVector, I, J...)
+function cache_getindex(A::AbstractVector, I, J...)
     @boundscheck checkbounds(A, I, J...)
     resizedata!(A, _maximum(axes(A,1), I))
     A.data[I]
 end
+
+getindex(A::CachedVector, I, J...) = cache_getindex(A, I, J...)
 
 function getindex(A::CachedVector, I::CartesianIndex)
     resizedata!(A, Tuple(I)...)
@@ -108,9 +111,13 @@ end
 
 ## Array caching
 
-resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
+resizedata!(B, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
 
-function resizedata!(_, _, B::AbstractVector, n)
+function cache_filldata!(B, inds) 
+    B.data[inds] .= view(B.array,inds)
+end
+
+function _vec_resizedata!(B::AbstractVector, n)
     @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
@@ -118,17 +125,18 @@ function resizedata!(_, _, B::AbstractVector, n)
     ν, = B.datasize
     n = max(ν,n)
     if n > length(B.data) # double memory to avoid O(n^2) growing
-        B.data = similar(B.data, min(2n,length(B.array)))
+        B.data = similar(B.data, min(2n,length(B)))
         B.data[axes(olddata,1)] = olddata
     end
 
-    inds = ν+1:n
-    B.data[inds] .= view(B.array,inds)
-
+    cache_filldata!(B, ν+1:n)
     B.datasize = (n,)
 
     B
 end
+
+resizedata!(_, _, B::AbstractVector, n) = _vec_resizedata!(B, n)
+resizedata!(_, _, B::AbstractVector, n::Integer) = _vec_resizedata!(B, n)
 
 function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) where N
     @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyound size of operator"))
@@ -155,6 +163,11 @@ function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) whe
     B
 end
 
+# sub array
+function resizedata!(v::SubArray{<:Any,1,<:AbstractMatrix}, m::Integer)
+    resizedata!(parent(v), m, parentindices(v)[2])
+    v
+end
 
 function convexunion(a::AbstractVector, b::AbstractVector)
     isempty(a) && return b
@@ -249,7 +262,7 @@ function _cache_broadcast(::CachedLayout, ::CachedLayout, op, A, B)
 end
 
 function cache_broadcast(op, A, B)
-    if length(A) ≠ length(B) 
+    if length(A) ≠ length(B)
         (length(A) == 1 || length(B) == 1) && error("Internal error: Scalar-like broadcasting not yet supported.")
         throw(DimensionMismatch("arrays could not be broadcast to a common size; got a dimension with lengths $(length(A)) and $(length(B))"))
     end
@@ -259,6 +272,12 @@ end
 broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = cache_broadcast(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = cache_broadcast(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector) = cache_broadcast(op, A, B)
+
+broadcasted(::LazyArrayStyle, op, A::SubArray{<:Any,1,<:CachedMatrix}, B::CachedVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::SubArray{<:Any,1,<:CachedMatrix}, B::AbstractVector) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::SubArray{<:Any,1,<:CachedMatrix}) = cache_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::SubArray{<:Any,1,<:CachedMatrix}) = cache_broadcast(op, A, B)
+
 
 
 ###
@@ -297,3 +316,18 @@ function lmul!(x::Number, a::CachedArray)
     lmul!(x, a.array)
     a
 end
+
+lmul!(x::Number, a::SubArray{<:Any,N,<:CachedArray}) where N = ArrayLayouts.lmul!(x, a)
+rmul!(a::SubArray{<:Any,N,<:CachedArray}, x::Number) where N = ArrayLayouts.rmul!(a, x)
+
+
+###
+# copy
+###
+
+# need to copy data to prevent mutation. `a.array` is never changed so does not need to be 
+# copied
+copy(a::CachedArray) = CachedArray(copy(a.data), a.array, a.datasize)
+copy(a::Adjoint{<:Any,<:CachedArray}) = copy(parent(a))'
+copy(a::Transpose{<:Any,<:CachedArray}) = transpose(copy(parent(a)))
+

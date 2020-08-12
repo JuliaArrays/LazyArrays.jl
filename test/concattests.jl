@@ -1,96 +1,109 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call,
-                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize
+                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!
 
 @testset "concat" begin
     @testset "Vcat" begin
-        A = @inferred(Vcat(Vector(1:10), Vector(1:20)))
-        @test eltype(A) == Int
-        @test @inferred(axes(A)) == (Base.OneTo(30),)
-        @test @inferred(A[5]) == A[15] == 5
-        @test_throws BoundsError A[31]
-        @test reverse(A) == Vcat(Vector(reverse(1:20)), Vector(reverse(1:10)))
-        b = Array{Int}(undef, 31)
-        @test_throws DimensionMismatch copyto!(b, A)
-        b = Array{Int}(undef, 30)
-        @test @allocated(copyto!(b, A)) == 0
-        @test b == vcat(A.args...)
-        @test copy(A) isa Vcat
-        @test copy(A) == A
-        @test copy(A) !== A
-        @test vec(A) === A
-        @test A' == transpose(A) == Vector(A)'
-        @test permutedims(A) == permutedims(Vector(A))
+        @testset "Vector" begin
+            A = @inferred(Vcat(Vector(1:10), Vector(1:20)))
+            @test eltype(A) == Int
+            @test @inferred(axes(A)) == (Base.OneTo(30),)
+            @test @inferred(A[5]) == A[15] == 5
+            @test_throws BoundsError A[31]
+            @test reverse(A) == Vcat(Vector(reverse(1:20)), Vector(reverse(1:10)))
+            b = Array{Int}(undef, 31)
+            @test_throws DimensionMismatch copyto!(b, A)
+            b = Array{Int}(undef, 30)
+            @test @allocated(copyto!(b, A)) == 0
+            @test b == vcat(A.args...)
+            @test copy(A) isa Vcat
+            @test copy(A) == A
+            @test copy(A) !== A
+            @test vec(A) === A
+            @test A' == transpose(A) == Vector(A)'
+            @test permutedims(A) == permutedims(Vector(A))
 
-        A = @inferred(Vcat(1:10, 1:20))
-        @test @inferred(length(A)) == 30
-        @test @inferred(A[5]) == A[15] == 5
-        @test_throws BoundsError A[31]
-        @test reverse(A) == Vcat(reverse(1:20), reverse(1:10))
-        b = Array{Int}(undef, 31)
-        @test_throws DimensionMismatch copyto!(b, A)
-        b = Array{Int}(undef, 30)
-        copyto!(b, A)
-        @test_broken @allocated(copyto!(b, A)) == 0
-        @test @allocated(copyto!(b, A)) ≤ 200
-        @test b == vcat(A.args...)
-        @test copy(A) === A
-        @test vec(A) === A
-        @test A' == transpose(A) == Vector(A)'
-        @test A' === Hcat((1:10)', (1:20)')
-        @test transpose(A) === Hcat(transpose(1:10), transpose(1:20))
-        @test permutedims(A) == permutedims(Vector(A))
+            A = @inferred(Vcat(1:10, 1:20))
+            @test @inferred(length(A)) == 30
+            @test @inferred(A[5]) == A[15] == 5
+            @test_throws BoundsError A[31]
+            @test reverse(A) == Vcat(reverse(1:20), reverse(1:10))
+            b = Array{Int}(undef, 31)
+            @test_throws DimensionMismatch copyto!(b, A)
+            b = Array{Int}(undef, 30)
+            copyto!(b, A)
+            @test_broken @allocated(copyto!(b, A)) == 0
+            @test @allocated(copyto!(b, A)) ≤ 200
+            @test b == vcat(A.args...)
+            @test copy(A) === A
+            @test vec(A) === A
+            @test A' == transpose(A) == Vector(A)'
+            @test A' === Hcat((1:10)', (1:20)')
+            @test transpose(A) === Hcat(transpose(1:10), transpose(1:20))
+            @test permutedims(A) == permutedims(Vector(A))
 
-        A = Vcat(randn(2,10), randn(4,10))
-        @test @inferred(length(A)) == 60
-        @test @inferred(size(A)) == (6,10)
-        @test_throws BoundsError A[61]
-        @test_throws BoundsError A[7,1]
-        b = Array{Float64}(undef, 7,10)
-        @test_throws DimensionMismatch copyto!(b, A)
-        b = Array{Float64}(undef, 6,10)
-        @test_broken @allocated(copyto!(b, A)) == 0
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) ≤ 200
-        @test b == vcat(A.args...)
-        @test copy(A) isa Vcat
-        @test copy(A) == A
-        @test copy(A) !== A
-        @test vec(A) == vec(Matrix(A))
-        @test A' == transpose(A) == Matrix(A)'
-        @test permutedims(A) == permutedims(Matrix(A))
+            @test map(copy,A) isa Vcat 
+            @test Applied(A)[3] == 3
+        end
 
-        A = Vcat(randn(2,10).+im.*randn(2,10), randn(4,10).+im.*randn(4,10))
-        @test eltype(A) == ComplexF64
-        @test @inferred(length(A)) == 60
-        @test @inferred(size(A)) == (6,10)
-        @test_throws BoundsError A[61]
-        @test_throws BoundsError A[7,1]
-        b = Array{ComplexF64}(undef, 7,10)
-        @test_throws DimensionMismatch copyto!(b, A)
-        b = Array{ComplexF64}(undef, 6,10)
-        @test_broken @allocated(copyto!(b, A)) == 0
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) ≤ 200
-        @test b == vcat(A.args...)
-        @test copy(A) isa Vcat
-        @test copy(A) == A
-        @test copy(A) !== A
-        @test vec(A) == vec(Matrix(A))
-        @test A' == Matrix(A)'
-        @test transpose(A) == transpose(Matrix(A))
-        @test permutedims(A) == permutedims(Matrix(A))
+        @testset "Matrix" begin
+            A = Vcat(randn(2,10), randn(4,10))
+            @test @inferred(length(A)) == 60
+            @test @inferred(size(A)) == (6,10)
+            @test_throws BoundsError A[61]
+            @test_throws BoundsError A[7,1]
+            b = Array{Float64}(undef, 7,10)
+            @test_throws DimensionMismatch copyto!(b, A)
+            b = Array{Float64}(undef, 6,10)
+            @test_broken @allocated(copyto!(b, A)) == 0
+            @test @allocated(copyto!(b, A)) ≤ 200
+            @test b == vcat(A.args...)
+            @test copy(A) isa Vcat
+            @test copy(A) == A
+            @test copy(A) !== A
+            @test vec(A) == vec(Matrix(A))
+            @test A' == transpose(A) == Matrix(A)'
+            @test permutedims(A) == permutedims(Matrix(A))
+            @test_throws BoundsError A[7,2] = 6
+            @test Applied(A)[1,3] == A[1,3]
 
-        @test Vcat() isa Vcat{Any,1,Tuple{}}
+            A = Vcat(randn(2,10).+im.*randn(2,10), randn(4,10).+im.*randn(4,10))
+            @test eltype(A) == ComplexF64
+            @test @inferred(length(A)) == 60
+            @test @inferred(size(A)) == (6,10)
+            @test_throws BoundsError A[61]
+            @test_throws BoundsError A[7,1]
+            b = Array{ComplexF64}(undef, 7,10)
+            @test_throws DimensionMismatch copyto!(b, A)
+            b = Array{ComplexF64}(undef, 6,10)
+            @test_broken @allocated(copyto!(b, A)) == 0
+            @test @allocated(copyto!(b, A)) ≤ 200
+            @test b == vcat(A.args...)
+            @test copy(A) isa Vcat
+            @test copy(A) == A
+            @test copy(A) !== A
+            @test vec(A) == vec(Matrix(A))
+            @test A' == Matrix(A)'
+            @test transpose(A) == transpose(Matrix(A))
+            @test permutedims(A) == permutedims(Matrix(A))
+        end
 
-        A = Vcat(1,zeros(3,1))
-        @test A isa AbstractMatrix
-        @test A[1,1] == 1.0
-        @test A[2,1] == 0.0
-        @test axes(A) == (Base.OneTo(4),Base.OneTo(1))
-        @test permutedims(A) == permutedims(Matrix(A))
+        @testset "etc" begin
+            @test Vcat() isa Vcat{Any,1,Tuple{}}
+
+            A = Vcat(1,zeros(3,1))
+            @test A isa AbstractMatrix
+            @test A[1,1] == 1.0
+            @test A[2,1] == 0.0
+            @test axes(A) == (Base.OneTo(4),Base.OneTo(1))
+            @test permutedims(A) == permutedims(Matrix(A))
+        end
     end
     @testset "Hcat" begin
         A = @inferred(Hcat(1:10, 2:11))
         @test_throws BoundsError A[1,3]
+        @test_throws BoundsError A[11,1]
+        
         @test @inferred(call(A)) == hcat
         @test @inferred(size(A)) == (10,2)
         @test @inferred(A[5]) == @inferred(A[5,1]) == 5
@@ -121,6 +134,8 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test vec(A) == vec(Matrix(A))
         @test vec(A) === Vcat(A.args...)
         @test A' == Matrix(A)'
+        @test_throws BoundsError A[11,1] = 5
+        @test_throws BoundsError A[5,3] = 5
 
         A = @inferred(Hcat(1, zeros(1,5)))
         @test A == hcat(1, zeros(1,5))
@@ -131,14 +146,14 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         b = Array{Float64}(undef, 10, 3)
         copyto!(b, A)
         @test b == hcat(A.args...)
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) == 0
+        @test @allocated(copyto!(b, A)) == 0
         @test vec(A) == vec(Matrix(A))
 
         A = Hcat(randn(5).+im.*randn(5), randn(5,2).+im.*randn(5,2))
         b = Array{ComplexF64}(undef, 5, 3)
         copyto!(b, A)
         @test b == hcat(A.args...)
-        VERSION ≥ v"1.2" && @test @allocated(copyto!(b, A)) == 0
+        @test @allocated(copyto!(b, A)) == 0
         @test vec(A) == vec(Matrix(A))
         @test A' == Matrix(A)'
         @test transpose(A) == transpose(Matrix(A))
@@ -147,6 +162,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             A = randn(3,3)
             H = Hcat(A,A)
             @test H[1,1] == applied(hcat,A,A)[1,1] == A[1,1]
+        end
+
+        @testset "adjoint vec / permutediims" begin
+            @test vec(Hcat([1,2]', 3)) == 1:3
+            @test permutedims(Hcat([1,2]', 3)) == reshape(1:3,3,1)
         end
     end
 
@@ -323,15 +343,18 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test (x + z) isa BroadcastArray
         @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
 
-        # Lazy mixed with Static treats as Lazy
-        s = SVector(1,2,3,4,5,6,7,8)
-        @test f.(x , s) isa Vcat
-        @test f.(x , s) == f.(Vector(x), Vector(s))
+        @testset "Lazy mixed with Static treats as Lazy" begin
+            s = SVector(1,2,3,4,5,6,7,8)
+            @test f.(x , s) isa Vcat
+            @test f.(x , s) == f.(Vector(x), Vector(s))
+        end
 
-        # these are special cased
-        @test Vcat(1, Ones(5))  + Vcat(2, Fill(2.0,5)) ≡ Vcat(3, Fill(3.0,5))
-        @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡
-            Vcat(SVector(5,7,9), Fill(3.0,5))
+        @testset "special cased" begin
+            @test Vcat(1, Ones(5))  + Vcat(2, Fill(2.0,5)) ≡ Vcat(3, Fill(3.0,5))
+            @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡
+                Vcat(SVector(5,7,9), Fill(3.0,5))
+            @test Vcat([1,2,3],Fill(1,7)) .* Zeros(10) ≡ Zeros(10) .* Vcat([1,2,3],Fill(1,7)) ≡ Zeros(10)
+        end
 
         H = Hcat(1, zeros(1,10))
         @test H/2 isa Hcat
@@ -391,7 +414,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         A = Vcat(1,[2,3], Fill(5,10))
         V = view(A,3:5)
         @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
-        VERSION ≥ v"1.1" && @inferred(arguments(V))
+        @inferred(arguments(V))
         @test arguments(V)[1] ≡ Fill(1,0)
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
 
@@ -409,7 +432,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
         V = view(A,3:5,1:4)
         @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(hcat)}
-        VERSION ≥ v"1.1" && @inferred(arguments(V))
+        @inferred(arguments(V))
         @test arguments(V)[1] == reshape(3:5,3,1)
 
         v = view(A,2,1:5)
@@ -483,5 +506,60 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         C = Vcat([1],[2,0])
         @test A == B == C == [1,2,0]
         @test A ≠ [1,2,4]
+    end
+
+    @testset "resizedata!" begin
+        # allow emulating a cached Vector
+        a = Vcat([1,2], Zeros(8))
+        @test resizedata!(a, 2) ≡ a
+        @test_throws ArgumentError resizedata!(a,3)
+    end
+
+    @testset "Axpy" begin
+        a = Vcat([1.,2],Zeros(1_000_000))
+        b = Vcat([1.,2],Zeros(1_000_000))
+        BLAS.axpy!(2.0, a, b)
+        @test b[1:10] == [3; 6; zeros(8)]
+        BLAS.axpy!(2.0, view(a,:), b)
+        @test b[1:10] == [5; 10; zeros(8)]
+    end
+
+    @testset "l/rmul!" begin
+        a = Vcat([1.,2],Zeros(1_000_000))
+        @test ArrayLayouts.lmul!(2,a) ≡ a
+        @test a[1:10] == [2; 4; zeros(8)]
+        @test ArrayLayouts.rmul!(a,2) ≡ a
+        @test a[1:10] == [4; 8; zeros(8)]
+    end
+
+    @testset "Dot" begin
+        a = Vcat([1,2],Zeros(1_000_000))
+        b = Vcat([1,2,3],Zeros(1_000_000))        
+        @test @inferred(dot(a,b)) ≡ 5.0
+        @test @inferred(dot(a,1:1_000_002)) ≡ @inferred(dot(1:1_000_002,a)) ≡ 5.0
+    end
+
+    @testset "search" begin
+        a = Vcat([1,2], 5:100)
+        v = Vector(a)
+        @test searchsortedfirst(a, 0) ≡ searchsortedfirst(v, 0) ≡ 1
+        @test searchsortedfirst(a, 2) ≡ searchsortedfirst(v, 2) ≡ 2
+        @test searchsortedfirst(a, 4) ≡ searchsortedfirst(v, 4) ≡ 3
+        @test searchsortedfirst(a, 50) ≡ searchsortedfirst(v, 50) ≡ 48
+        @test searchsortedfirst(a, 101) ≡ searchsortedfirst(v, 101) ≡ 99
+        @test searchsortedlast(a, 0) ≡ searchsortedlast(v, 0) ≡ 0
+        @test searchsortedlast(a, 2) ≡ searchsortedlast(v, 2) ≡ 2
+        @test searchsortedlast(a, 4) ≡ searchsortedlast(v, 4) ≡ 2
+        @test searchsortedlast(a, 50) ≡ searchsortedlast(v, 50) ≡ 48
+        @test searchsortedlast(a, 101) ≡ searchsortedlast(v, 101) ≡ 98
+        @test searchsorted(a, 0) ≡ searchsorted(v, 0) ≡ 1:0
+        @test searchsorted(a, 2) ≡ searchsorted(v, 2) ≡ 2:2
+        @test searchsorted(a, 4) ≡ searchsorted(v, 4) ≡ 3:2
+        @test searchsorted(a, 50) ≡ searchsorted(v, 50) ≡ 48:48
+        @test searchsorted(a, 101) ≡ searchsorted(v, 101) ≡ 99:98
+    end
+
+    @testset "print" begin
+        @test Base.replace_in_print_matrix(Vcat(1:3,Zeros(10)), 4, 1, "0.0") == " ⋅ "
     end
 end
