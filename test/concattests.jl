@@ -542,11 +542,21 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
     @testset "search" begin
         a = Vcat([1,2], 5:100)
         v = Vector(a)
-        @test searchsortedfirst(a, 0) == searchsortedfirst(v, 0) == 1
-        @test searchsortedfirst(a, 2) == searchsortedfirst(v, 2) == 2
-        @test searchsortedfirst(a, 4) == searchsortedfirst(v, 4) == 3
-        @test searchsortedfirst(a, 50) == searchsortedfirst(v, 50) == 48
-        @test searchsortedfirst(a, 101) == searchsortedfirst(v, 101) == 99
+        @test searchsortedfirst(a, 0) ≡ searchsortedfirst(v, 0) ≡ 1
+        @test searchsortedfirst(a, 2) ≡ searchsortedfirst(v, 2) ≡ 2
+        @test searchsortedfirst(a, 4) ≡ searchsortedfirst(v, 4) ≡ 3
+        @test searchsortedfirst(a, 50) ≡ searchsortedfirst(v, 50) ≡ 48
+        @test searchsortedfirst(a, 101) ≡ searchsortedfirst(v, 101) ≡ 99
+        @test searchsortedlast(a, 0) ≡ searchsortedlast(v, 0) ≡ 0
+        @test searchsortedlast(a, 2) ≡ searchsortedlast(v, 2) ≡ 2
+        @test searchsortedlast(a, 4) ≡ searchsortedlast(v, 4) ≡ 2
+        @test searchsortedlast(a, 50) ≡ searchsortedlast(v, 50) ≡ 48
+        @test searchsortedlast(a, 101) ≡ searchsortedlast(v, 101) ≡ 98
+        @test searchsorted(a, 0) ≡ searchsorted(v, 0) ≡ 1:0
+        @test searchsorted(a, 2) ≡ searchsorted(v, 2) ≡ 2:2
+        @test searchsorted(a, 4) ≡ searchsorted(v, 4) ≡ 3:2
+        @test searchsorted(a, 50) ≡ searchsorted(v, 50) ≡ 48:48
+        @test searchsorted(a, 101) ≡ searchsorted(v, 101) ≡ 99:98
     end
 
     @testset "print" begin

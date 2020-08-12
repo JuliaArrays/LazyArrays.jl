@@ -31,7 +31,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
       similar, @_gc_preserve_end, @_gc_preserve_begin,
       @nexprs, @ncall, @ntuple, tuple_type_tail,
       all, any, isbitsunion, issubset, replace_with_centered_mark, replace_in_print_matrix,
-      unsafe_convert, strides, union, map
+      unsafe_convert, strides, union, map, searchsortedfirst, searchsortedlast, searchsorted
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
