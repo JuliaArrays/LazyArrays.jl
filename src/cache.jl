@@ -90,11 +90,13 @@ end
 getindex(A::CachedVector, ::Colon) = copy(A)
 getindex(A::CachedVector, ::Slice) = copy(A)
 
-function getindex(A::CachedVector, I, J...)
+function cache_getindex(A::AbstractVector, I, J...)
     @boundscheck checkbounds(A, I, J...)
     resizedata!(A, _maximum(axes(A,1), I))
     A.data[I]
 end
+
+getindex(A::CachedVector, I, J...) = cache_getindex(A, I, J...)
 
 function getindex(A::CachedVector, I::CartesianIndex)
     resizedata!(A, Tuple(I)...)
@@ -109,9 +111,13 @@ end
 
 ## Array caching
 
-resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
+resizedata!(B, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
 
-function resizedata!(_, _, B::AbstractVector, n)
+function cache_filldata!(B, inds) 
+    B.data[inds] .= view(B.array,inds)
+end
+
+function _vec_resizedata!(B::AbstractVector, n)
     @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
@@ -119,17 +125,18 @@ function resizedata!(_, _, B::AbstractVector, n)
     ν, = B.datasize
     n = max(ν,n)
     if n > length(B.data) # double memory to avoid O(n^2) growing
-        B.data = similar(B.data, min(2n,length(B.array)))
+        B.data = similar(B.data, min(2n,length(B)))
         B.data[axes(olddata,1)] = olddata
     end
 
-    inds = ν+1:n
-    B.data[inds] .= view(B.array,inds)
-
+    cache_filldata!(B, ν+1:n)
     B.datasize = (n,)
 
     B
 end
+
+resizedata!(_, _, B::AbstractVector, n) = _vec_resizedata!(B, n)
+resizedata!(_, _, B::AbstractVector, n::Integer) = _vec_resizedata!(B, n)
 
 function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) where N
     @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyound size of operator"))
