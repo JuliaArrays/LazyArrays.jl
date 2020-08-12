@@ -922,7 +922,7 @@ function searchsortedlast(f::Vcat{<:Any,1}, x)
     return searchsortedlast(args[1], x)
 end
 
-searchsortedfirst(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x)
+searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x)
 
 # avoid ambiguity in LazyBandedMatrices
 copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))
