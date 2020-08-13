@@ -548,12 +548,18 @@ rowsupport(M::Hcat, k) = first(rowsupport(first(M.args),k)):(size(Hcat(most(M.ar
 
 struct PaddedLayout{L} <: MemoryLayout end
 applylayout(::Type{typeof(vcat)}, ::A, ::ZerosLayout) where A = PaddedLayout{A}()
+applylayout(::Type{typeof(vcat)}, ::ScalarLayout, ::ScalarLayout, ::ZerosLayout) = PaddedLayout{ApplyLayout{typeof(vcat)}}()
+applylayout(::Type{typeof(vcat)}, ::A, ::PaddedLayout) where A = PaddedLayout{ApplyLayout{typeof(vcat)}}()
+applylayout(::Type{typeof(vcat)}, ::ScalarLayout, ::ScalarLayout, ::PaddedLayout) = PaddedLayout{ApplyLayout{typeof(vcat)}}()
 cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
 
 paddeddata(A::CachedArray) = view(A.data,OneTo.(A.datasize)...)
-paddeddata(A::Vcat) = A.args[1]
+_vcat_paddeddata(A, B::Zeros) = A
+_vcat_paddeddata(A, B) = Vcat(A, paddeddata(B))
+_vcat_paddeddata(A, B, C...) = Vcat(A, _vcat_paddeddata(B, C...))
+paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
 
 function _vcat_resizedata!(::PaddedLayout, B, m)
     m ≤ length(paddeddata(B))  || throw(ArgumentError("Cannot resize"))
