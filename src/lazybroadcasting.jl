@@ -58,10 +58,11 @@ size(A::BroadcastArray) = map(length, axes(A))
 # Everything else falls back to dynamically dropping broadcasted indices based upon its axes
 @propagate_inbounds _broadcast_getindex_range(A, I) = A[I]
 
-getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
-    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)
-getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) =
-    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)    
+_broadcastarray_getindex(B::Broadcasted, kr) = BroadcastArray(B.f, map(a -> _broadcast_getindex_range(a,kr), B.args)...)
+_broadcastarray_getindex(B::AbstractArray, kr) = B[kr]
+
+getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) = _broadcastarray_getindex(Broadcasted(B), kr)
+getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) = _broadcastarray_getindex(Broadcasted(B), kr) 
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
 
