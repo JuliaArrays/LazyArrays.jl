@@ -1,5 +1,5 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
-import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call,
+import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!
 
 @testset "concat" begin
@@ -179,7 +179,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test H[1,1] == 1
     end
 
-    @testset "Special pads" begin
+    @testset "PaddedLayout" begin
         A = Vcat([1,2,3], Zeros(7))
         B = Vcat([1,2], Zeros(8))
 
@@ -219,6 +219,22 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test C.args[1] isa SVector{2,Int}
         @test C.args[2] isa Ones{Float64}
         @test C == Vector(A) + Vector(B)
+
+        @testset "multiple scalar" begin
+            # We only do 1 or 2 for now, this should be redesigned later
+            A = Vcat(1, Zeros(8))
+            @test MemoryLayout(A) isa PaddedLayout{ScalarLayout}
+            @test paddeddata(A) == 1
+            B = Vcat(1, 2, Zeros(8))
+            @test paddeddata(B) == [1,2]
+            @test MemoryLayout(B) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+            C = Vcat(1, cache(Zeros(8)));
+            @test paddeddata(C) == [1]
+            @test MemoryLayout(C) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+            D = Vcat(1, 2, cache(Zeros(8)));
+            @test paddeddata(D) == [1,2]
+            @test MemoryLayout(D) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+        end
     end
 
     @testset "Empty Vcat" begin
@@ -460,8 +476,12 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
     end
 
     @testset "searchsorted" begin
-        a = Vcat(1:10_000, [10_000_000_000,12_000_000_000])
-        # searchsortedfirst(a, 6_000_000_001)
+        a = Vcat(1:1_000_000, [10_000_000_000,12_000_000_000])
+        b = Vcat(1, 3:1_000_000)
+        @test searchsortedfirst(a, 6_000_000_001) == 1_000_001
+        @test searchsortedlast(a, 2) == 2
+        @test searchsortedfirst(b, 5) == 4
+        @test searchsortedlast(b, 1) == 1
     end
 
     @testset "args with hcat and view" begin

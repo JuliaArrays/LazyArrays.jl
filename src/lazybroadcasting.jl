@@ -40,16 +40,18 @@ BroadcastArray(b::BroadcastArray) = b
 BroadcastVector(A::BroadcastVector) = A
 BroadcastMatrix(A::BroadcastMatrix) = A
 
-Broadcasted(A::BroadcastArray) = instantiate(broadcasted(call(A), arguments(A)...))
-Broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = instantiate(broadcasted(call(A), arguments(A)...))
+broadcasted(A::BroadcastArray) = instantiate(broadcasted(call(A), arguments(A)...))
+broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = instantiate(broadcasted(call(A), arguments(A)...))
+Broadcasted(A::BroadcastArray) = broadcasted(A)::Broadcasted
+Broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = broadcasted(A)::Broadcasted
 
 @inline BroadcastArray(A::AbstractArray) = BroadcastArray(call(A), arguments(A)...)
 
-axes(A::BroadcastArray) = axes(Broadcasted(A))
+axes(A::BroadcastArray) = axes(broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
 
 
-@propagate_inbounds getindex(A::BroadcastArray{<:Any,N}, kj::Vararg{Int,N}) where N = Broadcasted(A)[kj...]
+@propagate_inbounds getindex(A::BroadcastArray{<:Any,N}, kj::Vararg{Int,N}) where N = broadcasted(A)[kj...]
 
 
 
@@ -58,10 +60,11 @@ size(A::BroadcastArray) = map(length, axes(A))
 # Everything else falls back to dynamically dropping broadcasted indices based upon its axes
 @propagate_inbounds _broadcast_getindex_range(A, I) = A[I]
 
-getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
-    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)
-getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) =
-    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)    
+_broadcastarray_getindex(B::Broadcasted, kr) = BroadcastArray(B.f, map(a -> _broadcast_getindex_range(a,kr), B.args)...)
+_broadcastarray_getindex(B::AbstractArray, kr) = B[kr]
+
+getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) = _broadcastarray_getindex(broadcasted(B), kr)
+getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) = _broadcastarray_getindex(broadcasted(B), kr) 
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
 
@@ -76,7 +79,7 @@ copy(bc::AdjOrTrans{<:Any,<:BroadcastArray}) = bc
 #                     (:maximum, :max), (:minimum, :min),
 #                     (:all, :&),       (:any, :|)]
 function Base._sum(f, A::BroadcastArray, ::Colon)
-    bc = Broadcasted(A)
+    bc = broadcasted(A)
     T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
     out = zero(T)
     @simd for I in eachindex(bc)
@@ -85,7 +88,7 @@ function Base._sum(f, A::BroadcastArray, ::Colon)
     out
 end
 function Base._prod(f, A::BroadcastArray, ::Colon)
-    bc = Broadcasted(A)
+    bc = broadcasted(A)
     T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
     out = one(T)
     @simd for I in eachindex(bc)
@@ -125,7 +128,7 @@ MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} =
     broadcastlayout(F, tuple_type_memorylayouts(Args)...)
 
 _copyto!(_, ::BroadcastLayout, dest::AbstractArray{<:Any,N}, bc::AbstractArray{<:Any,N}) where N = 
-    copyto!(dest, Broadcasted(bc))    
+    copyto!(dest, broadcasted(bc))    
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting
 for op in (+, -, big)

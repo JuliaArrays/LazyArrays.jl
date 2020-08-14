@@ -185,6 +185,8 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         d = MyLazyArray(randn(3))
         @test copy(Diagonal(b)) == Diagonal(copy(b))
         @test map(copy, Diagonal(b))  == Diagonal(copy(b))
+        @test inv(Diagonal(b)) == inv(Diagonal(b.data))
+        @test inv(Diagonal(b)) isa Diagonal{Float64,<:BroadcastVector}
         @test copy(Tridiagonal(c, b, c)) == Tridiagonal(copy(c), copy(b), copy(c))
         @test copy(Tridiagonal(c, b, c, d)) == Tridiagonal(copy(c), copy(b), copy(c), copy(d))
         @test copy(Tridiagonal(c, b, c, d)).du2 == d

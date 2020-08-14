@@ -166,4 +166,14 @@ import Base: broadcasted
         @test arguments(V) == (2,a[1:3])
         @test BroadcastArray(V) == V == 2a[1:3]
     end
+
+    @testset "broadcasted which simplifies" begin
+        a = BroadcastVector{Float64}(*, Zeros(10), randn(10))
+        @test @inferred(a[1]) == 0.0
+        @test @inferred(a[1:5]) ≡ Zeros(5)
+        @test @inferred(a[[1,2,4]]) ≡ Zeros(3)
+        @test broadcasted(a) ≡ Zeros(10)
+        @test_throws TypeError Base.Broadcast.Broadcasted(a)
+        @test materialize(Base.Broadcast.Broadcasted(view(a,1:3))) == zeros(3)
+    end
 end
