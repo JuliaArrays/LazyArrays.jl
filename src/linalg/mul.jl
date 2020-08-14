@@ -132,8 +132,8 @@ end
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
 flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
  
-adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
-transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
+adjoint(A::MulMatrix) = ApplyArray(*, reverse(map(adjoint,A.args))...)
+transpose(A::MulMatrix) = ApplyArray(*, reverse(map(transpose,A.args))...)
 
 ###
 # sub materialize
