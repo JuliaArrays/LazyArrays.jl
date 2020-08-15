@@ -1,4 +1,4 @@
-using LazyArrays, ArrayLayouts, LinearAlgebra
+using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays
 import LazyArrays: materialize!, MemoryLayout, triangulardata, LazyLayout, UnknownLayout, LazyMatrix
 
 # used to test general matrix backends
@@ -193,5 +193,11 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test map(copy, Tridiagonal(c, b, c)) == Tridiagonal(copy(c), copy(b), copy(c))
         @test map(copy, Tridiagonal(c, b, c, d)) == Tridiagonal(copy(c), copy(b), copy(c), copy(d))
         @test map(copy, Tridiagonal(c, b, c, d)).du2 == d
+    end
+
+    @testset "Nested" begin
+        a = MyLazyArray(randn(5))
+        @test a .\ rand(5) .* Zeros(5) ≡ Zeros(5)
+        @test broadcast(*, Zeros(5), Base.broadcasted(\, a, rand(5))) ≡ Zeros(5)
     end
 end

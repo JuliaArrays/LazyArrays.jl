@@ -189,6 +189,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test C.args[2] isa Zeros{Float64}
         @test C == Vector(A) + Vector(B)
 
+        @test colsupport(A, 1) == 1:3
 
         B = Vcat([1,2], Ones(8))
 
