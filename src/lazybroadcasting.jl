@@ -168,6 +168,10 @@ broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::AbstractArray{T,N}, b::Zeros{V,
     broadcast(DefaultArrayStyle{N}(), *, a, b)
 broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::AbstractArray{V,N}) where {T,V,N} =
     broadcast(DefaultArrayStyle{N}(), *, a, b)
+broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Broadcasted, b::Zeros{V,N}) where {V,N} =
+    broadcast(DefaultArrayStyle{N}(), *, a, b)
+broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::Broadcasted) where {T,N} =
+    broadcast(DefaultArrayStyle{N}(), *, a, b)
 
 
 ###
