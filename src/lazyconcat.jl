@@ -561,6 +561,8 @@ _vcat_paddeddata(A, B) = Vcat(A, paddeddata(B))
 _vcat_paddeddata(A, B, C...) = Vcat(A, _vcat_paddeddata(B, C...))
 paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
 
+colsupport(::PaddedLayout, A, j) = colsupport(paddeddata(A),j)
+
 function _vcat_resizedata!(::PaddedLayout, B, m)
     m ≤ length(paddeddata(B))  || throw(ArgumentError("Cannot resize"))
     B

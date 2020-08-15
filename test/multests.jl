@@ -966,6 +966,13 @@ end
         @test ApplyStyle(*,typeof(A),typeof(randn(2,2))) isa MulStyle
         @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*Fill(3,10) ≡ Fill(180,10)
         @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10)) == Fill(360,10,10)
+        @test A' isa ApplyArray
+        @test A' ≈ Matrix(A)'
+
+        a = ApplyArray(*, randn(2,2), randn(2))
+        @test a ≈ *(a.args...)
+        @test a' isa Adjoint
+        @test a'a ≈ Vector(a)'a ≈ a'Vector(a) ≈ Vector(a)'Vector(a)
     end
 
     @testset "copyto!" begin
