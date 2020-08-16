@@ -176,4 +176,12 @@ import Base: broadcasted
         @test_throws TypeError Base.Broadcast.Broadcasted(a)
         @test materialize(Base.Broadcast.Broadcasted(view(a,1:3))) == zeros(3)
     end
+
+    @testset "array-valued Broadcast" begin
+        a = BroadcastArray(*, 1:3, [[1,2],[3,4],[5,6]])
+        @test a == broadcast(*, 1:3, [[1,2],[3,4],[5,6]])
+        @test a[2] == [6,8]
+        @test a[1:2] == [[1,2], [6,8]]
+        
+    end
 end
