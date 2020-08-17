@@ -56,7 +56,7 @@ size(A::BroadcastArray) = map(length, axes(A))
 
 
 
-@propagate_inbounds _broadcast_getindex_range(A::Union{Ref,AbstractArray{<:Any,0},Number}, I) = A[] # Scalar-likes can just ignore all indices
+@propagate_inbounds _broadcast_getindex_range(A::Union{Ref,AbstractArray{<:Any,0},Number}, I) = A # Scalar-likes can just ignore all indices
 # Everything else falls back to dynamically dropping broadcasted indices based upon its axes
 @propagate_inbounds _broadcast_getindex_range(A, I) = A[I]
 
