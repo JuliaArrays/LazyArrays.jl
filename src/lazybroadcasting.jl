@@ -120,10 +120,6 @@ tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = (MemoryLayout(A),Memo
 tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C))
 
 broadcastlayout(::Type{F}, _...) where F = BroadcastLayout{F}()
-broadcastlayout(::Type, ::LazyLayout...) = LazyLayout()
-broadcastlayout(::Type, _, ::LazyLayout) = LazyLayout()
-broadcastlayout(::Type, _, _, ::LazyLayout) = LazyLayout()
-broadcastlayout(::Type, _, _, _, ::LazyLayout) = LazyLayout()
 MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = 
     broadcastlayout(F, tuple_type_memorylayouts(Args)...)
 
