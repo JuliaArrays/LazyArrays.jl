@@ -183,13 +183,13 @@ _broadcast_rowsupport(ax, ::Tuple{<:Any}, A, j) = ax[2]
 _broadcast_rowsupport(ax, Aax::Tuple{<:Any,OneTo{Int}}, A, j) = length(Aax[2]) == 1 ? ax[2] : rowsupport(A,j)
 _broadcast_rowsupport(ax, ::Tuple{<:Any,<:Any}, A, j) = rowsupport(A,j)
 
-colsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(axes(A)), axes.(A.args), A.args, j)...)
-rowsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(axes(A)), axes.(A.args), A.args, j)...)
+colsupport(lay::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
+rowsupport(lay::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
 
 for op in (:+, :-)
     @eval begin
-        rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(axes(A)), axes.(A.args), A.args, Ref(j))...)
-        colsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(axes(A)), axes.(A.args), A.args, Ref(j))...)
+        rowsupport(lay::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
+        colsupport(lay::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
     end
 end
 

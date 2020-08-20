@@ -939,3 +939,12 @@ searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x
 
 # avoid ambiguity in LazyBandedMatrices
 copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))
+
+
+# Triangular columns
+
+sublayout(::TriangularLayout{'U','N', ML}, ::Type{<:Tuple{KR,Integer}}) where {KR,ML} = 
+    sublayout(PaddedLayout{ML}(), Tuple{KR})
+
+sublayout(::TriangularLayout{'L','N', ML}, ::Type{<:Tuple{Integer,JR}}) where {JR,ML} = 
+    sublayout(PaddedLayout{ML}(), Tuple{JR})
