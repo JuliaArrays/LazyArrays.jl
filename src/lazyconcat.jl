@@ -852,14 +852,14 @@ sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,Abst
 _lazy_getindex(dat, kr...) = view(dat, kr...)
 _lazy_getindex(dat::Number, _) = dat
 
-function paddeddata(S::SubArray{<:Any,1,<:AbstractVector})
+function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractVector})
     dat = paddeddata(parent(S))
     (kr,) = parentindices(S)
     kr2 = kr ∩ axes(dat,1)
     _lazy_getindex(dat, kr2)
 end
 
-function paddeddata(S::SubArray{<:Any,1,<:AbstractMatrix})
+function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractMatrix})
     P = parent(S)
     (kr,j) = parentindices(S)
     resizedata!(P, 1, j) # ensure enough rows
@@ -868,12 +868,14 @@ function paddeddata(S::SubArray{<:Any,1,<:AbstractMatrix})
     _lazy_getindex(dat, kr2, j)
 end
 
-function paddeddata(S::SubArray{<:Any,2})
+function sub_paddeddata(_, S::SubArray{<:Any,2})
     dat = paddeddata(parent(S))
     (kr,jr) = parentindices(S)
     kr2 = kr ∩ axes(dat,1)
     _lazy_getindex(dat, kr2, jr)
 end
+
+paddeddata(S::SubArray) = sub_paddeddata(MemoryLayout(parent(S)), S)
 
 function _padded_sub_materialize(v::AbstractVector{T}) where T
     dat = paddeddata(v)
@@ -948,3 +950,14 @@ sublayout(::TriangularLayout{'U','N', ML}, ::Type{<:Tuple{KR,Integer}}) where {K
 
 sublayout(::TriangularLayout{'L','N', ML}, ::Type{<:Tuple{Integer,JR}}) where {JR,ML} = 
     sublayout(PaddedLayout{ML}(), Tuple{JR})
+
+function resizedata!(A::UpperTriangular, k::Integer, j::Integer)
+    @assert k ≤ 1 && j ≤ size(A,2)
+    A
+end
+
+function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
+    P = parent(S)
+    (kr,j) = parentindices(S)
+    view(triangulardata(P), kr ∩ (1:j), j)
+end
