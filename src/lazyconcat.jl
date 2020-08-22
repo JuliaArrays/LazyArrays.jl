@@ -687,9 +687,9 @@ function materialize!(d::Axpy{<:PaddedLayout,<:PaddedLayout,U,<:AbstractVector{T
     BLAS.axpy!(d.α, x, view(y,1:length(x)))
     y
 end
-
-BLAS.axpy!(α, X::LazyArray, Y::AbstractArray) = materialize!(Axpy(α,X,Y))
-BLAS.axpy!(α, X::SubArray{<:Any,N,<:LazyArray}, Y::AbstractArray) where N = materialize!(Axpy(α,X,Y))
+axpy!(α, X, Y) = materialize!(Axpy(α,X,Y))
+BLAS.axpy!(α, X::LazyArray, Y::AbstractArray) = axpy!(α, X, Y)
+BLAS.axpy!(α, X::SubArray{<:Any,N,<:LazyArray}, Y::AbstractArray) where N = axpy!(α, X, Y)
 
 
 ###
@@ -951,10 +951,7 @@ sublayout(::TriangularLayout{'U','N', ML}, ::Type{<:Tuple{KR,Integer}}) where {K
 sublayout(::TriangularLayout{'L','N', ML}, ::Type{<:Tuple{Integer,JR}}) where {JR,ML} = 
     sublayout(PaddedLayout{ML}(), Tuple{JR})
 
-function resizedata!(A::UpperTriangular, k::Integer, j::Integer)
-    @assert k ≤ 1 && j ≤ size(A,2)
-    A
-end
+resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
 
 function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
     P = parent(S)
