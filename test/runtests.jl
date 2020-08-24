@@ -261,7 +261,7 @@ end
     @test bc.args[2] == 3
 end
 
-@testset "Triangular padded" begin
+@testset "padded columns" begin
     A = randn(5,5)
     U = UpperTriangular(A)
     v = view(U,:,3)

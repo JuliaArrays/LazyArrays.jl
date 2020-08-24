@@ -90,7 +90,7 @@ Ldiv(A::Applied{<:Any,typeof(\)}) = Ldiv(A.args...)
 
 
 similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
-@inline copy(M::Applied{LdivStyle}) = copy(Ldiv(M))
+@inline copy(M::Applied{LdivStyle}) = ldiv(arguments(M)...)
 @inline copyto!(dest::AbstractArray, M::Applied{LdivStyle}) = copyto!(dest, Ldiv(M))
 @inline materialize!(M::Applied{LdivStyle}) = materialize!(Ldiv(M))
 

@@ -121,7 +121,7 @@ function _vec_resizedata!(B::AbstractVector, n)
     @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
-    olddata = B.data
+    olddata = paddeddata(B)
     ν, = B.datasize
     n = max(ν,n)
     if n > length(B.data) # double memory to avoid O(n^2) growing
