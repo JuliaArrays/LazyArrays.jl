@@ -579,17 +579,17 @@ end
         
         A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
         
-        if VERSION ≥ v"1.1"
-            @inferred(MulAdd(@~ A*x + y))
-            @test blasnoalloc(c, 2.0, A, x, 3.0, y) === c
-            @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
-            Ac = A'
-            blasnoalloc(c, 2.0, Ac, x, 3.0, y)
+        @inferred(MulAdd(@~ A*x + y))
+        @test blasnoalloc(c, 2.0, A, x, 3.0, y) === c
+        @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
+        Ac = A'
+        blasnoalloc(c, 2.0, Ac, x, 3.0, y)
+        if VERSION ≥ v"1.5"
             @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
-            Aa = ApplyArray(+, A, Ac)
-            blasnoalloc(c, 2.0, Aa, x, 3.0, y)
-			@test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
-		end
+        end
+        Aa = ApplyArray(+, A, Ac)
+        blasnoalloc(c, 2.0, Aa, x, 3.0, y)
+        @test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
     end
 
     @testset "multi-argument mul" begin
