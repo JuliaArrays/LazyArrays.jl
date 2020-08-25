@@ -687,9 +687,9 @@ function materialize!(d::Axpy{<:PaddedLayout,<:PaddedLayout,U,<:AbstractVector{T
     BLAS.axpy!(d.α, x, view(y,1:length(x)))
     y
 end
-
-BLAS.axpy!(α, X::LazyArray, Y::AbstractArray) = materialize!(Axpy(α,X,Y))
-BLAS.axpy!(α, X::SubArray{<:Any,N,<:LazyArray}, Y::AbstractArray) where N = materialize!(Axpy(α,X,Y))
+axpy!(α, X, Y) = materialize!(Axpy(α,X,Y))
+BLAS.axpy!(α, X::LazyArray, Y::AbstractArray) = axpy!(α, X, Y)
+BLAS.axpy!(α, X::SubArray{<:Any,N,<:LazyArray}, Y::AbstractArray) where N = axpy!(α, X, Y)
 
 
 ###
@@ -852,14 +852,14 @@ sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,Abst
 _lazy_getindex(dat, kr...) = view(dat, kr...)
 _lazy_getindex(dat::Number, _) = dat
 
-function paddeddata(S::SubArray{<:Any,1,<:AbstractVector})
+function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractVector})
     dat = paddeddata(parent(S))
     (kr,) = parentindices(S)
     kr2 = kr ∩ axes(dat,1)
     _lazy_getindex(dat, kr2)
 end
 
-function paddeddata(S::SubArray{<:Any,1,<:AbstractMatrix})
+function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractMatrix})
     P = parent(S)
     (kr,j) = parentindices(S)
     resizedata!(P, 1, j) # ensure enough rows
@@ -868,12 +868,14 @@ function paddeddata(S::SubArray{<:Any,1,<:AbstractMatrix})
     _lazy_getindex(dat, kr2, j)
 end
 
-function paddeddata(S::SubArray{<:Any,2})
+function sub_paddeddata(_, S::SubArray{<:Any,2})
     dat = paddeddata(parent(S))
     (kr,jr) = parentindices(S)
     kr2 = kr ∩ axes(dat,1)
     _lazy_getindex(dat, kr2, jr)
 end
+
+paddeddata(S::SubArray) = sub_paddeddata(MemoryLayout(parent(S)), S)
 
 function _padded_sub_materialize(v::AbstractVector{T}) where T
     dat = paddeddata(v)
@@ -939,3 +941,20 @@ searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x
 
 # avoid ambiguity in LazyBandedMatrices
 copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))
+
+
+# Triangular columns
+
+sublayout(::TriangularLayout{'U','N', ML}, ::Type{<:Tuple{KR,Integer}}) where {KR,ML} = 
+    sublayout(PaddedLayout{ML}(), Tuple{KR})
+
+sublayout(::TriangularLayout{'L','N', ML}, ::Type{<:Tuple{Integer,JR}}) where {JR,ML} = 
+    sublayout(PaddedLayout{ML}(), Tuple{JR})
+
+resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
+
+function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
+    P = parent(S)
+    (kr,j) = parentindices(S)
+    view(triangulardata(P), kr ∩ (1:j), j)
+end

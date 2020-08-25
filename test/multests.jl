@@ -534,13 +534,13 @@ end
         b = rand(Int,6)
         c = Array{Float64}(undef, 5)
         c .= applied(*,A,b)
+        d = similar(c)
+        mul!(d, A, b)
+        @test c ≈ d
 
         @test_throws DimensionMismatch (similar(c,3) .= applied(*,A,b))
         @test_throws DimensionMismatch (c .= applied(*,A,similar(b,2)))
 
-        d = similar(c)
-        mul!(d, A, b)
-        @test all(c .=== d)
 
         copyto!(d, MulAdd(1, A, b, 0.0, d))
         @test d == copyto!(similar(d), MulAdd(1, A, b, 0.0, d)) ≈ A*b

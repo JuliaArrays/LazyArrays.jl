@@ -260,3 +260,12 @@ end
     bc = BroadcastArray(broadcasted(+,1:10,broadcasted(+,1,2)))
     @test bc.args[2] == 3
 end
+
+@testset "padded columns" begin
+    A = randn(5,5)
+    U = UpperTriangular(A)
+    v = view(U,:,3)
+    @test MemoryLayout(v) isa PaddedLayout{DenseColumnMajor}
+    @test layout_getindex(v,1:4) == U[1:4,3]
+    @test layout_getindex(v,1:4) isa Vcat
+end

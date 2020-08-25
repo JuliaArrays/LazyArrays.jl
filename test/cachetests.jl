@@ -1,5 +1,5 @@
 using LazyArrays, FillArrays, ArrayLayouts, StaticArrays, Test
-import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout
+import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!
 
 @testset "Cache" begin
     @testset "basics" begin
@@ -290,5 +290,12 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
 
         a = CachedArray([1,2,3], Zeros{Int}(8));
         @test_throws DimensionMismatch a .+ CachedArray([1,2],Fill(2,6))
+    end
+
+    @testset "BigFloat" begin
+        a = cache(Zeros{BigFloat}(10));
+        resizedata!(a,3);
+        resizedata!(a,10);
+        @test a == Zeros{BigFloat}(10)
     end
 end
