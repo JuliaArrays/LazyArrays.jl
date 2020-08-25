@@ -1,5 +1,5 @@
 using LazyArrays, FillArrays, ArrayLayouts, StaticArrays, Test
-import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!
+import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!
 
 @testset "Cache" begin
     @testset "basics" begin
@@ -297,5 +297,11 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         resizedata!(a,3);
         resizedata!(a,10);
         @test a == Zeros{BigFloat}(10)
+    end
+
+    @testset "zero!" begin
+        a = cache(Zeros(10));
+        @test zero!(a) ≡ a
+        @test a.datasize == (0,)
     end
 end

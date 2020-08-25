@@ -194,7 +194,10 @@ end
 # special for zero cache
 ###
 
-zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = zero!(A.data)
+function zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N
+    zero!(A.data)
+    A
+end
 function _cached_getindex_vector(A, I)
     @boundscheck checkbounds(A, I)
     CachedArray(A.data[I ∩ OneTo(A.datasize[1])], A.array[OneTo(length(I))])
