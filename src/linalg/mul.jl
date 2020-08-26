@@ -1,7 +1,17 @@
+"""
+    MulStyle
 
+indicates that an `Applied` object should be materialized
+via `Mul`.
+"""
+struct MulStyle <: AbstractArrayApplyStyle end
 
+Mul(M::Applied) = Mul(M.args...)
+arguments(M::Mul) = (M.A, M.B)
 
-const Mul{Style, Factors<:Tuple} = Applied{Style, typeof(*), Factors}
+similar(M::Applied{MulStyle}, ::Type{T}) where T = similar(Mul(M), T)
+copy(M::Applied{MulStyle}) = mul(arguments(M)...)
+@inline copyto!(dest::AbstractArray, M::Applied{MulStyle}) = copyto!(dest, Mul(M))
 
 const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
 
@@ -9,29 +19,25 @@ const MulVector{T, Args} = MulArray{T, 1, Args}
 const MulMatrix{T, Args} = MulArray{T, 2, Args}
 
 
+check_applied_axes(A::Applied{<:Any,typeof(*)}) = check_mul_axes(A.args...)
 
-Mul(A...) = applied(*, A...)
-
-
-check_applied_axes(A::Mul) = check_mul_axes(A.args...)
-
-size(M::Mul, p::Int) = size(M)[p]
-axes(M::Mul, p::Int) = axes(M)[p]
-ndims(M::Mul) = ndims(last(M.args))
+size(M::Applied{<:Any,typeof(*)}, p::Int) = size(M)[p]
+axes(M::Applied{<:Any,typeof(*)}, p::Int) = axes(M)[p]
+ndims(M::Applied{<:Any,typeof(*)}) = ndims(last(M.args))
 
 _mul_ndims(::Type{Tuple{A}}) where A = ndims(A)
 _mul_ndims(::Type{Tuple{A,B}}) where {A,B} = ndims(B)
-ndims(::Type{<:Mul{<:Any,Args}}) where Args = _mul_ndims(Args)
+ndims(::Type{<:Applied{<:Any,typeof(*),Args}}) where Args = _mul_ndims(Args)
 
 
-length(M::Mul) = prod(size(M))
-size(M::Mul) = length.(axes(M))
+length(M::Applied{<:Any,typeof(*)}) = prod(size(M))
+size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
 
 
 @inline _eltypes() = tuple()
 @inline _eltypes(A, B...) = tuple(eltype(A), _eltypes(B...)...)
 
-@inline eltype(M::Mul) = _mul_eltype(_eltypes(M.args...)...)
+@inline eltype(M::Applied{<:Any,typeof(*)}) = _mul_eltype(_eltypes(M.args...)...)
 
 @inline mulaxes1(::Tuple{}) = ()
 @inline mulaxes1(::Tuple{}, B, C...) = mulaxes1(B, C...)
@@ -46,64 +52,51 @@ size(M::Mul) = length.(axes(M))
 @inline _combine_axes(a, b) = (a,b)
 @inline mulaxes(ax...) = _combine_axes(mulaxes1(ax...), mulaxes2(reverse(ax)...))
 
-@inline axes(M::Mul) = mulaxes(map(axes,M.args)...)
-@inline axes(M::Mul{<:Any, Tuple{}}) = ()
-
-
-# *(A::Mul, B::Mul) = apply(*,A.args..., B.args...)
-# *(A::Mul, B) = apply(*,A.args..., B)
-# *(A, B::Mul) = apply(*,A, B.args...)
-⋆(A...) = Mul(A...)
-
-function show(io::IO, A::Mul)
-    if length(A.args) == 0
-        print(io, "⋆()")
-        return
-    end
-    print(io, first(A.args))
-    for a in A.args[2:end]
-        print(io, '⋆', a)
-    end
-end
+@inline axes(M::Applied{<:Any,typeof(*)}) = mulaxes(map(axes,M.args)...)
+@inline axes(M::Applied{<:Any, typeof(*), Tuple{}}) = ()
 
 
 ####
 # Matrix * Array
 ####
 
+combine_mul_styles(a) = a
+combine_mul_styles(a, b) = error("Overload for $a and $b")
+combine_mul_styles(::T, ::T) where T = T()
+combine_mul_styles(::MulStyle, ::MulStyle) = DefaultArrayApplyStyle()
+combine_mul_styles(::MulStyle, ::DefaultArrayApplyStyle) = DefaultArrayApplyStyle()
+combine_mul_styles(::DefaultArrayApplyStyle, ::MulStyle) = DefaultArrayApplyStyle()
+combine_mul_styles(::DefaultArrayApplyStyle, ::DefaultApplyStyle) = DefaultApplyStyle()
+combine_mul_styles(::DefaultApplyStyle, ::DefaultArrayApplyStyle) = DefaultApplyStyle()
+combine_mul_styles(a, b, c...) = combine_mul_styles(combine_mul_styles(a, b), c...)
+# We need to combine all branches to determine whether it can be  simplified
+ApplyStyle(::typeof(*), a) = DefaultApplyStyle()
+ApplyStyle(::typeof(*), a::AbstractArray) = DefaultArrayApplyStyle()
+_mul_ApplyStyle(a, b...) = combine_mul_styles(ApplyStyle(*, a, most(b)...),  ApplyStyle(*, b...))
+ApplyStyle(::typeof(*), a, b...) = _mul_ApplyStyle(a, b...)
+ApplyStyle(::typeof(*), a::Type{<:AbstractArray}, b::Type{<:AbstractArray}...) = _mul_ApplyStyle(a, b...)
+ApplyStyle(::typeof(*), ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:Number}) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = MulStyle()
 
-ApplyStyle(::typeof(*), args::Type{<:AbstractArray}...) = mulapplystyle(MemoryLayout.(args)...)
-
-
-"""
-   lmaterialize(M::Mul)
-
-materializes arrays iteratively, left-to-right.
-"""
-lmaterialize(M::Mul) = _lmaterialize(M.args...)
-
-_lmaterialize(A, B) = apply(*,A,B)
-_lmaterialize(A, B, C, D...) = _lmaterialize(apply(*,A,B), C, D...)
 
 # arguments for something that is a *
-@inline _arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
-@inline _arguments(_, A) = (A,)
-@inline _arguments(A) = _arguments(MemoryLayout(typeof(A)), A)
+@inline _mul_arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
+@inline _mul_arguments(_, A) = (A,)
+@inline _mul_arguments(A) = _mul_arguments(MemoryLayout(typeof(A)), A)
 
 @inline __flatten(A::Tuple{<:Any}, B::Tuple) = (A..., _flatten(B...)...)
 @inline __flatten(A::Tuple, B::Tuple) = _flatten(A..., B...)
+@inline __flatten(A::Tuple{<:Any}, ::Tuple{}) = A
+@inline __flatten(A::Tuple, B::Tuple{}) = _flatten(A...)
 
 @inline _flatten() = ()
-@inline _flatten(A, B...) = __flatten(_arguments(A), B)
-@inline flatten(A) = _mul(_flatten(_arguments(A)...)...)
+@inline _flatten(A, B...) = __flatten(_mul_arguments(A), B)
+@inline _flatten(A) = __flatten(_mul_arguments(A), ())
+@inline flatten(A) = _mul(_flatten(_mul_arguments(A)...)...)
 
 
-copy(M::Mul{DefaultArrayApplyStyle,<:Tuple{<:Any,<:Any}}) = copyto!(similar(M), M)
-copy(A::Mul{DefaultArrayApplyStyle}) = flatten(lmaterialize(A))
-
-struct FlattenMulStyle <: ApplyStyle end
-
-copy(A::Mul{FlattenMulStyle}) = materialize(flatten(A))
 
 
 
@@ -112,80 +105,52 @@ copy(A::Mul{FlattenMulStyle}) = materialize(flatten(A))
 #####
 
 _mul(A) = A
-_mul(A,B,C...) = Mul(A,B,C...)
+_mul(A,B,C...) = lazymaterialize(*,A,B,C...)
 
 _mul_colsupport(j, Z) = colsupport(Z,j)
 _mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
 _mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
-function _mul_colsupport(j, Z::AbstractArray, Y...)
-    rws = colsupport(Z,j)
-    a = size(Z,1)+1
-    b = 0
-    for k in rws
-        cs = _mul_colsupport(k, Y...)
-        a = min(a,first(cs))
-        b = max(b,last(cs))
-    end
-    a:b
-end
 
-colsupport(B::Mul, j) = _mul_colsupport(j, reverse(B.args)...)
+_mul_colsupport(j, Z::AbstractArray, Y...) = _mul_colsupport(colsupport(Z,j), Y...)
+
+colsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_colsupport(j, reverse(B.args)...)
 colsupport(B::MulArray, j) = _mul_colsupport(j, reverse(B.args)...)
 
+_mul_rowsupport(j, A) = rowsupport(A,j)
+_mul_rowsupport(j, A::AbstractArray) = rowsupport(A,j)
+_mul_rowsupport(j, A, B...) = axes(A,1) # default is return all
+_mul_rowsupport(j, A::AbstractArray, B...) = _mul_rowsupport(rowsupport(A,j), B...)
 
-function _getindex(M::Mul, ::Tuple{<:Any}, k::Integer)
+rowsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_rowsupport(j, B.args...)
+rowsupport(B::MulArray, j) = _mul_rowsupport(j, B.args...)
+
+function getindex(M::Applied{<:Any,typeof(*)}, k...)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
-    ret = zero(eltype(M))
-    for j = rowsupport(A, k) ∩ colsupport(B,1)
-        ret += A[k,j] * B[j]
-    end
-    ret
+    Mul(A, B)[k...]
 end
-
-_getindex(M::Mul, ax, k::Integer) = M[Base._ind2sub(ax, k)...]
-getindex(M::Mul, k::Integer) = _getindex(M, axes(M), k)
-@propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer) = Applied{DefaultArrayApplyStyle}(A)[k]
-
-
-getindex(M::Mul, k::CartesianIndex{1}) = M[convert(Int, k)]
-getindex(M::Mul, kj::CartesianIndex{2}) = M[kj[1], kj[2]]
-
-
-
-
-function getindex(M::Mul, k::Integer, j::Integer)
-    A,Bs = first(M.args), tail(M.args)
-    B = _mul(Bs...)
-    ret = zero(eltype(M))
-    @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
-        ret += A[k,ℓ] * B[ℓ,j]
-    end
-    ret
-end
-
-@propagate_inbounds getindex(A::Mul{LazyArrayApplyStyle}, k::Integer, j::Integer) =
-    Applied{DefaultArrayApplyStyle}(A)[k,j]
 
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
-flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))
-
-adjoint(A::MulArray) = ApplyArray(*, reverse(map(adjoint,A.args))...)
-transpose(A::MulArray) = ApplyArray(*, reverse(map(transpose,A.args))...)
+flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
+ 
+adjoint(A::MulMatrix) = ApplyArray(*, reverse(map(adjoint,A.args))...)
+transpose(A::MulMatrix) = ApplyArray(*, reverse(map(transpose,A.args))...)
 
 ###
 # sub materialize
 ###
 
 # determine rows/cols of multiplication
+_mul_args_rowsupport(a,kr) = rowsupport(a,kr)
+_mul_args_colsupport(a,kr) = colsupport(a,kr)
 __mul_args_rows(kr, a) = (kr,)
-__mul_args_rows(kr, a, b...) =
-    (kr, __mul_args_rows(rowsupport(a,kr), b...)...)
-_mul_args_rows(kr, a, b...) = __mul_args_rows(rowsupport(a,kr), b...)
+__mul_args_rows(kr, a, b...) = 
+    (kr, __mul_args_rows(_mul_args_rowsupport(a,kr), b...)...)
+_mul_args_rows(kr, a, b...) = __mul_args_rows(_mul_args_rowsupport(a,kr), b...)
 __mul_args_cols(jr, z) = (jr,)
-__mul_args_cols(jr, z, y...) =
-    (__mul_args_cols(colsupport(z,jr), y...)..., jr)
-_mul_args_cols(jr, z, y...) = __mul_args_cols(colsupport(z,jr), y...)
+__mul_args_cols(jr, z, y...) = 
+    (__mul_args_cols(_mul_args_colsupport(z,jr), y...)..., jr)
+_mul_args_cols(jr, z, y...) = __mul_args_cols(_mul_args_colsupport(z,jr), y...)
 
 sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 
@@ -250,7 +215,7 @@ broadcasted(::DefaultArrayStyle{N}, ::typeof(/), b::ApplyArray{<:Number,N,typeof
         ApplyArray(*, most(b.args)..., broadcast(/,last(b.args),a))
 
 for Typ in (:Lmul, :Rmul)
-    @eval $Typ(M::Mul) = $Typ(M.args...)
+    @eval $Typ(M::Applied{<:Any,typeof(*)}) = $Typ(M.args...)
 end
 
 
@@ -259,24 +224,68 @@ end
 # L/Rmul
 ##
 
-struct LmulStyle <: AbstractArrayApplyStyle end
-struct RmulStyle <: AbstractArrayApplyStyle end
+@inline ApplyArray(M::Lmul) = ApplyArray(*, M.A, M.B)
+@inline ApplyArray(M::Rmul) = ApplyArray(*, M.A, M.B)
+@inline ApplyArray(M::Mul) = ApplyArray(*, M.A, M.B)
+@inline ApplyArray(M::Mul{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = ApplyArray(*, arguments(M.A)..., arguments(M.B)...)
+@inline ApplyArray(M::Mul{ApplyLayout{typeof(*)}}) = ApplyArray(*, arguments(M.A)..., M.B)
+@inline ApplyArray(M::Mul{<:Any,ApplyLayout{typeof(*)}}) = ApplyArray(*, M.A, arguments(M.B)...)
 
-similar(M::Applied{LmulStyle}, ::Type{T}) where T = similar(Lmul(M), T)
-copy(M::Applied{LmulStyle}) = copy(Lmul(M))
+# Support QuasiArrays
 
-similar(M::Applied{RmulStyle}, ::Type{T}) where T = similar(Rmul(M), T)
-copy(M::Applied{RmulStyle}) = copy(Rmul(M))
-
-
-@inline copyto!(dest::AbstractVecOrMat, M::Mul{LmulStyle}) = copyto!(dest, Lmul(M.args...))
-@inline copyto!(dest::AbstractVecOrMat, M::Mul{RmulStyle}) = copyto!(dest, Rmul(M.args...))
-
-@inline materialize!(M::Mul{LmulStyle}) = materialize!(Lmul(M))
-@inline materialize!(M::Mul{RmulStyle}) = materialize!(Rmul(M))
+lazymaterialize(::typeof(*), a::AbstractArray) = a
+lazymaterialize(F::Function, args::AbstractArray...) = copy(ApplyArray(F, args...))
+lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 
 
-mulapplystyle(::QLayout, _) = LmulStyle()
-mulapplystyle(::QLayout, ::LazyLayout) = LazyArrayApplyStyle()
+### 
+# Simplify
+# Here we implement a simple routine for simplifying multiplication by expanding what can be expanded
+
+#
+# The method is given *(a, b, ..., y, z) for see if *(a, b, ..., y) can be simplified.
+# If so, simplify and start over. If not, see if *(b, ..., y, z) can  be simplified. If so,
+# simplify and start over. Of not, return a lazy version.
+# In ContinuumArrays we use this for simplifying differential operators
+###
+
+@inline _or(::Val{true}, ::Val{true}) = Val(true)
+@inline _or(::Val{true}, ::Val{false}) = Val(true)
+@inline _or(::Val{false}, ::Val{true}) = Val(true)
+@inline _or(::Val{false}, ::Val{false}) = Val(false)
+
+@inline _not(::Val{true}) = Val(false)
+@inline _not(::Val{false}) = Val(true)
+
+@inline _islazy(::AbstractLazyLayout) = Val(true)
+@inline _islazy(_) = Val(false)
+@inline islazy(A) = _islazy(MemoryLayout(A))
+@inline simplifiable(M::Mul) = _not(_or(islazy(M.A), islazy(M.B)))
+
+@inline simplifiable(::typeof(*), a) = Val(false)
+@inline simplifiable(::typeof(*), a, b) = simplifiable(Mul(a,b))
+@inline simplifiable(::typeof(*), a...) = _most_simplifiable(*, simplifiable(*, most(a)...), a)
+@inline _most_simplifiable(::typeof(*), ::Val{true}, a) = Val(true)
+@inline _most_simplifiable(::typeof(*), ::Val{false}, a) = simplifiable(*, tail(a)...)
+
+# Flatten first
+@inline simplify(::typeof(*), args...) = _simplify(*, _flatten(args...)...)
+@inline _simplify(::typeof(*), a, b) = _twoarg_simplify(*, simplifiable(*, a, b), a, b)
+@inline _twoarg_simplify(::typeof(*), ::Val{false}, a, b) = lazymaterialize(*, a, b)
+@inline _twoarg_simplify(::typeof(*), ::Val{true}, a, b) = mul(a,b)
+@inline _simplify(::typeof(*), args...) = _most_simplify(simplifiable(*, most(args)...), args)
+@inline _most_simplify(::Val{true}, args) = *(_mul_arguments(_simplify(*, most(args)...))..., last(args))
+@inline _most_simplify(::Val{false}, args) = _tail_simplify(simplifiable(*, tail(args)...), args)
+@inline _tail_simplify(::Val{true}, args) = *(first(args), _mul_arguments(_simplify(*, tail(args)...))...)
+@inline _tail_simplify(::Val{false}, args) = lazymaterialize(*, args...)
+
+simplify(M::Mul) = simplify(*, M.A, M.B)
+simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 
 
+@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = simplify(M)
+@inline copy(M::Mul{<:AbstractLazyLayout}) = simplify(M)
+@inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = simplify(M)
+@inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
+@inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = simplify(M)
+@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = simplify(M)

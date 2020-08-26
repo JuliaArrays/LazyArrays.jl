@@ -1,15 +1,13 @@
-using LazyArrays, FillArrays, Test
-import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
+using LazyArrays, FillArrays, ArrayLayouts, Test
+import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied, arguments,
             ApplyArray, ApplyMatrix, ApplyVector, LazyArrayApplyStyle, ApplyLayout, call
+import ArrayLayouts: StridedLayout
 
 @testset "Applying" begin
     @testset "Applied" begin
         @test applied(exp,1) isa Applied{DefaultApplyStyle}
-
         @test apply(randn) isa Float64
-
         @test materialize(applied(*, 1)) == apply(*,1) == 1
-
         @test apply(exp, 1) === exp(1)
         @test apply(exp, broadcasted(+, 1, 2)) === apply(exp, applied(+, 1, 2)) === exp(3)
     end
@@ -49,6 +47,9 @@ import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
         vc = copy(float.(v))
         ve = convert(Vector, vc)
         @test eltype(ve) == Float64
+
+        A = ApplyArray(exp, randn(5,5))
+        @test copy(A) ≡ map(copy,A) ≡ A
     end
 
     @testset "copyto!" begin
@@ -67,5 +68,32 @@ import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied,
         @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(+)}
         @test call(v) == call(a) == +
         @test Array(v) == a[1:2] == Array(a)[1:2]
+    end
+
+    @testset "rot180" begin
+        A = randn(3,2)
+        R = ApplyArray(rot180, A)
+        @test eltype(R) == Float64
+        @test size(R) == size(A)
+        @test MemoryLayout(R) isa StridedLayout
+        @test strides(R) == (-1,-3)
+        @test pointer(R) == pointer(view(A,3,2))
+        @test R == rot180(A) == copyto!(similar(A),R)
+
+        R = ApplyArray(rotl90, A)
+        @test eltype(R) == Float64
+        @test size(R) == (2,3)
+        @test R == rotl90(A)
+
+        R = ApplyArray(rotr90, A)
+        @test eltype(R) == Float64
+        @test size(R) == (2,3)
+        @test R == rotr90(A)
+
+        B = randn(2,3)
+        R = ApplyArray(rot180, ApplyArray(*, A, B))
+        @test MemoryLayout(R) isa ApplyLayout{typeof(*)}
+        @test arguments(R) == (rot180(A), rot180(B))
+        @test R ≈ rot180(A*B)
     end
 end

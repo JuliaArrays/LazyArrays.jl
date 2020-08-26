@@ -40,30 +40,38 @@ BroadcastArray(b::BroadcastArray) = b
 BroadcastVector(A::BroadcastVector) = A
 BroadcastMatrix(A::BroadcastMatrix) = A
 
-Broadcasted(A::BroadcastArray) = instantiate(broadcasted(call(A), arguments(A)...))
-Broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = instantiate(broadcasted(call(A), arguments(A)...))
+broadcasted(A::BroadcastArray) = instantiate(broadcasted(call(A), arguments(A)...))
+broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = instantiate(broadcasted(call(A), arguments(A)...))
+Broadcasted(A::BroadcastArray) = broadcasted(A)::Broadcasted
+Broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = broadcasted(A)::Broadcasted
 
 @inline BroadcastArray(A::AbstractArray) = BroadcastArray(call(A), arguments(A)...)
 
-axes(A::BroadcastArray) = axes(Broadcasted(A))
+axes(A::BroadcastArray) = axes(broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
 
 
-@propagate_inbounds getindex(A::BroadcastArray{<:Any,N}, kj::Vararg{Int,N}) where N = Broadcasted(A)[kj...]
+@propagate_inbounds getindex(A::BroadcastArray{<:Any,N}, kj::Vararg{Int,N}) where N = broadcasted(A)[kj...]
 
 
 
 
-@propagate_inbounds _broadcast_getindex_range(A::Union{Ref,AbstractArray{<:Any,0},Number}, I) = A[] # Scalar-likes can just ignore all indices
+@propagate_inbounds _broadcast_getindex_range(A::Union{Ref,AbstractArray{<:Any,0},Number}, I) = A # Scalar-likes can just ignore all indices
 # Everything else falls back to dynamically dropping broadcasted indices based upon its axes
 @propagate_inbounds _broadcast_getindex_range(A, I) = A[I]
 
-getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) =
-    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)
-getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) =
-    BroadcastArray(Broadcasted(B).f, map(a -> _broadcast_getindex_range(a,kr), Broadcasted(B).args)...)    
+_broadcastarray_getindex(B::Broadcasted, kr) = BroadcastArray(B.f, map(a -> _broadcast_getindex_range(a,kr), B.args)...)
+_broadcastarray_getindex(B::AbstractArray, kr) = B[kr]
+
+getindex(B::BroadcastArray{<:Any,1}, kr::AbstractVector{<:Integer}) = _broadcastarray_getindex(broadcasted(B), kr)
+getindex(B::BroadcastArray{<:Any,1}, kr::AbstractUnitRange{<:Integer}) = _broadcastarray_getindex(broadcasted(B), kr) 
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc) 
+
+# BroadcastArray are immutable
+copy(bc::BroadcastArray) = bc
+map(::typeof(copy), bc::BroadcastArray) = bc
+copy(bc::AdjOrTrans{<:Any,<:BroadcastArray}) = bc
 
 # Replacement for #18.
 # Could extend this to other similar reductions in Base... or apply at lower level? 
@@ -71,7 +79,7 @@ copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 #                     (:maximum, :max), (:minimum, :min),
 #                     (:all, :&),       (:any, :|)]
 function Base._sum(f, A::BroadcastArray, ::Colon)
-    bc = Broadcasted(A)
+    bc = broadcasted(A)
     T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
     out = zero(T)
     @simd for I in eachindex(bc)
@@ -80,7 +88,7 @@ function Base._sum(f, A::BroadcastArray, ::Colon)
     out
 end
 function Base._prod(f, A::BroadcastArray, ::Colon)
-    bc = Broadcasted(A)
+    bc = broadcasted(A)
     T = Broadcast.combine_eltypes(f ∘ bc.f, bc.args) 
     out = one(T)
     @simd for I in eachindex(bc)
@@ -104,7 +112,7 @@ BroadcastStyle(::StaticArrayStyle{N}, L::LazyArrayStyle{N})  where N = L
 is returned by `MemoryLayout(A)` if a matrix `A` is a `BroadcastArray`.
 `F` is the typeof function that broadcast operation is applied.
 """
-struct BroadcastLayout{F} <: MemoryLayout end
+struct BroadcastLayout{F} <: AbstractLazyLayout end
 
 tuple_type_memorylayouts(::Type{I}) where I<:Tuple = MemoryLayout.(I.parameters)
 tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = (MemoryLayout(A),)
@@ -112,15 +120,11 @@ tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = (MemoryLayout(A),Memo
 tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C))
 
 broadcastlayout(::Type{F}, _...) where F = BroadcastLayout{F}()
-broadcastlayout(::Type, ::LazyLayout...) = LazyLayout()
-broadcastlayout(::Type, _, ::LazyLayout) = LazyLayout()
-broadcastlayout(::Type, _, _, ::LazyLayout) = LazyLayout()
-broadcastlayout(::Type, _, _, _, ::LazyLayout) = LazyLayout()
 MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} = 
     broadcastlayout(F, tuple_type_memorylayouts(Args)...)
 
 _copyto!(_, ::BroadcastLayout, dest::AbstractArray{<:Any,N}, bc::AbstractArray{<:Any,N}) where N = 
-    copyto!(dest, Broadcasted(bc))    
+    copyto!(dest, broadcasted(bc))    
 ## scalar-range broadcast operations ##
 # Ranges already support smart broadcasting
 for op in (+, -, big)
@@ -160,26 +164,32 @@ broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::AbstractArray{T,N}, b::Zeros{V,
     broadcast(DefaultArrayStyle{N}(), *, a, b)
 broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::AbstractArray{V,N}) where {T,V,N} =
     broadcast(DefaultArrayStyle{N}(), *, a, b)
+broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Broadcasted, b::Zeros{V,N}) where {V,N} =
+    broadcast(DefaultArrayStyle{N}(), *, a, b)
+broadcasted(::LazyArrayStyle{N}, ::typeof(*), a::Zeros{T,N}, b::Broadcasted) where {T,N} =
+    broadcast(DefaultArrayStyle{N}(), *, a, b)
 
 
 ###
 # support
 ###
 
-_broadcast_colsupport(sz, A::Number, j) = OneTo(sz[1])
-_broadcast_colsupport(sz, A::AbstractVector, j) = colsupport(A,j)
-_broadcast_colsupport(sz, A::AbstractMatrix, j) = size(A,1) == 1 ? OneTo(sz[1]) : colsupport(A,j)
-_broadcast_rowsupport(sz, A::Number, j) = OneTo(sz[2])
-_broadcast_rowsupport(sz, A::AbstractVector, j) = OneTo(sz[2])
-_broadcast_rowsupport(sz, A::AbstractMatrix, j) = size(A,2) == 1 ? OneTo(sz[2]) : rowsupport(A,j)
+_broadcast_colsupport(ax, ::Tuple{}, A, j) = ax[1]
+_broadcast_colsupport(ax, ::Tuple{<:Any}, A, j) = colsupport(A,j)
+_broadcast_colsupport(ax, Aax::Tuple{OneTo{Int},<:Any}, A, j) = length(Aax[1]) == 1 ? ax[1] : colsupport(A,j)
+_broadcast_colsupport(ax, ::Tuple{<:Any,<:Any}, A, j) = colsupport(A,j)
+_broadcast_rowsupport(ax, ::Tuple{}, A, j) = ax[2]
+_broadcast_rowsupport(ax, ::Tuple{<:Any}, A, j) = ax[2]
+_broadcast_rowsupport(ax, Aax::Tuple{<:Any,OneTo{Int}}, A, j) = length(Aax[2]) == 1 ? ax[2] : rowsupport(A,j)
+_broadcast_rowsupport(ax, ::Tuple{<:Any,<:Any}, A, j) = rowsupport(A,j)
 
-colsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(size(A)), A.args, j)...)
-rowsupport(::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(size(A)), A.args, j)...)
+colsupport(lay::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
+rowsupport(lay::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
 
 for op in (:+, :-)
     @eval begin
-        colsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(size(A)), A.args, j)...)
-        rowsupport(::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(size(A)), A.args, j)...)
+        rowsupport(lay::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
+        colsupport(lay::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_colsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
     end
 end
 
@@ -198,11 +208,13 @@ _broadcastviewinds(sz, inds) =
     tuple(isone(sz[1]) ? OneTo(sz[1]) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
 
 _broadcastview(a, inds) = view(a, _broadcastviewinds(size(a), inds)...)
+_broadcastview(a::Number, inds) = a
 
-function arguments(b::BroadcastLayout, V::SubArray)
+function _broadcast_sub_arguments(V)
     args = arguments(parent(V))
     _broadcastview.(args, Ref(parentindices(V)))
 end
+arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
 
 ###
 # Transpose
@@ -213,11 +225,3 @@ call(b::BroadcastLayout, a::AdjOrTrans) = call(b, parent(a))
 transposelayout(b::BroadcastLayout) = b
 arguments(b::BroadcastLayout, A::Adjoint) = map(adjoint, arguments(b, parent(A)))
 arguments(b::BroadcastLayout, A::Transpose) = map(transpose, arguments(b, parent(A)))
-
-##
-# copy
-##
-
-_broadcasted(b::BroadcastArray) = broadcasted(b.f, _broadcasted.(b.args)...)
-_broadcasted(b) = b
-Base.copy(b::BroadcastArray) = materialize(_broadcasted(b))

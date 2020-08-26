@@ -77,18 +77,16 @@ import Base: broadcasted
 
     @testset "vector*matrix broadcasting #27" begin
         H = [1., 0.]
-        @test Mul(H, H') .+ 1 == H*H' .+ 1
+        @test applied(*, H, H') .+ 1 == H*H' .+ 1
         B =  randn(2,2)
-        @test Mul(H, H') .+ B == H*H' .+ B
+        @test applied(*, H, H') .+ B == H*H' .+ B
     end
 
     @testset "BroadcastArray +" begin
         a = BroadcastArray(+, randn(400), randn(400))
         b = similar(a)
         copyto!(b, a)
-        if VERSION ≥ v"1.1"
-            @test @allocated(copyto!(b, a)) == 0
-        end
+        @test @allocated(copyto!(b, a)) == 0
         @test b == a
     end
 
@@ -151,8 +149,39 @@ import Base: broadcasted
         @test BroadcastArray(Vc) == BroadcastArray(Vt) == Vc == (Array(B)')[1:2,1:3]      
     end
 
-    @testset "copy to TrackedArray" begin
+    @testset "copy" begin
         a = LazyArray(broadcasted(+, param(rand(3, 3)), 1))
-        @test @inferred(copy(a)) isa TrackedArray
+        @test @inferred(copy(a)) isa BroadcastArray{<:Tracker.TrackedReal}
+
+        a = randn(5)
+        A = BroadcastArray(*, 2, a)
+        @test copy(A) ≡ map(copy,A) ≡ A
+        @test copy(A') ≡ A'
+    end
+
+    @testset "Number .* A" begin
+        a = randn(5)
+        A = BroadcastArray(*, 2, a)
+        V = view(A,1:3)
+        @test arguments(V) == (2,a[1:3])
+        @test BroadcastArray(V) == V == 2a[1:3]
+    end
+
+    @testset "broadcasted which simplifies" begin
+        a = BroadcastVector{Float64}(*, Zeros(10), randn(10))
+        @test @inferred(a[1]) == 0.0
+        @test @inferred(a[1:5]) ≡ Zeros(5)
+        @test @inferred(a[[1,2,4]]) ≡ Zeros(3)
+        @test broadcasted(a) ≡ Zeros(10)
+        @test_throws TypeError Base.Broadcast.Broadcasted(a)
+        @test materialize(Base.Broadcast.Broadcasted(view(a,1:3))) == zeros(3)
+    end
+
+    @testset "array-valued Broadcast" begin
+        a = BroadcastArray(*, 1:3, [[1,2],[3,4],[5,6]])
+        @test a == broadcast(*, 1:3, [[1,2],[3,4],[5,6]])
+        @test a[2] == [6,8]
+        @test a[1:2] == [[1,2], [6,8]]
+        
     end
 end

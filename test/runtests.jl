@@ -1,6 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, ArrayLayouts
 import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
             PaddedLayout, ApplyLayout, BroadcastLayout, AddArray, LazyLayout
+import ArrayLayouts: OnesLayout
 
 @testset "Lazy MemoryLayout" begin
     @testset "ApplyArray" begin
@@ -20,7 +21,7 @@ import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcas
     end
 
     @testset "Vcat" begin
-        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{FillLayout}()
+        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{OnesLayout}()
         @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
     end
 end
@@ -200,6 +201,7 @@ end
     @test y == cumsum(Vector(x)) == Cumsum(x)
     @test @inferred(diff(x)) == diff(Vector(x)) == Diff(x)
     @test diff(x) isa Vcat
+    @test Cumsum(x) == Cumsum(x)
 
     @test sum(x) == sum(Vector(x)) == last(y)
     @test cumsum(Vcat(4)) === Vcat(4)
@@ -211,10 +213,29 @@ end
     @test Diff(A; dims=1) == diff(A; dims=1)
     @test Diff(A; dims=2) == diff(A; dims=2)
 
-    @test_broken cumsum(Vcat(Int[], 1:5)) == cumsum(1:5)
+    @test Cumsum(A; dims=1) == Cumsum(A; dims=1)
+
+    a = Vcat([1,2,3], Fill(2,100_000_000))
+    @test @inferred(cumsum(a))[end] == sum(a) == 200000006
+    a = Vcat(2, Fill(2,100_000_000))
+    @test @inferred(cumsum(a))[end] == sum(a) == 200000002
+
+    @testset "empty" begin
+        @test cumsum(Vcat(Int[], 1:5)) == cumsum(1:5)
+        a = Vcat(Int[], [1,2,3])
+        @test @inferred(cumsum(a)) == cumsum(Vector(a))
+        a = Vcat(1, [1,2], [4,5,6])
+        @test @inferred(cumsum(a)) == cumsum(Vector(a))
+        a = Vcat(1, Int[], [4,5,6])
+        @test cumsum(a) == cumsum(Vector(a))
+        a = Vcat(1, Int[], Int[], [4,5,6])
+        @test cumsum(a) == cumsum(Vector(a))
+    end
 
     @test cumsum(BroadcastArray(exp, 1:10)) === Cumsum(BroadcastArray(exp, 1:10))
     @test cumsum(ApplyArray(+, 1:10)) === Cumsum(ApplyArray(+, 1:10))
+
+
 end
 
 @testset "col/rowsupport" begin
@@ -295,4 +316,13 @@ end
 
     bc = BroadcastArray(broadcasted(+,1:10,broadcasted(+,1,2)))
     @test bc.args[2] == 3
+end
+
+@testset "padded columns" begin
+    A = randn(5,5)
+    U = UpperTriangular(A)
+    v = view(U,:,3)
+    @test MemoryLayout(v) isa PaddedLayout{DenseColumnMajor}
+    @test layout_getindex(v,1:4) == U[1:4,3]
+    @test layout_getindex(v,1:4) isa Vcat
 end

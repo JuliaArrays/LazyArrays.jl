@@ -428,7 +428,39 @@ function getindex(Q::Cumsum, k::Integer, j::Integer)
     end
 end
 
+==(a::Cumsum{<:Any,1}, b::Cumsum{<:Any,1}) = a.v == b.v
+
 copyto!(x::AbstractArray{<:Any,N}, C::Cumsum{<:Any,N}) where N = cumsum!(x, C.v)
 
 # keep lazy
 cumsum(a::LazyArray; kwds...) = Cumsum(a; kwds...)
+
+
+## Rotations
+
+for op in (:rot180, :rotl90, :rotr90)
+    @eval begin 
+        ndims(::Applied{<:Any,typeof($op)}) = 2
+        eltype(A::Applied{<:Any,typeof($op)}) = eltype(A.args...)
+    end
+end
+size(A::Applied{<:Any,typeof(rot180)}) = size(A.args...)
+axes(A::Applied{<:Any,typeof(rot180)}) = axes(A.args...)
+size(A::Applied{<:Any,typeof(rotl90)}) = reverse(size(A.args...))
+size(A::Applied{<:Any,typeof(rotr90)}) = reverse(size(A.args...))
+
+getindex(A::Applied{<:Any,typeof(rot180)}, k::Int, j::Int) = A.args[1][end-k+1,end-j+1]
+getindex(A::Applied{<:Any,typeof(rotl90)}, k::Int, j::Int) = A.args[1][j,end-k+1]
+getindex(A::Applied{<:Any,typeof(rotr90)}, k::Int, j::Int) = A.args[1][end-j+1,k]
+
+applylayout(::Type{typeof(rot180)}, ::AbstractStridedLayout) = StridedLayout()
+function strides(A::ApplyMatrix{<:Any,typeof(rot180)})
+    a,b = strides(A.args...)
+    -a,-b
+end
+unsafe_convert(::Type{Ptr{T}}, A::ApplyMatrix{T,typeof(rot180)}) where T =
+    pointer(A.args..., length(A))
+
+applylayout(::Type{typeof(rot180)}, ::ApplyLayout{typeof(*)}) = ApplyLayout{typeof(*)}()
+call(::ApplyLayout{typeof(*)}, A::ApplyMatrix{<:Any,typeof(rot180)}) = *
+arguments(::ApplyLayout{typeof(*)}, A::ApplyMatrix{<:Any,typeof(rot180)}) = ApplyMatrix.(rot180, arguments(A.args...))

@@ -36,11 +36,11 @@ testparams = [
         @testset ".= @~ $label" begin
             actual = zero(desired)
             actual .= lazy
-            @test actual == desired
+            @test actual ≈ desired
         end
 
         @testset "materialize(@~ $label)" begin
-            @test materialize(lazy) == desired
+            @test materialize(lazy) ≈ desired
         end
 
         @testset "LazyArray(@~ $label)" begin

@@ -28,15 +28,10 @@ size(A::InvOrPInv, k) = size(A)[k]
 axes(A::InvOrPInv, k) = axes(A)[k]
 eltype(A::InvOrPInv) = Base.promote_op(inv, eltype(parent(A)))
 
-struct LdivApplyStyle <: ApplyStyle end
+# Use ArrayLayouts.ldiv instead of \
+struct LdivStyle <: ApplyStyle end
 
-
-ldivapplystyle(_, _) = LdivApplyStyle()
-ldivapplystyle(::LazyLayout, ::LazyLayout) = LazyArrayApplyStyle()
-ldivapplystyle(::LazyLayout, _) = LazyArrayApplyStyle()
-ldivapplystyle(_, ::LazyLayout) = LazyArrayApplyStyle()
-ApplyStyle(::typeof(\), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = 
-    ldivapplystyle(MemoryLayout(A), MemoryLayout(B))
+ApplyStyle(::typeof(\), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = LdivStyle()
 
 
 axes(M::Applied{Style,typeof(\)}) where Style = ldivaxes(M.args...)
@@ -66,6 +61,10 @@ parent(A::PInvMatrix) = first(A.args)
 parent(A::InvMatrix) = first(A.args)
 axes(A::PInvMatrix) = reverse(axes(parent(A)))
 size(A::PInvMatrix) = map(length, axes(A))
+inv(A::InvMatrix) = parent(A)
+pinv(A::InvMatrix) = parent(A)
+pinv(A::PInvMatrix) = parent(A)
+
 
 @propagate_inbounds getindex(A::PInvMatrix{T}, k::Int, j::Int) where T =
     (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
@@ -73,37 +72,44 @@ size(A::PInvMatrix) = map(length, axes(A))
 @propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
     (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
-struct InvLayout{L} <: MemoryLayout end
-struct PInvLayout{L} <: MemoryLayout end
+
+abstract type AbstractInvLayout{L} <: MemoryLayout end
+struct InvLayout{L} <: AbstractInvLayout{L} end
+struct PInvLayout{L} <: AbstractInvLayout{L} end
 
 applylayout(::Type{typeof(inv)}, ::A) where A = InvLayout{A}()
 applylayout(::Type{typeof(pinv)}, ::A) where A = PInvLayout{A}()
 
-mulapplystyle(::InvLayout{A}, B) where A = ldivapplystyle(A, B)
-mulapplystyle(::PInvLayout{A}, B) where A = ldivapplystyle(A, B)
+# Can always  simplify by lowering to \
+simplifiable(::Mul{<:AbstractInvLayout}) = Val(true)
 
-
-@inline function Ldiv(M::Mul)
-    Ai,b = M.args
-    Ldiv(parent(Ai), b)
-end
+copy(M::Mul{<:AbstractInvLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
+copy(M::Mul{<:AbstractInvLayout,<:AbstractLazyLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
+@inline copy(M::Mul{<:AbstractInvLayout,ApplyLayout{typeof(*)}}) = simplify(M)
 Ldiv(A::Applied{<:Any,typeof(\)}) = Ldiv(A.args...)
 
 
-similar(M::Applied{LdivApplyStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
-copy(M::Applied{LdivApplyStyle}) = copy(Ldiv(M))
-@inline copyto!(dest::AbstractArray, M::Applied{LdivApplyStyle}) = copyto!(dest, Ldiv(M))
-@inline materialize!(M::Applied{LdivApplyStyle}) = materialize!(Ldiv(M))
+similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
+@inline copy(M::Applied{LdivStyle}) = ldiv(arguments(M)...)
+@inline copyto!(dest::AbstractArray, M::Applied{LdivStyle}) = copyto!(dest, Ldiv(M))
+@inline materialize!(M::Applied{LdivStyle}) = materialize!(Ldiv(M))
 
-@propagate_inbounds getindex(A::Applied{LazyArrayApplyStyle,typeof(\)}, kj...) = 
-    materialize(Ldiv(A))[kj...]
+@propagate_inbounds getindex(A::Applied{<:Any,typeof(\)}, kj...) = Ldiv(A)[kj...]
 
 
 ###
 # * layout
 ###
+_copy_ldiv_mul(A, B, C...) = apply(*, A \  B,  C...)
+copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
+copy(L::Ldiv{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 
-function copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) 
-    args = arguments(L.B)
-    apply(*, L.A \  first(args),  tail(args)...)
-end
+copy(L::Ldiv{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
+copy(L::Ldiv{<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
+copy(L::Ldiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
+
+###
+# Diagonal
+###
+
+inv(D::Diagonal{T,<:LazyVector}) where T = Diagonal(inv.(D.diag))

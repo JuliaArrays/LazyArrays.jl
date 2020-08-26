@@ -1,8 +1,8 @@
-using LazyArrays, LinearAlgebra
-import LazyArrays: @lazymul, @lazyldiv, materialize!, MemoryLayout, triangulardata, LazyLayout, LazyArrayApplyStyle, UnknownLayout
+using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays
+import LazyArrays: materialize!, MemoryLayout, triangulardata, LazyLayout, UnknownLayout, LazyMatrix
 
 # used to test general matrix backends
-struct MyMatrix{T} <: AbstractMatrix{T}
+struct MyMatrix{T} <: LazyMatrix{T}
     A::Matrix{T}
 end
 
@@ -17,6 +17,7 @@ Base.convert(::Type{MyMatrix{T}}, A::AbstractArray{T}) where T = MyMatrix{T}(A)
 Base.convert(::Type{MyMatrix{T}}, A::AbstractArray) where T = MyMatrix{T}(convert(AbstractArray{T}, A))
 Base.convert(::Type{MyMatrix}, A::AbstractArray{T}) where T = MyMatrix{T}(A)
 Base.getindex(A::MyMatrix, kj...) = A.A[kj...]
+Base.getindex(A::MyMatrix, ::Colon, j::Integer) = A.A[:,j]
 Base.getindex(A::MyMatrix, ::Colon, j::AbstractVector) = MyMatrix(A.A[:,j])
 Base.setindex!(A::MyMatrix, v, kj...) = setindex!(A.A, v, kj...)
 Base.size(A::MyMatrix) = size(A.A)
@@ -25,14 +26,9 @@ Base.similar(::MyMatrix{T}, m::Int, n::Int) where T = MyMatrix{T}(undef, m, n)
 Base.similar(::MyMatrix, ::Type{T}, m::Int, n::Int) where T = MyMatrix{T}(undef, m, n)
 LinearAlgebra.factorize(A::MyMatrix) = factorize(A.A)
 
-
-@lazymul MyMatrix
-@lazyldiv MyMatrix
-
-struct MyLazyArray{T,N} <: AbstractArray{T,N}
+struct MyLazyArray{T,N} <: LazyArray{T,N}
     data::Array{T,N}
 end
-
 
 Base.size(A::MyLazyArray) = size(A.data)
 Base.getindex(A::MyLazyArray, j::Int...) = A.data[j...]
@@ -40,16 +36,17 @@ LazyArrays.MemoryLayout(::Type{<:MyLazyArray}) = LazyLayout()
 LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
 
 @testset "lazymul/ldiv tests" begin
-    @testset "*/" begin
+    @testset "*" begin
         A = randn(5,5)
         B = randn(5,5)
         x = randn(5)
         @test MyMatrix(A)*x ≈ apply(*,MyMatrix(A),x) ≈ A*x
+        @test MemoryLayout(MyMatrix(A)) isa LazyLayout
         @test all(MyMatrix(A)*MyMatrix(A) .=== apply(*,MyMatrix(A),MyMatrix(A)))
         @test all(MyMatrix(A)*A .=== apply(*,MyMatrix(A),A))
         @test all(A*MyMatrix(A) .=== apply(*,A,MyMatrix(A)))
         @test MyMatrix(A)*MyMatrix(A) ≈ MyMatrix(A)*A ≈ A*MyMatrix(A) ≈ A^2
-        
+
         @test MyMatrix(A)*MyMatrix(A)*MyMatrix(A) ≈ apply(*,MyMatrix(A),MyMatrix(A),MyMatrix(A)) ≈ A^3
 
         @test all(UpperTriangular(A) * MyMatrix(A) .=== apply(*,UpperTriangular(A), MyMatrix(A)))
@@ -75,7 +72,7 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test all(UpperTriangular(A) * MyMatrix(A)' .=== apply(*,UpperTriangular(A), MyMatrix(A)'))
         @test all(MyMatrix(A)' * UpperTriangular(A) .=== apply(*,MyMatrix(A)',UpperTriangular(A)))
 
-
+        @test ApplyArray(\, MyMatrix(A), x)[1,1] ≈ (A\x)[1]
         @test MyMatrix(A)\x ≈ apply(\,MyMatrix(A),x) ≈ copyto!(similar(x),Ldiv(A,copy(x))) ≈ A\x
         @test eltype(applied(\,MyMatrix(A),x)) == eltype(apply(\,MyMatrix(A),x)) == eltype(MyMatrix(A)\x) == Float64
 
@@ -113,7 +110,6 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test_throws DimensionMismatch apply(\,MyMatrix(C),randn(4,3))
     end
 
-
     @testset "Lazy" begin
         A = MyLazyArray(randn(2,2))
         B = MyLazyArray(randn(2,2))
@@ -140,9 +136,8 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test apply(\,A,B) ≈ apply(\,Array(A),B) ≈ apply(\,A,Array(B)) ≈ Array(A)\Array(B)
 
         Ap = applied(*,A,x)
-        @test Ap isa Applied{LazyArrayApplyStyle}
         @test copyto!(similar(Ap), Ap) == A*x
-        @test copyto!(similar(Ap,BigFloat), Ap) == A*x
+        @test copyto!(similar(Ap,BigFloat), Ap) ≈ A*x
 
         @test MemoryLayout(typeof(Diagonal(x))) isa DiagonalLayout{LazyLayout}
         @test MemoryLayout(typeof(Diagonal(ApplyArray(+,x,x)))) isa DiagonalLayout{LazyLayout}
@@ -152,5 +147,57 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test MemoryLayout(typeof(transpose(A))) isa LazyLayout
         @test MemoryLayout(typeof(view(A,1:2,1:2))) isa LazyLayout
         @test MemoryLayout(typeof(reshape(A,4))) isa LazyLayout
+    end
+
+    @testset "QR" begin
+        B = MyMatrix(randn(3,3))
+        Q = qr(randn(3,3)).Q
+        @test Q * B ≈ Q*B.A
+    end
+
+    @testset "ambiguities" begin
+        A = randn(5,5)
+        b = MyLazyArray(randn(5))
+        c = randn(5)
+        c̃ = complex.(c)
+        @test A*b isa ApplyVector{Float64,typeof(*)}
+        @test UpperTriangular(A)*b isa ApplyVector{Float64,typeof(*)}
+        @test A*b ≈ A*Vector(b)
+        @test UpperTriangular(A)*b ≈ UpperTriangular(A)*Vector(b)
+        @test c'b ≈ c̃'b ≈ c'Vector(b)
+        @test transpose(c)b ≈ transpose(c̃)b ≈ transpose(c)Vector(b)
+    end
+
+    @testset "InvMatrix" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        b = MyLazyArray(randn(5))
+        M = ApplyArray(*, B, b)
+        @test InvMatrix(A) * b ≈ A \ b
+        @test InvMatrix(A) * M ≈ A \ B * b
+
+        @test ArrayLayouts.ldiv(MyMatrix(A), M) ≈ A\ B * b
+    end
+
+    @testset "Tri/Diagonal" begin 
+        b = MyLazyArray(randn(5))
+        c = MyLazyArray(randn(4))
+        d = MyLazyArray(randn(3))
+        @test copy(Diagonal(b)) == Diagonal(copy(b))
+        @test map(copy, Diagonal(b))  == Diagonal(copy(b))
+        @test inv(Diagonal(b)) == inv(Diagonal(b.data))
+        @test inv(Diagonal(b)) isa Diagonal{Float64,<:BroadcastVector}
+        @test copy(Tridiagonal(c, b, c)) == Tridiagonal(copy(c), copy(b), copy(c))
+        @test copy(Tridiagonal(c, b, c, d)) == Tridiagonal(copy(c), copy(b), copy(c), copy(d))
+        @test copy(Tridiagonal(c, b, c, d)).du2 == d
+        @test map(copy, Tridiagonal(c, b, c)) == Tridiagonal(copy(c), copy(b), copy(c))
+        @test map(copy, Tridiagonal(c, b, c, d)) == Tridiagonal(copy(c), copy(b), copy(c), copy(d))
+        @test map(copy, Tridiagonal(c, b, c, d)).du2 == d
+    end
+
+    @testset "Nested" begin
+        a = MyLazyArray(randn(5))
+        @test a .\ rand(5) .* Zeros(5) ≡ Zeros(5)
+        @test broadcast(*, Zeros(5), Base.broadcasted(\, a, rand(5))) ≡ Zeros(5)
     end
 end
