@@ -113,12 +113,12 @@ end
 _compatible_sizes((A, B)) = (size(A, 2) == size(B, 1))
 
 
-# Implements the mixed-produce property for the Kronecker product and matrix
+# Implements the mixed-product property for the Kronecker product and matrix
 # multiplication
 function materialize(M::Applied{
     MulAddStyle, typeof(*),
-    NTuple{2, Kron{T,2,NTuple{2, MT}}}
-}) where {T, MT<:AbstractMatrix}
+    NTuple{2, Kron{T,2,NTuple{N, MT}}}
+}) where {T, N, MT<:AbstractMatrix}
     A, B = M.args
     # Keeping it simple for now, but could potentially make this "alignment"-check
     # more precise. For example, if one factor of A has 6 columns and it's aligned
@@ -439,7 +439,7 @@ cumsum(a::LazyArray; kwds...) = Cumsum(a; kwds...)
 ## Rotations
 
 for op in (:rot180, :rotl90, :rotr90)
-    @eval begin 
+    @eval begin
         ndims(::Applied{<:Any,typeof($op)}) = 2
         eltype(A::Applied{<:Any,typeof($op)}) = eltype(A.args...)
     end
