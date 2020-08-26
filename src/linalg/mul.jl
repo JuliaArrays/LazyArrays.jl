@@ -287,3 +287,8 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 @inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
 @inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = simplify(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = simplify(M)
+
+
+#TODO: Why not all DiagonalLayout?
+@inline copy(M::Mul{<:DiagonalLayout{<:AbstractFillLayout},<:AbstractLazyLayout}) = copy(mulreduce(M))
+@inline copy(M::Mul{<:AbstractLazyLayout,<:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
