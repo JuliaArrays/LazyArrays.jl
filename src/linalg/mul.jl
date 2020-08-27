@@ -292,3 +292,7 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 #TODO: Why not all DiagonalLayout?
 @inline copy(M::Mul{<:DiagonalLayout{<:AbstractFillLayout},<:AbstractLazyLayout}) = copy(mulreduce(M))
 @inline copy(M::Mul{<:AbstractLazyLayout,<:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
+
+# inv
+
+_inv(Lay::ApplyLayout{typeof(*)}, _, A) = *(reverse(map(inv, arguments(Lay, A)))...)
