@@ -115,11 +115,9 @@ _compatible_sizes((A, B)) = (size(A, 2) == size(B, 1))
 
 # Implements the mixed-product property for the Kronecker product and matrix
 # multiplication
-function materialize(M::Applied{
-    MulAddStyle, typeof(*),
-    NTuple{2, Kron{T,2,NTuple{N, MT}}}
-}) where {T, N, MT<:AbstractMatrix}
-    A, B = M.args
+function copy(M::Mul{ApplyLayout{typeof(kron)},ApplyLayout{typeof(kron)},<:AbstractMatrix,<:AbstractMatrix})
+    A, B = M.A, M.B
+    MT = promote_type(map(typeof, arguments(A))..., map(typeof,arguments(B))...)
     # Keeping it simple for now, but could potentially make this "alignment"-check
     # more precise. For example, if one factor of A has 6 columns and it's aligned
     # with two factors of B with 2 and 3 rows, then we can still use the
@@ -137,12 +135,9 @@ end
 
 # Implements Roth's lemma aka the "vec-trick" for multiplying a 2-factor Kron
 # matrix to a vector
-function materialize(M::Applied{
-    MulAddStyle, typeof(*),
-    Tuple{Kron{T,2,NTuple{2, MT}}, VT}
-}) where {T, VT<:AbstractVector, MT<:AbstractMatrix}
-    K, v = M.args
-    A, B = K.args
+function copy(M::Mul{ApplyLayout{typeof(kron)}, <:Any, <:AbstractMatrix, <:AbstractVector})
+    K, v = M.A, M.B
+    A, B = arguments(K)
     V = reshape(v, size(B, 2), size(A, 2))
     return vec(B * V * transpose(A))
 end
@@ -158,12 +153,10 @@ shuffle_algorithm_type(::Type{<:AbstractArray}) = ModifiedShuffle()
 shuffle_algorithm_type(::Type{<:ApplyArray}) = Shuffle()
 
 
-function materialize(M::Applied{
-    MulAddStyle, typeof(*),
-    Tuple{Kron{T,2,NTuple{N, MT}}, MVT}
-}) where {T, N, MVT<:AbstractVecOrMat, MT<:AbstractMatrix}
+function copy(M::Mul{ApplyLayout{typeof(kron)}})
+    MT = promote_type(map(typeof, arguments(M.A))...)
     algo_type = shuffle_algorithm_type(MT)
-    return shuffle_algorithm(algo_type, M.args[1], M.args[2], eltype(M))
+    return shuffle_algorithm(algo_type, M.A, M.B, eltype(M))
 end
 
 
