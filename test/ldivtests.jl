@@ -1,4 +1,4 @@
-using LazyArrays, LinearAlgebra, Test
+using LazyArrays, LinearAlgebra, FillArrays, Test
 import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout
 import Base.Broadcast: materialize
 
@@ -99,8 +99,18 @@ import Base.Broadcast: materialize
     @testset "Lazy *" begin
         A = randn(5,5)
         B = randn(5,5)
+        M = ApplyArray(*, A, B)
         b = 1:5
         @test apply(\,B,ApplyArray(*,A,b)) == B\A*b
+        @test M \ b ≈ B\(A\b)
+        @test M \ M ≈ Eye(5)
+        @test M \ b isa Vector
+        @test M\M isa Matrix
+
+        @testset "Inv of Mul" begin
+            @test inv(M) ≈ inv(A*B)
+            @test_throws DimensionMismatch inv(ApplyArray(*,randn(5,6), rand(6,5)))
+        end
     end
 
     @testset "Triangular ldiv" begin
