@@ -178,8 +178,7 @@ include("cachetests.jl")
         K1, K2 = Kron(A, B), Kron(C, D)
         res = K1 * K2
         @test res ≈ (kron(A, B) * kron(C, D))
-        # @test res isa Kron{eltype(A), 2}
-        # FIXME: seems like the correct materialize function isn't being called
+        @test res isa Kron{eltype(A), 2}
     end
 
 
@@ -190,8 +189,7 @@ include("cachetests.jl")
         K1, K2 = Kron(A, B), Kron(C, D)
         res = K1 * K2
         @test res ≈ (kron(A, B) * kron(C, D))
-        # @test res isa Matrix{eltype(A)}
-        # FIXME: same issue as above
+        @test res isa Matrix{eltype(A)}
     end
 
 end

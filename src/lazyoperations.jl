@@ -115,7 +115,12 @@ _compatible_sizes((A, B)) = (size(A, 2) == size(B, 1))
 
 # Implements the mixed-product property for the Kronecker product and matrix
 # multiplication
-function copy(M::Mul{ApplyLayout{typeof(kron)},ApplyLayout{typeof(kron)},<:AbstractMatrix,<:AbstractMatrix})
+function copy(M::Mul{
+    ApplyLayout{typeof(kron)},
+    <:ArrayLayouts.MemoryLayout,
+    Kron{T,2,NTuple{N,M}},
+    Kron{T′,2, NTuple{N′,M′}}
+} where {T, T′, N, N′, M <: AbstractMatrix{T}, M′ <: AbstractMatrix{T′}})
     A, B = M.A, M.B
     MT = promote_type(map(typeof, arguments(A))..., map(typeof,arguments(B))...)
     # Keeping it simple for now, but could potentially make this "alignment"-check
@@ -135,7 +140,11 @@ end
 
 # Implements Roth's lemma aka the "vec-trick" for multiplying a 2-factor Kron
 # matrix to a vector
-function copy(M::Mul{ApplyLayout{typeof(kron)}, <:Any, <:AbstractMatrix, <:AbstractVector})
+function copy(M::Mul{
+    LazyArrays.ApplyLayout{typeof(kron)},
+    <:ArrayLayouts.MemoryLayout,
+    Kron{T,2,NTuple{2,M}},V
+} where {T, M<:AbstractMatrix{T}, V<:AbstractVector})
     K, v = M.A, M.B
     A, B = arguments(K)
     V = reshape(v, size(B, 2), size(A, 2))
