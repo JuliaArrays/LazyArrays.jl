@@ -200,4 +200,19 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test a .\ rand(5) .* Zeros(5) ≡ Zeros(5)
         @test broadcast(*, Zeros(5), Base.broadcasted(\, a, rand(5))) ≡ Zeros(5)
     end
+
+    @testset "inv" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        M = ApplyArray(*, A, B)
+        b = randn(5)
+        @test M \ MyLazyArray(b) ≈ M \ b
+    end
+
+    @testset "Diagonal Fill" begin
+        b = randn(5)
+        B = randn(5,5)
+        @test Eye(5) * MyLazyArray(b) == b
+        @test MyLazyArray(B) * Eye(5) == B
+    end
 end
