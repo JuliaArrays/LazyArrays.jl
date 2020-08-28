@@ -295,4 +295,8 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 
 # inv
 
-_inv(Lay::ApplyLayout{typeof(*)}, _, A) = *(reverse(map(inv, arguments(Lay, A)))...)
+function _inv(Lay::ApplyLayout{typeof(*)}, _, A)
+    args = arguments(Lay, A)
+    map(checksquare,args)
+    *(reverse(map(inv, arguments(Lay, A)))...)
+end

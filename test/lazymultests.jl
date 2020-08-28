@@ -200,4 +200,12 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test a .\ rand(5) .* Zeros(5) ≡ Zeros(5)
         @test broadcast(*, Zeros(5), Base.broadcasted(\, a, rand(5))) ≡ Zeros(5)
     end
+
+    @testset "Inv of Mul" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        M = ApplyArray(*, A, B)
+        @test inv(M) ≈ inv(A*B)
+        @test_throws DimensionMismatch inv(ApplyArray(*,randn(5,6), rand(6,5)))
+    end
 end
