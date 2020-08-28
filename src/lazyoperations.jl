@@ -115,12 +115,7 @@ _compatible_sizes((A, B)) = (size(A, 2) == size(B, 1))
 
 # Implements the mixed-product property for the Kronecker product and matrix
 # multiplication
-function copy(M::Mul{
-    ApplyLayout{typeof(kron)},
-    <:ArrayLayouts.MemoryLayout,
-    Kron{T,2,NTuple{N,M}},
-    Kron{T′,2, NTuple{N′,M′}}
-} where {T, T′, N, N′, M <: AbstractMatrix{T}, M′ <: AbstractMatrix{T′}})
+function copy(M::Mul{ApplyLayout{typeof(kron)}, ApplyLayout{typeof(kron)}})
     A, B = M.A, M.B
     MT = promote_type(map(typeof, arguments(A))..., map(typeof,arguments(B))...)
     # Keeping it simple for now, but could potentially make this "alignment"-check
