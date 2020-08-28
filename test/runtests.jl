@@ -1,4 +1,4 @@
-using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, ArrayLayouts
+using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, ArrayLayouts, SparseArrays
 import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
             PaddedLayout, ApplyLayout, BroadcastLayout, AddArray, LazyLayout
 import ArrayLayouts: OnesLayout
@@ -59,41 +59,96 @@ include("cachetests.jl")
     K = Kron(A,B,C)
     @test [K[k] for k=1:length(K)] == Array(K) == kron(A,B,C) == copyto!(similar(K), K)
 
-    A = randn(3,2)
-    B = randn(4,6)
-    K, k = Kron(A,B), kron(A,B)
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == k
-    @test det(K) == 0  # kronecker of rectangular factors
-    @test isapprox(det(k), det(K); atol=eps(eltype(K)), rtol=0)
-    @test tr(K) ≈ tr(k)
+    @testset "Rectangular Factors: Compatibility with Matrix functions" begin
+        A = randn(3,2)
+        B = randn(4,6)
+        K, k = Kron(A,B), kron(A,B)
+        @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == k
+        @test det(K) == 0  # kronecker of rectangular factors
+        @test logdet(K) == -Inf
+        @test logabsdet(K) == (-Inf, 0)
+        @test isapprox(det(k), det(K); atol=eps(eltype(K)), rtol=0)
+        @test tr(K) ≈ tr(k)
 
-    K, k = Kron(A,B'), kron(A,B')
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B')) == k
-    @test_throws DimensionMismatch det(K)
-    @test_throws DimensionMismatch tr(K)
+        @test K' == Kron(A', B') == k'
+        @test transpose(K) == Kron(transpose(A), transpose(B)) == transpose(k)
+        @test pinv(K) == Kron(pinv(A), pinv(B)) ≈ pinv(k)
+        @test_throws SingularException inv(K)
 
-    K, k = Kron(A',B), kron(A',B)
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B)) == k
-    @test_throws DimensionMismatch det(K)
-    @test_throws DimensionMismatch tr(K)
+        K, k = Kron(A,B'), kron(A,B')
+        @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B')) == k
+        @test_throws DimensionMismatch det(K)
+        @test_throws DimensionMismatch tr(K)
 
-    K, k = Kron(A',B'), kron(A',B')
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B')) == k
-    @test det(K) == 0  # kronecker of rectangular factors
-    @test isapprox(det(k), det(K); atol=eps(eltype(K)), rtol=0)
-    @test tr(K) ≈ tr(k)
+        K, k = Kron(A',B), kron(A',B)
+        @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B)) == k
+        @test_throws DimensionMismatch det(K)
+        @test_throws DimensionMismatch tr(K)
 
-    A = randn(3,3)
-    B = randn(6,6)
-    C = randn(2,2)
-    K, k = Kron(A,B,C), kron(A,B,C)
-    @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B,C)) == k
+        K, k = Kron(A',B'), kron(A',B')
+        @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A',B')) == k
+        @test det(K) == 0  # kronecker of rectangular factors
+        @test logdet(K) == -Inf
+        @test logabsdet(K) == (-Inf, 0)
+        @test isapprox(det(k), det(K); atol=eps(eltype(K)), rtol=0)
+        @test tr(K) ≈ tr(k)
+    end
 
-    @test logdet(K) ≈ logdet(k)
-    @test all(logabsdet(K) .≈ logabsdet(k))
-    @test det(K) ≈ det(k)
-    @test diag(K) ≈ diag(k)
-    @test tr(K) ≈ tr(k)
+    @testset "Square Factors: Compatibility with Matrix functions" begin
+        # need A,B,C to be invertible
+        A, B, C = 0, 0, 0
+        while det(A) == 0
+            A = randn(3,3)
+        end
+        while det(B) == 0
+            B = randn(6,6)
+        end
+        while det(C) == 0
+            C = randn(2,2)
+        end
+        K, k = Kron(A,B,C), kron(A,B,C)
+        @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B,C)) == k
+
+        @test K' == Kron(A', B', C') == k'
+        @test transpose(K) == Kron(transpose(A), transpose(B), transpose(C)) == transpose(k)
+        @test pinv(K) == Kron(pinv(A), pinv(B), pinv(C)) ≈ pinv(k)
+        @test inv(K) == Kron(inv(A), inv(B), inv(C)) ≈ inv(k)
+
+        @test logdet(K) ≈ logdet(k)
+        @test all(logabsdet(K) .≈ logabsdet(k))
+        @test det(K) ≈ det(k)
+        @test diag(K) ≈ diag(k)
+        @test tr(K) ≈ tr(k)
+    end
+
+    @testset "Zero Factor" begin
+        A = zeros(3,3)
+        B = randn(4,4)
+        K, k = Kron(A, B), kron(A, B)
+        @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == k == zeros(12, 12)
+        @test det(K) ≈ det(k) ≈ 0
+        @test isinf(logdet(K))
+        @test logdet(K) ≈ logdet(k) == -Inf
+        @test all(logabsdet(K) .≈ logabsdet(k) .≈ (-Inf, 0))
+
+        c = randn(10)
+        @test_throws DimensionMismatch K * c
+        C = randn(10, 12)
+        @test_throws DimensionMismatch K * C
+        c = randn(12)
+        @test (K * c) == zeros(12)
+    end
+
+    @testset "Identity Factor" begin
+        A = I(3)
+        B = randn(4,4)
+        K, k = Kron(A, B), kron(A, B)
+        @test [K[k,j] for k=1:size(K,1), j=1:size(K,2)] == Array(Kron(A,B)) == k
+        @test det(K) ≈ det(k) ≈ det(B)^size(A,1)
+
+        c = randn(12)
+        @test (K * c) ≈ (k * c)
+    end
 
     A = randn(3,2)
     B = randn(4,6)
@@ -158,6 +213,51 @@ include("cachetests.jl")
 
     @testset "3-factor kron-mul" begin
         A, B, C = randn(4, 4), randn(3, 2), randn(5, 6)
+        K, k = Kron(A, B, C), kron(A, B, C)
+        x = randn(size(k, 2))
+        X = randn(size(k, 2), 8)
+
+        res_vec = K * x
+        @test size(res_vec, 1) == size(K, 1) == size(k, 1)
+        @test res_vec ≈ (k * x)
+
+        res_mat = K * X
+        @test size(res_mat, 1) == size(K, 1) == size(k, 1)
+        @test res_mat ≈ (k * X)
+    end
+
+    @testset "3-factor all-square kron-mul" begin
+        A, B, C = randn(4, 4), randn(3, 3), randn(5, 5)
+        K, k = Kron(A, B, C), kron(A, B, C)
+        x = randn(size(k, 2))
+        X = randn(size(k, 2), 8)
+
+        res_vec = K * x
+        @test size(res_vec, 1) == size(K, 1) == size(k, 1)
+        @test res_vec ≈ (k * x)
+
+        res_mat = K * X
+        @test size(res_mat, 1) == size(K, 1) == size(k, 1)
+        @test res_mat ≈ (k * X)
+    end
+
+    @testset "3-factor sparse kron-mul" begin
+        A, B, C = sprandn(4, 4, 0.2), sprandn(3, 3, 0.2), sprandn(5, 5, 0.2)
+        K, k = Kron(A, B, C), kron(A, B, C)
+        x = randn(size(k, 2))
+        X = randn(size(k, 2), 8)
+
+        res_vec = K * x
+        @test size(res_vec, 1) == size(K, 1) == size(k, 1)
+        @test res_vec ≈ (k * x)
+
+        res_mat = K * X
+        @test size(res_mat, 1) == size(K, 1) == size(k, 1)
+        @test res_mat ≈ (k * X)
+    end
+
+    @testset "3-factor mixed-sparsity kron-mul" begin
+        A, B, C = sprandn(4, 4, 0.2), randn(3, 3), sprandn(5, 5, 0.2)
         K, k = Kron(A, B, C), kron(A, B, C)
         x = randn(size(k, 2))
         X = randn(size(k, 2), 8)

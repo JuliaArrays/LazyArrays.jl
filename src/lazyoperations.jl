@@ -165,8 +165,8 @@ end
 
 
 function shuffle_algorithm(
-    ::ModifiedShuffle, K::Kron{T,2,NTuple{N, MT}}, p::AbstractVecOrMat, OT::Type{<:Number}
-) where {T, N, MT<:AbstractMatrix}
+    ::ModifiedShuffle, K::Kron{T,2} where T, p::AbstractVecOrMat, OT::Type{<:Number}
+)
 
     if size(K, 2) != size(p, 1)
         if ndims(p) > 1
@@ -182,9 +182,9 @@ function shuffle_algorithm(
         return q
     end
 
-    K_shrunk_factors::Array{MT} = []
-    R_H::Array{Array{Int}} = []
-    C_H::Array{Array{Int}} = []
+    K_shrunk_factors::Vector{eltype(K.args)} = []
+    R_H::Vector{Vector{Int}} = []
+    C_H::Vector{Vector{Int}} = []
 
     is_dense = !any(issparse, K.args)
 
