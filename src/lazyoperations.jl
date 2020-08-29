@@ -117,14 +117,14 @@ _compatible_sizes((A, B)) = (size(A, 2) == size(B, 1))
 # multiplication
 function copy(M::Mul{ApplyLayout{typeof(kron)}, ApplyLayout{typeof(kron)}})
     A, B = M.A, M.B
-    MT = promote_type(map(typeof, arguments(A))..., map(typeof,arguments(B))...)
+    MT = promote_type(map(typeof, arguments(A))..., map(typeof, arguments(B))...)
     # Keeping it simple for now, but could potentially make this "alignment"-check
     # more precise. For example, if one factor of A has 6 columns and it's aligned
     # with two factors of B with 2 and 3 rows, then we can still use the
     # mixed-product property after explicitly computing the Kronecker product of
     # the two factors of B (or maybe just deferring to the shuffle algorithm)
-    if (length(A.args) == length(B.args)) && all(_compatible_sizes, zip(A.args, B.args))
-        factors = [(A_i * B_i) for (A_i, B_i) in zip(A.args, B.args)]
+    if (length(arguments(A)) == length(arguments(B))) && all(_compatible_sizes, zip(arguments(A), arguments(B)))
+        factors = [(A_i * B_i) for (A_i, B_i) in zip(arguments(A), arguments(B))]
         return Kron(factors...)
     else
         algo_type = shuffle_algorithm_type(MT)
@@ -137,7 +137,7 @@ end
 # matrix to a vector
 function copy(M::Mul{
     LazyArrays.ApplyLayout{typeof(kron)},
-    <:ArrayLayouts.MemoryLayout,
+    <:Any,
     Kron{T,2,NTuple{2,M}},V
 } where {T, M<:AbstractMatrix{T}, V<:AbstractVector})
     K, v = M.A, M.B
