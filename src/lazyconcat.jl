@@ -43,27 +43,31 @@ function ==(a::Vcat{T,1,II}, b::Vcat{T,1,II}) where {T,II}
     all(arguments(a) .== arguments(b))
 end
 
-@propagate_inbounds @inline function vcat_getindex(f, k::Integer)
+@propagate_inbounds @inline vcat_getindex(f, k::Integer) =
+    vcat_getindex_recursive(f, (k, ), f.args...)
+
+@propagate_inbounds @inline vcat_getindex(f, k::Integer, j::Integer) =
+    vcat_getindex_recursive(f, (k, j), f.args...)
+
+@propagate_inbounds @inline function vcat_getindex_recursive(
+        f, idx::NTuple{1}, A, args...)
+    k, = idx
     T = eltype(f)
-    κ = k
-    for A in f.args
-        n = length(A)
-        κ ≤ n && return convert(T,A[κ])::T
-        κ -= n
-    end
-    throw(BoundsError(f, k))
+    n = length(A)
+    k ≤ n && return convert(T, A[k])::T
+    vcat_getindex_recursive(f, (k - n, ), args...)
 end
 
-@propagate_inbounds @inline function vcat_getindex(f, k::Integer, j::Integer)
+@propagate_inbounds @inline function vcat_getindex_recursive(
+        f, idx::NTuple{2}, A, args...)
+    k, j = idx
     T = eltype(f)
-    κ = k
-    for A in f.args
-        n = size(A,1)
-        κ ≤ n && return convert(T,A[κ,j])::T
-        κ -= n
-    end
-    throw(BoundsError(f, (k,j)))
+    n = size(A, 1)
+    k ≤ n && return convert(T, A[k, j])::T
+    vcat_getindex_recursive(f, (k - n, j), args...)
 end
+
+@inline vcat_getindex_recursive(f, idx) = throw(BoundsError(f, idx))
 
 @propagate_inbounds @inline getindex(f::Vcat{<:Any,1}, k::Integer) = vcat_getindex(f, k)
 @propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::Integer) = vcat_getindex(f, k, j)
