@@ -126,16 +126,19 @@ ndims(::Applied{<:Any,typeof(hcat)}) = 2
 size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
 Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
 
-function hcat_getindex(f, k::Integer, j::Integer)
+@inline hcat_getindex(f, k::Integer, j::Integer) =
+    hcat_getindex_recursive(f, (k, j), f.args...)
+
+@inline function hcat_getindex_recursive(
+        f, idx::NTuple{2}, A, args...)
+    k, j = idx
     T = eltype(f)
-    ξ = j
-    for A in f.args
-        n = size(A,2)
-        ξ ≤ n && return T(A[k,ξ])::T
-        ξ -= n
-    end
-    throw(BoundsError(f, (k,j)))
+    n = size(A, 2)
+    j ≤ n && return convert(T, A[k, j])::T
+    hcat_getindex_recursive(f, (k, j - n), args...)
 end
+
+@inline hcat_getindex_recursive(f, idx) = throw(BoundsError(f, idx))
 
 getindex(f::Hcat, k::Integer, j::Integer) = hcat_getindex(f, k, j)
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(f, k, j)
@@ -144,14 +147,19 @@ getindex(f::Applied{<:Any,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(
 # since its mutable we need to make a copy
 copy(f::Hcat) = Hcat(map(copy, f.args)...)
 
+@inline function hcat_setindex_recursive!(
+        f, v, idx::NTuple{2}, A, args...)
+    k, j = idx
+    T = eltype(f)
+    n = size(A, 2)
+    j ≤ n && return setindex!(A, v, k, j)
+    hcat_setindex_recursive!(f, v, (k, j - n), args...)
+end
+
+@inline hcat_setindex_recursive!(f, v, idx) = throw(BoundsError(f, idx))
+
 function setindex!(f::Hcat{T}, v, k::Integer, j::Integer) where T
-    ξ = j
-    for A in f.args
-        n = size(A,2)
-        ξ ≤ n && return setindex!(A, v, k, ξ)
-        ξ -= n
-    end
-    throw(BoundsError(f, (k,j)))
+    hcat_setindex_recursive!(f, v, (k, j), f.args...)
 end
 
 
