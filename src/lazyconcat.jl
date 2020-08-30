@@ -43,11 +43,8 @@ function ==(a::Vcat{T,1,II}, b::Vcat{T,1,II}) where {T,II}
     all(arguments(a) .== arguments(b))
 end
 
-@propagate_inbounds @inline vcat_getindex(f, k::Integer) =
-    vcat_getindex_recursive(f, (k, ), f.args...)
-
-@propagate_inbounds @inline vcat_getindex(f, k::Integer, j::Integer) =
-    vcat_getindex_recursive(f, (k, j), f.args...)
+@propagate_inbounds @inline vcat_getindex(f, idx::Vararg{Integer}) =
+    vcat_getindex_recursive(f, idx, f.args...)
 
 @propagate_inbounds @inline function vcat_getindex_recursive(
         f, idx::NTuple{1}, A, args...)
@@ -81,24 +78,30 @@ getindex(f::Applied{<:Any,typeof(vcat)}, k::Integer, j::Integer)= vcat_getindex(
 copy(f::Vcat) = Vcat(map(copy, f.args)...)
 map(::typeof(copy), f::Vcat) = Vcat(map.(copy, f.args)...)
 
-@propagate_inbounds @inline function setindex!(f::Vcat{T,1}, v, k::Integer) where T
-    κ = k
-    for A in f.args
-        n = length(A)
-        κ ≤ n && return setindex!(A, v, κ)
-        κ -= n
-    end
-    throw(BoundsError(f, k))
+@propagate_inbounds @inline vcat_setindex!(f, v, idx::Vararg{Integer}) =
+    vcat_setindex_recursive!(f, v, idx, f.args...)
+
+@propagate_inbounds @inline function vcat_setindex_recursive!(
+        f, v, idx::NTuple{1}, A, args...)
+    k, = idx
+    n = length(A)
+    k ≤ n && return setindex!(A, v, idx...)
+    vcat_setindex_recursive!(f, v, (k - n, ), args...)
 end
 
-@propagate_inbounds @inline function setindex!(f::Vcat{T,2}, v, k::Integer, j::Integer) where T
-    κ = k
-    for A in f.args
-        n = size(A,1)
-        κ ≤ n && return setindex!(A, v, κ, j)
-        κ -= n
-    end
-    throw(BoundsError(f, (k,j)))
+@propagate_inbounds @inline function vcat_setindex_recursive!(
+        f, v, idx::NTuple{2}, A, args...)
+    k, j = idx
+    n = length(A)
+    k ≤ n && return setindex!(A, v, idx...)
+    vcat_setindex_recursive!(f, v, (k - n, j), args...)
+end
+
+@inline vcat_setindex_recursive!(f, v, idx) = throw(BoundsError(f, idx))
+
+@propagate_inbounds @inline function setindex!(
+        f::Vcat{T,N}, v, idx::Vararg{Integer,N}) where {T,N}
+    vcat_setindex_recursive!(f, v, idx, f.args...)
 end
 
 reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.args))...)
