@@ -92,7 +92,7 @@ end
 @propagate_inbounds @inline function vcat_setindex_recursive!(
         f, v, idx::NTuple{2}, A, args...)
     k, j = idx
-    n = length(A)
+    n = size(A, 1)
     k ≤ n && return setindex!(A, v, idx...)
     vcat_setindex_recursive!(f, v, (k - n, j), args...)
 end
