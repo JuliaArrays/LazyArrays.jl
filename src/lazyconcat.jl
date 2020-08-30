@@ -82,7 +82,7 @@ map(::typeof(copy), f::Vcat) = Vcat(map.(copy, f.args)...)
     vcat_setindex_recursive!(f, v, idx, f.args...)
 
 @propagate_inbounds @inline function vcat_setindex_recursive!(
-        f, v, idx::NTuple{1}, A, args...)
+        f::Vcat{T,1} where T, v, idx::NTuple{1}, A, args...)
     k, = idx
     n = length(A)
     k ≤ n && return setindex!(A, v, idx...)
@@ -90,7 +90,7 @@ map(::typeof(copy), f::Vcat) = Vcat(map.(copy, f.args)...)
 end
 
 @propagate_inbounds @inline function vcat_setindex_recursive!(
-        f, v, idx::NTuple{2}, A, args...)
+        f::Vcat{T,2} where T, v, idx::NTuple{2}, A, args...)
     k, j = idx
     n = size(A, 1)
     k ≤ n && return setindex!(A, v, idx...)
