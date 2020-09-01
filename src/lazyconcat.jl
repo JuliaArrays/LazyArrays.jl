@@ -78,9 +78,6 @@ getindex(f::Applied{<:Any,typeof(vcat)}, k::Integer, j::Integer)= vcat_getindex(
 copy(f::Vcat) = Vcat(map(copy, f.args)...)
 map(::typeof(copy), f::Vcat) = Vcat(map.(copy, f.args)...)
 
-@propagate_inbounds @inline vcat_setindex!(f, v, idx::Vararg{Integer}) =
-    vcat_setindex_recursive!(f, v, idx, f.args...)
-
 @propagate_inbounds @inline function vcat_setindex_recursive!(
         f::Vcat{T,1} where T, v, idx::NTuple{1}, A, args...)
     k, = idx
