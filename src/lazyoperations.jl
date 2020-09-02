@@ -24,14 +24,28 @@ axes(a::Kron{<:Any,2}) = (OneTo(size(a,1)), OneTo(size(a,2)))
 axes(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> OneTo(size(a, M)), Val(N)))
 
 
-function det(K::Kron{<:Any, 2})
-    (size(K, 1) == size(K, 2)) || throw(DimensionMismatch("matrix is not square: dimensions are $(size(K))"))
+issquare(M::AbstractMatrix) = (size(M, 1) == size(M, 2))
 
-    d = 1.
-    s = size(K, 1)
+adjoint(K::Kron{<:Any, 2}) = Kron(adjoint.(K.args)...)
+transpose(K::Kron{<:Any, 2}) = Kron(transpose.(K.args)...)
+pinv(K::Kron{<:Number, 2}) = Kron(pinv.(K.args)...)
+function inv(K::Kron{<:Number, 2})
+    n = checksquare(K)
+
+    # see det below for why the presence of rectangular factors renders
+    # the kronecker product singular
+    all(issquare, K.args) || throw(LinearAlgebra.SingularException(n))
+
+    return Kron(inv.(K.args)...)
+end
+
+
+function det(K::Kron{T, 2}) where T<:Number
+    s = checksquare(K)
+    d = one(T)
 
     for A in K.args
-        if size(A, 1) == size(A, 2)
+        if issquare(A)
             dA = det(A)
             if iszero(dA)
                 return dA
@@ -41,22 +55,267 @@ function det(K::Kron{<:Any, 2})
             # The Kronecker Product of rectangular matrices, if it is square, will
             # have determinant zero. This can be shown by using the fact that
             # rank(A ⊗ B) = rank(A)rank(B) and showing that this is strictly less
-            # than the number of rows in the resulting Kronecker matrix. Hence,
+            # than the number of rows/cols in the resulting Kronecker matrix. Hence,
             # since A ⊗ B does not have full rank, its determinant must be zero.
-            return zero(d)
+            return zero(T)
         end
     end
     return d
 end
 
+
+function logabsdet(K::Kron{T, 2}) where T<:Number
+    s = checksquare(K)
+    d = zero(T)
+    sgn = one(T)
+
+    for A in K.args
+        if issquare(A)
+            ldA, sgnA = logabsdet(A)
+            if isinf(ldA)
+                return ldA, sgnA
+            end
+            p = (s ÷ size(A, 1))
+            d += p * ldA
+            sgn *= sgnA ^ p
+        else
+            # see definition of det above for explanation
+            return float(T)(-Inf), zero(T)
+        end
+    end
+    return d, sgn
+end
+
+
 function tr(K::Kron{<:Any, 2})
-    (size(K, 1) == size(K, 2)) || throw(DimensionMismatch("matrix is not square: dimensions are $(size(K))"))
-    if all(A -> (size(A, 1) == size(A, 2)), K.args)  # check if all component matrices are square
+    checksquare(K)
+    if all(issquare, K.args)
         return prod(tr.(K.args))
     else
         return sum(diag(K))
     end
 end
+
+
+function diag(K::Kron{<:Any, 2})
+    if all(issquare, K.args)
+        return kron(diag.(K.args)...)
+    else
+        d = similar(K.args[1], minimum(size(K)))
+        @inbounds for i in 1:length(d)
+            d[i] = K[i, i]
+        end
+        return d
+    end
+end
+
+
+_compatible_sizes((A, B)) = (size(A, 2) == size(B, 1))
+
+
+# Implements the mixed-product property for the Kronecker product and matrix
+# multiplication
+function copy(M::Mul{ApplyLayout{typeof(kron)}, ApplyLayout{typeof(kron)}})
+    A, B = M.A, M.B
+    MT = promote_type(map(typeof, arguments(A))..., map(typeof, arguments(B))...)
+    # Keeping it simple for now, but could potentially make this "alignment"-check
+    # more precise. For example, if one factor of A has 6 columns and it's aligned
+    # with two factors of B with 2 and 3 rows, then we can still use the
+    # mixed-product property after explicitly computing the Kronecker product of
+    # the two factors of B (or maybe just deferring to the shuffle algorithm)
+    if (length(arguments(A)) == length(arguments(B))) && all(_compatible_sizes, zip(arguments(A), arguments(B)))
+        factors = [(A_i * B_i) for (A_i, B_i) in zip(arguments(A), arguments(B))]
+        return Kron(factors...)
+    else
+        algo_type = shuffle_algorithm_type(MT)
+        return shuffle_algorithm(algo_type, A, B, eltype(M))
+    end
+end
+
+
+# Implements Roth's lemma aka the "vec-trick" for multiplying a 2-factor Kron
+# matrix to a vector
+function copy(M::Mul{
+    LazyArrays.ApplyLayout{typeof(kron)},
+    <:Any,
+    Kron{T,2,NTuple{2,M}},V
+} where {T, M<:AbstractMatrix{T}, V<:AbstractVector})
+    K, v = M.A, M.B
+    A, B = arguments(K)
+    V = reshape(v, size(B, 2), size(A, 2))
+    return vec(B * V * transpose(A))
+end
+
+
+
+abstract type ShuffleAlgorithm end
+struct Shuffle <: ShuffleAlgorithm end
+struct ModifiedShuffle <: ShuffleAlgorithm end
+
+shuffle_algorithm_type(::Type) = Shuffle()
+shuffle_algorithm_type(::Type{<:AbstractArray}) = ModifiedShuffle()
+shuffle_algorithm_type(::Type{<:ApplyArray}) = Shuffle()
+
+
+function copy(M::Mul{ApplyLayout{typeof(kron)}})
+    MT = promote_type(map(typeof, arguments(M.A))...)
+    algo_type = shuffle_algorithm_type(MT)
+    return shuffle_algorithm(algo_type, M.A, M.B, eltype(M))
+end
+
+
+function shuffle_algorithm(
+    ::ModifiedShuffle, K::Kron{T,2} where T, p::AbstractVecOrMat, OT::Type{<:Number}
+)
+
+    if size(K, 2) != size(p, 1)
+        if ndims(p) > 1
+            throw(DimensionMismatch("matrix A has dimensions $(size(K)), matrix B has dimensions $(size(p))"))
+        else
+            throw(DimensionMismatch("matrix A has dimensions $(size(K)), vector B has length $(size(p, 1))"))
+        end
+    end
+
+    output_sizes = (ndims(p) > 1) ? (size(K, 1), size(p, 2)) : (size(K,1),)
+    q = fill!(similar(p, OT, output_sizes), zero(OT))
+    if any(iszero, K.args)
+        return q
+    end
+
+    K_shrunk_factors::Vector{eltype(K.args)} = []
+    R_H::Vector{Vector{Int}} = []
+    C_H::Vector{Vector{Int}} = []
+
+    is_dense = !any(issparse, K.args)
+
+    # note: the following computation costs are for multiplication against
+    #       a single vector.
+    nnz_ = [issparse(X_h) ? nnz(X_h) : prod(size(X_h)) for X_h in K.args]
+    trad_cost = 2*sum([
+        prod(size.(K.args[1:h-1], 2)) * nnz_[h] * prod(size.(K.args[h+1:end], 1))
+        for (h, X_h) in enumerate(K.args)
+        if X_h != I
+    ])
+
+    naive_cost = 2*prod(size(K))
+
+    if is_dense && naive_cost <= trad_cost && naive_cost < 1e6
+        return Matrix(K) * p
+    end
+
+    for X_h in K.args
+        R_h, C_h = Set{Int}(), Set{Int}()
+
+        for i in axes(X_h, 1), j in axes(X_h, 2)
+            if X_h[i, j] != 0
+                push!(R_h, i)
+                push!(C_h, j)
+            end
+        end
+
+        R_h, C_h = sort(collect(R_h)), sort(collect(C_h))
+
+        is_dense = is_dense && (axes(X_h, 1) == R_h && axes(X_h, 2) == C_h)
+
+        push!(K_shrunk_factors, X_h[R_h, C_h])
+        push!(R_H, R_h)
+        push!(C_H, C_h)
+    end
+
+    if is_dense
+        # this means that the component matrices were all dense AND they had no
+        # zero rows/cols
+        return shuffle_algorithm(Shuffle(), K, p, OT)
+    end
+
+    nnz_m = [issparse(X_h) ? nnz(X_h) : prod(size(X_h)) for X_h in K_shrunk_factors]
+    modified_cost = 2*sum([
+        prod(length.(C_H[1:h-1])) * nnz_m[h] * prod(length.(R_H[h+1:end]))
+        for (h, X_h) in enumerate(K.args)
+        if X_h != I
+    ])
+
+    if trad_cost <= modified_cost
+        return shuffle_algorithm(Shuffle(), K, p, OT)
+    end
+
+    R_indices = Iterators.product(reverse(R_H)...)
+    C_indices = Iterators.product(reverse(C_H)...)
+
+    r_index_v = [1, cumprod([size(m, 1) for m in K.args[end:-1:2]])...]
+    c_index_v = [1, cumprod([size(m, 2) for m in K.args[end:-1:2]])...]
+
+    r_indices = zeros(Int, prod(size(R_indices)))
+    for (i, r_ind) in enumerate(R_indices)
+        r_indices[i] = dot(r_index_v, r_ind .- 1) + 1
+    end
+
+    c_indices = zeros(Int, prod(size(C_indices)))
+    for (i, c_ind) in enumerate(C_indices)
+        c_indices[i] = dot(c_index_v, c_ind .- 1) + 1
+    end
+
+    K_ = Kron(K_shrunk_factors...)
+    if ndims(p) == 1
+        q[r_indices] = shuffle_algorithm(Shuffle(), K_, p[c_indices], OT)
+    else
+        q[r_indices, :] = shuffle_algorithm(Shuffle(), K_, p[c_indices, :], OT)
+    end
+
+    return q
+end
+
+
+function shuffle_algorithm(::Shuffle, K::Kron{T,2} where T, p::AbstractVecOrMat, OT::Type{<:Number})
+    q = copy!(similar(p, OT), p)
+    r = [size(m, 1) for m in K.args]
+    c = [size(m, 2) for m in K.args]
+
+    all_square = all(map(==, r, c))
+    is_vector = (ndims(p) == 1)
+
+    i_left, i_right = 1, prod(c)
+    H = length(K.args)
+
+    @inbounds for h in 1:H
+        X_h = K.args[h]
+        r_h, c_h = r[h], c[h]
+        i_right ÷= c_h
+
+        if X_h != I
+            if all_square
+                q′ = q
+            else
+                size_ = prod(r[1:h]) * prod(c[h+1:H])
+                output_sizes = (ndims(p) > 1) ? (size_, size(p, 2)) : (size_,)
+                q′ = fill!(similar(p, OT, output_sizes), zero(OT))
+            end
+
+            base_i, base_j = 0, 0
+            for i_l in 1:i_left
+                for i_r in 1:i_right
+                    slc_in  = base_i + i_r : i_right : base_i + i_r + (c_h-1)*i_right
+                    slc_out = base_j + i_r : i_right : base_j + i_r + (r_h-1)*i_right
+
+                    if is_vector
+                        @views q′[slc_out] = X_h * q[slc_in]
+                    else
+                        @views q′[slc_out, :] = X_h * q[slc_in, :]
+                    end
+                end
+
+                base_i += i_right*c_h
+                base_j += i_right*r_h
+            end
+            q = q′
+        end
+
+        i_left *= r_h
+    end
+
+    return q
+end
+
 
 
 kron_getindex((A,)::Tuple{AbstractVector}, k::Integer) = A[k]
@@ -177,7 +436,7 @@ cumsum(a::LazyArray; kwds...) = Cumsum(a; kwds...)
 ## Rotations
 
 for op in (:rot180, :rotl90, :rotr90)
-    @eval begin 
+    @eval begin
         ndims(::Applied{<:Any,typeof($op)}) = 2
         eltype(A::Applied{<:Any,typeof($op)}) = eltype(A.args...)
     end

@@ -110,6 +110,7 @@ _mul(A,B,C...) = lazymaterialize(*,A,B,C...)
 _mul_colsupport(j, Z) = colsupport(Z,j)
 _mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
 _mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
+
 _mul_colsupport(j, Z::AbstractArray, Y...) = _mul_colsupport(colsupport(Z,j), Y...)
 
 colsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_colsupport(j, reverse(B.args)...)
@@ -170,7 +171,7 @@ function _vec_mul_arguments(args, (kr,))
 end
 
 # this is a vector view of a MulMatrix
-_vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) = 
+_vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) =
     _mat_mul_arguments(args, (kr,jr))
 
 # this is a row-vector view
@@ -185,8 +186,9 @@ arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V
 
 @inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
 
+
 ##
-# adoint Mul
+# adjoint Mul
 ##
 
 adjointlayout(::Type, ::ApplyLayout{typeof(*)}) = ApplyLayout{typeof(*)}()
@@ -200,9 +202,9 @@ arguments(::ApplyLayout{typeof(*)}, V::Transpose) = reverse(transpose.(arguments
 
 
 
-## 
+##
 # * specialcase
-##    
+##
 
 for op in (:*, :\)
     @eval broadcasted(::DefaultArrayStyle{N}, ::typeof($op), a::Number, b::ApplyArray{<:Number,N,typeof(*)}) where N =
