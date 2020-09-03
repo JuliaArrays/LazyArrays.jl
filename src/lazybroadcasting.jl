@@ -212,11 +212,12 @@ _viewifmutable(a::AbstractRange, inds...) = a[inds...]
 _broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(size(a), inds)...)
 _broadcastview(a::Number, inds) = a
 
-function _broadcast_sub_arguments(V)
-    args = arguments(parent(V))
+function _broadcast_sub_arguments(lay, P, V)
+    args = arguments(lay, P)
     _broadcastview.(args, Ref(parentindices(V)))
 end
-arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
+_broadcast_sub_arguments(A, V) = _broadcast_sub_arguments(MemoryLayout(A), A, V)
+arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(parent(V), V)
 call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
 
 
