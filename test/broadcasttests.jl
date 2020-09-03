@@ -181,7 +181,14 @@ import Base: broadcasted
         a = BroadcastArray(*, 1:3, [[1,2],[3,4],[5,6]])
         @test a == broadcast(*, 1:3, [[1,2],[3,4],[5,6]])
         @test a[2] == [6,8]
-        @test a[1:2] == [[1,2], [6,8]]
-        
+        @test a[1:2] == [[1,2], [6,8]]     
+    end
+
+    @testset "submaterialize" begin
+        a = BroadcastArray(/, randn(1000), 2)
+        @test a[3:10] ≈ a.args[1][3:10]/2
+        @test MemoryLayout(a') isa DualLayout{BroadcastLayout{typeof(/)}}
+        @test (a')[:,3:10] isa Adjoint
+        @test (a')[:,3:10] ≈ a[3:10]'
     end
 end

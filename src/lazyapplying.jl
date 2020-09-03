@@ -51,6 +51,7 @@ call(_, a) = a.f
 call(a::AbstractArray) = call(MemoryLayout(typeof(a)), a)
 arguments(a) = a.args
 arguments(_, a) = a.args
+arguments(::DualLayout{ML}, P) where ML = arguments(ML(), P)
 arguments(a::AbstractArray) = arguments(MemoryLayout(typeof(a)), a)
 
 @inline check_applied_axes(A::Applied) = nothing
