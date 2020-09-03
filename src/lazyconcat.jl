@@ -361,7 +361,7 @@ end
 
 # Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) =
-    Broadcasted{LazyArrayStyle}(op, (A, B))
+    Broadcasted{LazyArrayStyle{1}}(op, (A, B))
 
 # ambiguities
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = cache_broadcast(op, A, B)

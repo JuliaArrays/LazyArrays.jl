@@ -215,6 +215,7 @@ function _broadcast_sub_arguments(V)
     _broadcastview.(args, Ref(parentindices(V)))
 end
 arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
+call(lay::BroadcastLayout, V::SubArray) = call(lay, parent(V))
 
 ###
 # Transpose
