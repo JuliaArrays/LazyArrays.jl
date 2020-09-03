@@ -9,7 +9,7 @@ import Base: broadcasted
         @test BroadcastArray(b) == BroadcastVector(b) == b == copyto!(similar(b), b)
 
         @test b ==  Vector(b) == exp.(a)
-        @test b[2:5] isa BroadcastVector
+        @test b[2:5] isa Vector
         @test b[2:5] == exp.(a[2:5])
 
         @test exp.(b) isa BroadcastVector
@@ -174,7 +174,7 @@ import Base: broadcasted
         @test @inferred(a[[1,2,4]]) ≡ Zeros(3)
         @test broadcasted(a) ≡ Zeros(10)
         @test_throws TypeError Base.Broadcast.Broadcasted(a)
-        @test materialize(Base.Broadcast.Broadcasted(view(a,1:3))) == zeros(3)
+        @test broadcasted(view(a,1:3)) ≡ Zeros(3)
     end
 
     @testset "array-valued Broadcast" begin

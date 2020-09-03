@@ -198,16 +198,16 @@ end
 # SubArray
 ###
 
-call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
-
 sublayout(b::BroadcastLayout, _) = b
-
 
 _broadcastviewinds(::Tuple{}, inds) = ()
 _broadcastviewinds(sz, inds) =
-    tuple(isone(sz[1]) ? OneTo(sz[1]) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
+    tuple(isone(sz[1]) ? convert(typeof(inds[1]), OneTo(sz[1])) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
 
-_broadcastview(a, inds) = view(a, _broadcastviewinds(size(a), inds)...)
+_viewifmutable(a, inds...) = view(a, inds...)
+_viewifmutable(a::AbstractFill, inds...) = a[inds...]
+_viewifmutable(a::AbstractRange, inds...) = a[inds...]
+_broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(size(a), inds)...)
 _broadcastview(a::Number, inds) = a
 
 function _broadcast_sub_arguments(V)
@@ -215,7 +215,8 @@ function _broadcast_sub_arguments(V)
     _broadcastview.(args, Ref(parentindices(V)))
 end
 arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
-call(lay::BroadcastLayout, V::SubArray) = call(lay, parent(V))
+call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
+
 
 ###
 # Transpose
