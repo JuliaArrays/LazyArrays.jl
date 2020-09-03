@@ -64,7 +64,9 @@ BroadcastMatrix(A::BroadcastMatrix) = A
 
 
 _broadcastarray2broadcasted(lay::BroadcastLayout, a) = broadcasted(call(lay, a), map(_broadcastarray2broadcasted, arguments(lay, a))...)
+_broadcastarray2broadcasted(lay::BroadcastLayout, a::BroadcastArray) = broadcasted(call(lay, a), map(_broadcastarray2broadcasted, arguments(lay, a))...)
 _broadcastarray2broadcasted(_, a) = a
+_broadcastarray2broadcasted(lay, a::BroadcastArray) = error("Overload LazyArrays._broadcastarray2broadcasted(::$(lay), _)")
 _broadcastarray2broadcasted(::DualLayout{ML}, a) where ML = _broadcastarray2broadcasted(ML(), a)
 _broadcastarray2broadcasted(a) = _broadcastarray2broadcasted(MemoryLayout(a), a)
 _broadcasted(A) = instantiate(_broadcastarray2broadcasted(A))
