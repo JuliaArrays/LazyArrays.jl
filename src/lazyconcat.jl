@@ -426,7 +426,7 @@ _vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:SVector{M},<:AbstractFi
 
 # default is BroadcastArray
 _vcat_broadcasted(::Type{T}, op, A, B) where T =
-    Broadcasted{LazyArrayStyle}(op, (Vcat(A...), Vcat(B...)))
+    Broadcasted{LazyArrayStyle{1}}(op, (Vcat(A...), Vcat(B...)))
 
 
 broadcasted(::LazyArrayStyle{1}, op, A::Vcat{T, 1, <:Tuple{<:Any,<:Any}},
