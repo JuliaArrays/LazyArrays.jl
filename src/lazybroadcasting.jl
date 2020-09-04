@@ -63,13 +63,13 @@ BroadcastVector(A::BroadcastVector) = A
 BroadcastMatrix(A::BroadcastMatrix) = A
 
 
-_broadcastarray2broadcasted(lay::BroadcastLayout, a) = broadcasted(call(lay, a), map(_broadcastarray2broadcasted, arguments(lay, a))...)
-_broadcastarray2broadcasted(lay::BroadcastLayout, a::BroadcastArray) = broadcasted(call(lay, a), map(_broadcastarray2broadcasted, arguments(lay, a))...)
-_broadcastarray2broadcasted(_, a) = a
-_broadcastarray2broadcasted(lay, a::BroadcastArray) = error("Overload LazyArrays._broadcastarray2broadcasted(::$(lay), _)")
-_broadcastarray2broadcasted(::DualLayout{ML}, a) where ML = _broadcastarray2broadcasted(ML(), a)
-_broadcastarray2broadcasted(a) = _broadcastarray2broadcasted(MemoryLayout(a), a)
-_broadcasted(A) = instantiate(_broadcastarray2broadcasted(A))
+@inline _broadcastarray2broadcasted(lay::BroadcastLayout, a) = broadcasted(call(lay, a), map(_broadcastarray2broadcasted, arguments(lay, a))...)
+@inline _broadcastarray2broadcasted(lay::BroadcastLayout, a::BroadcastArray) = broadcasted(call(lay, a), map(_broadcastarray2broadcasted, arguments(lay, a))...)
+@inline _broadcastarray2broadcasted(_, a) = a
+@inline _broadcastarray2broadcasted(lay, a::BroadcastArray) = error("Overload LazyArrays._broadcastarray2broadcasted(::$(lay), _)")
+@inline _broadcastarray2broadcasted(::DualLayout{ML}, a) where ML = _broadcastarray2broadcasted(ML(), a)
+@inline _broadcastarray2broadcasted(a) = _broadcastarray2broadcasted(MemoryLayout(a), a)
+@inline _broadcasted(A) = instantiate(_broadcastarray2broadcasted(A))
 broadcasted(A::BroadcastArray) = _broadcasted(A)
 broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = _broadcasted(A)
 Broadcasted(A::BroadcastArray) = broadcasted(A)::Broadcasted
@@ -202,28 +202,31 @@ end
 
 sublayout(b::BroadcastLayout, _) = b
 
-_convertifrange(::Type{R}, b) where R<:AbstractRange = convert(R, b)
-_convertifrange(_, b) = b # not type stable
+@inline _convertifrange(::Type{R}, b) where R<:AbstractRange = convert(R, b)
+@inline _convertifrange(_, b) = b # not type stable
 
-_broadcastviewinds(::Tuple{}, inds) = ()
-_broadcastviewinds(sz, inds) =
+@inline _broadcastviewinds(::Tuple{}, inds) = ()
+@inline _broadcastviewinds(sz, inds) =
     tuple(isone(sz[1]) ? _convertifrange(typeof(inds[1]), OneTo(sz[1])) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
 
-_viewifmutable(a, inds...) = view(a, inds...)
-_viewifmutable(a::AbstractFill, inds...) = a[inds...]
-_viewifmutable(a::AbstractRange, inds...) = a[inds...]
-_broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(size(a), inds)...)
-_broadcastview(a::Number, inds) = a
-_broadcastview(a::Base.RefValue, inds) = a
+@inline _viewifmutable(a, inds...) = view(a, inds...)
+@inline _viewifmutable(a::AbstractFill, inds...) = a[inds...]
+@inline _viewifmutable(a::AbstractRange, inds...) = a[inds...]
+@inline _broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(size(a), inds)...)
+@inline _broadcastview(a::Number, inds) = a
+@inline _broadcastview(a::Base.RefValue, inds) = a
 
-function _broadcast_sub_arguments(lay, P, V)
+@inline __broadcastview(inds) = ()
+@inline __broadcastview(inds, a, b...) = (_broadcastview(a, inds), __broadcastview(inds, b...)...)
+
+@inline function _broadcast_sub_arguments(lay, P, V)
     args = arguments(lay, P)
-    _broadcastview.(args, Ref(parentindices(V)))
+    __broadcastview(parentindices(V), args...)
 end
-_broadcast_sub_arguments(A, V) = _broadcast_sub_arguments(MemoryLayout(A), A, V)
-_broadcast_sub_arguments(V) =  _broadcast_sub_arguments(parent(V), V)
-arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
-call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
+@inline _broadcast_sub_arguments(A, V) = _broadcast_sub_arguments(MemoryLayout(A), A, V)
+@inline _broadcast_sub_arguments(V) =  _broadcast_sub_arguments(parent(V), V)
+@inline arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
+@inline call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
 
 
 ###
