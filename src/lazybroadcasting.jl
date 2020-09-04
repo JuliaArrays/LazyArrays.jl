@@ -202,12 +202,12 @@ end
 
 sublayout(b::BroadcastLayout, _) = b
 
-@inline _convertifrange(::Type{R}, b) where R<:AbstractRange = convert(R, b)
-@inline _convertifrange(_, b) = b # not type stable
+@inline _convertifvector(::Type{R}, b) where R<:AbstractVector = convert(R, b)
+@inline _convertifvector(_, b) = b # not type stable
 
 @inline _broadcastviewinds(::Tuple{}, inds) = ()
 @inline _broadcastviewinds(sz, inds) =
-    tuple(isone(sz[1]) ? _convertifrange(typeof(inds[1]), OneTo(sz[1])) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
+    tuple(isone(sz[1]) ? _convertifvector(typeof(inds[1]), OneTo(sz[1])) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
 
 @inline _viewifmutable(a, inds...) = view(a, inds...)
 @inline _viewifmutable(a::AbstractFill, inds...) = a[inds...]
