@@ -191,4 +191,12 @@ import Base: broadcasted
         @test (a')[:,3:10] isa Adjoint
         @test (a')[:,3:10] ≈ a[3:10]'
     end
+
+    @testset "adjoint broadcast" begin
+        a = BroadcastArray(exp, 1:5)
+        b = randn(5)
+        @test MemoryLayout(a') isa DualLayout{BroadcastLayout{typeof(exp)}}
+        @test a'b ≈ Vector(a)'b
+        @test BroadcastArray(a')b ≈ [a'b]
+    end
 end

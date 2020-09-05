@@ -215,4 +215,10 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test Eye(5) * MyLazyArray(b) == b
         @test MyLazyArray(B) * Eye(5) == B
     end
+
+    @testset "LazyBroadcast" begin
+        a = MyLazyArray(randn(5))
+        b = a .^ 2
+        @test BroadcastArray(view(b,1:3)) == Vector(a)[1:3] .^2
+    end
 end
