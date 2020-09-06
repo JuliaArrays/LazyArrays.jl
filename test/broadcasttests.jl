@@ -9,7 +9,7 @@ import Base: broadcasted
         @test BroadcastArray(b) == BroadcastVector(b) == b == copyto!(similar(b), b)
 
         @test b ==  Vector(b) == exp.(a)
-        @test b[2:5] isa BroadcastVector
+        @test b[2:5] isa Vector
         @test b[2:5] == exp.(a[2:5])
 
         @test exp.(b) isa BroadcastVector
@@ -174,14 +174,29 @@ import Base: broadcasted
         @test @inferred(a[[1,2,4]]) ≡ Zeros(3)
         @test broadcasted(a) ≡ Zeros(10)
         @test_throws TypeError Base.Broadcast.Broadcasted(a)
-        @test materialize(Base.Broadcast.Broadcasted(view(a,1:3))) == zeros(3)
+        @test broadcasted(view(a,1:3)) ≡ Zeros(3)
     end
 
     @testset "array-valued Broadcast" begin
         a = BroadcastArray(*, 1:3, [[1,2],[3,4],[5,6]])
         @test a == broadcast(*, 1:3, [[1,2],[3,4],[5,6]])
         @test a[2] == [6,8]
-        @test a[1:2] == [[1,2], [6,8]]
-        
+        @test a[1:2] == [[1,2], [6,8]]     
+    end
+
+    @testset "submaterialize" begin
+        a = BroadcastArray(/, randn(1000), 2)
+        @test a[3:10] ≈ a.args[1][3:10]/2
+        @test MemoryLayout(a') isa DualLayout{BroadcastLayout{typeof(/)}}
+        @test (a')[:,3:10] isa Adjoint
+        @test (a')[:,3:10] ≈ a[3:10]'
+    end
+
+    @testset "adjoint broadcast" begin
+        a = BroadcastArray(exp, 1:5)
+        b = randn(5)
+        @test MemoryLayout(a') isa DualLayout{BroadcastLayout{typeof(exp)}}
+        @test a'b ≈ Vector(a)'b
+        @test BroadcastArray(a')b ≈ [a'b]
     end
 end
