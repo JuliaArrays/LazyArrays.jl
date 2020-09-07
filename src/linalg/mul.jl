@@ -55,6 +55,19 @@ size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
 @inline axes(M::Applied{<:Any,typeof(*)}) = mulaxes(map(axes,M.args)...)
 @inline axes(M::Applied{<:Any, typeof(*), Tuple{}}) = ()
 
+###
+# show
+###
+
+function Base.array_summary(io::IO, C::MulArray, inds::Tuple{Vararg{OneTo}})
+    args = arguments(C)
+    summary(io, first(args))
+    for a in tail(args)
+        print(io, " * ")
+        summary(io, a)
+    end
+end
+    
 
 ####
 # Matrix * Array

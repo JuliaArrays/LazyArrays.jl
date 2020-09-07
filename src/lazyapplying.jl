@@ -242,6 +242,22 @@ for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
     end
 end
 
+###
+# show
+###
+
+function Base.array_summary(io::IO, C::ApplyArray, inds::Tuple{Vararg{OneTo}})
+    args = arguments(C)
+    print(io, C.f)
+    print(io, "(")
+    summary(io, first(args))
+    for a in tail(args)
+        print(io, ", ")
+        summary(io, a)
+    end
+    print(io, ")")
+end
+
 abstract type AbstractLazyLayout <: MemoryLayout end
 struct LazyLayout <: AbstractLazyLayout end
 
