@@ -37,10 +37,12 @@ Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
 function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
-    if !all(map(size,arguments(a)) .== map(size,arguments(b)))
+    a_args = arguments(a)
+    b_args = arguments(b)
+    if length(a_args) ≠ length(b_args) || any(map(size,a_args) .≠ map(size,b_args))
         return Base.invoke(==, NTuple{2,AbstractArray}, a, b)
     end
-    all(arguments(a) .== arguments(b))
+    all(a_args .== b_args)
 end
 
 @propagate_inbounds @inline vcat_getindex(f, idx::Vararg{Integer}) =

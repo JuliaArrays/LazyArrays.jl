@@ -255,6 +255,28 @@ function _broadcastarray_summary(io, A)
     print(io, ")")
 end
 
+for op in (:+, :-, :*, :\, :/)
+    @eval begin
+        function _broadcastarray_summary(io::IO, A::BroadcastArray{<:Any,N,typeof($op)}) where N
+            args = arguments(A)
+            if length(args) == 1
+                print(io, "($($op)).(")
+                summary(io, first(args))
+                print(io, ")")
+            else
+                print(io, "(")
+                summary(io, first(args))
+                print(io, ")")
+                for a in tail(args)
+                    print(io, " .$($op) (")
+                    summary(io, a)
+                    print(io, ")")
+                end
+            end
+        end
+    end
+end
+
 Base.array_summary(io::IO, C::BroadcastArray, inds::Tuple{Vararg{OneTo}}) = _broadcastarray_summary(io, C)
 function Base.array_summary(io::IO, C::BroadcastArray, inds)
     _broadcastarray_summary(io, C)
