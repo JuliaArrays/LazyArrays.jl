@@ -1137,4 +1137,9 @@ end
         @test materialize!(Lmul(applied(*,UpperTriangular(A),copy(b)))) ≈ UpperTriangular(A)b
         @test materialize!(Rmul(applied(*,copy(A),UpperTriangular(B)))) ≈ A*UpperTriangular(B)
     end
+
+    @testset "show" begin
+        A = ApplyArray(*, [1 2; 3 4], 1:2)
+        @test stringmime("text/plain", A) == "(2×2 Array{Int64,2}) * (2-element UnitRange{Int64}):\n  5\n 11"
+    end
 end

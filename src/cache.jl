@@ -169,6 +169,8 @@ function resizedata!(v::SubArray{<:Any,1,<:AbstractMatrix}, m::Integer)
     v
 end
 
+convexunion(a::AbstractVector) = a
+
 function convexunion(a::AbstractVector, b::AbstractVector)
     isempty(a) && return b
     isempty(b) && return a
