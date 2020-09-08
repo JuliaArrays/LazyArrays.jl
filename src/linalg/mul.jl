@@ -59,7 +59,7 @@ size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
 # show
 ###
 
-function Base.array_summary(io::IO, C::MulArray, inds::Tuple{Vararg{OneTo}})
+function _applyarray_summary(io::IO, C::MulArray)
     args = arguments(C)
     summary(io, first(args))
     for a in tail(args)
