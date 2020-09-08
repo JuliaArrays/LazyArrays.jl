@@ -509,16 +509,18 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test rowsupport(H,2:3) == colsupport(V,2:3) == 2:9
     end
 
-    @testset "print" begin
-        H = Hcat(Diagonal([1,2,3]), Zeros(3,3))
-        V = Vcat(Diagonal([1,2,3]), Zeros(3,3))
-        @test stringmime("text/plain", H) == "hcat(3×3 Diagonal{$Int,Array{$Int,1}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅    ⋅    ⋅    ⋅ \n  ⋅   2.0   ⋅    ⋅    ⋅    ⋅ \n  ⋅    ⋅   3.0   ⋅    ⋅    ⋅ "
-        @test stringmime("text/plain", V) == "vcat(3×3 Diagonal{$Int,Array{$Int,1}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅ \n  ⋅   2.0   ⋅ \n  ⋅    ⋅   3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
-        v = Vcat(1, Zeros(3))
-        @test colsupport(v,1) == 1:1
-        @test stringmime("text/plain", v) == "vcat($Int, 3-element Zeros{Float64}):\n 1.0\n  ⋅ \n  ⋅ \n  ⋅ "
-        A = Vcat(Ones{Int}(1,3), Diagonal(1:3))
-        @test stringmime("text/plain", A) == "vcat(1×3 Ones{$Int}, 3×3 Diagonal{$Int,UnitRange{$Int}}):\n 1  1  1\n 1  ⋅  ⋅\n ⋅  2  ⋅\n ⋅  ⋅  3"
+    if VERSION ≥ v"1.5"
+        @testset "print" begin
+            H = Hcat(Diagonal([1,2,3]), Zeros(3,3))
+            V = Vcat(Diagonal([1,2,3]), Zeros(3,3))
+            @test stringmime("text/plain", H) == "hcat(3×3 Diagonal{$Int,Array{$Int,1}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅    ⋅    ⋅    ⋅ \n  ⋅   2.0   ⋅    ⋅    ⋅    ⋅ \n  ⋅    ⋅   3.0   ⋅    ⋅    ⋅ "
+            @test stringmime("text/plain", V) == "vcat(3×3 Diagonal{$Int,Array{$Int,1}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅ \n  ⋅   2.0   ⋅ \n  ⋅    ⋅   3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
+            v = Vcat(1, Zeros(3))
+            @test colsupport(v,1) == 1:1
+            @test stringmime("text/plain", v) == "vcat($Int, 3-element Zeros{Float64}):\n 1.0\n  ⋅ \n  ⋅ \n  ⋅ "
+            A = Vcat(Ones{Int}(1,3), Diagonal(1:3))
+            @test stringmime("text/plain", A) == "vcat(1×3 Ones{$Int}, 3×3 Diagonal{$Int,UnitRange{$Int}}):\n 1  1  1\n 1  ⋅  ⋅\n ⋅  2  ⋅\n ⋅  ⋅  3"
+        end
     end
 
     @testset "==" begin
