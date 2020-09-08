@@ -1,4 +1,4 @@
-using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays
+using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, Base64
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
                     MulStyle, MulAddStyle, Applied, ApplyStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
                     Rmul, ApplyLayout, arguments, colsupport, rowsupport, lazymaterialize
