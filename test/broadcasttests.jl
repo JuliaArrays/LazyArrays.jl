@@ -1,4 +1,4 @@
-using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Tracker, Test
+using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Tracker, Base64, Test
 import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle
 import Base: broadcasted
 
@@ -198,5 +198,13 @@ import Base: broadcasted
         @test MemoryLayout(a') isa DualLayout{BroadcastLayout{typeof(exp)}}
         @test a'b ≈ Vector(a)'b
         @test BroadcastArray(a')b ≈ [a'b]
+    end
+
+    @testset "show" begin
+        @test stringmime("text/plain", BroadcastArray(factorial, 1:3)) == "factorial.(3-element UnitRange{$Int}):\n 1\n 2\n 6"
+        @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
+        @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Array{Int64,1}):\n 1\n 2"
+        @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
+        @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Array{Int64,1}, Int64):\n 1\n 0"
     end
 end

@@ -36,11 +36,13 @@ end
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
-function ==(a::Vcat{T,1,II}, b::Vcat{T,1,II}) where {T,II}
-    if !all(map(length,arguments(a)) .== map(length,arguments(b)))
+function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
+    a_args = arguments(a)
+    b_args = arguments(b)
+    if length(a_args) ≠ length(b_args) || any(map(size,a_args) .≠ map(size,b_args))
         return Base.invoke(==, NTuple{2,AbstractArray}, a, b)
     end
-    all(arguments(a) .== arguments(b))
+    all(a_args .== b_args)
 end
 
 @propagate_inbounds @inline vcat_getindex(f, idx::Vararg{Integer}) =
@@ -766,9 +768,9 @@ sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
 sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Number,AbstractVector}}) = ApplyLayout{typeof(vcat)}()
 
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) =
-    view.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
+    _viewifmutable.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
 arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) =
-    view.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
+    _viewifmutable.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
 
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
 _vcat_firstinds(sz) = (1, (1 .+ most(_vcat_lastinds(sz)))...)
@@ -824,7 +826,7 @@ function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     _view_hcat.(args, Ref(kr), sjr2)
 end
 
-function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix)
+function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret = similar(V)
     n = 0
     _,jr = parentindices(V)
