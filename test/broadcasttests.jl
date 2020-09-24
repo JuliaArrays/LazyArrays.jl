@@ -203,8 +203,10 @@ import Base: broadcasted
     @testset "show" begin
         @test stringmime("text/plain", BroadcastArray(factorial, 1:3)) == "factorial.(3-element UnitRange{$Int}):\n 1\n 2\n 6"
         @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
-        @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Array{Int64,1}):\n 1\n 2"
+        @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Array{$Int,1}):\n 1\n 2"
         @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
-        @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Array{Int64,1}, Int64):\n 1\n 0"
+        @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Array{$Int,1}, $Int):\n 1\n 0"
+        @test stringmime("text/plain", BroadcastArray(^, 1:3, 2)) == "(3-element UnitRange{$Int}) .^ $Int:\n 1\n 4\n 9"
+        x = 1:3; @test stringmime("text/plain", BroadcastArray(@~ x .^ 2)) == "(3-element UnitRange{$Int}) .^ 2:\n 1\n 4\n 9"
     end
 end

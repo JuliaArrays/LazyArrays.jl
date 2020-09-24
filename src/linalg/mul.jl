@@ -59,8 +59,7 @@ size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
 # show
 ###
 
-function _applyarray_summary(io::IO, C::MulArray)
-    args = arguments(C)
+function _applyarray_summary(io::IO, ::typeof(*), args)
     print(io, "(")
     summary(io, first(args))
     print(io, ")")

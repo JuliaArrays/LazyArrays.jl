@@ -246,9 +246,10 @@ end
 # show
 ###
 
-function _applyarray_summary(io::IO, C)
-    args = arguments(C)
-    print(io, C.f)
+
+_applyarray_summary(io::IO, C) = _applyarray_summary(io::IO, C.f, arguments(C))
+function _applyarray_summary(io::IO, f, args)
+    print(io, f)
     print(io, "(")
     summary(io, first(args))
     for a in tail(args)

@@ -244,9 +244,9 @@ arguments(b::BroadcastLayout, A::Transpose) = map(transpose, arguments(b, parent
 # Show
 ###
 
-function _broadcastarray_summary(io, A)
-    args = arguments(A)
-    print(io, "$(A.f).(")
+_broadcastarray_summary(io, A) = _broadcastarray_summary(io, A.f, arguments(A)...)
+function _broadcastarray_summary(io, f, args)
+    print(io, "$f.(")
     summary(io, first(args))
     for a in tail(args)
         print(io, ", ")
@@ -257,8 +257,7 @@ end
 
 for op in (:+, :-, :*, :\, :/)
     @eval begin
-        function _broadcastarray_summary(io::IO, A::BroadcastArray{<:Any,N,typeof($op)}) where N
-            args = arguments(A)
+        function _broadcastarray_summary(io::IO, ::typeof($op), args...)
             if length(args) == 1
                 print(io, "($($op)).(")
                 summary(io, first(args))
@@ -276,6 +275,20 @@ for op in (:+, :-, :*, :\, :/)
         end
     end
 end
+
+function _broadcastarray_summary(io::IO, ::typeof(Base.literal_pow), ::Base.RefValue{typeof(^)}, x, ::Base.RefValue{Val{K}}) where {N,K}
+    print(io, "(")
+    summary(io, x)
+    print(io, ") .^ $K")
+end
+
+function _broadcastarray_summary(io::IO, ::typeof(^), x, y)
+    print(io, "(")
+    summary(io, x)
+    print(io, ") .^ ")
+    summary(io, y)
+end
+
 
 Base.array_summary(io::IO, C::BroadcastArray, inds::Tuple{Vararg{OneTo}}) = _broadcastarray_summary(io, C)
 function Base.array_summary(io::IO, C::BroadcastArray, inds)
