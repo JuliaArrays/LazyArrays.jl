@@ -245,7 +245,7 @@ arguments(b::BroadcastLayout, A::Transpose) = map(transpose, arguments(b, parent
 ###
 
 _broadcastarray_summary(io, A) = _broadcastarray_summary(io, A.f, arguments(A)...)
-function _broadcastarray_summary(io, f, args)
+function _broadcastarray_summary(io, f, args...)
     print(io, "$f.(")
     summary(io, first(args))
     for a in tail(args)
