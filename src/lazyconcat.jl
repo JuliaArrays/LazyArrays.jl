@@ -649,14 +649,14 @@ function layout_broadcast(_, ::PaddedLayout, op, A, B)
     b = paddeddata(B)
     m = length(b)
     zB = Zeros{eltype(B)}(size(B)...)
-    CachedArray(broadcast(op, view(A,1:m), b), broadcast(op, A, zB))
+    CachedArray(convert(Array,broadcast(op, view(A,1:m), b)), broadcast(op, A, zB))
 end
 
 function layout_broadcast(::PaddedLayout, _, op, A, B)
     a = paddeddata(A)
     n = length(a)
     zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray(broadcast(op, a, view(B,1:n)), broadcast(op, zA, B))
+    CachedArray(convert(Array,broadcast(op, a, view(B,1:n))), broadcast(op, zA, B))
 end
 
 function layout_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
