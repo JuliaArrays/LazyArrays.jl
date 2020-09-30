@@ -349,31 +349,32 @@ _vcat_axes(a::Tuple{<:AbstractUnitRange}, b, c...) = tuple(first(a), broadcast((
 _vcat_getindex_eval(y) = ()
 _vcat_getindex_eval(y, a, b...) = tuple(y[a], _vcat_getindex_eval(y, b...)...)
 
-function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
+function layout_broadcasted(::ApplyLayout{typeof(vcat)}, _, op, A::AbstractVector, B::AbstractVector)
     kr = _vcat_axes(map(axes,A.args)...)  # determine how to break up B
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
     ApplyVector(vcat, broadcast((a,b) -> broadcast(op,a,b), A.args, B_arrays)...)
 end
 
-function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
+function layout_broadcasted(_, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector)
     kr = _vcat_axes(axes.(B.args)...)
     A_arrays = _vcat_getindex_eval(A,kr...)
     Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.args)...)
 end
 
-# Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
-broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) =
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
     Broadcasted{LazyArrayStyle{1}}(op, (A, B))
 
+
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcast(op, A, B)
+
+
+# Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) = layout_broadcast(op, A, B)
+
 # ambiguities
-broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = cache_broadcast(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::CachedVector, B::Vcat{<:Any,1}) = cache_broadcast(op, A, B)
-
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1})=
-    broadcast(DefaultArrayStyle{1}(), *, a, b)
-
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::Vcat{<:Any,1})=
-    broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = layout_broadcast(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::Vcat{<:Any,1}) = layout_broadcast(op, A, B)
 
 
 
@@ -633,7 +634,7 @@ function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::Abst
 end
 
 # special case handle broadcasting with padded and cached arrays
-function _cache_broadcast(::PaddedLayout, ::PaddedLayout, op, A, B)
+function layout_broadcast(::PaddedLayout, ::PaddedLayout, op, A, B)
     a,b = paddeddata(A),paddeddata(B)
     n,m = length(a),length(b)
     dat = if n ≤ m
@@ -644,21 +645,21 @@ function _cache_broadcast(::PaddedLayout, ::PaddedLayout, op, A, B)
     CachedArray(dat, broadcast(op, Zeros{eltype(A)}(length(A)), Zeros{eltype(B)}(length(B))))
 end
 
-function _cache_broadcast(_, ::PaddedLayout, op, A, B)
+function layout_broadcast(_, ::PaddedLayout, op, A, B)
     b = paddeddata(B)
     m = length(b)
     zB = Zeros{eltype(B)}(size(B)...)
     CachedArray(broadcast(op, view(A,1:m), b), broadcast(op, A, zB))
 end
 
-function _cache_broadcast(::PaddedLayout, _, op, A, B)
+function layout_broadcast(::PaddedLayout, _, op, A, B)
     a = paddeddata(A)
     n = length(a)
     zA = Zeros{eltype(A)}(size(A)...)
     CachedArray(broadcast(op, a, view(B,1:n)), broadcast(op, zA, B))
 end
 
-function _cache_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
+function layout_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
     a,b = paddeddata(A),paddeddata(B)
     n = length(a)
     resizedata!(B,n)
@@ -669,7 +670,7 @@ function _cache_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
     CachedArray([broadcast(op, a, b); broadcast(op, zA1, @view(Bdata[n+1:end]))], broadcast(op, zA, B.array))
 end
 
-function _cache_broadcast(::CachedLayout, ::PaddedLayout, op, A, B)
+function layout_broadcast(::CachedLayout, ::PaddedLayout, op, A, B)
     b = paddeddata(B)
     n = length(b)
     resizedata!(A,n)

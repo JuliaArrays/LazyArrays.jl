@@ -1,6 +1,7 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call, paddeddata,
-                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!
+                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!,
+                    CachedVector
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -584,5 +585,15 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
 
     @testset "print" begin
         @test Base.replace_in_print_matrix(Vcat(1:3,Zeros(10)), 4, 1, "0.0") == " ⋅ "
+    end
+
+    @testset "projection" begin
+        a = Vcat(Ones(5), Zeros(5))
+        b = randn(10)
+        @test colsupport(a .* b) ≡ Base.OneTo(5)
+        @test a .* b isa CachedVector
+        @test Diagonal(a) * b isa CachedVector
+        @test b .* a isa CachedVector
+        @test a .* b == Diagonal(a) * b == b .* a
     end
 end
