@@ -335,7 +335,12 @@ end
     @test cumsum(BroadcastArray(exp, 1:10)) === Cumsum(BroadcastArray(exp, 1:10))
     @test cumsum(ApplyArray(+, 1:10)) === Cumsum(ApplyArray(+, 1:10))
 
-
+    @testset "Cumprod" begin
+        a = Accumulate(*, 1:5)
+        @test a == cumprod(1:5)
+        a = Accumulate(*, BroadcastArray(+, 1, BroadcastArray(^, 1:10_000_000, -2.0)));
+        @test a[end] ≈ prod(1 .+ (1:10_000_000).^(-2.0))
+    end
 end
 
 @testset "col/rowsupport" begin

@@ -15,7 +15,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
          <, ≤, >, ≥, promote_rule, convert, copy,
          size, step, isempty, length, first, last, ndims,
          getindex, setindex!, intersect, @_inline_meta, inv,
-         sort, sort!, issorted, sortperm, diff, cumsum, sum, in, broadcast,
+         sort, sort!, issorted, sortperm, diff, accumulate, cumsum, sum, in, broadcast,
          eltype, parent, real, imag,
          conj, transpose, adjoint, permutedims, vec,
          exp, log, sqrt, cos, sin, tan, csc, sec, cot,
@@ -58,7 +58,7 @@ import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot, 
 import Base: require_one_based_indexing
 
 export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
-        Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum,
+        Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum, Accumulate,
         applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, @~, LazyArray
 
 

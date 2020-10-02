@@ -121,8 +121,8 @@ end
 resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
 resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), UnknownLayout(), B, mn...)
 
-function cache_filldata!(B, inds) 
-    B.data[inds] .= view(B.array,inds)
+function cache_filldata!(B, inds...) 
+    B.data[inds...] .= view(B.array,inds...)
 end
 
 function _vec_resizedata!(B::AbstractVector, n)
@@ -160,11 +160,11 @@ function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) whe
 
     for k in 1:N-1
         inds = tuple(axes(B.data)[1:k-1]...,νμ[k]+1:nm[k],Base.OneTo.(B.datasize[k+1:end])...)
-        B.data[inds...] .= view(B.array,inds...)
+        cache_filldata!(B.data, inds...)
     end
     let k = N
         inds = tuple(axes(B.data)[1:k-1]...,νμ[k]+1:nm[k])
-        B.data[inds...] .= view(B.array,inds...)
+        cache_filldata!(B.data, inds...)
     end
     B.datasize = nm
 
