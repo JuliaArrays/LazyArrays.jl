@@ -366,9 +366,11 @@ layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op,
 
 
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle{1}, op, a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcasted(op, A, B)
+broadcasted(::LazyArrayStyle{1}, op, a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle{1}, op, A::Zeros{<:Any,1}, B::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 
 
 # Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
