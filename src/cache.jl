@@ -1,6 +1,11 @@
 ## CachedOperator
 
-mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} <: LazyArray{T,N}
+abstract type AbstractCachedArray{T,N} <: LazyArray{T,N} end
+const AbstractCachedVector{T} = AbstractCachedArray{T,1}
+const AbstractCachedMatrix{T} = AbstractCachedArray{T,2}
+
+
+mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} <: AbstractCachedArray{T,N}
     data::DM
     array::M
     datasize::NTuple{N,Int}
@@ -17,6 +22,8 @@ CachedArray(data::DM, array::M, datasize::NTuple{N,Int}) where {T,N,DM<:Abstract
 
 const CachedVector{T,DM<:AbstractVector{T},M<:AbstractVector{T}} = CachedArray{T,1,DM,M}
 const CachedMatrix{T,DM<:AbstractMatrix{T},M<:AbstractMatrix{T}} = CachedArray{T,2,DM,M}
+
+
 
 # CachedArray(data::AbstractArray{T,N}, array::AbstractArray{T,N}, sz::NTuple{N,Int}) where {T,N} =
 #     CachedArray{T,N,typeof(data),typeof(array)}(data, array, sz)
@@ -45,7 +52,7 @@ _cache(_, O::AbstractArray) = CachedArray(O)
 _cache(_, O::CachedArray) = CachedArray(copy(O.data), O.array, O.datasize)
 _cache(::AbstractStridedLayout, O::AbstractArray) = copy(O)
 
-
+cacheddata(A::AbstractCachedArray) = view(A.data,OneTo.(A.datasize)...)
 
 convert(::Type{AbstractArray{T}}, S::CachedArray{T}) where {T} = S
 convert(::Type{AbstractArray{T}}, S::CachedArray) where {T} =
@@ -55,19 +62,19 @@ axes(A::CachedArray) = axes(A.array)
 size(A::CachedArray) = size(A.array)
 length(A::CachedArray) = length(A.array)
 
-@propagate_inbounds function Base.getindex(B::CachedArray{T,N}, kj::Vararg{Integer,N}) where {T,N}
+@propagate_inbounds function Base.getindex(B::AbstractCachedArray{T,N}, kj::Vararg{Integer,N}) where {T,N}
     @boundscheck checkbounds(B, kj...)
     resizedata!(B, kj...)
     B.data[kj...]
 end
 
-@propagate_inbounds function Base.getindex(B::CachedArray{T,1}, k::Integer) where T
+@propagate_inbounds function Base.getindex(B::AbstractCachedArray{T,1}, k::Integer) where T
     @boundscheck checkbounds(B, k)
     resizedata!(B, k)
     B.data[k]
 end
 
-@propagate_inbounds function Base.setindex!(B::CachedArray{T,N}, v, kj::Vararg{Integer,N}) where {T,N}
+@propagate_inbounds function Base.setindex!(B::AbstractCachedArray{T,N}, v, kj::Vararg{Integer,N}) where {T,N}
     @boundscheck checkbounds(B, kj...)
     resizedata!(B,kj...)
     @inbounds B.data[kj...] = v
@@ -77,18 +84,18 @@ end
 _maximum(ax, I::AbstractUnitRange{Int}) = maximum(I)
 _maximum(ax, I) = maximum(ax[I])
 _maximum(ax, ::Colon) = maximum(ax)
-function getindex(A::CachedArray, I...)
+function getindex(A::AbstractCachedArray, I...)
     @boundscheck checkbounds(A, I...)
     resizedata!(A, _maximum.(axes(A), I)...)
     A.data[I...]
 end
 
-@inline getindex(A::CachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
-@inline getindex(A::CachedMatrix, kr::AbstractVector, jr::AbstractVector) = layout_getindex(A, kr, jr)
-@inline getindex(A::CachedMatrix, ::Colon, j::Integer) = layout_getindex(A, :, j)
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector) = layout_getindex(A, kr, jr)
+@inline getindex(A::AbstractCachedMatrix, ::Colon, j::Integer) = layout_getindex(A, :, j)
 
-getindex(A::CachedVector, ::Colon) = copy(A)
-getindex(A::CachedVector, ::Slice) = copy(A)
+getindex(A::AbstractCachedVector, ::Colon) = copy(A)
+getindex(A::AbstractCachedVector, ::Slice) = copy(A)
 
 function cache_getindex(A::AbstractVector, I, J...)
     @boundscheck checkbounds(A, I, J...)
@@ -96,14 +103,14 @@ function cache_getindex(A::AbstractVector, I, J...)
     A.data[I]
 end
 
-getindex(A::CachedVector, I, J...) = cache_getindex(A, I, J...)
+getindex(A::AbstractCachedVector, I, J...) = cache_getindex(A, I, J...)
 
-function getindex(A::CachedVector, I::CartesianIndex)
+function getindex(A::AbstractCachedVector, I::CartesianIndex)
     resizedata!(A, Tuple(I)...)
     A.data[I]
 end
 
-function getindex(A::CachedArray, I::CartesianIndex)
+function getindex(A::AbstractCachedArray, I::CartesianIndex)
     resizedata!(A, Tuple(I)...)
     A.data[I]
 end
@@ -111,7 +118,8 @@ end
 
 ## Array caching
 
-resizedata!(B, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
+resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
+resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), UnknownLayout(), B, mn...)
 
 function cache_filldata!(B, inds) 
     B.data[inds] .= view(B.array,inds)
@@ -121,7 +129,7 @@ function _vec_resizedata!(B::AbstractVector, n)
     @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
-    olddata = paddeddata(B)
+    olddata = cacheddata(B)
     ν, = B.datasize
     n = max(ν,n)
     if n > length(B.data) # double memory to avoid O(n^2) growing
@@ -231,27 +239,27 @@ MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayo
 BroadcastStyle(::Type{<:CachedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 
 broadcasted(::LazyArrayStyle, op, A::CachedArray) =
-    CachedArray(broadcast(op, paddeddata(A)), broadcast(op, A.array))
+    CachedArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
 
 broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Number) =
-    CachedArray(broadcast(op, paddeddata(A), c), broadcast(op, A.array, c))
+    CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
 broadcasted(::LazyArrayStyle, op, c::Number, A::CachedArray) =
-CachedArray(broadcast(op, c, paddeddata(A)), broadcast(op, c, A.array))
+CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Ref) =
-    CachedArray(broadcast(op, paddeddata(A), c), broadcast(op, A.array, c))
+    CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
 broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) =
-    CachedArray(broadcast(op, c, paddeddata(A)), broadcast(op, c, A.array))
+    CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 
 
 function layout_broadcasted(::CachedLayout, _, op, A::AbstractVector, B::AbstractVector)
-    dat = paddeddata(A)
+    dat = cacheddata(A)
     n = length(dat)
     m = length(B)
     CachedArray(broadcast(op, dat, view(B,1:n)), broadcast(op, A.array, B))
 end
 
 function layout_broadcasted(_, ::CachedLayout, op, A::AbstractVector, B::AbstractVector)
-    dat = paddeddata(B)
+    dat = cacheddata(B)
     n = length(dat)
     m = length(A)
     CachedArray(broadcast(op, view(A,1:n), dat), broadcast(op, A, B.array))
@@ -261,8 +269,8 @@ function layout_broadcasted(::CachedLayout, ::CachedLayout, op, A::AbstractVecto
     n = max(A.datasize[1],B.datasize[1])
     resizedata!(A,n)
     resizedata!(B,n)
-    Adat = view(paddeddata(A),1:n)
-    Bdat = view(paddeddata(B),1:n)
+    Adat = view(cacheddata(A),1:n)
+    Bdat = view(cacheddata(B),1:n)
     CachedArray(broadcast(op, Adat, Bdat), broadcast(op, A.array, B.array))
 end
 
@@ -290,10 +298,10 @@ broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::SubArray{<:Any,1,<:Cache
 ###
 
 # allow overloading for special backends, e.g., padded
-_norm2(_, a) = sqrt(norm(paddeddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
-_norm1(_, a) = norm(paddeddata(a),1) + norm(@view(a.array[a.datasize[1]+1:end]),1)
-_normInf(_, a) = max(norm(paddeddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
-_normp(_, a, p) = (norm(paddeddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
+_norm2(_, a) = sqrt(norm(cacheddata(a),2)^2 + norm(@view(a.array[a.datasize[1]+1:end]),2)^2)
+_norm1(_, a) = norm(cacheddata(a),1) + norm(@view(a.array[a.datasize[1]+1:end]),1)
+_normInf(_, a) = max(norm(cacheddata(a),Inf), norm(@view(a.array[a.datasize[1]+1:end]),Inf))
+_normp(_, a, p) = (norm(cacheddata(a),p)^p + norm(@view(a.array[a.datasize[1]+1:end]),p)^p)^inv(p)
 
 norm1(a::CachedVector) = _norm1(MemoryLayout(a), a)
 norm2(a::CachedVector) = _norm2(MemoryLayout(a), a)

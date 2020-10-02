@@ -366,6 +366,7 @@ layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op,
 
 
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcasted(op, A, B)
+broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1}, B::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcasted(op, A, B)
 
 
@@ -570,7 +571,7 @@ cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
 
-paddeddata(A::CachedArray) = view(A.data,OneTo.(A.datasize)...)
+paddeddata(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = cacheddata(A)
 _vcat_paddeddata(A, B::Zeros) = A
 _vcat_paddeddata(A, B) = Vcat(A, paddeddata(B))
 _vcat_paddeddata(A, B, C...) = Vcat(A, _vcat_paddeddata(B, C...))
@@ -634,7 +635,7 @@ function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::Abst
 end
 
 # special case handle broadcasting with padded and cached arrays
-function layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A, B)
+function layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector)
     a,b = paddeddata(A),paddeddata(B)
     n,m = length(a),length(b)
     dat = if n ≤ m
@@ -660,10 +661,10 @@ function layout_broadcasted(::PaddedLayout, _, op, A::AbstractVector, B::Abstrac
 end
 
 function layout_broadcasted(::PaddedLayout, ::CachedLayout, op, A, B)
-    a,b = paddeddata(A),paddeddata(B)
+    a = paddeddata(A)
     n = length(a)
     resizedata!(B,n)
-    Bdata = paddeddata(B)
+    Bdata = cacheddata(B)
     b = view(Bdata,1:n)
     zA1 = Zeros{eltype(A)}(size(Bdata,1)-n)
     zA = Zeros{eltype(A)}(size(A)...)
@@ -674,7 +675,7 @@ function layout_broadcasted(::CachedLayout, ::PaddedLayout, op, A, B)
     b = paddeddata(B)
     n = length(b)
     resizedata!(A,n)
-    Adata = paddeddata(A)
+    Adata = cacheddata(A)
     a = view(Adata,1:n)
     zB1 = Zeros{eltype(B)}(size(Adata,1)-n)
     zB = Zeros{eltype(B)}(size(B)...)
