@@ -399,7 +399,7 @@ function getindex(D::Diff, k::Integer, j::Integer)
     end
 end
 
-mutable struct Accumulate{T, N, Op, DM, Arr<:AbstractArray{T,N}} <: AbstractCachedArray{T, N}
+mutable struct Accumulate{T, N, Op, DM<:AbstractArray{T,N}, Arr<:AbstractArray{T,N}} <: AbstractCachedArray{T, N}
     op::Op
     data::DM
     v::Arr
@@ -407,7 +407,7 @@ mutable struct Accumulate{T, N, Op, DM, Arr<:AbstractArray{T,N}} <: AbstractCach
     datasize::NTuple{N,Int}
 end
 
-Accumulate(op, data, v::AbstractVector, d::Int) = Accumulate(op, data, v, d, size(data))
+Accumulate(op, data::AbstractArray, v::AbstractArray, d::Int) = Accumulate(op, data, v, d, size(data))
 function Accumulate(op, v::AbstractVector, d::Int)
     @assert d == 1
     Accumulate(op, [v[1]], v, d)
@@ -425,7 +425,7 @@ function Accumulate(op, A::AbstractMatrix{T}; dims::Integer=1) where T
     Accumulate(op, A, dims)
 end
 
-const Cumsum{T,N,Arr} = Accumulate{T,N,typeof(+),Arr}
+const Cumsum{T,N,Arr} = Accumulate{T,N,typeof(+),Array{T,N},Arr}
 Cumsum(v::AbstractArray; dims::Integer=1) = Accumulate(+, v; dims=dims)
 
 IndexStyle(::Type{<:Accumulate{<:Any,1}}) = IndexLinear()

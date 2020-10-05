@@ -332,8 +332,10 @@ end
         @test cumsum(a) == cumsum(Vector(a))
     end
 
-    @test cumsum(BroadcastArray(exp, 1:10)) === Cumsum(BroadcastArray(exp, 1:10))
-    @test cumsum(ApplyArray(+, 1:10)) === Cumsum(ApplyArray(+, 1:10))
+    @test cumsum(BroadcastArray(exp, 1:10)) == Cumsum(BroadcastArray(exp, 1:10))
+    @test cumsum(BroadcastArray(exp, 1:10)) isa typeof(Cumsum(BroadcastArray(exp, 1:10)))
+    @test cumsum(ApplyArray(+, 1:10)) == Cumsum(ApplyArray(+, 1:10))
+    @test cumsum(ApplyArray(+, 1:10)) isa typeof(Cumsum(ApplyArray(+, 1:10)))
 
     @testset "Cumprod" begin
         a = Accumulate(*, 1:5)

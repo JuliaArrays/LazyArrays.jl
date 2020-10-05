@@ -99,11 +99,12 @@ getindex(A::AbstractCachedVector, ::Slice) = copy(A)
 
 function cache_getindex(A::AbstractVector, I, J...)
     @boundscheck checkbounds(A, I, J...)
-    resizedata!(A, _maximum(axes(A,1), I))
+    isempty(I) || resizedata!(A, _maximum(axes(A,1), I))
     A.data[I]
 end
 
 getindex(A::AbstractCachedVector, I, J...) = cache_getindex(A, I, J...)
+getindex(A::AbstractCachedVector, I::AbstractVector) = layout_getindex(A, I)
 
 function getindex(A::AbstractCachedVector, I::CartesianIndex)
     resizedata!(A, Tuple(I)...)

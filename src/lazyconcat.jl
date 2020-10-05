@@ -364,6 +364,11 @@ end
 layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
     Broadcasted{LazyArrayStyle{1}}(op, (A, B))
 
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, Blay::CachedLayout, op, A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(UnknownLayout(), Blay, op, A, B)
+layout_broadcasted(Alay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(Alay, UnknownLayout(), op, A, B)    
+
 
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcasted(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcasted(op, A, B)
@@ -663,7 +668,7 @@ function layout_broadcasted(::PaddedLayout, _, op, A::AbstractVector, B::Abstrac
     CachedArray(convert(Array,broadcast(op, a, view(B,1:n))), broadcast(op, zA, B))
 end
 
-function layout_broadcasted(::PaddedLayout, ::CachedLayout, op, A, B)
+function layout_broadcasted(::PaddedLayout, ::CachedLayout, op, A::AbstractVector, B::AbstractVector)
     a = paddeddata(A)
     n = length(a)
     resizedata!(B,n)
@@ -674,7 +679,7 @@ function layout_broadcasted(::PaddedLayout, ::CachedLayout, op, A, B)
     CachedArray([broadcast(op, a, b); broadcast(op, zA1, @view(Bdata[n+1:end]))], broadcast(op, zA, B.array))
 end
 
-function layout_broadcasted(::CachedLayout, ::PaddedLayout, op, A, B)
+function layout_broadcasted(::CachedLayout, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector)
     b = paddeddata(B)
     n = length(b)
     resizedata!(A,n)
