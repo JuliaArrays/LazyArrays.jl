@@ -160,11 +160,11 @@ function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) whe
 
     for k in 1:N-1
         inds = tuple(axes(B.data)[1:k-1]...,νμ[k]+1:nm[k],Base.OneTo.(B.datasize[k+1:end])...)
-        cache_filldata!(B.data, inds...)
+        cache_filldata!(B, inds...)
     end
     let k = N
         inds = tuple(axes(B.data)[1:k-1]...,νμ[k]+1:nm[k])
-        cache_filldata!(B.data, inds...)
+        cache_filldata!(B, inds...)
     end
     B.datasize = nm
 
