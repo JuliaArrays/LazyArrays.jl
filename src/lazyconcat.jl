@@ -690,6 +690,11 @@ function layout_broadcasted(::CachedLayout, ::PaddedLayout, op, A::AbstractVecto
     CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB1)], broadcast(op, A.array, zB))
 end
 
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::PaddedLayout, op, A::AbstractVector, B::AbstractVector) = 
+    layout_broadcasted(UnknownLayout(), lay, op, A, B)
+layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) = 
+    layout_broadcasted(lay, UnknownLayout(), op, A, B)    
+
 
 ###
 # Dot/Axpy
