@@ -100,18 +100,18 @@ similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
 ###
 # * layout
 ###
-_copy_ldiv_mul(A, B₀, B₁...) = apply(*, A \  B₀,  B₁...)
-copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
-copy(L::Ldiv{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
-copy(L::Ldiv{<:ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
+@inline _copy_ldiv_mul(A, B₀, B₁...) = apply(*, A \  B₀,  B₁...)
+@inline copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
+@inline copy(L::Ldiv{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
+@inline copy(L::Ldiv{<:ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 
-_copy_ldiv_ldiv(B, A₀) = A₀ \ B
-_copy_ldiv_ldiv(B, A₀, A₁...) = _copy_ldiv_ldiv(A₀ \ B, A₁...)
-copy(L::Ldiv{<:ApplyLayout{typeof(*)}}) = _copy_ldiv_ldiv(L.B, arguments(ApplyLayout{typeof(*)}(), L.A)...)
-copy(L::Ldiv{<:ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = _copy_ldiv_ldiv(L.B, arguments(ApplyLayout{typeof(*)}(), L.A)...)
-copy(L::Ldiv{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
-copy(L::Ldiv{<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
-copy(L::Ldiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
+@inline _copy_ldiv_ldiv(B, A₀) = A₀ \ B
+@inline _copy_ldiv_ldiv(B, A₀, A₁...) = _copy_ldiv_ldiv(A₀ \ B, A₁...)
+@inline copy(L::Ldiv{<:ApplyLayout{typeof(*)}}) = _copy_ldiv_ldiv(L.B, arguments(ApplyLayout{typeof(*)}(), L.A)...)
+@inline copy(L::Ldiv{<:ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = _copy_ldiv_ldiv(L.B, arguments(ApplyLayout{typeof(*)}(), L.A)...)
+@inline copy(L::Ldiv{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
+@inline copy(L::Ldiv{<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
+@inline copy(L::Ldiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 
 ###
 # Diagonal

@@ -349,6 +349,12 @@ _vcat_axes(a::Tuple{<:AbstractUnitRange}, b, c...) = tuple(first(a), broadcast((
 _vcat_getindex_eval(y) = ()
 _vcat_getindex_eval(y, a, b...) = tuple(y[a], _vcat_getindex_eval(y, b...)...)
 
+# let it stay lazy
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::AbstractLazyLayout, op, A::AbstractVector, B::AbstractVector) =
+    Broadcasted{LazyArrayStyle{1}}(op, (A, B))
+layout_broadcasted(::AbstractLazyLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
+    Broadcasted{LazyArrayStyle{1}}(op, (A, B))
+
 function layout_broadcasted(::ApplyLayout{typeof(vcat)}, _, op, A::AbstractVector, B::AbstractVector)
     kr = _vcat_axes(map(axes,A.args)...)  # determine how to break up B
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
@@ -367,7 +373,7 @@ layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op,
 layout_broadcasted(::ApplyLayout{typeof(vcat)}, Blay::CachedLayout, op, A::AbstractVector, B::AbstractVector) =
     layout_broadcasted(UnknownLayout(), Blay, op, A, B)
 layout_broadcasted(Alay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
-    layout_broadcasted(Alay, UnknownLayout(), op, A, B)    
+    layout_broadcasted(Alay, UnknownLayout(), op, A, B)
 
 
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcasted(op, A, B)
@@ -690,10 +696,10 @@ function layout_broadcasted(::CachedLayout, ::PaddedLayout, op, A::AbstractVecto
     CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB1)], broadcast(op, A.array, zB))
 end
 
-layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::PaddedLayout, op, A::AbstractVector, B::AbstractVector) = 
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::PaddedLayout, op, A::AbstractVector, B::AbstractVector) =
     layout_broadcasted(UnknownLayout(), lay, op, A, B)
-layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) = 
-    layout_broadcasted(lay, UnknownLayout(), op, A, B)    
+layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(lay, UnknownLayout(), op, A, B)
 
 
 ###
@@ -974,10 +980,10 @@ copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))
 
 # Triangular columns
 
-sublayout(::TriangularLayout{'U','N', ML}, ::Type{<:Tuple{KR,Integer}}) where {KR,ML} = 
+sublayout(::TriangularLayout{'U','N', ML}, ::Type{<:Tuple{KR,Integer}}) where {KR,ML} =
     sublayout(PaddedLayout{ML}(), Tuple{KR})
 
-sublayout(::TriangularLayout{'L','N', ML}, ::Type{<:Tuple{Integer,JR}}) where {JR,ML} = 
+sublayout(::TriangularLayout{'L','N', ML}, ::Type{<:Tuple{Integer,JR}}) where {JR,ML} =
     sublayout(PaddedLayout{ML}(), Tuple{JR})
 
 resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)

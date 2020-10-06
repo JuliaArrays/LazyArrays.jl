@@ -286,6 +286,7 @@ end
 broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = layout_broadcasted(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = layout_broadcasted(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector) = layout_broadcasted(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::Broadcasted, B::CachedVector) = broadcast(op, materialize(A), B)
 
 broadcasted(::LazyArrayStyle, op, A::SubArray{<:Any,1,<:CachedMatrix}, B::CachedVector) = layout_broadcasted(op, A, B)
 broadcasted(::LazyArrayStyle, op, A::SubArray{<:Any,1,<:CachedMatrix}, B::AbstractVector) = layout_broadcasted(op, A, B)
