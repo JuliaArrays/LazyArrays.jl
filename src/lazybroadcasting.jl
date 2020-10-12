@@ -236,8 +236,14 @@ end
 call(b::BroadcastLayout, a::AdjOrTrans) = call(b, parent(a))
 
 transposelayout(b::BroadcastLayout) = b
-arguments(b::BroadcastLayout, A::Adjoint) = map(adjoint, arguments(b, parent(A)))
-arguments(b::BroadcastLayout, A::Transpose) = map(transpose, arguments(b, parent(A)))
+
+_adjoint(a) = adjoint(a)
+_adjoint(a::Ref) = a
+_transpose(a) = transpose(a)
+_transpose(a::Ref) = a
+
+arguments(b::BroadcastLayout, A::Adjoint) = map(_adjoint, arguments(b, parent(A)))
+arguments(b::BroadcastLayout, A::Transpose) = map(_transpose, arguments(b, parent(A)))
 
 
 ###
