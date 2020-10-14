@@ -45,11 +45,11 @@ function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
     all(a_args .== b_args)
 end
 
-@propagate_inbounds @inline vcat_getindex(f, idx::Vararg{Integer}) =
+@propagate_inbounds @inline vcat_getindex(f, idx...) =
     vcat_getindex_recursive(f, idx, f.args...)
 
 @propagate_inbounds @inline function vcat_getindex_recursive(
-        f, idx::NTuple{1}, A, args...)
+        f, idx::Tuple{Integer}, A, args...)
     k, = idx
     T = eltype(f)
     n = length(A)
@@ -58,7 +58,7 @@ end
 end
 
 @propagate_inbounds @inline function vcat_getindex_recursive(
-        f, idx::NTuple{2}, A, args...)
+        f, idx::Tuple{Integer,Integer}, A, args...)
     k, j = idx
     T = eltype(f)
     n = size(A, 1)
@@ -66,10 +66,21 @@ end
     vcat_getindex_recursive(f, (k - n, j), args...)
 end
 
+@propagate_inbounds @inline function vcat_getindex_recursive(
+        f, idx::Tuple{Integer,AbstractVector}, A, args...)
+    k, j = idx
+    T = eltype(f)
+    n = size(A, 1)
+    k ≤ n && return convert(AbstractVector{T}, A[k, j])
+    vcat_getindex_recursive(f, (k - n, j), args...)
+end
+
 @inline vcat_getindex_recursive(f, idx) = throw(BoundsError(f, idx))
 
 @propagate_inbounds @inline getindex(f::Vcat{<:Any,1}, k::Integer) = vcat_getindex(f, k)
 @propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::Integer) = vcat_getindex(f, k, j)
+@propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::AbstractVector) = vcat_getindex(f, k, j)
+
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(vcat)}, k::Integer)= vcat_getindex(f, k)
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(vcat)}, k::Integer, j::Integer)= vcat_getindex(f, k, j)
 getindex(f::Applied{<:Any,typeof(vcat)}, k::Integer)= vcat_getindex(f, k)
@@ -125,11 +136,11 @@ ndims(::Applied{<:Any,typeof(hcat)}) = 2
 size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
 Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
 
-@inline hcat_getindex(f, k::Integer, j::Integer) =
+@inline hcat_getindex(f, k, j::Integer) =
     hcat_getindex_recursive(f, (k, j), f.args...)
 
 @inline function hcat_getindex_recursive(
-        f, idx::NTuple{2}, A, args...)
+        f, idx::Tuple{Any,Integer}, A, args...)
     k, j = idx
     T = eltype(f)
     n = size(A, 2)
@@ -140,6 +151,7 @@ end
 @inline hcat_getindex_recursive(f, idx) = throw(BoundsError(f, idx))
 
 getindex(f::Hcat, k::Integer, j::Integer) = hcat_getindex(f, k, j)
+getindex(f::Hcat, k::AbstractVector, j::Integer) = hcat_getindex(f, k, j)
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(f, k, j)
 getindex(f::Applied{<:Any,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(f, k, j)
 
@@ -800,7 +812,7 @@ _argsindices(sz) = broadcast(:, _vcat_firstinds(sz), _vcat_lastinds(sz))
 
 _view_vcat(a::Number, kr) = Fill(a,length(kr))
 _view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
-_view_vcat(a, kr...) = view(a, kr...)
+_view_vcat(a, kr...) = _viewifmutable(a, kr...)
 
 function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr)
     sz = size.(arguments(A),1)
@@ -818,7 +830,17 @@ end
 
 _vcat_sub_arguments(LAY::ApplyLayout{typeof(vcat)}, A, V) = _vcat_sub_arguments(LAY, A, V, parentindices(V)...)
 
-_vcat_sub_arguments(::ApplyLayout{typeof(hcat)}, A, V) = arguments(ApplyLayout{typeof(hcat)}(), V)
+
+function _vcat_sub_arguments(L::ApplyLayout{typeof(hcat)}, A, V)
+    A = parent(V)
+    args = arguments(L, A)
+    k,jr = parentindices(V)
+    sz = size.(args,2)
+    sjr = intersect.(_argsindices(sz), Ref(jr))
+    sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
+    _view_hcat.(args, k, sjr2)
+end
+
 _vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
 
 _vcat_sub_arguments(A, V) = _vcat_sub_arguments(MemoryLayout(typeof(A)), A, V)
@@ -834,8 +856,13 @@ function arguments(L::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
     _view_vcat.(args, skr2, Ref(jr))
 end
 
-_view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
-_view_hcat(a, kr, jr) = view(a, kr, jr)
+@inline _view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
+@inline _view_hcat(a::Number, kr::Number, jr) = Fill(a,length(jr))
+@inline _view_hcat(a, kr, jr) = _viewifmutable(a, kr, jr)
+
+# equivalent to broadcast but written to maintain type stability
+__view_hcat(::Tuple{}, _, ::Tuple{}) = ()
+@inline __view_hcat(args::Tuple, kr, jrs::Tuple) = (_view_hcat(args[1], kr, jrs[1]), __view_hcat(tail(args), kr, tail(jrs))...)
 
 function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     A = parent(V)
@@ -844,7 +871,7 @@ function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     sz = size.(args,2)
     sjr = intersect.(_argsindices(sz), Ref(jr))
     sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
-    _view_hcat.(args, Ref(kr), sjr2)
+    __view_hcat(args, kr, sjr2)
 end
 
 function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
@@ -859,7 +886,7 @@ function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret
 end
 
-sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector) = ApplyArray(V)
+sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector) = ApplyVector(V)
 
 function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     ret = similar(V)

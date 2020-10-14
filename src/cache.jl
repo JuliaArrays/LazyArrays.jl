@@ -92,6 +92,8 @@ end
 
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector) = layout_getindex(A, kr, jr)
+@inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractVector) = layout_getindex(A, k, jr)
+@inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = layout_getindex(A, k, :)
 @inline getindex(A::AbstractCachedMatrix, ::Colon, j::Integer) = layout_getindex(A, :, j)
 
 getindex(A::AbstractCachedVector, ::Colon) = copy(A)

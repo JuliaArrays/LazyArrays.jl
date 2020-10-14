@@ -596,4 +596,10 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test b .* a isa CachedVector
         @test a .* b == Diagonal(a) * b == b .* a
     end
+
+    @testset "Hcat getindex" begin
+        A = Hcat(1, (1:10)')
+        @test A[1,:] isa Vcat{<:Any,1}
+        @test A[1,:][1:10] == A[1,1:10]
+    end
 end

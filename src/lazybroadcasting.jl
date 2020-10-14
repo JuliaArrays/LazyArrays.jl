@@ -212,6 +212,11 @@ sublayout(b::BroadcastLayout, _) = b
 @inline _viewifmutable(a, inds...) = view(a, inds...)
 @inline _viewifmutable(a::AbstractFill, inds...) = a[inds...]
 @inline _viewifmutable(a::AbstractRange, inds...) = a[inds...]
+_viewifmutable(a::BroadcastArray, inds...) = a[inds...]
+function _viewifmutable(a::AdjOrTrans{<:Any,<:AbstractVector}, k::Integer, j)
+    @assert k == 1
+    _viewifmutable(parent(a), j)
+end
 @inline _broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(size(a), inds)...)
 @inline _broadcastview(a::Number, inds) = a
 @inline _broadcastview(a::Base.RefValue, inds) = a
@@ -223,6 +228,10 @@ sublayout(b::BroadcastLayout, _) = b
     args = arguments(lay, P)
     __broadcastview(parentindices(V), args...)
 end
+
+@inline _broadcast_sub_arguments(lay::DualLayout{ML}, P, V::AbstractVector) where ML =
+    arguments(ML(), view(P', parentindices(V)[2]))
+
 @inline _broadcast_sub_arguments(A, V) = _broadcast_sub_arguments(MemoryLayout(A), A, V)
 @inline _broadcast_sub_arguments(V) =  _broadcast_sub_arguments(parent(V), V)
 @inline arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
