@@ -310,3 +310,27 @@ function Base.array_summary(io::IO, C::BroadcastArray, inds)
     _broadcastarray_summary(io, C)
     print(io, " with indices ", Base.inds2string(inds))
 end
+
+
+function Base.array_summary(io::IO, C::Adjoint{<:Any,<:LazyArray}, inds::Tuple{Vararg{OneTo}})
+    print(io, "(")
+    summary(io, parent(C))
+    print(io, ")'")
+end
+function Base.array_summary(io::IO, C::Adjoint{<:Any,<:LazyArray}, inds)
+    print(io, "(")
+    summary(io, parent(C))
+    print(io, ")' with indices ", Base.inds2string(inds))
+end
+
+
+function Base.array_summary(io::IO, C::Transpose{<:Any,<:LazyArray}, inds::Tuple{Vararg{OneTo}})
+    print(io, "transpose(")
+    summary(io, parent(C))
+    print(io, ")")
+end
+function Base.array_summary(io::IO, C::Transpose{<:Any,<:LazyArray}, inds)
+    print(io, "transpose(")
+    summary(io, parent(C))
+    print(io, ") with indices ", Base.inds2string(inds))
+end
