@@ -1007,16 +1007,23 @@ copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))
 
 # Triangular columns
 
-sublayout(::TriangularLayout{'U','N', ML}, ::Type{<:Tuple{KR,Integer}}) where {KR,ML} =
-    sublayout(PaddedLayout{ML}(), Tuple{KR})
+sublayout(::TriangularLayout{'U','N', ML}, INDS::Type{<:Tuple{KR,Integer}}) where {KR,ML} =
+    sublayout(PaddedLayout{typeof(sublayout(ML(), INDS))}(), Tuple{KR})
 
-sublayout(::TriangularLayout{'L','N', ML}, ::Type{<:Tuple{Integer,JR}}) where {JR,ML} =
-    sublayout(PaddedLayout{ML}(), Tuple{JR})
+sublayout(::TriangularLayout{'L','N', ML}, INDS::Type{<:Tuple{Integer,JR}}) where {JR,ML} =
+    sublayout(PaddedLayout{typeof(sublayout(ML(), INDS))}(), Tuple{JR})
 
 resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
+resizedata!(A::LowerTriangular, k::Integer, j::Integer) = resizedata!(parent(A), k, min(k,j))
 
 function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
     P = parent(S)
     (kr,j) = parentindices(S)
     view(triangulardata(P), kr ∩ (1:j), j)
+end
+
+function sub_paddeddata(::TriangularLayout{'L','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
+    P = parent(S)
+    (k,jr) = parentindices(S)
+    view(triangulardata(P), k, jr ∩ (1:k))
 end

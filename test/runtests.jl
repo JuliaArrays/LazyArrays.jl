@@ -432,4 +432,10 @@ end
     @test MemoryLayout(v) isa PaddedLayout{DenseColumnMajor}
     @test layout_getindex(v,1:4) == U[1:4,3]
     @test layout_getindex(v,1:4) isa Vcat
+
+    L = LowerTriangular(A)
+    w = view(L,3,:)
+    @test MemoryLayout(w) isa PaddedLayout{ArrayLayouts.StridedLayout}
+    @test layout_getindex(w,1:4) == L[3,1:4]
+    @test layout_getindex(w,1:4) isa Vcat
 end

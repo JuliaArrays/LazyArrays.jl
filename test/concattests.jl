@@ -380,6 +380,15 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test H./Ref(2) isa Hcat
         @test Ref(2).\H isa Hcat
         @test H/2  == H./Ref(2) == 2\H == Ref(2) .\ H == [1/2 zeros(1,10)]
+
+        @testset "vcat and padded" begin
+            x,y = Vcat([1,2,3],Zeros(5)), Vcat(5, 1:7)
+            @test MemoryLayout(x) isa PaddedLayout
+            @test MemoryLayout(y) isa ApplyLayout{typeof(vcat)}
+            @test x .+ y == y .+ x == Vector(x) .+ Vector(y)
+            @test x .+ y isa BroadcastVector
+            @test y .+ x isa BroadcastVector
+        end
     end
 
     @testset "maximum/minimum Vcat" begin
