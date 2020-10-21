@@ -48,6 +48,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
 
         @testset "Matrix" begin
             A = Vcat(randn(2,10), randn(4,10))
+            @inferred Vcat(randn(2,10), randn(4,10))
             @test @inferred(length(A)) == 60
             @test @inferred(size(A)) == (6,10)
             @test_throws BoundsError A[61]
