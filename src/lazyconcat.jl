@@ -67,7 +67,7 @@ end
 end
 
 @propagate_inbounds @inline function vcat_getindex_recursive(
-        f, idx::Tuple{Integer,AbstractVector}, A, args...)
+        f, idx::Tuple{Integer,Union{Colon,AbstractVector}}, A, args...)
     k, j = idx
     T = eltype(f)
     n = size(A, 1)
@@ -80,6 +80,7 @@ end
 @propagate_inbounds @inline getindex(f::Vcat{<:Any,1}, k::Integer) = vcat_getindex(f, k)
 @propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::Integer) = vcat_getindex(f, k, j)
 @propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::AbstractVector) = vcat_getindex(f, k, j)
+@propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::Colon) = vcat_getindex(f, k, j)
 
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(vcat)}, k::Integer)= vcat_getindex(f, k)
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(vcat)}, k::Integer, j::Integer)= vcat_getindex(f, k, j)
@@ -140,12 +141,21 @@ Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
     hcat_getindex_recursive(f, (k, j), f.args...)
 
 @inline function hcat_getindex_recursive(
-        f, idx::Tuple{Any,Integer}, A, args...)
+        f, idx::Tuple{Integer,Integer}, A, args...)
     k, j = idx
     T = eltype(f)
     n = size(A, 2)
     j ≤ n && return convert(T, A[k, j])::T
     hcat_getindex_recursive(f, (k, j - n), args...)
+end
+
+@inline function hcat_getindex_recursive(
+        f, idx::Tuple{Union{Colon,AbstractVector},Integer}, A, args...)
+    kr, j = idx
+    T = eltype(f)
+    n = size(A, 2)
+    j ≤ n && return convert(AbstractVector{T}, A[kr, j])
+    hcat_getindex_recursive(f, (kr, j - n), args...)
 end
 
 @inline hcat_getindex_recursive(f, idx) = throw(BoundsError(f, idx))
@@ -455,6 +465,7 @@ _vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:SVector{M},<:AbstractFi
    Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
 
 # default is BroadcastArray
+# TODO: REMOVE
 _vcat_broadcasted(::Type{T}, op, A, B) where T =
     Broadcasted{LazyArrayStyle{1}}(op, (Vcat(A...), Vcat(B...)))
 

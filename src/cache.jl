@@ -17,8 +17,13 @@ mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} <: 
     end
 end
 
-CachedArray(data::DM, array::M, datasize::NTuple{N,Int}) where {T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} =
-    CachedArray{T,N,DM,M}(data, array, datasize)
+CachedArray(data::AbstractArray{T,N}, array::AbstractArray{T,N}, datasize::NTuple{N,Int}) where {T,N} =
+    CachedArray{T,N,typeof(data),typeof(array)}(data, array, datasize)
+
+function CachedArray(data::AbstractArray{T,N}, array::AbstractArray{V,N}, datasize::NTuple{N,Int}) where {T,V,N}
+    TV = promote_type(T,V)
+    CachedArray(convert(AbstractArray{TV,N}, data), convert(AbstractArray{TV,N}, array), datasize)
+end
 
 const CachedVector{T,DM<:AbstractVector{T},M<:AbstractVector{T}} = CachedArray{T,1,DM,M}
 const CachedMatrix{T,DM<:AbstractMatrix{T},M<:AbstractMatrix{T}} = CachedArray{T,2,DM,M}

@@ -87,6 +87,15 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test A' == Matrix(A)'
             @test transpose(A) == transpose(Matrix(A))
             @test permutedims(A) == permutedims(Matrix(A))
+
+            @testset "indexing" begin
+                A = Vcat(randn(2,10), randn(4,10))
+                @test A[2,1:5] == Matrix(A)[2,1:5]
+                @test A[2,:] == Matrix(A)[2,:]
+                @test A[1:5,2] == Matrix(A)[1:5,2]
+                @test A[:,2] == Matrix(A)[:,2]
+                @test A[:,:] == A[1:6,:] == A[:,1:10] == A[1:6,1:10] == A
+            end
         end
 
         @testset "etc" begin
@@ -168,6 +177,14 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @testset "adjoint vec / permutediims" begin
             @test vec(Hcat([1,2]', 3)) == 1:3
             @test permutedims(Hcat([1,2]', 3)) == reshape(1:3,3,1)
+        end
+
+        @testset "indexing" begin
+            A = Hcat(randn(2,2), randn(2,3))
+            @test A[2,1:5] == A[2,:] == Matrix(A)[2,:]
+            @test A[1:2,2] == A[:,2] == Matrix(A)[:,2]
+            @test A[:,2] == Matrix(A)[:,2]
+            @test A[:,:] == A[1:2,:] == A[:,1:5] == A[1:2,1:5] == A
         end
     end
 
