@@ -428,53 +428,6 @@ function +(A::AbstractArray, B::Vcat)
     A .+ B
 end
 
-######
-# Special Vcat broadcasts
-#
-# We use Vcat for infinite padded vectors, so we need to special case
-# two arrays. This may be generalisable in the future
-######
-
-function _vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:AbstractVector,<:AbstractFill},
-                               (Bhead, Btail)::Tuple{<:AbstractVector,<:AbstractFill}) where T
-    if length(Ahead) ≥ length(Bhead)
-        M,m = length(Ahead), length(Bhead)
-        Chead = Vector{T}(undef,M)
-        view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
-        view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
-
-        Ctail = op.(Atail, Btail[M-m+1:end])
-    else
-        m,M = length(Ahead), length(Bhead)
-        Chead = Vector{T}(undef,M)
-        view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
-        view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
-
-        Ctail = op.(Atail[M-m+1:end], Btail)
-    end
-
-    Vcat(Chead, Ctail)
-end
-
-_vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:Number,<:AbstractFill},
-                           (Bhead, Btail)::Tuple{<:Number,<:AbstractFill}) where {M,T} =
-   Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-
-_vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:SVector{M},<:AbstractFill},
-                           (Bhead, Btail)::Tuple{<:SVector{M},<:AbstractFill}) where {M,T} =
-   Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-
-# default is BroadcastArray
-# TODO: REMOVE
-_vcat_broadcasted(::Type{T}, op, A, B) where T =
-    Broadcasted{LazyArrayStyle{1}}(op, (Vcat(A...), Vcat(B...)))
-
-
-broadcasted(::LazyArrayStyle{1}, op, A::Vcat{T, 1, <:Tuple{<:Any,<:Any}},
-                                     B::Vcat{V, 1, <:Tuple{<:Any,<:Any}}) where {T,V} =
-  _vcat_broadcasted(promote_type(T,V), op, A.args, B.args)
-
-
 
 ####
 # Cumsum
@@ -669,6 +622,52 @@ _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector, src::CachedVector) 
 function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::AbstractVector)
     zero!(paddeddata(dest))
     dest
+end
+
+######
+# Special Vcat broadcasts
+#
+# We use Vcat for infinite padded vectors, so we need to special case
+# two arrays. This may be generalisable in the future
+######
+
+function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}},
+                                              B::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}})
+    (Ahead, Atail) = A.args
+    (Bhead, Btail) = B.args
+    T = promote_type(eltype(A), eltype(B))
+
+    if length(Ahead) ≥ length(Bhead)
+        M,m = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
+        view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
+
+        Ctail = op.(Atail, Btail[M-m+1:end])
+    else
+        m,M = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
+        view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
+
+        Ctail = op.(Atail[M-m+1:end], Btail)
+    end
+
+    Vcat(Chead, Ctail)
+end
+
+function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}},
+                                              B::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
+    (Ahead, Atail) = A.args
+    (Bhead, Btail) = B.args
+    Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
+end
+
+function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{SVector{M},AbstractFill}},
+                                              B::Vcat{<:Any,1,<:Tuple{SVector{M},AbstractFill}}) where M
+    (Ahead, Atail) = A.args
+    (Bhead, Btail) = B.args
+    Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
 end
 
 # special case handle broadcasting with padded and cached arrays
