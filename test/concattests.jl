@@ -389,6 +389,14 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test x .+ y isa BroadcastVector
             @test y .+ x isa BroadcastVector
         end
+
+        @testset "vcat and Zeros" begin
+            x,y = Vcat([1,2,3],Zeros(5)), Vcat(5, 1:7)
+            @test x .+ Zeros(8) == Zeros(8) .+ x == x
+            @test y .+ Zeros(8) == Zeros(8) .+ y == y
+            @test x .* Zeros(8) ≡ Zeros(8) .* x ≡ Zeros(8)
+            @test y .* Zeros(8) ≡ Zeros(8) .* y ≡ Zeros(8)
+        end
     end
 
     @testset "maximum/minimum Vcat" begin

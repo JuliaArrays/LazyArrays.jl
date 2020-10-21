@@ -388,10 +388,10 @@ layout_broadcasted(Alay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::Abstr
     layout_broadcasted(Alay, UnknownLayout(), op, A, B)
 
 
-broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle{1}, op, a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
-broadcasted(::LazyArrayStyle{1}, op, A::Zeros{<:Any,1}, B::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle, op, a::Vcat{<:Any,1}, b::AbstractVector) = layout_broadcasted(op, a, b)
+broadcasted(::LazyArrayStyle, op, a::AbstractVector, b::Vcat{<:Any,1}) = layout_broadcasted(op, a, b)
+broadcasted(::LazyArrayStyle{1}, op, a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), op, a, b)
+broadcasted(::LazyArrayStyle{1}, op, a::Zeros{<:Any,1}, b::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), op, a, b)
 broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 
