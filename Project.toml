@@ -12,10 +12,10 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-ArrayLayouts = "0.4.9"
-FillArrays = "0.9.6"
+ArrayLayouts = "0.4.10"
+FillArrays = "0.10"
 MacroTools = "0.5"
-MatrixFactorizations = "0.5.2, 0.6"
+MatrixFactorizations = "0.6"
 StaticArrays = "0.12"
 julia = "1.4"
 
