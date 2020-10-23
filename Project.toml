@@ -13,7 +13,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 ArrayLayouts = "0.4.7"
-FillArrays = "0.9.6"
+FillArrays = "0.9.6, 0.10"
 MacroTools = "0.5"
 MatrixFactorizations = "0.5.2, 0.6"
 StaticArrays = "0.12"
