@@ -220,7 +220,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         B = Vcat([1,2], randn(8))
 
         C = @inferred(A+B)
-        @test C isa BroadcastArray{Float64}
+        @test C isa CachedVector{Float64}
         @test C == Vector(A) + Vector(B)
 
         B = Vcat(SVector(1,2), Ones(8))
@@ -403,8 +403,8 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test MemoryLayout(x) isa PaddedLayout
             @test MemoryLayout(y) isa ApplyLayout{typeof(vcat)}
             @test x .+ y == y .+ x == Vector(x) .+ Vector(y)
-            @test x .+ y isa BroadcastVector
-            @test y .+ x isa BroadcastVector
+            @test x .+ y isa CachedVector{Float64,Vector{Float64},<:Vcat}
+            @test y .+ x isa CachedVector{Float64,Vector{Float64},<:Vcat}
         end
 
         @testset "vcat and Zeros" begin
