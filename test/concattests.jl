@@ -1,6 +1,7 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call, paddeddata,
-                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!
+                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!,
+                    CachedVector
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -86,6 +87,15 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test A' == Matrix(A)'
             @test transpose(A) == transpose(Matrix(A))
             @test permutedims(A) == permutedims(Matrix(A))
+
+            @testset "indexing" begin
+                A = Vcat(randn(2,10), randn(4,10))
+                @test A[2,1:5] == Matrix(A)[2,1:5]
+                @test A[2,:] == Matrix(A)[2,:]
+                @test A[1:5,2] == Matrix(A)[1:5,2]
+                @test A[:,2] == Matrix(A)[:,2]
+                @test A[:,:] == A[1:6,:] == A[:,1:10] == A[1:6,1:10] == A
+            end
         end
 
         @testset "etc" begin
@@ -168,6 +178,14 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test vec(Hcat([1,2]', 3)) == 1:3
             @test permutedims(Hcat([1,2]', 3)) == reshape(1:3,3,1)
         end
+
+        @testset "indexing" begin
+            A = Hcat(randn(2,2), randn(2,3))
+            @test A[2,1:5] == A[2,:] == Matrix(A)[2,:]
+            @test A[1:2,2] == A[:,2] == Matrix(A)[:,2]
+            @test A[:,2] == Matrix(A)[:,2]
+            @test A[:,:] == A[1:2,:] == A[:,1:5] == A[1:2,1:5] == A
+        end
     end
 
     @testset "DefaultApplyStyle" begin
@@ -202,7 +220,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         B = Vcat([1,2], randn(8))
 
         C = @inferred(A+B)
-        @test C isa BroadcastArray{Float64}
+        @test C isa CachedVector{Float64}
         @test C == Vector(A) + Vector(B)
 
         B = Vcat(SVector(1,2), Ones(8))
@@ -379,6 +397,32 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test H./Ref(2) isa Hcat
         @test Ref(2).\H isa Hcat
         @test H/2  == H./Ref(2) == 2\H == Ref(2) .\ H == [1/2 zeros(1,10)]
+
+        @testset "vcat and padded" begin
+            x,y = Vcat([1,2,3],Zeros(5)), Vcat(5, 1:7)
+            @test MemoryLayout(x) isa PaddedLayout
+            @test MemoryLayout(y) isa ApplyLayout{typeof(vcat)}
+            @test x .+ y == y .+ x == Vector(x) .+ Vector(y)
+            @test x .+ y isa CachedVector{Float64,Vector{Float64},<:Vcat}
+            @test y .+ x isa CachedVector{Float64,Vector{Float64},<:Vcat}
+        end
+
+        @testset "vcat and Zeros" begin
+            x,y = Vcat([1,2,3],Zeros(5)), Vcat(5, 1:7)
+            @test x .+ Zeros(8) == Zeros(8) .+ x == x
+            @test y .+ Zeros(8) == Zeros(8) .+ y == y
+            @test x .* Zeros(8) ≡ Zeros(8) .* x ≡ Zeros(8)
+            @test y .* Zeros(8) ≡ Zeros(8) .* y ≡ Zeros(8)
+        end
+
+        @testset "vcat and BroadcastArray" begin
+            x,y,z = Vcat([1,2,3],Zeros(5)), Vcat(5, 1:7), BroadcastArray(exp,1:8)
+            @test x .+ z == z .+ x == Array(x) .+ Array(z)
+            @test y .+ z == z .+ y == Array(y) .+ Array(z)
+
+            @test x .+ z isa CachedVector
+            @test y .+ z isa BroadcastVector
+        end
     end
 
     @testset "maximum/minimum Vcat" begin
@@ -584,5 +628,21 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
 
     @testset "print" begin
         @test Base.replace_in_print_matrix(Vcat(1:3,Zeros(10)), 4, 1, "0.0") == " ⋅ "
+    end
+
+    @testset "projection" begin
+        a = Vcat(Ones(5), Zeros(5))
+        b = randn(10)
+        @test colsupport(a .* b) ≡ Base.OneTo(5)
+        @test a .* b isa CachedVector
+        @test Diagonal(a) * b isa CachedVector
+        @test b .* a isa CachedVector
+        @test a .* b == Diagonal(a) * b == b .* a
+    end
+
+    @testset "Hcat getindex" begin
+        A = Hcat(1, (1:10)')
+        @test A[1,:] isa Vcat{<:Any,1}
+        @test A[1,:][1:10] == A[1,1:10]
     end
 end

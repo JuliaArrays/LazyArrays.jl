@@ -212,6 +212,11 @@ sublayout(b::BroadcastLayout, _) = b
 @inline _viewifmutable(a, inds...) = view(a, inds...)
 @inline _viewifmutable(a::AbstractFill, inds...) = a[inds...]
 @inline _viewifmutable(a::AbstractRange, inds...) = a[inds...]
+_viewifmutable(a::BroadcastArray, inds...) = a[inds...]
+function _viewifmutable(a::AdjOrTrans{<:Any,<:AbstractVector}, k::Integer, j)
+    @assert k == 1
+    _viewifmutable(parent(a), j)
+end
 @inline _broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(size(a), inds)...)
 @inline _broadcastview(a::Number, inds) = a
 @inline _broadcastview(a::Base.RefValue, inds) = a
@@ -223,6 +228,10 @@ sublayout(b::BroadcastLayout, _) = b
     args = arguments(lay, P)
     __broadcastview(parentindices(V), args...)
 end
+
+@inline _broadcast_sub_arguments(lay::DualLayout{ML}, P, V::AbstractVector) where ML =
+    arguments(ML(), view(P', parentindices(V)[2]))
+
 @inline _broadcast_sub_arguments(A, V) = _broadcast_sub_arguments(MemoryLayout(A), A, V)
 @inline _broadcast_sub_arguments(V) =  _broadcast_sub_arguments(parent(V), V)
 @inline arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
@@ -236,17 +245,23 @@ end
 call(b::BroadcastLayout, a::AdjOrTrans) = call(b, parent(a))
 
 transposelayout(b::BroadcastLayout) = b
-arguments(b::BroadcastLayout, A::Adjoint) = map(adjoint, arguments(b, parent(A)))
-arguments(b::BroadcastLayout, A::Transpose) = map(transpose, arguments(b, parent(A)))
+
+_adjoint(a) = adjoint(a)
+_adjoint(a::Ref) = a
+_transpose(a) = transpose(a)
+_transpose(a::Ref) = a
+
+arguments(b::BroadcastLayout, A::Adjoint) = map(_adjoint, arguments(b, parent(A)))
+arguments(b::BroadcastLayout, A::Transpose) = map(_transpose, arguments(b, parent(A)))
 
 
 ###
 # Show
 ###
 
-function _broadcastarray_summary(io, A)
-    args = arguments(A)
-    print(io, "$(A.f).(")
+_broadcastarray_summary(io, A) = _broadcastarray_summary(io, A.f, arguments(A)...)
+function _broadcastarray_summary(io, f, args...)
+    print(io, "$f.(")
     summary(io, first(args))
     for a in tail(args)
         print(io, ", ")
@@ -257,8 +272,7 @@ end
 
 for op in (:+, :-, :*, :\, :/)
     @eval begin
-        function _broadcastarray_summary(io::IO, A::BroadcastArray{<:Any,N,typeof($op)}) where N
-            args = arguments(A)
+        function _broadcastarray_summary(io::IO, ::typeof($op), args...)
             if length(args) == 1
                 print(io, "($($op)).(")
                 summary(io, first(args))
@@ -277,8 +291,46 @@ for op in (:+, :-, :*, :\, :/)
     end
 end
 
+function _broadcastarray_summary(io::IO, ::typeof(Base.literal_pow), ::Base.RefValue{typeof(^)}, x, ::Base.RefValue{Val{K}}) where {N,K}
+    print(io, "(")
+    summary(io, x)
+    print(io, ") .^ $K")
+end
+
+function _broadcastarray_summary(io::IO, ::typeof(^), x, y)
+    print(io, "(")
+    summary(io, x)
+    print(io, ") .^ ")
+    summary(io, y)
+end
+
+
 Base.array_summary(io::IO, C::BroadcastArray, inds::Tuple{Vararg{OneTo}}) = _broadcastarray_summary(io, C)
 function Base.array_summary(io::IO, C::BroadcastArray, inds)
     _broadcastarray_summary(io, C)
     print(io, " with indices ", Base.inds2string(inds))
+end
+
+
+function Base.array_summary(io::IO, C::Adjoint{<:Any,<:LazyArray}, inds::Tuple{Vararg{OneTo}})
+    print(io, "(")
+    summary(io, parent(C))
+    print(io, ")'")
+end
+function Base.array_summary(io::IO, C::Adjoint{<:Any,<:LazyArray}, inds)
+    print(io, "(")
+    summary(io, parent(C))
+    print(io, ")' with indices ", Base.inds2string(inds))
+end
+
+
+function Base.array_summary(io::IO, C::Transpose{<:Any,<:LazyArray}, inds::Tuple{Vararg{OneTo}})
+    print(io, "transpose(")
+    summary(io, parent(C))
+    print(io, ")")
+end
+function Base.array_summary(io::IO, C::Transpose{<:Any,<:LazyArray}, inds)
+    print(io, "transpose(")
+    summary(io, parent(C))
+    print(io, ") with indices ", Base.inds2string(inds))
 end

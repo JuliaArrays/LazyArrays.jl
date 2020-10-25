@@ -45,11 +45,11 @@ function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
     all(a_args .== b_args)
 end
 
-@propagate_inbounds @inline vcat_getindex(f, idx::Vararg{Integer}) =
+@propagate_inbounds @inline vcat_getindex(f, idx...) =
     vcat_getindex_recursive(f, idx, f.args...)
 
 @propagate_inbounds @inline function vcat_getindex_recursive(
-        f, idx::NTuple{1}, A, args...)
+        f, idx::Tuple{Integer}, A, args...)
     k, = idx
     T = eltype(f)
     n = length(A)
@@ -58,7 +58,7 @@ end
 end
 
 @propagate_inbounds @inline function vcat_getindex_recursive(
-        f, idx::NTuple{2}, A, args...)
+        f, idx::Tuple{Integer,Integer}, A, args...)
     k, j = idx
     T = eltype(f)
     n = size(A, 1)
@@ -66,10 +66,22 @@ end
     vcat_getindex_recursive(f, (k - n, j), args...)
 end
 
+@propagate_inbounds @inline function vcat_getindex_recursive(
+        f, idx::Tuple{Integer,Union{Colon,AbstractVector}}, A, args...)
+    k, j = idx
+    T = eltype(f)
+    n = size(A, 1)
+    k ≤ n && return convert(AbstractVector{T}, A[k, j])
+    vcat_getindex_recursive(f, (k - n, j), args...)
+end
+
 @inline vcat_getindex_recursive(f, idx) = throw(BoundsError(f, idx))
 
 @propagate_inbounds @inline getindex(f::Vcat{<:Any,1}, k::Integer) = vcat_getindex(f, k)
 @propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::Integer) = vcat_getindex(f, k, j)
+@propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::AbstractVector) = vcat_getindex(f, k, j)
+@propagate_inbounds @inline getindex(f::Vcat{<:Any,2}, k::Integer, j::Colon) = vcat_getindex(f, k, j)
+
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(vcat)}, k::Integer)= vcat_getindex(f, k)
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(vcat)}, k::Integer, j::Integer)= vcat_getindex(f, k, j)
 getindex(f::Applied{<:Any,typeof(vcat)}, k::Integer)= vcat_getindex(f, k)
@@ -125,11 +137,11 @@ ndims(::Applied{<:Any,typeof(hcat)}) = 2
 size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
 Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
 
-@inline hcat_getindex(f, k::Integer, j::Integer) =
+@inline hcat_getindex(f, k, j::Integer) =
     hcat_getindex_recursive(f, (k, j), f.args...)
 
 @inline function hcat_getindex_recursive(
-        f, idx::NTuple{2}, A, args...)
+        f, idx::Tuple{Integer,Integer}, A, args...)
     k, j = idx
     T = eltype(f)
     n = size(A, 2)
@@ -137,9 +149,19 @@ Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
     hcat_getindex_recursive(f, (k, j - n), args...)
 end
 
+@inline function hcat_getindex_recursive(
+        f, idx::Tuple{Union{Colon,AbstractVector},Integer}, A, args...)
+    kr, j = idx
+    T = eltype(f)
+    n = size(A, 2)
+    j ≤ n && return convert(AbstractVector{T}, A[kr, j])
+    hcat_getindex_recursive(f, (kr, j - n), args...)
+end
+
 @inline hcat_getindex_recursive(f, idx) = throw(BoundsError(f, idx))
 
 getindex(f::Hcat, k::Integer, j::Integer) = hcat_getindex(f, k, j)
+getindex(f::Hcat, k::AbstractVector, j::Integer) = hcat_getindex(f, k, j)
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(f, k, j)
 getindex(f::Applied{<:Any,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(f, k, j)
 
@@ -349,31 +371,47 @@ _vcat_axes(a::Tuple{<:AbstractUnitRange}, b, c...) = tuple(first(a), broadcast((
 _vcat_getindex_eval(y) = ()
 _vcat_getindex_eval(y, a, b...) = tuple(y[a], _vcat_getindex_eval(y, b...)...)
 
-function broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::AbstractVector)
+# let it stay lazy
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::AbstractLazyLayout, op, A::AbstractVector, B::AbstractVector) =
+    Broadcasted{LazyArrayStyle{1}}(op, (A, B))
+layout_broadcasted(::AbstractLazyLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
+    Broadcasted{LazyArrayStyle{1}}(op, (A, B))
+
+function layout_broadcasted(::ApplyLayout{typeof(vcat)}, _, op, A::AbstractVector, B::AbstractVector)
     kr = _vcat_axes(map(axes,A.args)...)  # determine how to break up B
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
     ApplyVector(vcat, broadcast((a,b) -> broadcast(op,a,b), A.args, B_arrays)...)
 end
 
-function broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::Vcat{<:Any,1})
+function layout_broadcasted(_, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector)
     kr = _vcat_axes(axes.(B.args)...)
     A_arrays = _vcat_getindex_eval(A,kr...)
     Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.args)...)
 end
 
-# Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
-broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) =
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
     Broadcasted{LazyArrayStyle{1}}(op, (A, B))
 
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, Blay::CachedLayout, op, A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(UnknownLayout(), Blay, op, A, B)
+layout_broadcasted(Alay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(Alay, UnknownLayout(), op, A, B)
+
+
+broadcasted(::LazyArrayStyle, op, a::Vcat{<:Any,1}, b::AbstractVector) = layout_broadcasted(op, a, b)
+broadcasted(::LazyArrayStyle, op, a::AbstractVector, b::Vcat{<:Any,1}) = layout_broadcasted(op, a, b)
+broadcasted(::LazyArrayStyle{1}, op, a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), op, a, b)
+broadcasted(::LazyArrayStyle{1}, op, a::Zeros{<:Any,1}, b::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), op, a, b)
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+
+
+# Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) = layout_broadcasted(op, A, B)
+
 # ambiguities
-broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = cache_broadcast(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::CachedVector, B::Vcat{<:Any,1}) = cache_broadcast(op, A, B)
-
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1})=
-    broadcast(DefaultArrayStyle{1}(), *, a, b)
-
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::Vcat{<:Any,1})=
-    broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = layout_broadcasted(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::CachedVector, B::Vcat{<:Any,1}) = layout_broadcasted(op, A, B)
 
 
 
@@ -389,52 +427,6 @@ function +(A::AbstractArray, B::Vcat)
     size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
     A .+ B
 end
-
-######
-# Special Vcat broadcasts
-#
-# We use Vcat for infinite padded vectors, so we need to special case
-# two arrays. This may be generalisable in the future
-######
-
-function _vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:AbstractVector,<:AbstractFill},
-                               (Bhead, Btail)::Tuple{<:AbstractVector,<:AbstractFill}) where T
-    if length(Ahead) ≥ length(Bhead)
-        M,m = length(Ahead), length(Bhead)
-        Chead = Vector{T}(undef,M)
-        view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
-        view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
-
-        Ctail = op.(Atail, Btail[M-m+1:end])
-    else
-        m,M = length(Ahead), length(Bhead)
-        Chead = Vector{T}(undef,M)
-        view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
-        view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
-
-        Ctail = op.(Atail[M-m+1:end], Btail)
-    end
-
-    Vcat(Chead, Ctail)
-end
-
-_vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:Number,<:AbstractFill},
-                           (Bhead, Btail)::Tuple{<:Number,<:AbstractFill}) where {M,T} =
-   Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-
-_vcat_broadcasted(::Type{T}, op, (Ahead, Atail)::Tuple{<:SVector{M},<:AbstractFill},
-                           (Bhead, Btail)::Tuple{<:SVector{M},<:AbstractFill}) where {M,T} =
-   Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-
-# default is BroadcastArray
-_vcat_broadcasted(::Type{T}, op, A, B) where T =
-    Broadcasted{LazyArrayStyle{1}}(op, (Vcat(A...), Vcat(B...)))
-
-
-broadcasted(::LazyArrayStyle{1}, op, A::Vcat{T, 1, <:Tuple{<:Any,<:Any}},
-                                     B::Vcat{V, 1, <:Tuple{<:Any,<:Any}}) where {T,V} =
-  _vcat_broadcasted(promote_type(T,V), op, A.args, B.args)
-
 
 
 ####
@@ -569,7 +561,7 @@ cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
 
-paddeddata(A::CachedArray) = view(A.data,OneTo.(A.datasize)...)
+paddeddata(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = cacheddata(A)
 _vcat_paddeddata(A, B::Zeros) = A
 _vcat_paddeddata(A, B) = Vcat(A, paddeddata(B))
 _vcat_paddeddata(A, B, C...) = Vcat(A, _vcat_paddeddata(B, C...))
@@ -632,8 +624,54 @@ function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::Abst
     dest
 end
 
+######
+# Special Vcat broadcasts
+#
+# We use Vcat for infinite padded vectors, so we need to special case
+# two arrays. This may be generalisable in the future
+######
+
+function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}},
+                                              B::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}})
+    (Ahead, Atail) = A.args
+    (Bhead, Btail) = B.args
+    T = promote_type(eltype(A), eltype(B))
+
+    if length(Ahead) ≥ length(Bhead)
+        M,m = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
+        view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
+
+        Ctail = op.(Atail, Btail[M-m+1:end])
+    else
+        m,M = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
+        view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
+
+        Ctail = op.(Atail[M-m+1:end], Btail)
+    end
+
+    Vcat(Chead, Ctail)
+end
+
+function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}},
+                                              B::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
+    (Ahead, Atail) = A.args
+    (Bhead, Btail) = B.args
+    Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
+end
+
+function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{SVector{M},AbstractFill}},
+                                              B::Vcat{<:Any,1,<:Tuple{SVector{M},AbstractFill}}) where M
+    (Ahead, Atail) = A.args
+    (Bhead, Btail) = B.args
+    Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
+end
+
 # special case handle broadcasting with padded and cached arrays
-function _cache_broadcast(::PaddedLayout, ::PaddedLayout, op, A, B)
+function layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector)
     a,b = paddeddata(A),paddeddata(B)
     n,m = length(a),length(b)
     dat = if n ≤ m
@@ -644,41 +682,46 @@ function _cache_broadcast(::PaddedLayout, ::PaddedLayout, op, A, B)
     CachedArray(dat, broadcast(op, Zeros{eltype(A)}(length(A)), Zeros{eltype(B)}(length(B))))
 end
 
-function _cache_broadcast(_, ::PaddedLayout, op, A, B)
+function layout_broadcasted(_, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector)
     b = paddeddata(B)
     m = length(b)
     zB = Zeros{eltype(B)}(size(B)...)
-    CachedArray(broadcast(op, view(A,1:m), b), broadcast(op, A, zB))
+    CachedArray(convert(Array,broadcast(op, view(A,1:m), b)), broadcast(op, A, zB))
 end
 
-function _cache_broadcast(::PaddedLayout, _, op, A, B)
+function layout_broadcasted(::PaddedLayout, _, op, A::AbstractVector, B::AbstractVector)
     a = paddeddata(A)
     n = length(a)
     zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray(broadcast(op, a, view(B,1:n)), broadcast(op, zA, B))
+    CachedArray(convert(Array,broadcast(op, a, view(B,1:n))), broadcast(op, zA, B))
 end
 
-function _cache_broadcast(::PaddedLayout, ::CachedLayout, op, A, B)
-    a,b = paddeddata(A),paddeddata(B)
+function layout_broadcasted(::PaddedLayout, ::CachedLayout, op, A::AbstractVector, B::AbstractVector)
+    a = paddeddata(A)
     n = length(a)
     resizedata!(B,n)
-    Bdata = paddeddata(B)
+    Bdata = cacheddata(B)
     b = view(Bdata,1:n)
     zA1 = Zeros{eltype(A)}(size(Bdata,1)-n)
     zA = Zeros{eltype(A)}(size(A)...)
     CachedArray([broadcast(op, a, b); broadcast(op, zA1, @view(Bdata[n+1:end]))], broadcast(op, zA, B.array))
 end
 
-function _cache_broadcast(::CachedLayout, ::PaddedLayout, op, A, B)
+function layout_broadcasted(::CachedLayout, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector)
     b = paddeddata(B)
     n = length(b)
     resizedata!(A,n)
-    Adata = paddeddata(A)
+    Adata = cacheddata(A)
     a = view(Adata,1:n)
     zB1 = Zeros{eltype(B)}(size(Adata,1)-n)
     zB = Zeros{eltype(B)}(size(B)...)
     CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB1)], broadcast(op, A.array, zB))
 end
+
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::PaddedLayout, op, A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(UnknownLayout(), lay, op, A, B)
+layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(lay, UnknownLayout(), op, A, B)
 
 
 ###
@@ -779,7 +822,7 @@ _argsindices(sz) = broadcast(:, _vcat_firstinds(sz), _vcat_lastinds(sz))
 
 _view_vcat(a::Number, kr) = Fill(a,length(kr))
 _view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
-_view_vcat(a, kr...) = view(a, kr...)
+_view_vcat(a, kr...) = _viewifmutable(a, kr...)
 
 function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr)
     sz = size.(arguments(A),1)
@@ -797,7 +840,17 @@ end
 
 _vcat_sub_arguments(LAY::ApplyLayout{typeof(vcat)}, A, V) = _vcat_sub_arguments(LAY, A, V, parentindices(V)...)
 
-_vcat_sub_arguments(::ApplyLayout{typeof(hcat)}, A, V) = arguments(ApplyLayout{typeof(hcat)}(), V)
+
+function _vcat_sub_arguments(L::ApplyLayout{typeof(hcat)}, A, V)
+    A = parent(V)
+    args = arguments(L, A)
+    k,jr = parentindices(V)
+    sz = size.(args,2)
+    sjr = intersect.(_argsindices(sz), Ref(jr))
+    sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
+    _view_hcat.(args, k, sjr2)
+end
+
 _vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
 
 _vcat_sub_arguments(A, V) = _vcat_sub_arguments(MemoryLayout(typeof(A)), A, V)
@@ -813,8 +866,13 @@ function arguments(L::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
     _view_vcat.(args, skr2, Ref(jr))
 end
 
-_view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
-_view_hcat(a, kr, jr) = view(a, kr, jr)
+@inline _view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
+@inline _view_hcat(a::Number, kr::Number, jr) = Fill(a,length(jr))
+@inline _view_hcat(a, kr, jr) = _viewifmutable(a, kr, jr)
+
+# equivalent to broadcast but written to maintain type stability
+__view_hcat(::Tuple{}, _, ::Tuple{}) = ()
+@inline __view_hcat(args::Tuple, kr, jrs::Tuple) = (_view_hcat(args[1], kr, jrs[1]), __view_hcat(tail(args), kr, tail(jrs))...)
 
 function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     A = parent(V)
@@ -823,7 +881,7 @@ function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     sz = size.(args,2)
     sjr = intersect.(_argsindices(sz), Ref(jr))
     sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
-    _view_hcat.(args, Ref(kr), sjr2)
+    __view_hcat(args, kr, sjr2)
 end
 
 function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
@@ -838,7 +896,7 @@ function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret
 end
 
-sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector) = ApplyArray(V)
+sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector) = ApplyVector(V)
 
 function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
     ret = similar(V)
@@ -959,16 +1017,23 @@ copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))
 
 # Triangular columns
 
-sublayout(::TriangularLayout{'U','N', ML}, ::Type{<:Tuple{KR,Integer}}) where {KR,ML} = 
-    sublayout(PaddedLayout{ML}(), Tuple{KR})
+sublayout(::TriangularLayout{'U','N', ML}, INDS::Type{<:Tuple{KR,Integer}}) where {KR,ML} =
+    sublayout(PaddedLayout{typeof(sublayout(ML(), INDS))}(), Tuple{KR})
 
-sublayout(::TriangularLayout{'L','N', ML}, ::Type{<:Tuple{Integer,JR}}) where {JR,ML} = 
-    sublayout(PaddedLayout{ML}(), Tuple{JR})
+sublayout(::TriangularLayout{'L','N', ML}, INDS::Type{<:Tuple{Integer,JR}}) where {JR,ML} =
+    sublayout(PaddedLayout{typeof(sublayout(ML(), INDS))}(), Tuple{JR})
 
 resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
+resizedata!(A::LowerTriangular, k::Integer, j::Integer) = resizedata!(parent(A), k, min(k,j))
 
 function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
     P = parent(S)
     (kr,j) = parentindices(S)
     view(triangulardata(P), kr ∩ (1:j), j)
+end
+
+function sub_paddeddata(::TriangularLayout{'L','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
+    P = parent(S)
+    (k,jr) = parentindices(S)
+    view(triangulardata(P), k, jr ∩ (1:k))
 end

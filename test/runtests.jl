@@ -332,10 +332,26 @@ end
         @test cumsum(a) == cumsum(Vector(a))
     end
 
-    @test cumsum(BroadcastArray(exp, 1:10)) === Cumsum(BroadcastArray(exp, 1:10))
-    @test cumsum(ApplyArray(+, 1:10)) === Cumsum(ApplyArray(+, 1:10))
+    @testset "lazy cumsum" begin
+        c = BroadcastArray(exp, 1:10)
+        @test cumsum(c) == Cumsum(BroadcastArray(exp, 1:10))
+        @test cumsum(BroadcastArray(exp, 1:10)) isa typeof(Cumsum(BroadcastArray(exp, 1:10)))
+        @test cumsum(ApplyArray(+, 1:10)) == Cumsum(ApplyArray(+, 1:10))
+        @test cumsum(ApplyArray(+, 1:10)) isa typeof(Cumsum(ApplyArray(+, 1:10)))
 
+        @test copyto!(similar(c), cumsum(c)) == cumsum(Vector(c))
+    end
 
+    @testset "Cumprod" begin
+        a = Accumulate(*, 1:5)
+        @test IndexStyle(typeof(a)) == IndexLinear()
+        @test a == cumprod(1:5)
+        v = BroadcastArray(+, 1, BroadcastArray(^, 1:10_000_000, -2.0))
+        a = accumulate(*, v)
+        @test a isa Accumulate
+        @test a[end] ≈ prod(1 .+ (1:10_000_000).^(-2.0))
+        
+    end
 end
 
 @testset "col/rowsupport" begin
@@ -425,4 +441,10 @@ end
     @test MemoryLayout(v) isa PaddedLayout{DenseColumnMajor}
     @test layout_getindex(v,1:4) == U[1:4,3]
     @test layout_getindex(v,1:4) isa Vcat
+
+    L = LowerTriangular(A)
+    w = view(L,3,:)
+    @test MemoryLayout(w) isa PaddedLayout{ArrayLayouts.StridedLayout}
+    @test layout_getindex(w,1:4) == L[3,1:4]
+    @test layout_getindex(w,1:4) isa Vcat
 end

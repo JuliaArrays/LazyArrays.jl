@@ -399,38 +399,68 @@ function getindex(D::Diff, k::Integer, j::Integer)
     end
 end
 
-struct Cumsum{T, N, Arr} <: LazyArray{T, N}
+mutable struct Accumulate{T, N, Op, DM<:AbstractArray{T,N}, Arr<:AbstractArray{T,N}} <: AbstractCachedArray{T, N}
+    op::Op
+    data::DM
     v::Arr
     dims::Int
+    datasize::NTuple{N,Int}
 end
 
-Cumsum(v::AbstractVector{T}) where T = Cumsum{T,1,typeof(v)}(v, 1)
+Accumulate(op, data::AbstractArray, v::AbstractArray, d::Int) = Accumulate(op, data, v, d, size(data))
+function Accumulate(op, v::AbstractVector, d::Int)
+    @assert d == 1
+    Accumulate(op, [v[1]], v, d)
+end
 
-function Cumsum(A::AbstractMatrix{T}; dims::Integer) where T
+function Accumulate(op, v::AbstractMatrix, d::Int)
+    @assert 1 ≤ d ≤ 2
+    data = d == 1 ? v[1:1,:] : v[:,1:1]
+    Accumulate(op, data, v, d)
+end
+Accumulate(op, v::AbstractVector{T}; dims::Integer=1) where T = Accumulate(op, v, dims)
+
+function Accumulate(op, A::AbstractMatrix{T}; dims::Integer=1) where T
     dims == 1 || dims == 2 || throw(ArgumentError("dimension must be 1 or 2, got $dims"))
-    Cumsum{T,2,typeof(A)}(A, dims)
+    Accumulate(op, A, dims)
 end
 
-IndexStyle(::Type{<:Cumsum{<:Any,1}}) = IndexLinear()
-IndexStyle(::Type{<:Cumsum{<:Any,2}}) = IndexCartesian()
+const Cumsum{T,N,Arr} = Accumulate{T,N,typeof(+),Array{T,N},Arr}
+Cumsum(v::AbstractArray; dims::Integer=1) = Accumulate(+, v; dims=dims)
 
-size(Q::Cumsum) = size(Q.v)
+IndexStyle(::Type{<:Accumulate{<:Any,1}}) = IndexLinear()
+IndexStyle(::Type{<:Accumulate{<:Any,2}}) = IndexCartesian()
 
-getindex(Q::Cumsum{<:Any, 1}, k::Integer) = k == 1 ? Q.v[1] : Q.v[k] + Q[k-1]
-function getindex(Q::Cumsum, k::Integer, j::Integer)
-    if Q.dims == 1
-        k == 1 ? Q.v[1,j] : Q.v[k,j] + Q[k-1,j]
-    else # dims == 2
-        j == 1 ? Q.v[k,1] : Q.v[k,j] + Q[k,j-1]
-    end
-end
+size(Q::Accumulate) = size(Q.v)
+
 
 ==(a::Cumsum{<:Any,1}, b::Cumsum{<:Any,1}) = a.v == b.v
 
 copyto!(x::AbstractArray{<:Any,N}, C::Cumsum{<:Any,N}) where N = cumsum!(x, C.v)
 
+# How we populate the data
+function cache_filldata!(K::Accumulate{<:Any,1}, inds)
+    @inbounds for k in inds
+        K.data[k] = K.op(K.data[k-1], K.v[k])
+    end
+end
+
+function cache_filldata!(K::Accumulate{<:Any,2}, kr, jr)
+    if K.dims == 1
+        @inbounds for j in jr, k in kr
+            K.data[k,j] = K.op(K.data[k-1,j], K.v[k,j])
+        end
+    else # K.dims == 2
+        @inbounds for j in jr, k in kr
+            K.data[k,j] = K.op(K.data[k,j-1], K.v[k,j])
+        end
+    end
+end
+
+
 # keep lazy
 cumsum(a::LazyArray; kwds...) = Cumsum(a; kwds...)
+accumulate(op, a::LazyArray; kwds...) = Accumulate(op, a; kwds...)
 
 
 ## Rotations

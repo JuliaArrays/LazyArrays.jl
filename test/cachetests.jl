@@ -11,7 +11,8 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test cache(C) isa CachedArray{Int,1,Vector{Int},UnitRange{Int}}
         C2 = cache(C)
         @test C2.data !== C.data
-        @test C[:] == C[Base.Slice(Base.OneTo(10))] == C
+        @test C[:] == C[Base.Slice(Base.OneTo(10))] == C[1:10] == C[collect(1:10)] == C
+        @test C[CartesianIndex(2)] == 2
 
         @test cache(A)[2,1] == 2
         @test_throws BoundsError cache(A)[2,2]
@@ -25,6 +26,11 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         C2 = cache(C)
         @test C2.data !== C.data
         @test C[1:2,1:2] == [1 11; 2 12]
+
+        @test C[1,:] == C[1,1:10] == C[1,collect(1:10)] == A[1,1:10]
+        @test C[:,1] == C[1:10,1] == C[collect(1:10),1] == A[1:10,1]
+        @test C[1:10,1:10] == C[collect(1:10),collect(1:10)] == C[:,:] == C[1:10,:] == 
+                C[collect(1:10),:] == C[:,1:10] == C[:,collect(1:10)] == A
 
         A = reshape(1:10^3, 10,10,10)
         C = cache(A)
@@ -41,6 +47,12 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test C[1:3,1,:] == A[1:3,1,:]
     end
 
+    @testset "convert" begin
+        A = collect(1:5)
+        C = cache(A)
+
+    end
+
     @testset "Matrix cache" begin
         A = collect(1:5)
         C = cache(A)
@@ -48,8 +60,8 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         C[1] = 2
         @test A[1] ≠ 2
 
-        A = cache(Matrix(reshape(1:6,2,3)))
-        C = cache(A)
+        A = cache(Matrix(reshape(1:6,2,3)));
+        C = cache(A);
         @test C isa Matrix{Int}
         C[1,1] = 2
         @test A[1,1] ≠ 2
@@ -144,6 +156,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         z = Zeros(100)
         @test v .+ c == c .+ v == Array(c) + Array(v)
         @test z .+ c == c .+ z == Array(c)
+        @test c .* z ≡ z .* c ≡ z
     end
 
     @testset "Fill" begin

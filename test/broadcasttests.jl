@@ -190,6 +190,8 @@ import Base: broadcasted
         @test MemoryLayout(a') isa DualLayout{BroadcastLayout{typeof(/)}}
         @test (a')[:,3:10] isa Adjoint
         @test (a')[:,3:10] ≈ a[3:10]'
+
+        @test BroadcastArray(view(a',1,3:10)) == a[3:10]
     end
 
     @testset "adjoint broadcast" begin
@@ -203,8 +205,30 @@ import Base: broadcasted
     @testset "show" begin
         @test stringmime("text/plain", BroadcastArray(factorial, 1:3)) == "factorial.(3-element UnitRange{$Int}):\n 1\n 2\n 6"
         @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
-        @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Array{Int64,1}):\n 1\n 2"
+        @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Array{$Int,1}):\n 1\n 2"
         @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
-        @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Array{Int64,1}, Int64):\n 1\n 0"
+        @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Array{$Int,1}, $Int):\n 1\n 0"
+        @test stringmime("text/plain", BroadcastArray(^, 1:3, 2)) == "(3-element UnitRange{$Int}) .^ $Int:\n 1\n 4\n 9"
+        x = 1:3
+        @test stringmime("text/plain", BroadcastArray(@~ x .^ 2)) == "(3-element UnitRange{$Int}) .^ 2:\n 1\n 4\n 9"
+        @test stringmime("text/plain", BroadcastArray(@~ x .^ 2)') == "((3-element UnitRange{$Int}) .^ 2)':\n 1  4  9"
+        @test stringmime("text/plain", transpose(BroadcastArray(@~ x .^ 2))) == "transpose((3-element UnitRange{$Int}) .^ 2):\n 1  4  9"
+    end
+
+    @testset "offset indexing" begin
+        v = BroadcastArray(+, SubArray(1:3, (Base.IdentityUnitRange(1:3),)), 1)
+        @test axes(v) == (Base.IdentityUnitRange(1:3),)
+        @test v[1] == 2
+        @test stringmime("text/plain", v) == "(3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3:\n 2\n 3\n 4"
+        @test stringmime("text/plain", v') == "((3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3)' with indices Base.OneTo(1)×1:3:\n 2  3  4"
+        @test stringmime("text/plain", transpose(v)) == "transpose((3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3) with indices Base.OneTo(1)×1:3:\n 2  3  4"
+    end
+
+    @testset "Ref" begin
+        A = BroadcastArray(norm, Ref([1,2]), [1,2])
+        @test A == [norm([1,2],1), norm([1,2],2)]
+        Ac = BroadcastArray(A')
+        At = BroadcastArray(transpose(A))
+        @test Ac == At == [norm([1,2],1) norm([1,2],2)] 
     end
 end
