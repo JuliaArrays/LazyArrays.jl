@@ -119,4 +119,10 @@ import Base.Broadcast: materialize
         L = applied(\, UpperTriangular(A), b)
         @test copyto!(similar(L), L) ≈ UpperTriangular(A) \ b ≈ materialize!(L)
     end
+
+    @testset "Diagonal \\ Mul" begin
+        D = Diagonal(randn(5))
+        A = ApplyArray(*, randn(5,5), randn(5))
+        @test D \ A ≈ D \ Vector(A)
+    end
 end
