@@ -231,4 +231,14 @@ import Base: broadcasted
         At = BroadcastArray(transpose(A))
         @test Ac == At == [norm([1,2],1) norm([1,2],2)] 
     end
+
+    @testset "large args tuple_type_memorylayouts" begin
+        a = randn(5)
+        @test MemoryLayout(BroadcastArray(+, a)) isa BroadcastLayout{typeof(+)}
+        @test MemoryLayout(BroadcastArray(+, a, a)) isa BroadcastLayout{typeof(+)}
+        @test MemoryLayout(BroadcastArray(+, a, a, a)) isa BroadcastLayout{typeof(+)}
+        @test MemoryLayout(BroadcastArray(+, a, a, a, a)) isa BroadcastLayout{typeof(+)}
+        @test MemoryLayout(BroadcastArray(+, a, a, a, a, a)) isa BroadcastLayout{typeof(+)}
+        @test MemoryLayout(BroadcastArray(+, a, a, a, a, a, a)) isa BroadcastLayout{typeof(+)}
+    end
 end
