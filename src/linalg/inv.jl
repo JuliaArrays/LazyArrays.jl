@@ -101,6 +101,7 @@ similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
 # * layout
 ###
 @inline _copy_ldiv_mul(A, B₀, B₁...) = apply(*, A \  B₀,  B₁...)
+@inline copy(L::Ldiv{<:DiagonalLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 @inline copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 @inline copy(L::Ldiv{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 @inline copy(L::Ldiv{<:ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)

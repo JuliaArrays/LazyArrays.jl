@@ -1142,4 +1142,13 @@ end
         A = ApplyArray(*, [1 2; 3 4], 1:2)
         @test stringmime("text/plain", A) == "(2×2 Array{Int64,2}) * (2-element UnitRange{Int64}):\n  5\n 11"
     end
+
+    @testset "mat-mul-vec matrix indexing" begin
+        A = ApplyArray(*, [1 2; 3 4], 1:2)
+        # following needed for ContinuumArrays.jl
+        g = [1 1; 2 2]
+        V = view(A,g)
+        @test MemoryLayout(V) isa UnknownLayout
+        @test A[g] == layout_getindex(A, g) == [A[1] A[1]; A[2] A[2]]
+    end
 end

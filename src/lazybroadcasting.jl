@@ -13,6 +13,8 @@ tuple_type_memorylayouts(::Type{I}) where I<:Tuple = MemoryLayout.(I.parameters)
 tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = (MemoryLayout(A),)
 tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = (MemoryLayout(A),MemoryLayout(B))
 tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C))
+tuple_type_memorylayouts(::Type{Tuple{A,B,C,D}}) where {A,B,C,D} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C),MemoryLayout(D))
+tuple_type_memorylayouts(::Type{Tuple{A,B,C,D,E}}) where {A,B,C,D,E} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C),MemoryLayout(D),MemoryLayout(E))
 
 broadcastlayout(::Type{F}, _...) where F = BroadcastLayout{F}()
 
