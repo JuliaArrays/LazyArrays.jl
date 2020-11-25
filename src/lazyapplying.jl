@@ -305,7 +305,7 @@ applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::LazyLayout) where N = La
 BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
 
 ### 
-# Number special cases
+# Eager applications
 ###
 
 for op in (:+, :-, :*, :\)
@@ -314,6 +314,10 @@ end
 
 for op in (:one, :zero)
     @eval applied(::typeof($op), ::Type{T}) where T = $op(T)
+end
+
+for f in (view, Base.maybeview, (:))
+    @eval applied(::typeof($f), args...) = $f(args...)
 end
 
 ###
