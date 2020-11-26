@@ -9,14 +9,14 @@ is returned by `MemoryLayout(A)` if a matrix `A` is a `BroadcastArray`.
 """
 struct BroadcastLayout{F} <: AbstractLazyLayout end
 
-tuple_type_memorylayouts(::Type{I}) where I<:Tuple = MemoryLayout.(I.parameters)
-tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = (MemoryLayout(A),)
-tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = (MemoryLayout(A),MemoryLayout(B))
-tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C))
-tuple_type_memorylayouts(::Type{Tuple{A,B,C,D}}) where {A,B,C,D} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C),MemoryLayout(D))
-tuple_type_memorylayouts(::Type{Tuple{A,B,C,D,E}}) where {A,B,C,D,E} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C),MemoryLayout(D),MemoryLayout(E))
+@inline tuple_type_memorylayouts(::Type{I}) where I<:Tuple = MemoryLayout.(I.parameters)
+@inline tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = (MemoryLayout(A),)
+@inline tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = (MemoryLayout(A),MemoryLayout(B))
+@inline tuple_type_memorylayouts(::Type{Tuple{A,B,C}}) where {A,B,C} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C))
+@inline tuple_type_memorylayouts(::Type{Tuple{A,B,C,D}}) where {A,B,C,D} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C),MemoryLayout(D))
+@inline tuple_type_memorylayouts(::Type{Tuple{A,B,C,D,E}}) where {A,B,C,D,E} = (MemoryLayout(A),MemoryLayout(B),MemoryLayout(C),MemoryLayout(D),MemoryLayout(E))
 
-broadcastlayout(::Type{F}, _...) where F = BroadcastLayout{F}()
+@inline broadcastlayout(::Type{F}, _...) where F = BroadcastLayout{F}()
 
 
 function _copyto!(_, ::BroadcastLayout, dest::AbstractArray{<:Any,N}, bc::AbstractArray{<:Any,N}) where N
@@ -42,7 +42,7 @@ BroadcastArray{T}(bc::Broadcasted{<:Union{Nothing,BroadcastStyle},<:Tuple{Vararg
 BroadcastVector(bc::Broadcasted) = BroadcastVector{combine_eltypes(bc.f, bc.args)}(bc)
 BroadcastMatrix(bc::Broadcasted) = BroadcastMatrix{combine_eltypes(bc.f, bc.args)}(bc)
 
-MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} =
+@inline MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} =
     broadcastlayout(F, tuple_type_memorylayouts(Args)...)
 
 _broadcast2broadcastarray() = ()
@@ -64,9 +64,10 @@ BroadcastArray(b::BroadcastArray) = b
 BroadcastVector(A::BroadcastVector) = A
 BroadcastMatrix(A::BroadcastMatrix) = A
 
-
-@inline _broadcastarray2broadcasted(lay::BroadcastLayout, a) = broadcasted(call(lay, a), map(_broadcastarray2broadcasted, arguments(lay, a))...)
-@inline _broadcastarray2broadcasted(lay::BroadcastLayout, a::BroadcastArray) = broadcasted(call(lay, a), map(_broadcastarray2broadcasted, arguments(lay, a))...)
+@inline __broadcastarray2broadcasted() = ()
+@inline __broadcastarray2broadcasted(a, b...) = tuple(_broadcastarray2broadcasted(a), __broadcastarray2broadcasted(b...)...)
+@inline _broadcastarray2broadcasted(lay::BroadcastLayout, a) = broadcasted(call(lay, a), __broadcastarray2broadcasted(arguments(lay, a)...)...)
+@inline _broadcastarray2broadcasted(lay::BroadcastLayout, a::BroadcastArray) = broadcasted(call(lay, a), __broadcastarray2broadcasted(arguments(lay, a)...)...)
 @inline _broadcastarray2broadcasted(_, a) = a
 @inline _broadcastarray2broadcasted(lay, a::BroadcastArray) = error("Overload LazyArrays._broadcastarray2broadcasted(::$(lay), _)")
 @inline _broadcastarray2broadcasted(::DualLayout{ML}, a) where ML = _broadcastarray2broadcasted(ML(), a)
@@ -214,7 +215,7 @@ sublayout(b::BroadcastLayout, _) = b
 @inline _viewifmutable(a, inds...) = view(a, inds...)
 @inline _viewifmutable(a::AbstractFill, inds...) = a[inds...]
 @inline _viewifmutable(a::AbstractRange, inds...) = a[inds...]
-_viewifmutable(a::BroadcastArray, inds...) = a[inds...]
+# _viewifmutable(a::BroadcastArray, inds...) = a[inds...]
 function _viewifmutable(a::AdjOrTrans{<:Any,<:AbstractVector}, k::Integer, j)
     @assert k == 1
     _viewifmutable(parent(a), j)
@@ -234,8 +235,10 @@ end
 @inline _broadcast_sub_arguments(lay::DualLayout{ML}, P, V::AbstractVector) where ML =
     arguments(ML(), view(P', parentindices(V)[2]))
 
-@inline _broadcast_sub_arguments(A, V) = _broadcast_sub_arguments(MemoryLayout(A), A, V)
-@inline _broadcast_sub_arguments(V) =  _broadcast_sub_arguments(parent(V), V)
+@inline function _broadcast_sub_arguments(V)
+    P = parent(V)
+    _broadcast_sub_arguments(MemoryLayout(P), P, V)
+end
 @inline arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
 @inline call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
 

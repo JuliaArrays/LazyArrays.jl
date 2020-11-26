@@ -810,11 +810,6 @@ sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
 # a row-slice of an Hcat is equivalent to a Vcat
 sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Number,AbstractVector}}) = ApplyLayout{typeof(vcat)}()
 
-arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) =
-    _viewifmutable.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
-arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) =
-    _viewifmutable.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
-
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
 _vcat_firstinds(sz) = (1, (1 .+ most(_vcat_lastinds(sz)))...)
 
@@ -869,10 +864,13 @@ end
 @inline _view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
 @inline _view_hcat(a::Number, kr::Number, jr) = Fill(a,length(jr))
 @inline _view_hcat(a, kr, jr) = _viewifmutable(a, kr, jr)
+@inline _view_hcat(a::AbstractVector, kr, jr::Colon) = _viewifmutable(a, kr)
 
 # equivalent to broadcast but written to maintain type stability
 __view_hcat(::Tuple{}, _, ::Tuple{}) = ()
+__view_hcat(::Tuple{}, _, ::Colon) = ()
 @inline __view_hcat(args::Tuple, kr, jrs::Tuple) = (_view_hcat(args[1], kr, jrs[1]), __view_hcat(tail(args), kr, tail(jrs))...)
+@inline __view_hcat(args::Tuple, kr, ::Colon) = (_view_hcat(args[1], kr, :), __view_hcat(tail(args), kr, :)...)
 
 function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     A = parent(V)
@@ -883,6 +881,11 @@ function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
     __view_hcat(args, kr, sjr2)
 end
+
+arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) =
+    _viewifmutable.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
+arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) =
+    __view_hcat(arguments(parent(V)), parentindices(V)[1], :)
 
 function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret = similar(V)
@@ -896,9 +899,9 @@ function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret
 end
 
-sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector) = ApplyVector(V)
+sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector, _) = ApplyVector(V)
 
-function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
+function sub_materialize(::ApplyLayout{typeof(hcat)}, V, _)
     ret = similar(V)
     n = 0
     kr,_ = parentindices(V)

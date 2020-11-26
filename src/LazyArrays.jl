@@ -74,4 +74,14 @@ include("lazymacro.jl")
 # support x^2
 Base.to_power_type(x::LazyArray) = x
 
+# Special broadcasting for BlockArrays.jl
+map(::typeof(length), A::BroadcastArray{OneTo{Int},1,Type{OneTo}}) = A.args[1]
+map(::typeof(length), A::BroadcastArray{<:Fill,1,Type{Fill}}) = A.args[2]
+map(::typeof(length), A::BroadcastArray{<:Zeros,1,Type{Zeros}}) = A.args[1]
+map(::typeof(length), A::BroadcastArray{<:Vcat,1,Type{Vcat}}) = broadcast(+,map.(length,A.args)...)
+broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastArray{OneTo{Int},1,Type{OneTo}}) =
+    A.args[1]
+broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastArray{<:Fill,1,Type{Fill}}) =
+    A.args[2]
+
 end # module
