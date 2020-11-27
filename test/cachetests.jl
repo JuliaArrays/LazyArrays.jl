@@ -317,4 +317,18 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test zero!(a) ≡ a
         @test a.datasize == (0,)
     end
+
+    @testset "minimum/maximum" begin
+        c = cache(Fill(2,4));
+        c[1] = 1;
+        @test maximum(c) == 2
+        @test minimum(c) == 1
+        c[1] = 3;
+        @test maximum(c) == 3
+        @test minimum(c) == 2
+        c[1:4] .= 1;
+        @test maximum(c) == 1
+        c[1:4] .= 3;
+        @test minimum(c) == 3
+    end
 end
