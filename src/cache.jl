@@ -364,7 +364,7 @@ copy(a::Adjoint{<:Any,<:CachedArray}) = copy(parent(a))'
 copy(a::Transpose{<:Any,<:CachedArray}) = transpose(copy(parent(a)))
 
 ###
-# special maximum/minimum
+# special maximum/minimum/sum
 # TODO: when view returns a Fill this can be generalised
 ###
 
@@ -385,4 +385,9 @@ function minimum(a::CachedVector{<:Any,<:Any,<:AbstractFill})
     else
         minimum(data)
     end
+end
+
+function sum(a::CachedVector{<:Any,<:Any,<:AbstractFill})
+    data = cacheddata(a)
+    sum(data) + sum(a.array[length(data)+1:end])
 end
