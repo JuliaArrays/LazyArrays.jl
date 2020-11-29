@@ -323,7 +323,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         c[1] = 1;
         @test maximum(c) == 2
         @test minimum(c) == 1
-        @test sum(c) == 12
+        @test sum(c) == 7
         c[1] = 3;
         @test maximum(c) == 3
         @test minimum(c) == 2
