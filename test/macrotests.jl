@@ -97,4 +97,10 @@ end
     @test bc.args[1].args isa Tuple{Applied, Int}
 end
 
+@testset "@~ and `@views`" begin
+    # https://github.com/JuliaArrays/LazyArrays.jl/issues/144
+    A = randn(6, 6)
+    @test copy(@views @~ exp.(A[1:2, 1:2])) == exp.(A[1:2, 1:2])
+end
+
 end  # module
