@@ -31,8 +31,8 @@ end
 @inline ndims(A::Applied{<:Any,typeof(vcat),I}) where I = max(1,maximum(map(ndims,A.args)))
 @inline ndims(A::Applied{<:Any,typeof(vcat),Tuple{}}) = 1
 @inline axes(f::Vcat{<:Any,1,Tuple{}}) = (OneTo(0),)
-@inline axes(f::Vcat{<:Any,1}) = tuple(OneTo(+(map(length,f.args)...)))
-@inline axes(f::Vcat{<:Any,2}) = (OneTo(+(map(a -> size(a,1), f.args)...)), axes(f.args[1],2))
+@inline axes(f::Vcat{<:Any,1}) = tuple(oneto(+(map(length,f.args)...)))
+@inline axes(f::Vcat{<:Any,2}) = (oneto(+(map(a -> size(a,1), f.args)...)), axes(f.args[1],2))
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
