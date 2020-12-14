@@ -55,6 +55,7 @@ BroadcastArray(bc::Broadcasted{S}) where S =
     _BroadcastArray(instantiate(Broadcasted{S}(bc.f, _broadcast2broadcastarray(bc.args...))))
 
 BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
+BroadcastArray{T}(f, A, As...) where T = BroadcastArray{T}(instantiate(broadcasted(f, A, As...)))
 BroadcastMatrix(f, A...) = BroadcastMatrix(broadcasted(f, A...))
 BroadcastVector(f, A...) = BroadcastVector(broadcasted(f, A...))
 

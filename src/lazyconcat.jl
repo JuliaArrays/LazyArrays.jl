@@ -318,7 +318,7 @@ end
 for adj in (:adjoint, :transpose)
     @eval begin
         $adj(A::Hcat{T}) where T = Vcat{T}(map($adj,A.args)...)
-        $adj(A::Vcat{T}) where T = Hcat{T}(map($adj,A.args)...)
+        $adj(A::Vcat{T,2}) where T = Hcat{T}(map($adj,A.args)...)
     end
 end
 
@@ -333,6 +333,13 @@ _permutedims(a::AbstractArray) = permutedims(a)
 permutedims(A::Hcat{T}) where T = Vcat{T}(map(_permutedims,A.args)...)
 permutedims(A::Vcat{T}) where T = Hcat{T}(map(_permutedims,A.args)...)
 
+transposelayout(::ApplyLayout{typeof(vcat)}) = ApplyLayout{typeof(hcat)}()
+transposelayout(::ApplyLayout{typeof(hcat)}) = ApplyLayout{typeof(vcat)}()
+
+arguments(::ApplyLayout{typeof(vcat)}, A::Adjoint) = map(adjoint, arguments(ApplyLayout{typeof(hcat)}(), parent(A)))
+arguments(::ApplyLayout{typeof(hcat)}, A::Adjoint) = map(adjoint, arguments(ApplyLayout{typeof(vcat)}(), parent(A)))
+arguments(::ApplyLayout{typeof(vcat)}, A::Transpose) = map(transpose, arguments(ApplyLayout{typeof(hcat)}(), parent(A)))
+arguments(::ApplyLayout{typeof(hcat)}, A::Transpose) = map(transpose, arguments(ApplyLayout{typeof(vcat)}(), parent(A)))
 
 #####
 # broadcasting

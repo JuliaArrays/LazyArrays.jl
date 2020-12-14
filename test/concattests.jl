@@ -645,4 +645,18 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test A[1,:] isa Vcat{<:Any,1}
         @test A[1,:][1:10] == A[1,1:10]
     end
+
+    @testset "Adjoint" begin
+        a = Vcat(1, 1:5)
+        @test a' isa Adjoint
+        @test MemoryLayout(a') isa DualLayout{ApplyLayout{typeof(hcat)}}
+        @test a'*(1:6) ≡ 71
+
+        A = Vcat(rand(2,3), randn(3,3))
+        @test A' isa Hcat
+        @test transpose(A) isa Hcat
+        @test MemoryLayout(Adjoint(A)) isa ApplyLayout{typeof(hcat)}
+        @test MemoryLayout(Transpose(A)) isa ApplyLayout{typeof(hcat)}
+        @test Hcat(Adjoint(A)) == Hcat(Transpose(A)) == transpose(A) == A'
+    end
 end
