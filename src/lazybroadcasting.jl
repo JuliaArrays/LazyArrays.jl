@@ -236,10 +236,8 @@ end
 @inline _broadcast_sub_arguments(lay::DualLayout{ML}, P, V::AbstractVector) where ML =
     arguments(ML(), view(P', parentindices(V)[2]))
 
-@inline function _broadcast_sub_arguments(V)
-    P = parent(V)
-    _broadcast_sub_arguments(MemoryLayout(P), P, V)
-end
+@inline _broadcast_sub_arguments(A, V) = _broadcast_sub_arguments(MemoryLayout(A), A, V)
+@inline _broadcast_sub_arguments(V) =  _broadcast_sub_arguments(parent(V), V)
 @inline arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
 @inline call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
 
