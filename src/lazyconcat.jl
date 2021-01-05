@@ -263,6 +263,13 @@ function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
     return arr
 end
 
+# special case for adjoints of hcat. This is useful for catching fast paths
+# for vector case, e.g., _fast_blockbradcast_copyto! in BlockArrays.jl
+function vcat_copyto!(dest::AbstractMatrix, arrays::Adjoint{<:Any,<:AbstractVector}...)
+    hcat_copyto!(dest', map(adjoint, arrays)...)
+    dest
+end
+
 _copyto!(_, LAY::ApplyLayout{typeof(hcat)}, dest::AbstractMatrix, H::AbstractMatrix) =
     hcat_copyto!(dest, arguments(LAY,H)...)
 function hcat_copyto!(dest::AbstractMatrix, arrays...)
