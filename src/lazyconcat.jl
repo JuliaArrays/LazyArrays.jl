@@ -334,6 +334,9 @@ _vec(a::AbstractArray) = vec(a)
 _vec(a::Adjoint{<:Number,<:AbstractVector}) = _vec(parent(a))
 vec(A::Hcat) = Vcat(map(_vec,A.args)...)
 
+copy(f::Adjoint{<:Any,<:Union{Vcat,Hcat}}) = copy(parent(f))'
+copy(f::Transpose{<:Any,<:Union{Vcat,Hcat}}) = transpose(copy(parent(f)))
+
 _permutedims(a) = a
 _permutedims(a::AbstractArray) = permutedims(a)
 
