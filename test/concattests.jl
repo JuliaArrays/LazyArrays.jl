@@ -39,11 +39,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test copy(A) === A
             @test vec(A) === A
             @test A' == transpose(A) == Vector(A)'
-            @test A' === Hcat((1:10)', (1:20)')
-            @test transpose(A) === Hcat(transpose(1:10), transpose(1:20))
+            @test A' == Hcat((1:10)', (1:20)')
+            @test transpose(A) == Hcat(transpose(1:10), transpose(1:20))
             @test permutedims(A) == permutedims(Vector(A))
 
-            @test map(copy,A) isa Vcat 
+            @test map(copy,A) isa Vcat
             @test Applied(A)[3] == 3
         end
 
@@ -113,7 +113,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         A = @inferred(Hcat(1:10, 2:11))
         @test_throws BoundsError A[1,3]
         @test_throws BoundsError A[11,1]
-        
+
         @test @inferred(call(A)) == hcat
         @test @inferred(size(A)) == (10,2)
         @test @inferred(A[5]) == @inferred(A[5,1]) == 5
@@ -601,7 +601,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
 
     @testset "Dot" begin
         a = Vcat([1,2],Zeros(1_000_000))
-        b = Vcat([1,2,3],Zeros(1_000_000))        
+        b = Vcat([1,2,3],Zeros(1_000_000))
         @test @inferred(dot(a,b)) ≡ 5.0
         @test @inferred(dot(a,1:1_000_002)) ≡ @inferred(dot(1:1_000_002,a)) ≡ 5.0
     end
