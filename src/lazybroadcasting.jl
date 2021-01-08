@@ -85,7 +85,7 @@ axes(A::BroadcastArray) = axes(broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
 
 
-@propagate_inbounds getindex(A::BroadcastArray{<:Any,N}, kj::Vararg{Int,N}) where N = broadcasted(A)[kj...]
+@propagate_inbounds getindex(A::BroadcastArray{T,N}, kj::Vararg{Int,N}) where {T,N} = convert(T,broadcasted(A)[kj...])::T
 
 
 sub_materialize(::BroadcastLayout, A) = materialize(_broadcasted(A))

@@ -1,7 +1,7 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!,
-                    CachedVector
+                    CachedVector, ApplyLayout
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -108,6 +108,13 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test axes(A) == (Base.OneTo(4),Base.OneTo(1))
             @test permutedims(A) == permutedims(Matrix(A))
         end
+
+        @testset "Vcat adjoints of vectors" begin
+            # This special case was added to catch fast paths but
+            # could be removed
+            v = Vcat((1:5)', (2:6)')
+            @test copyto!(Matrix{Float64}(undef,2,5), v) == Matrix(v) == [(1:5)'; (2:6)']
+        end
     end
     @testset "Hcat" begin
         A = @inferred(Hcat(1:10, 2:11))
@@ -186,6 +193,26 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test A[:,2] == Matrix(A)[:,2]
             @test A[:,:] == A[1:2,:] == A[:,1:5] == A[1:2,1:5] == A
         end
+    end
+
+    @testset "Hcat/Vcat adjoints" begin
+        v = Vcat(1, 1:5)
+        h = Hcat(1:5, 2:6)
+        @test v' isa Adjoint
+        @test transpose(v) isa Transpose
+        @test MemoryLayout(v') isa DualLayout{ApplyLayout{typeof(hcat)}}
+        @test MemoryLayout(transpose(v)) isa DualLayout{ApplyLayout{typeof(hcat)}}
+        @test MemoryLayout(Adjoint(h)) isa ApplyLayout{typeof(vcat)}
+        @test MemoryLayout(Transpose(h)) isa ApplyLayout{typeof(vcat)}
+        @test copy(v') ≡ v'
+        @test copy(Adjoint(h)) ≡ h'
+        @test copy(transpose(v)) ≡ transpose(v)
+        @test copy(Transpose(h)) ≡ transpose(h)
+
+        @test arguments(v') ≡ (1, (1:5)')
+        @test arguments(Adjoint(h)) ≡ ((1:5)', (2:6)')
+        @test arguments(transpose(v)) ≡ (1, transpose(1:5))
+        @test arguments(Transpose(h)) ≡ (transpose(1:5), transpose(2:6))
     end
 
     @testset "DefaultApplyStyle" begin
