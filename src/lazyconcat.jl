@@ -864,7 +864,7 @@ function _vcat_sub_arguments(L::ApplyLayout{typeof(hcat)}, A, V)
 end
 
 _vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
-
+_vcat_sub_arguments(::DualLayout{ML}, A, V) where ML = _vcat_sub_arguments(ML(), A, V)
 _vcat_sub_arguments(A, V) = _vcat_sub_arguments(MemoryLayout(typeof(A)), A, V)
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1}) = _vcat_sub_arguments(parent(V), V)
 
