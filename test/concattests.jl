@@ -1,7 +1,7 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!,
-                    CachedVector, ApplyLayout
+                    CachedVector, ApplyLayout, arguments
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -114,6 +114,10 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             # could be removed
             v = Vcat((1:5)', (2:6)')
             @test copyto!(Matrix{Float64}(undef,2,5), v) == Matrix(v) == [(1:5)'; (2:6)']
+        end
+
+        @testset "adjoint sub" begin
+            @test arguments(view(Vcat(1,1:10)',1,:)) == (Fill(1,1),1:10)
         end
     end
     @testset "Hcat" begin
