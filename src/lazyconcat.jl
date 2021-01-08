@@ -263,6 +263,13 @@ function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
     return arr
 end
 
+# special case for adjoints of hcat. This is useful for catching fast paths
+# for vector case, e.g., _fast_blockbradcast_copyto! in BlockArrays.jl
+function vcat_copyto!(dest::AbstractMatrix, arrays::Adjoint{<:Any,<:AbstractVector}...)
+    hcat_copyto!(dest', map(adjoint, arrays)...)
+    dest
+end
+
 _copyto!(_, LAY::ApplyLayout{typeof(hcat)}, dest::AbstractMatrix, H::AbstractMatrix) =
     hcat_copyto!(dest, arguments(LAY,H)...)
 function hcat_copyto!(dest::AbstractMatrix, arrays...)
@@ -318,7 +325,7 @@ end
 for adj in (:adjoint, :transpose)
     @eval begin
         $adj(A::Hcat{T}) where T = Vcat{T}(map($adj,A.args)...)
-        $adj(A::Vcat{T}) where T = Hcat{T}(map($adj,A.args)...)
+        $adj(A::Vcat{T,2}) where T = Hcat{T}(map($adj,A.args)...)
     end
 end
 
@@ -327,12 +334,22 @@ _vec(a::AbstractArray) = vec(a)
 _vec(a::Adjoint{<:Number,<:AbstractVector}) = _vec(parent(a))
 vec(A::Hcat) = Vcat(map(_vec,A.args)...)
 
+copy(f::Adjoint{<:Any,<:Union{Vcat,Hcat}}) = copy(parent(f))'
+copy(f::Transpose{<:Any,<:Union{Vcat,Hcat}}) = transpose(copy(parent(f)))
+
 _permutedims(a) = a
 _permutedims(a::AbstractArray) = permutedims(a)
 
 permutedims(A::Hcat{T}) where T = Vcat{T}(map(_permutedims,A.args)...)
 permutedims(A::Vcat{T}) where T = Hcat{T}(map(_permutedims,A.args)...)
 
+transposelayout(::ApplyLayout{typeof(vcat)}) = ApplyLayout{typeof(hcat)}()
+transposelayout(::ApplyLayout{typeof(hcat)}) = ApplyLayout{typeof(vcat)}()
+
+arguments(::ApplyLayout{typeof(vcat)}, A::Adjoint) = map(adjoint, arguments(ApplyLayout{typeof(hcat)}(), parent(A)))
+arguments(::ApplyLayout{typeof(hcat)}, A::Adjoint) = map(adjoint, arguments(ApplyLayout{typeof(vcat)}(), parent(A)))
+arguments(::ApplyLayout{typeof(vcat)}, A::Transpose) = map(transpose, arguments(ApplyLayout{typeof(hcat)}(), parent(A)))
+arguments(::ApplyLayout{typeof(hcat)}, A::Transpose) = map(transpose, arguments(ApplyLayout{typeof(vcat)}(), parent(A)))
 
 #####
 # broadcasting
@@ -810,11 +827,6 @@ sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
 # a row-slice of an Hcat is equivalent to a Vcat
 sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Number,AbstractVector}}) = ApplyLayout{typeof(vcat)}()
 
-arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) =
-    _viewifmutable.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
-arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) =
-    _viewifmutable.(arguments(parent(V)), Ref(parentindices(V)[1]), Ref(:))
-
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
 _vcat_firstinds(sz) = (1, (1 .+ most(_vcat_lastinds(sz)))...)
 
@@ -852,7 +864,7 @@ function _vcat_sub_arguments(L::ApplyLayout{typeof(hcat)}, A, V)
 end
 
 _vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
-
+_vcat_sub_arguments(::DualLayout{ML}, A, V) where ML = _vcat_sub_arguments(ML(), A, V)
 _vcat_sub_arguments(A, V) = _vcat_sub_arguments(MemoryLayout(typeof(A)), A, V)
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1}) = _vcat_sub_arguments(parent(V), V)
 
@@ -869,10 +881,13 @@ end
 @inline _view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
 @inline _view_hcat(a::Number, kr::Number, jr) = Fill(a,length(jr))
 @inline _view_hcat(a, kr, jr) = _viewifmutable(a, kr, jr)
+@inline _view_hcat(a::AbstractVector, kr, jr::Colon) = _viewifmutable(a, kr)
 
 # equivalent to broadcast but written to maintain type stability
 __view_hcat(::Tuple{}, _, ::Tuple{}) = ()
+__view_hcat(::Tuple{}, _, ::Colon) = ()
 @inline __view_hcat(args::Tuple, kr, jrs::Tuple) = (_view_hcat(args[1], kr, jrs[1]), __view_hcat(tail(args), kr, tail(jrs))...)
+@inline __view_hcat(args::Tuple, kr, ::Colon) = (_view_hcat(args[1], kr, :), __view_hcat(tail(args), kr, :)...)
 
 function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     A = parent(V)
@@ -883,6 +898,11 @@ function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
     __view_hcat(args, kr, sjr2)
 end
+
+arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) =
+    _viewifmutable.(arguments(parent(V)), Ref(:), Ref(parentindices(V)[2]))
+arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) =
+    __view_hcat(arguments(parent(V)), parentindices(V)[1], :)
 
 function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret = similar(V)
@@ -896,9 +916,9 @@ function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret
 end
 
-sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector) = ApplyVector(V)
+sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector, _) = ApplyVector(V)
 
-function sub_materialize(::ApplyLayout{typeof(hcat)}, V)
+function sub_materialize(::ApplyLayout{typeof(hcat)}, V, _)
     ret = similar(V)
     n = 0
     kr,_ = parentindices(V)

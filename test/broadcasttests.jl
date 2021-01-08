@@ -73,6 +73,12 @@ import Base: broadcasted
         @test colsupport(B,1) == rowsupport(B,1) == 1:5
         @test colsupport(B,3) == rowsupport(B,3) == 1:5
         @test colsupport(B,5) == rowsupport(B,5) == 1:5
+
+        @testset "different type" begin
+            B = BroadcastArray{Float64}(+, [1,2,3], 2)
+            @test eltype(B) == Float64
+            @test B[1] ≡ 3.0
+        end
     end
 
     @testset "vector*matrix broadcasting #27" begin
@@ -240,5 +246,18 @@ import Base: broadcasted
         @test MemoryLayout(BroadcastArray(+, a, a, a, a)) isa BroadcastLayout{typeof(+)}
         @test MemoryLayout(BroadcastArray(+, a, a, a, a, a)) isa BroadcastLayout{typeof(+)}
         @test MemoryLayout(BroadcastArray(+, a, a, a, a, a, a)) isa BroadcastLayout{typeof(+)}
+    end
+
+    @testset "block array axes broadcasting" begin
+        # Special cases to support non-allocating block sizes 1:N as in 2D polynomials
+        n = BroadcastArray(Fill, Base.OneTo(5), Base.OneTo(5))
+        k = BroadcastArray(Base.OneTo,Base.OneTo(5))
+        z = BroadcastArray(Zeros, Base.OneTo(5))
+        v = BroadcastArray(Vcat, n, k)
+        @test map(length, n) ≡ map(length, k) ≡ map(length, z) ≡ Base.OneTo(5)
+        @test map(length, v) ≡ 2:2:10
+        @test map(length, BroadcastArray(Fill,Base.OneTo(5))) == ones(5)
+
+        @test broadcast(length, n) ≡ broadcast(length, k) ≡ Base.OneTo(5)
     end
 end

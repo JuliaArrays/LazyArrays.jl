@@ -1,7 +1,7 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!,
-                    CachedVector
+                    CachedVector, ApplyLayout, arguments
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -39,11 +39,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test copy(A) === A
             @test vec(A) === A
             @test A' == transpose(A) == Vector(A)'
-            @test A' === Hcat((1:10)', (1:20)')
-            @test transpose(A) === Hcat(transpose(1:10), transpose(1:20))
+            @test A' == Hcat((1:10)', (1:20)')
+            @test transpose(A) == Hcat(transpose(1:10), transpose(1:20))
             @test permutedims(A) == permutedims(Vector(A))
 
-            @test map(copy,A) isa Vcat 
+            @test map(copy,A) isa Vcat
             @test Applied(A)[3] == 3
         end
 
@@ -108,12 +108,23 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test axes(A) == (Base.OneTo(4),Base.OneTo(1))
             @test permutedims(A) == permutedims(Matrix(A))
         end
+
+        @testset "Vcat adjoints of vectors" begin
+            # This special case was added to catch fast paths but
+            # could be removed
+            v = Vcat((1:5)', (2:6)')
+            @test copyto!(Matrix{Float64}(undef,2,5), v) == Matrix(v) == [(1:5)'; (2:6)']
+        end
+
+        @testset "adjoint sub" begin
+            @test arguments(view(Vcat(1,1:10)',1,:)) == (Fill(1,1),1:10)
+        end
     end
     @testset "Hcat" begin
         A = @inferred(Hcat(1:10, 2:11))
         @test_throws BoundsError A[1,3]
         @test_throws BoundsError A[11,1]
-        
+
         @test @inferred(call(A)) == hcat
         @test @inferred(size(A)) == (10,2)
         @test @inferred(A[5]) == @inferred(A[5,1]) == 5
@@ -186,6 +197,26 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test A[:,2] == Matrix(A)[:,2]
             @test A[:,:] == A[1:2,:] == A[:,1:5] == A[1:2,1:5] == A
         end
+    end
+
+    @testset "Hcat/Vcat adjoints" begin
+        v = Vcat(1, 1:5)
+        h = Hcat(1:5, 2:6)
+        @test v' isa Adjoint
+        @test transpose(v) isa Transpose
+        @test MemoryLayout(v') isa DualLayout{ApplyLayout{typeof(hcat)}}
+        @test MemoryLayout(transpose(v)) isa DualLayout{ApplyLayout{typeof(hcat)}}
+        @test MemoryLayout(Adjoint(h)) isa ApplyLayout{typeof(vcat)}
+        @test MemoryLayout(Transpose(h)) isa ApplyLayout{typeof(vcat)}
+        @test copy(v') ≡ v'
+        @test copy(Adjoint(h)) ≡ h'
+        @test copy(transpose(v)) ≡ transpose(v)
+        @test copy(Transpose(h)) ≡ transpose(h)
+
+        @test arguments(v') ≡ (1, (1:5)')
+        @test arguments(Adjoint(h)) ≡ ((1:5)', (2:6)')
+        @test arguments(transpose(v)) ≡ (1, transpose(1:5))
+        @test arguments(Transpose(h)) ≡ (transpose(1:5), transpose(2:6))
     end
 
     @testset "DefaultApplyStyle" begin
@@ -601,7 +632,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
 
     @testset "Dot" begin
         a = Vcat([1,2],Zeros(1_000_000))
-        b = Vcat([1,2,3],Zeros(1_000_000))        
+        b = Vcat([1,2,3],Zeros(1_000_000))
         @test @inferred(dot(a,b)) ≡ 5.0
         @test @inferred(dot(a,1:1_000_002)) ≡ @inferred(dot(1:1_000_002,a)) ≡ 5.0
     end
@@ -644,5 +675,19 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         A = Hcat(1, (1:10)')
         @test A[1,:] isa Vcat{<:Any,1}
         @test A[1,:][1:10] == A[1,1:10]
+    end
+
+    @testset "Adjoint" begin
+        a = Vcat(1, 1:5)
+        @test a' isa Adjoint
+        @test MemoryLayout(a') isa DualLayout{ApplyLayout{typeof(hcat)}}
+        @test a'*(1:6) ≡ 71
+
+        A = Vcat(rand(2,3), randn(3,3))
+        @test A' isa Hcat
+        @test transpose(A) isa Hcat
+        @test MemoryLayout(Adjoint(A)) isa ApplyLayout{typeof(hcat)}
+        @test MemoryLayout(Transpose(A)) isa ApplyLayout{typeof(hcat)}
+        @test Hcat(Adjoint(A)) == Hcat(Transpose(A)) == transpose(A) == A'
     end
 end

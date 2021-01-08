@@ -49,12 +49,12 @@ end
 call(a) = a.f
 call(_, a) = a.f
 
-call(a::AbstractArray) = call(MemoryLayout(a), a)
-arguments(a) = a.args
-arguments(_, a) = a.args
-call(::DualLayout{ML}, a) where ML = call(ML(), a)
-arguments(::DualLayout{ML}, a) where ML = arguments(ML(), a)
-arguments(a::AbstractArray) = arguments(MemoryLayout(a), a)
+@inline call(a::AbstractArray) = call(MemoryLayout(a), a)
+@inline arguments(a) = a.args
+@inline arguments(_, a) = a.args
+@inline call(::DualLayout{ML}, a) where ML = call(ML(), a)
+@inline arguments(::DualLayout{ML}, a) where ML = arguments(ML(), a)
+@inline arguments(a::AbstractArray) = arguments(MemoryLayout(a), a)
 
 @inline check_applied_axes(A::Applied) = nothing
 
