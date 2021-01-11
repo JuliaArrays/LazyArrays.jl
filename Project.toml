@@ -15,7 +15,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ArrayLayouts = "0.5"
 FillArrays = "0.11"
 MacroTools = "0.5"
-MatrixFactorizations = "0.7.1"
+MatrixFactorizations = "0.7.1, 0.8"
 StaticArrays = "0.12, 1.0"
 julia = "1.5"
 
