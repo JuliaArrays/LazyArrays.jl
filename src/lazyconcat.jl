@@ -1009,15 +1009,16 @@ _searchsortedfirst(a::Number, x) = 1 + (x > a)
 _searchsortedlast(a, x) = searchsortedlast(a, x)
 _searchsortedlast(a::Number, x) = 0 + (x ≥ a)
 
-function searchsortedfirst(f::Vcat{<:Any,1}, x)
-    n = 0
-    for a in arguments(f)
-        m = length(a)
-        r = _searchsortedfirst(a, x)
-        r ≤ m && return n + r
-        n += m
-    end
-    return n+1
+searchsortedfirst(f::Vcat{<:Any,1}, x) =
+    searchsortedfirst_recursive(0, x, arguments(f)...)
+
+@inline searchsortedfirst_recursive(n, x) = n + 1  # no more arguments
+
+@inline function searchsortedfirst_recursive(n, x, a, args...)
+    m = length(a)
+    r = _searchsortedfirst(a, x)
+    r ≤ m && return n + r
+    return searchsortedfirst_recursive(n + m, x, args...)
 end
 
 function searchsortedlast(f::Vcat{<:Any,1}, x)
