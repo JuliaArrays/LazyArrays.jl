@@ -552,12 +552,12 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
     end
 
     @testset "searchsorted" begin
-        a = Vcat(1:1_000_000, [10_000_000_000,12_000_000_000])
-        b = Vcat(1, 3:1_000_000)
-        @test searchsortedfirst(a, 6_000_000_001) == 1_000_001
-        @test searchsortedlast(a, 2) == 2
-        @test searchsortedfirst(b, 5) == 4
-        @test searchsortedlast(b, 1) == 1
+        a = Vcat(1:1_000_000, [10_000_000_000,12_000_000_000], 14_000_000_000)
+        b = Vcat(1, 3:1_000_000, [2_000_000, 3_000_000])
+        @test @inferred(searchsortedfirst(a, 6_000_000_001)) == 1_000_001
+        @test @inferred(searchsortedlast(a, 2)) == 2
+        @test @inferred(searchsortedfirst(b, 5)) == 4
+        @test @inferred(searchsortedlast(b, 1)) == 1
     end
 
     @testset "args with hcat and view" begin
