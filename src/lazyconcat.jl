@@ -1009,24 +1009,28 @@ _searchsortedfirst(a::Number, x) = 1 + (x > a)
 _searchsortedlast(a, x) = searchsortedlast(a, x)
 _searchsortedlast(a::Number, x) = 0 + (x ≥ a)
 
-function searchsortedfirst(f::Vcat{<:Any,1}, x)
-    n = 0
-    for a in arguments(f)
-        m = length(a)
-        r = _searchsortedfirst(a, x)
-        r ≤ m && return n + r
-        n += m
-    end
-    return n+1
+searchsortedfirst(f::Vcat{<:Any,1}, x) =
+    searchsortedfirst_recursive(0, x, arguments(f)...)
+
+searchsortedlast(f::Vcat{<:Any,1}, x) =
+    searchsortedlast_recursive(length(f), x, reverse(arguments(f))...)
+
+@inline searchsortedfirst_recursive(n, x) = n + 1
+
+@inline function searchsortedfirst_recursive(n, x, a, args...)
+    m = length(a)
+    r = _searchsortedfirst(a, x)
+    r ≤ m && return n + r
+    return searchsortedfirst_recursive(n + m, x, args...)
 end
 
-function searchsortedlast(f::Vcat{<:Any,1}, x)
-    args = arguments(f)
-    for k in length(args):-1:2
-        r = _searchsortedlast(args[k], x)
-        r > 0 && return mapreduce(length,+, args[1:k-1]) + r
-    end
-    return _searchsortedlast(args[1], x)
+@inline searchsortedlast_recursive(n, x) = n
+
+@inline function searchsortedlast_recursive(n, x, a, args...)
+    n -= length(a)
+    r = _searchsortedlast(a, x)
+    r > 0 && return n + r
+    return searchsortedlast_recursive(n, x, args...)
 end
 
 searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x)
