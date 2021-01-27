@@ -193,7 +193,7 @@ _vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) =
 
 # this is a row-vector view
 _vec_mul_arguments(args, (kr,jr)::Tuple{Number,AbstractVector}) =
-    _vec_mul_arguments(reverse(map(transpose, args)), (jr,kr))
+    _vec_mul_arguments(reverse(map(permutedims, args)), (jr,kr))
 
 _mat_mul_arguments(V) = _mat_mul_arguments(arguments(parent(V)), parentindices(V))
 _vec_mul_arguments(V) = _vec_mul_arguments(arguments(parent(V)), parentindices(V))
