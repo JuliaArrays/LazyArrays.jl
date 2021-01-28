@@ -1140,7 +1140,11 @@ end
 
     @testset "show" begin
         A = ApplyArray(*, [1 2; 3 4], 1:2)
-        @test stringmime("text/plain", A) == "(2×2 Array{Int64,2}) * (2-element UnitRange{Int64}):\n  5\n 11"
+        if VERSION < v"1.6-"
+	        @test stringmime("text/plain", A) == "(2×2 Array{Int64,2}) * (2-element UnitRange{Int64}):\n  5\n 11"
+	    else
+	        @test stringmime("text/plain", A) == "(2×2 Matrix{Int64}) * (2-element UnitRange{Int64}):\n  5\n 11"
+		end
     end
 
     @testset "mat-mul-vec matrix indexing" begin

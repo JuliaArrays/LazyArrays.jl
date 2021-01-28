@@ -209,16 +209,24 @@ import Base: broadcasted
     end
 
     @testset "show" begin
+        x = 1:3    
         @test stringmime("text/plain", BroadcastArray(factorial, 1:3)) == "factorial.(3-element UnitRange{$Int}):\n 1\n 2\n 6"
-        @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
-        @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Array{$Int,1}):\n 1\n 2"
-        @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
-        @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Array{$Int,1}, $Int):\n 1\n 0"
         @test stringmime("text/plain", BroadcastArray(^, 1:3, 2)) == "(3-element UnitRange{$Int}) .^ $Int:\n 1\n 4\n 9"
-        x = 1:3
         @test stringmime("text/plain", BroadcastArray(@~ x .^ 2)) == "(3-element UnitRange{$Int}) .^ 2:\n 1\n 4\n 9"
         @test stringmime("text/plain", BroadcastArray(@~ x .^ 2)') == "((3-element UnitRange{$Int}) .^ 2)':\n 1  4  9"
         @test stringmime("text/plain", transpose(BroadcastArray(@~ x .^ 2))) == "transpose((3-element UnitRange{$Int}) .^ 2):\n 1  4  9"
+
+        if VERSION < v"1.6-"
+            @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
+            @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Array{$Int,1}):\n 1\n 2"
+            @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
+            @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Array{$Int,1}, $Int):\n 1\n 0"
+        else
+            @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Vector{$Int}) .+ ($Int):\n 3\n 4"
+            @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Vector{$Int}):\n 1\n 2"
+            @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Vector{$Int}) .+ ($Int):\n 3\n 4"
+            @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Vector{$Int}, $Int):\n 1\n 0"
+        end
     end
 
     @testset "offset indexing" begin
