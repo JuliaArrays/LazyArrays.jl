@@ -391,3 +391,7 @@ function sum(a::CachedVector{<:Any,<:Any,<:AbstractFill})
     data = cacheddata(a)
     sum(data) + sum(a.array[length(data)+1:end])
 end
+
+
+permutedims(a::CachedMatrix) = CachedArray(permutedims(a.data), permutedims(a.array), reverse(a.datasize))
+permutedims(a::CachedVector) = CachedArray(permutedims(a.data), permutedims(a.array), (1,a.datasize[1]))
