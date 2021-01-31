@@ -217,6 +217,7 @@ call(::ApplyLayout{typeof(*)}, V::Transpose) = *
 arguments(::ApplyLayout{typeof(*)}, V::Adjoint) = reverse(adjoint.(arguments(V')))
 arguments(::ApplyLayout{typeof(*)}, V::Transpose) = reverse(transpose.(arguments(V')))
 
+permutedims(A::ApplyArray{<:Any,2,typeof(*)}) = ApplyArray(*, reverse(map(permutedims, A.args))...)
 
 
 ##

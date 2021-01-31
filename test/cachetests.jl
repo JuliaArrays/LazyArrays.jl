@@ -332,4 +332,19 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         c[1:4] .= 3;
         @test minimum(c) == 3
     end
+
+    @testset "permutedims" begin
+        a = cache(Zeros(10));
+        a[3] = 2
+        a.data[4:end] .= NaN # fill with noise
+        @test permutedims(a) isa CachedMatrix
+        @test permutedims(a).datasize == (1,3)
+        @test permutedims(a)[4] == permutedims(a)[1,4] == 0.0
+        @test permutedims(a) == [0 0 2 zeros(1,7)]
+
+        A = cache(Zeros(5,6));
+        A[2,3] = 2;
+        @test permutedims(A) isa CachedMatrix
+        @test permutedims(A).datasize == (3,2)
+    end
 end

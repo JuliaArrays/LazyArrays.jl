@@ -95,6 +95,8 @@ function getindex(A::AbstractCachedArray, I...)
     A.data[I...]
 end
 
+getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, I)...]
+
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector) = layout_getindex(A, kr, jr)
 @inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractVector) = layout_getindex(A, k, jr)
@@ -131,8 +133,8 @@ end
 
 ## Array caching
 
-resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), MemoryLayout(typeof(B.array)), B, mn...)
-resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(typeof(B.data)), UnknownLayout(), B, mn...)
+resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(B.data), MemoryLayout(B.array), B, mn...)
+resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(B.data), UnknownLayout(), B, mn...)
 
 function cache_filldata!(B, inds...) 
     B.data[inds...] .= view(B.array,inds...)
@@ -163,7 +165,7 @@ function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) whe
     @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
-    olddata = B.data
+    olddata = cacheddata(B)
     νμ = size(olddata)
     nm = max.(νμ,nm)
     if νμ ≠ nm
@@ -391,3 +393,7 @@ function sum(a::CachedVector{<:Any,<:Any,<:AbstractFill})
     data = cacheddata(a)
     sum(data) + sum(a.array[length(data)+1:end])
 end
+
+
+permutedims(a::CachedMatrix) = CachedArray(permutedims(a.data), permutedims(a.array), reverse(a.datasize))
+permutedims(a::CachedVector) = CachedArray(permutedims(a.data), permutedims(a.array), (1,a.datasize[1]))

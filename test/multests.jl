@@ -1155,4 +1155,11 @@ end
         @test MemoryLayout(V) isa UnknownLayout
         @test A[g] == layout_getindex(A, g) == [A[1] A[1]; A[2] A[2]]
     end
+
+    @testset "permutedims" begin
+        A = ApplyArray(*, [1 2; 3 4], 1:2)
+        B = ApplyArray(*, [1 2; 3 4], [1 2; 3 4])
+        @test permutedims(A) == A'
+        @test permutedims(B) == B'
+    end
 end
