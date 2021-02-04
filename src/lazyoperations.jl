@@ -19,9 +19,9 @@ size(K::Kron, j::Int) = prod(size.(K.args, j))
 size(a::Kron{<:Any,1}) = (size(a,1),)
 size(a::Kron{<:Any,2}) = (size(a,1), size(a,2))
 size(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> size(a, M), Val(N)))
-axes(a::Kron{<:Any,1}) = (OneTo(size(a,1)),)
-axes(a::Kron{<:Any,2}) = (OneTo(size(a,1)), OneTo(size(a,2)))
-axes(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> OneTo(size(a, M)), Val(N)))
+axes(a::Kron{<:Any,1}) = (oneto(size(a,1)),)
+axes(a::Kron{<:Any,2}) = (oneto(size(a,1)), oneto(size(a,2)))
+axes(a::Kron{<:Any,N}) where {N} = (@_inline_meta; ntuple(M -> oneto(size(a, M)), Val(N)))
 
 
 issquare(M::AbstractMatrix) = (size(M, 1) == size(M, 2))

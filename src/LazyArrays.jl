@@ -62,6 +62,12 @@ export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, @~, LazyArray
 
 
+if VERSION < v"1.6-"
+	oneto = OneTo
+else
+	import Base: oneto
+end
+
 include("lazyapplying.jl")
 include("lazybroadcasting.jl")
 include("linalg/linalg.jl")
