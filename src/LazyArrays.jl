@@ -63,7 +63,7 @@ export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
 
 
 if VERSION < v"1.6-"
-	oneto = OneTo
+	oneto(n) = OneTo(n)
 else
 	import Base: oneto
 end
