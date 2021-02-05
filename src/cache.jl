@@ -225,7 +225,7 @@ function zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N
 end
 function _cached_getindex_vector(A, I)
     @boundscheck checkbounds(A, I)
-    CachedArray(A.data[I ∩ OneTo(A.datasize[1])], A.array[OneTo(length(I))])
+    CachedArray(A.data[I ∩ OneTo(A.datasize[1])], A.array[oneto(length(I))])
 end
 
 getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector) where T =
