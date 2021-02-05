@@ -30,6 +30,7 @@ import Base.Broadcast: materialize
 
         b = randn(5) + im*randn(5)
         @test InvMatrix(A) * b ≈ Matrix(A) \ b
+        @test InvMatrix(A) \ b == A*b
     end
 
     @testset "ComplexF64 \\ *" begin
