@@ -66,12 +66,6 @@ pinv(A::InvMatrix) = parent(A)
 pinv(A::PInvMatrix) = parent(A)
 
 
-@propagate_inbounds getindex(A::PInvMatrix{T}, k::Int, j::Int) where T =
-    (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
-
-@propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
-    (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
-
 
 abstract type AbstractInvLayout{L} <: MemoryLayout end
 struct InvLayout{L} <: AbstractInvLayout{L} end
@@ -125,3 +119,18 @@ end
 ###
 
 inv(D::Diagonal{T,<:LazyVector}) where T = Diagonal(inv.(D.diag))
+
+
+###
+# getindex
+###
+
+# \ is likely to be specialised
+@propagate_inbounds getindex(Ai::InvMatrix{T}, ::Colon, j::Integer) where T = parent(Ai) \ [Zeros{T}(j-1); one(T); Zeros{T}(size(Ai,1)-j)]
+@propagate_inbounds getindex(Ai::PInvMatrix{T}, ::Colon, j::Integer) where T = parent(Ai) \ [Zeros{T}(j-1); one(T); Zeros{T}(size(Ai,1)-j)]
+
+@propagate_inbounds getindex(A::PInvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
+@propagate_inbounds getindex(A::InvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
+
+getindex(L::ApplyMatrix{<:Any,typeof(\)}, ::Colon, j::Integer) where T = L.args[1] \ L.args[2][:,j]
+getindex(L::ApplyMatrix{<:Any,typeof(\)}, k::Integer, j::Integer) where T = L[:,j][k]
