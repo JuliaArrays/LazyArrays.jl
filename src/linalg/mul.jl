@@ -313,7 +313,10 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 @inline copy(M::Mul{<:DiagonalLayout{<:AbstractFillLayout},<:AbstractLazyLayout}) = copy(mulreduce(M))
 @inline copy(M::Mul{<:AbstractLazyLayout,<:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
 
+
 # inv
+
+@inline copy(M::Mul{ApplyLayout{typeof(\)},<:AbstractLazyLayout}) = simplify(M)
 
 function _inv(Lay::ApplyLayout{typeof(*)}, _, A)
     args = arguments(Lay, A)
