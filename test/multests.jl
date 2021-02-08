@@ -1162,4 +1162,9 @@ end
         @test permutedims(A) == A'
         @test permutedims(B) == B'
     end
+
+    @testset "Colon indexing" begin
+        A = ApplyArray(*, [1 2; 3 4], [1 2; 3 4], [1 2; 3 4])
+        @test A[:,1] == Matrix(A)[:,1]
+    end
 end

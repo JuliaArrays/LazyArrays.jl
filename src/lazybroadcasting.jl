@@ -347,7 +347,9 @@ end
 
 _broadcast_mul_mul(A, B) = simplify(Mul(BroadcastArray(*, A...), B))
 _broadcast_mul_mul((a,B)::Tuple{AbstractVector,AbstractMatrix}, C) = a .* (B*C)
+_broadcast_mul_mul((A,b)::Tuple{AbstractMatrix,AbstractVector}, C) = b .* (A*C)
 @inline copy(M::Mul{BroadcastLayout{typeof(*)}}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
 @inline copy(M::Mul{BroadcastLayout{typeof(*)},<:AbstractLazyLayout}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
 
 getindex(A::BroadcastMatrix{<:Any,typeof(*),<:Tuple{AbstractVector,AbstractMatrix}}, ::Colon, j::Integer) = A.args[1] .* A.args[2][:,j]
+getindex(A::BroadcastMatrix{<:Any,typeof(*),<:Tuple{AbstractMatrix,AbstractVector}}, ::Colon, j::Integer) = A.args[1][:,j] .* A.args[2]
