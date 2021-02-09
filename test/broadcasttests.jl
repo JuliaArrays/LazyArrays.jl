@@ -178,11 +178,13 @@ import Base: broadcasted
         Ã = BroadcastArray(*, A.args[2],  1:3)
         B = randn(4,2)
         C = BroadcastArray(*, randn(4,2), randn(4,2))
+        b = randn(2)
         @test A*B ≈ Matrix(A)*B
         @test Ã*B ≈ Matrix(Ã)*B
         @test A*C ≈ Matrix(A)*Matrix(C)
         @test Ã*C ≈ Matrix(Ã)*Matrix(C)
         @test A[:,2] ≈ Ã[:,2] ≈ Matrix(A)[:,2]
+        @test C*b ≈ Matrix(C)*b
     end
 
     @testset "broadcasted which simplifies" begin

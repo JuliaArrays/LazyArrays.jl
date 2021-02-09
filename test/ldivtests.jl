@@ -126,4 +126,10 @@ import Base.Broadcast: materialize
         A = ApplyArray(*, randn(5,5), randn(5))
         @test D \ A ≈ D \ Vector(A)
     end
+
+    @testset "LdivArray Mul" begin
+        A = ApplyArray(\, Diagonal(1:5), randn(5,5))
+        b = randn(5)
+        @test A * b ≈ Matrix(A) * b
+    end
 end
