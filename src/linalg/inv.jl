@@ -66,12 +66,6 @@ pinv(A::InvMatrix) = parent(A)
 pinv(A::PInvMatrix) = parent(A)
 
 
-@propagate_inbounds getindex(A::PInvMatrix{T}, k::Int, j::Int) where T =
-    (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
-
-@propagate_inbounds getindex(A::InvMatrix{T}, k::Int, j::Int) where T =
-    (parent(A)\[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
-
 
 abstract type AbstractInvLayout{L} <: MemoryLayout end
 struct InvLayout{L} <: AbstractInvLayout{L} end
@@ -86,6 +80,7 @@ simplifiable(::Mul{<:AbstractInvLayout}) = Val(true)
 copy(M::Mul{<:AbstractInvLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 copy(M::Mul{<:AbstractInvLayout,<:AbstractLazyLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 @inline copy(M::Mul{<:AbstractInvLayout,ApplyLayout{typeof(*)}}) = simplify(M)
+copy(L::Ldiv{<:AbstractInvLayout}) = pinv(L.A) * L.B
 Ldiv(A::Applied{<:Any,typeof(\)}) = Ldiv(A.args...)
 
 
@@ -104,7 +99,7 @@ similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
 @inline copy(L::Ldiv{<:DiagonalLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 @inline copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 @inline copy(L::Ldiv{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
-@inline copy(L::Ldiv{<:ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
+@inline copy(L::Ldiv{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 
 @inline _copy_ldiv_ldiv(B, A₀) = A₀ \ B
 @inline _copy_ldiv_ldiv(B, A₀, A₁...) = _copy_ldiv_ldiv(A₀ \ B, A₁...)
@@ -114,8 +109,29 @@ similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
 @inline copy(L::Ldiv{<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 @inline copy(L::Ldiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 
+
+function copy(M::Mul{ApplyLayout{typeof(\)}})
+    A,B = arguments(ApplyLayout{typeof(\)}(), M.A)
+    A \ (B * M.B)
+end
 ###
 # Diagonal
 ###
 
 inv(D::Diagonal{T,<:LazyVector}) where T = Diagonal(inv.(D.diag))
+
+
+###
+# getindex
+###
+
+# \ is likely to be specialised
+@propagate_inbounds getindex(Ai::InvMatrix{T}, ::Colon, j::Integer) where T = parent(Ai) \ [Zeros{T}(j-1); one(T); Zeros{T}(size(parent(Ai),1)-j)]
+@propagate_inbounds getindex(Ai::PInvMatrix{T}, ::Colon, j::Integer) where T = parent(Ai) \ [Zeros{T}(j-1); one(T); Zeros{T}(size(parent(Ai),1)-j)]
+getindex(Ai::SubArray{<:Any,2,<:InvMatrix}, ::Colon, j::Integer) = parent(Ai)[:, parentindices(Ai)[2][j]]
+
+@propagate_inbounds getindex(A::PInvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
+@propagate_inbounds getindex(A::InvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
+
+getindex(L::ApplyMatrix{<:Any,typeof(\)}, ::Colon, j::Integer) where T = L.args[1] \ L.args[2][:,j]
+getindex(L::ApplyMatrix{<:Any,typeof(\)}, k::Integer, j::Integer) where T = L[:,j][k]

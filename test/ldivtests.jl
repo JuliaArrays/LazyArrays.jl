@@ -30,6 +30,7 @@ import Base.Broadcast: materialize
 
         b = randn(5) + im*randn(5)
         @test InvMatrix(A) * b ≈ Matrix(A) \ b
+        @test InvMatrix(A) \ b == A*b
     end
 
     @testset "ComplexF64 \\ *" begin
@@ -124,5 +125,11 @@ import Base.Broadcast: materialize
         D = Diagonal(randn(5))
         A = ApplyArray(*, randn(5,5), randn(5))
         @test D \ A ≈ D \ Vector(A)
+    end
+
+    @testset "LdivArray Mul" begin
+        A = ApplyArray(\, Diagonal(1:5), randn(5,5))
+        b = randn(5)
+        @test A * b ≈ Matrix(A) * b
     end
 end

@@ -127,6 +127,7 @@ BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyVector{<:Any}}}) where N = LazyArray
 BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector{<:Any}}}) where N = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyMatrix,<:Tuple{Slice,Any}}}) = LazyArrayStyle{1}()
 BroadcastStyle(L::LazyArrayStyle{N}, ::StaticArrayStyle{N}) where N = L
 BroadcastStyle(::StaticArrayStyle{N}, L::LazyArrayStyle{N})  where N = L
 
@@ -338,3 +339,17 @@ function Base.array_summary(io::IO, C::Transpose{<:Any,<:LazyArray}, inds)
     summary(io, parent(C))
     print(io, ") with indices ", Base.inds2string(inds))
 end
+
+
+###
+# Mul
+###
+
+_broadcast_mul_mul(A, B) = simplify(Mul(BroadcastArray(*, A...), B))
+_broadcast_mul_mul((a,B)::Tuple{AbstractVector,AbstractMatrix}, C) = a .* (B*C)
+_broadcast_mul_mul((A,b)::Tuple{AbstractMatrix,AbstractVector}, C) = b .* (A*C)
+@inline copy(M::Mul{BroadcastLayout{typeof(*)}}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
+@inline copy(M::Mul{BroadcastLayout{typeof(*)},<:AbstractLazyLayout}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
+
+getindex(A::BroadcastMatrix{<:Any,typeof(*),<:Tuple{AbstractVector,AbstractMatrix}}, ::Colon, j::Integer) = A.args[1] .* A.args[2][:,j]
+getindex(A::BroadcastMatrix{<:Any,typeof(*),<:Tuple{AbstractMatrix,AbstractVector}}, ::Colon, j::Integer) = A.args[1][:,j] .* A.args[2]

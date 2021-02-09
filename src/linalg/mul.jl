@@ -313,10 +313,24 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 @inline copy(M::Mul{<:DiagonalLayout{<:AbstractFillLayout},<:AbstractLazyLayout}) = copy(mulreduce(M))
 @inline copy(M::Mul{<:AbstractLazyLayout,<:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
 
+
 # inv
+
+@inline copy(M::Mul{ApplyLayout{typeof(\)},<:AbstractLazyLayout}) = simplify(M)
 
 function _inv(Lay::ApplyLayout{typeof(*)}, _, A)
     args = arguments(Lay, A)
     map(checksquare,args)
     *(reverse(map(inv, arguments(Lay, A)))...)
+end
+
+
+##
+# getindex
+##
+_reverse_mul_vec(z) = z
+_reverse_mul_vec(z, y, w...) = _reverse_mul_vec(y*z, w...)
+function getindex(M::ApplyMatrix{<:Any,typeof(*)}, ::Colon, j::Integer)
+    rargs = reverse(M.args)
+    _reverse_mul_vec(first(rargs)[:,j], tail(rargs)...)
 end

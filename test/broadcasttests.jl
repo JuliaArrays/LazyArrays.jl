@@ -173,6 +173,20 @@ import Base: broadcasted
         @test BroadcastArray(V) == V == 2a[1:3]
     end
 
+    @testset "vec .* A" begin
+        A = BroadcastArray(*, 1:3, randn(3,4))
+        Ã = BroadcastArray(*, A.args[2],  1:3)
+        B = randn(4,2)
+        C = BroadcastArray(*, randn(4,2), randn(4,2))
+        b = randn(2)
+        @test A*B ≈ Matrix(A)*B
+        @test Ã*B ≈ Matrix(Ã)*B
+        @test A*C ≈ Matrix(A)*Matrix(C)
+        @test Ã*C ≈ Matrix(Ã)*Matrix(C)
+        @test A[:,2] ≈ Ã[:,2] ≈ Matrix(A)[:,2]
+        @test C*b ≈ Matrix(C)*b
+    end
+
     @testset "broadcasted which simplifies" begin
         a = BroadcastVector{Float64}(*, Zeros(10), randn(10))
         @test @inferred(a[1]) == 0.0
