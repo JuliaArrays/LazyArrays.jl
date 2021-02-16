@@ -391,3 +391,28 @@ function map(::typeof(copy), D::Tridiagonal{<:Any,<:LazyArray})
 end
     
 
+
+
+###
+# LazyBandedLayout
+###
+
+abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
+struct LazyBandedLayout <: AbstractLazyBandedLayout end
+sublayout(::AbstractLazyBandedLayout, ::Type{<:NTuple{2,AbstractUnitRange}}) = LazyBandedLayout()
+
+diagonallayout(::LazyLayout) = DiagonalLayout{LazyLayout}()
+tridiagonallayout(::LazyLayout, _, _) = LazyBandedLayout()
+tridiagonallayout(_, ::LazyLayout, _) = LazyBandedLayout()
+tridiagonallayout(_, _, ::LazyLayout) = LazyBandedLayout()
+tridiagonallayout(::LazyLayout, _, ::LazyLayout) = LazyBandedLayout()
+tridiagonallayout(::LazyLayout, ::LazyLayout, _) = LazyBandedLayout()
+tridiagonallayout(::LazyLayout, _, ::LazyLayout) = LazyBandedLayout()
+tridiagonallayout(::LazyLayout, ::LazyLayout, ::LazyLayout) = LazyBandedLayout()
+bidiagonallayout(::LazyLayout, _) = LazyBandedLayout()
+bidiagonallayout(_, ::LazyLayout) = LazyBandedLayout()
+bidiagonallayout(::LazyLayout, ::LazyLayout) = LazyBandedLayout()
+symytridiagonallayout(::LazyLayout, _) = LazyBandedLayout()
+symytridiagonallayout(_, ::LazyLayout) = LazyBandedLayout()
+symytridiagonallayout(::LazyLayout, ::LazyLayout) = LazyBandedLayout()
+

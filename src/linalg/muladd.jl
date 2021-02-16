@@ -35,15 +35,3 @@ similar(M::Applied{MulAddStyle}, ::Type{T}) where T = similar(MulAdd(M), T)
 copy(M::Applied{MulAddStyle}) = copy(MulAdd(M))
 @inline copyto!(dest::AbstractArray, M::Applied{MulAddStyle}) = copyto!(dest, MulAdd(M))
 
-###
-# *DiagonalLayout
-###
-
-for (lay, Lay) in ((:diagonallayout, :DiagonalLayout), (:tridiagonallayout, :TridiagonalLayout), 
-                   (:bidiagonallayout, :BidiagonalLayout), (:symtridiagonallayout, :SymTridiagonalLayout))
-    @eval begin
-        $lay(::LazyLayout) = $Lay{LazyLayout}()
-        $lay(::ApplyLayout) = $Lay{LazyLayout}()
-        $lay(::BroadcastLayout) = $Lay{LazyLayout}()
-    end
-end
