@@ -391,3 +391,24 @@ function map(::typeof(copy), D::Tridiagonal{<:Any,<:LazyArray})
 end
     
 
+
+
+###
+# LazyBandedLayout
+###
+
+diagonallayout(::AbstractLazyLayout) = DiagonalLayout{LazyLayout}()
+tridiagonallayout(::AbstractLazyLayout, _, _) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(_, ::AbstractLazyLayout, _) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(_, _, ::AbstractLazyLayout) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(::AbstractLazyLayout, _, ::AbstractLazyLayout) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout, _) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(_, ::AbstractLazyLayout, ::AbstractLazyLayout) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout, ::AbstractLazyLayout) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+bidiagonallayout(::AbstractLazyLayout, _) = BidiagonalLayout{LazyLayout,LazyLayout}()
+bidiagonallayout(_, ::AbstractLazyLayout) = BidiagonalLayout{LazyLayout,LazyLayout}()
+bidiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout) = BidiagonalLayout{LazyLayout,LazyLayout}()
+symtridiagonallayout(::AbstractLazyLayout, _) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
+symtridiagonallayout(_, ::AbstractLazyLayout) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
+symtridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
+
