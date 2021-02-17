@@ -444,6 +444,8 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test y .+ Zeros(8) == Zeros(8) .+ y == y
             @test x .* Zeros(8) ≡ Zeros(8) .* x ≡ Zeros(8)
             @test y .* Zeros(8) ≡ Zeros(8) .* y ≡ Zeros(8)
+            @test x .\ Zeros(8) ≡ Zeros(8) ./ x ≡ Zeros(8)
+            @test y .\ Zeros(8) ≡ Zeros(8) ./ y ≡ Zeros(8)
         end
 
         @testset "vcat and BroadcastArray" begin

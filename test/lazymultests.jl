@@ -193,6 +193,23 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test map(copy, Tridiagonal(c, b, c)) == Tridiagonal(copy(c), copy(b), copy(c))
         @test map(copy, Tridiagonal(c, b, c, d)) == Tridiagonal(copy(c), copy(b), copy(c), copy(d))
         @test map(copy, Tridiagonal(c, b, c, d)).du2 == d
+
+        @test MemoryLayout(Tridiagonal(c, b, c)) isa TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}
+        @test MemoryLayout(SymTridiagonal(b, c)) isa SymTridiagonalLayout{LazyLayout,LazyLayout}
+        @test MemoryLayout(Bidiagonal(b, c, :U)) isa BidiagonalLayout{LazyLayout,LazyLayout}
+
+        @test LazyArrays.tridiagonallayout(UnknownLayout(), UnknownLayout(), LazyLayout()) isa TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}
+        @test LazyArrays.tridiagonallayout(UnknownLayout(), LazyLayout(), UnknownLayout()) isa TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}
+        @test LazyArrays.tridiagonallayout(LazyLayout(), UnknownLayout(), UnknownLayout()) isa TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}
+        @test LazyArrays.tridiagonallayout(UnknownLayout(), LazyLayout(), LazyLayout()) isa TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}
+        @test LazyArrays.tridiagonallayout(LazyLayout(), UnknownLayout(), LazyLayout()) isa TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}
+        @test LazyArrays.tridiagonallayout(LazyLayout(), LazyLayout(), UnknownLayout()) isa TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}
+
+        @test LazyArrays.symtridiagonallayout(UnknownLayout(), LazyLayout()) isa SymTridiagonalLayout{LazyLayout,LazyLayout}
+        @test LazyArrays.symtridiagonallayout(LazyLayout(), UnknownLayout()) isa SymTridiagonalLayout{LazyLayout,LazyLayout}
+
+        @test LazyArrays.bidiagonallayout(UnknownLayout(), LazyLayout()) isa BidiagonalLayout{LazyLayout,LazyLayout}
+        @test LazyArrays.bidiagonallayout(LazyLayout(), UnknownLayout()) isa BidiagonalLayout{LazyLayout,LazyLayout}
     end
 
     @testset "Nested" begin

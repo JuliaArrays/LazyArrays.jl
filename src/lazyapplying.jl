@@ -408,7 +408,7 @@ tridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout, ::AbstractLazyLayo
 bidiagonallayout(::AbstractLazyLayout, _) = BidiagonalLayout{LazyLayout,LazyLayout}()
 bidiagonallayout(_, ::AbstractLazyLayout) = BidiagonalLayout{LazyLayout,LazyLayout}()
 bidiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout) = BidiagonalLayout{LazyLayout,LazyLayout}()
-symytridiagonallayout(::AbstractLazyLayout, _) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
-symytridiagonallayout(_, ::AbstractLazyLayout) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
-symytridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
+symtridiagonallayout(::AbstractLazyLayout, _) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
+symtridiagonallayout(_, ::AbstractLazyLayout) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
+symtridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
 
