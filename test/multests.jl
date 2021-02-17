@@ -897,7 +897,7 @@ end
 
         A = randn(5,5)
         B = SymTridiagonal(randn(5),randn(4))
-        @test MemoryLayout(typeof(B)) == SymTridiagonalLayout{DenseColumnMajor}()
+        @test MemoryLayout(typeof(B)) == SymTridiagonalLayout{DenseColumnMajor,DenseColumnMajor}()
         @test apply(*,A,B) ≈ A*B
     end
 end

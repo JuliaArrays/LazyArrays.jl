@@ -397,22 +397,18 @@ end
 # LazyBandedLayout
 ###
 
-abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
-struct LazyBandedLayout <: AbstractLazyBandedLayout end
-sublayout(::AbstractLazyBandedLayout, ::Type{<:NTuple{2,AbstractUnitRange}}) = LazyBandedLayout()
-
 diagonallayout(::AbstractLazyLayout) = DiagonalLayout{LazyLayout}()
-tridiagonallayout(::AbstractLazyLayout, _, _) = LazyBandedLayout()
-tridiagonallayout(_, ::AbstractLazyLayout, _) = LazyBandedLayout()
-tridiagonallayout(_, _, ::AbstractLazyLayout) = LazyBandedLayout()
-tridiagonallayout(::AbstractLazyLayout, _, ::AbstractLazyLayout) = LazyBandedLayout()
-tridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout, _) = LazyBandedLayout()
-tridiagonallayout(::AbstractLazyLayout, _, ::AbstractLazyLayout) = LazyBandedLayout()
-tridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout, ::AbstractLazyLayout) = LazyBandedLayout()
-bidiagonallayout(::AbstractLazyLayout, _) = LazyBandedLayout()
-bidiagonallayout(_, ::AbstractLazyLayout) = LazyBandedLayout()
-bidiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout) = LazyBandedLayout()
-symytridiagonallayout(::AbstractLazyLayout, _) = LazyBandedLayout()
-symytridiagonallayout(_, ::AbstractLazyLayout) = LazyBandedLayout()
-symytridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout) = LazyBandedLayout()
+tridiagonallayout(::AbstractLazyLayout, _, _) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(_, ::AbstractLazyLayout, _) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(_, _, ::AbstractLazyLayout) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(::AbstractLazyLayout, _, ::AbstractLazyLayout) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout, _) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(_, ::AbstractLazyLayout, ::AbstractLazyLayout) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+tridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout, ::AbstractLazyLayout) = TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}()
+bidiagonallayout(::AbstractLazyLayout, _) = BidiagonalLayout{LazyLayout,LazyLayout}()
+bidiagonallayout(_, ::AbstractLazyLayout) = BidiagonalLayout{LazyLayout,LazyLayout}()
+bidiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout) = BidiagonalLayout{LazyLayout,LazyLayout}()
+symytridiagonallayout(::AbstractLazyLayout, _) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
+symytridiagonallayout(_, ::AbstractLazyLayout) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
+symytridiagonallayout(::AbstractLazyLayout, ::AbstractLazyLayout) = SymTridiagonalLayout{LazyLayout,LazyLayout}()
 
