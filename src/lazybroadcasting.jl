@@ -157,6 +157,9 @@ broadcasted(::LazyArrayStyle{N}, op, x::Ref, r::AbstractFill{T,N}) where {T,N} =
 broadcasted(::LazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), op, r1, r2)
 broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::AbstractFill, b::AbstractRange) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::AbstractRange, b::AbstractFill) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::AbstractRange) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::AbstractRange, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+
 for op in (:*, :/, :\)
     @eval broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::Zeros{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
 end

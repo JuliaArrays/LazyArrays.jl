@@ -111,6 +111,8 @@ import Base: broadcasted
 
         @test broadcasted(LazyArrayStyle{1}(), *, Zeros(5), Zeros(5)) ≡ Zeros(5)
         @test broadcasted(LazyArrayStyle{1}(), *, Fill(2,5), 1:5) ≡ broadcasted(LazyArrayStyle{1}(), *, 1:5, Fill(2,5)) ≡ 2:2:10
+        @test broadcasted(LazyArrayStyle{1}(), *, Zeros(5), 1:5) ≡ broadcasted(LazyArrayStyle{1}(), *, 1:5, Zeros(5)) ≡ Zeros(5)
+        @test broadcasted(LazyArrayStyle{1}(), *, Ones{Int}(5), 1:5) ≡ broadcasted(LazyArrayStyle{1}(), *, 1:5, Ones{Int}(5)) ≡ 1:5
 
         b = BroadcastArray(exp, randn(5))
         @test b .* Zeros(5) ≡ Zeros(5)
