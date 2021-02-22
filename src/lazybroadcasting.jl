@@ -142,51 +142,37 @@ for op in (+, -, big)
 end
 
 for op in (-, +, *, /)
-    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::AbstractRange, x::Real) =
-        broadcast(DefaultArrayStyle{1}(), $op, r, x)
+    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), r::AbstractRange, x::Real) = broadcast(DefaultArrayStyle{1}(), $op, r, x)
 end
 
 for op in (-, +, *, \)
-    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), x::Real, r::AbstractRange) =
-        broadcast(DefaultArrayStyle{1}(), $op, x, r)
+    @eval broadcasted(::LazyArrayStyle{1}, ::typeof($op), x::Real, r::AbstractRange) = broadcast(DefaultArrayStyle{1}(), $op, x, r)
 end
 
-
-broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}) where {T,N} =
-    broadcast(DefaultArrayStyle{N}(), op, r)
-broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Number) where {T,N} =
-    broadcast(DefaultArrayStyle{N}(), op, r, x)
-broadcasted(::LazyArrayStyle{N}, op, x::Number, r::AbstractFill{T,N}) where {T,N} =
-    broadcast(DefaultArrayStyle{N}(), op, x, r)
-broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Ref) where {T,N} =
-    broadcast(DefaultArrayStyle{N}(), op, r, x)
-broadcasted(::LazyArrayStyle{N}, op, x::Ref, r::AbstractFill{T,N}) where {T,N} =
-    broadcast(DefaultArrayStyle{N}(), op, x, r)
-broadcasted(::LazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} =
-    broadcast(DefaultArrayStyle{N}(), op, r1, r2)
-
+broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, r)
+broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Number) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, r, x)
+broadcasted(::LazyArrayStyle{N}, op, x::Number, r::AbstractFill{T,N}) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, x, r)
+broadcasted(::LazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Ref) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, r, x)
+broadcasted(::LazyArrayStyle{N}, op, x::Ref, r::AbstractFill{T,N}) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, x, r)
+broadcasted(::LazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), op, r1, r2)
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::AbstractFill, b::AbstractRange) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::AbstractRange, b::AbstractFill) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 for op in (:*, :/, :\)
-    @eval broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::Zeros{V,N}) where {T,V,N} =
-            broadcast(DefaultArrayStyle{N}(), $op, a, b)
+    @eval broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::Zeros{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
 end
 
 for op in (:*, :/)
     @eval begin
-        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::AbstractArray{V,N}) where {T,V,N} =
-            broadcast(DefaultArrayStyle{N}(), $op, a, b)
-        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::Broadcasted) where {T,N} =
-            broadcast(DefaultArrayStyle{N}(), $op, a, b)
+        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::AbstractArray{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
+        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::Broadcasted) where {T,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
     end
 end
 for op in (:*, :\)
     @eval begin
-        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::AbstractArray{T,N}, b::Zeros{V,N}) where {T,V,N} =
-            broadcast(DefaultArrayStyle{N}(), $op, a, b)
-        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Broadcasted, b::Zeros{V,N}) where {V,N} =
-            broadcast(DefaultArrayStyle{N}(), $op, a, b)
+        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::AbstractArray{T,N}, b::Zeros{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
+        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Broadcasted, b::Zeros{V,N}) where {V,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
     end
 end
-
 
 ###
 # support
