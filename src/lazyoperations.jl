@@ -438,8 +438,9 @@ copyto!(x::AbstractArray{<:Any,N}, C::Cumsum{<:Any,N}) where N = cumsum!(x, C.v)
 
 # How we populate the data
 function cache_filldata!(K::Accumulate{<:Any,1}, inds)
+    copyto!(view(K.data,inds), view(K.v,inds))
     @inbounds for k in inds
-        K.data[k] = K.op(K.data[k-1], K.v[k])
+        K.data[k] = K.op(K.data[k-1], K.data[k])
     end
 end
 
