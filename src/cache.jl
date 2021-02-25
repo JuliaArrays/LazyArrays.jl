@@ -107,15 +107,16 @@ getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, 
 getindex(A::AbstractCachedVector, ::Colon) = copy(A)
 getindex(A::AbstractCachedVector, ::Slice) = copy(A)
 
-function cache_getindex(A::AbstractVector, I, J...)
+function cache_getindex(n, A::AbstractVector, I, J...)
     @boundscheck checkbounds(A, I, J...)
-    isempty(I) || resizedata!(A, _maximum(axes(A,1), I))
+    isempty(I) || resizedata!(A, n)
     A.data[I]
 end
+# allow dispatch on resize length for infinite arrays
+cache_getindex(A::AbstractVector, I, J...) = cache_getindex(_maximum(axes(A,1), I), A::AbstractVector, I, J...)
 
 getindex(A::AbstractCachedVector, I, J...) = cache_getindex(A, I, J...)
-getindex(A::AbstractCachedVector, I::UnitRange) = cache_getindex(A, I)
-getindex(A::AbstractCachedVector, I::AbstractVector) = layout_getindex(A, I)
+getindex(A::AbstractCachedVector, I::AbstractVector) = cache_getindex(A, I)
 
 function getindex(A::AbstractCachedVector, I::CartesianIndex)
     resizedata!(A, Tuple(I)...)
@@ -226,10 +227,8 @@ function _cached_getindex_vector(A, I)
     CachedArray(A.data[I ∩ OneTo(A.datasize[1])], A.array[oneto(length(I))])
 end
 
-getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector) where T =
-    _cached_getindex_vector(A, I)
-getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractUnitRange) where T =
-    _cached_getindex_vector(A, I)
+getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector) where T = _cached_getindex_vector(A, I)
+getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractUnitRange) where T = _cached_getindex_vector(A, I)
 
 ###
 # MemoryLayout
