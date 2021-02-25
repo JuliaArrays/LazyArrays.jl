@@ -39,12 +39,8 @@ CachedArray(data::AbstractArray, array::AbstractArray) = CachedArray(data, array
 #     CachedArray(Diagonal(Vector{T}(undef, size(array,1))), array)
 # end
 
-CachedArray(::Type{Array}, array::AbstractArray{T,N}) where {T,N} =
-    CachedArray(Array{T,N}(undef, ntuple(zero,N)), array)
-
-
-CachedArray(array::AbstractArray{T,N}) where {T,N} =
-    CachedArray(similar(array, ntuple(zero,N)), array)
+CachedArray(::Type{Array}, array::AbstractArray{T,N}) where {T,N} = CachedArray(Array{T,N}(undef, ntuple(zero,N)), array)
+CachedArray(array::AbstractArray{T,N}) where {T,N} = CachedArray(similar(array, ntuple(zero,N)), array)
 
 """
     cache(array::AbstractArray)
@@ -118,6 +114,7 @@ function cache_getindex(A::AbstractVector, I, J...)
 end
 
 getindex(A::AbstractCachedVector, I, J...) = cache_getindex(A, I, J...)
+getindex(A::AbstractCachedVector, I::UnitRange) = cache_getindex(A, I)
 getindex(A::AbstractCachedVector, I::AbstractVector) = layout_getindex(A, I)
 
 function getindex(A::AbstractCachedVector, I::CartesianIndex)
@@ -141,6 +138,7 @@ function cache_filldata!(B, inds...)
 end
 
 function _vec_resizedata!(B::AbstractVector, n)
+    n ≤ 0 && return B
     @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
@@ -253,17 +251,12 @@ MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayo
 
 BroadcastStyle(::Type{<:CachedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 
-broadcasted(::LazyArrayStyle, op, A::CachedArray) =
-    CachedArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
+broadcasted(::LazyArrayStyle, op, A::CachedArray) = CachedArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
+broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Number) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+broadcasted(::LazyArrayStyle, op, c::Number, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
+broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Ref) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 
-broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Number) =
-    CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
-broadcasted(::LazyArrayStyle, op, c::Number, A::CachedArray) =
-CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
-broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Ref) =
-    CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
-broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) =
-    CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 
 
 function layout_broadcasted(::CachedLayout, _, op, A::AbstractVector, B::AbstractVector)
@@ -397,3 +390,23 @@ end
 
 permutedims(a::CachedMatrix) = CachedArray(permutedims(a.data), permutedims(a.array), reverse(a.datasize))
 permutedims(a::CachedVector) = CachedArray(permutedims(a.data), permutedims(a.array), (1,a.datasize[1]))
+
+
+##
+# hide type of AbstactArray
+##
+const CachedAbstractArray{T,N} = CachedArray{T,N,Array{T,N},AbstractArray{T,N}}
+const CachedAbstractVector{T} = CachedAbstractArray{T,1}
+const CachedAbstractMatrix{T} = CachedAbstractArray{T,2}
+
+CachedAbstractArray{T,N}(data::AbstractArray{T,N}, array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(data, array, size(data))
+CachedAbstractArray{T,N}(array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(Array{T,N}(undef, ntuple(zero,N)), array)
+CachedAbstractArray(array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(array)
+CachedAbstractArray(data::AbstractArray{T,N}, array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(data, array)
+(CachedAbstractArray{V,N} where V)(array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(array)
+
+broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
+broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray, c::Number) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+broadcasted(::LazyArrayStyle, op, c::Number, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
+broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray, c::Ref) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
