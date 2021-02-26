@@ -48,9 +48,12 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
     end
 
     @testset "convert" begin
-        A = collect(1:5)
-        C = cache(A)
-
+        C = cache(1:5);
+        C[1] = 3;
+        @test convert(AbstractVector{Int}, C) ≡ convert(AbstractArray{Int}, C) ≡ C
+        @test convert(AbstractVector{Float64}, C) isa CachedVector
+        @test convert(AbstractArray{Float64}, C) isa CachedVector
+        @test convert(AbstractVector{Float64}, C) == convert(AbstractArray{Float64}, C) == C
     end
 
     @testset "Matrix cache" begin

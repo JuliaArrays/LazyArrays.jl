@@ -55,8 +55,10 @@ _cache(::AbstractStridedLayout, O::AbstractArray) = copy(O)
 
 cacheddata(A::AbstractCachedArray) = view(A.data,OneTo.(A.datasize)...)
 
-convert(::Type{AbstractArray{T}}, S::CachedArray{T}) where {T} = S
-convert(::Type{AbstractArray{T}}, S::CachedArray) where {T} =
+convert(::Type{AbstractArray{T}}, S::CachedArray{T}) where T = S
+convert(::Type{AbstractArray{T,N}}, S::CachedArray{T,N}) where {T,N} = S
+convert(::Type{AbstractArray{T}}, S::CachedArray{<:Any,N}) where {T,N} = convert(AbstractArray{T,N}, S)
+convert(::Type{AbstractArray{T,N}}, S::CachedArray{<:Any,N}) where {T,N} = 
     CachedArray(convert(AbstractArray{T}, S.data), convert(AbstractArray{T}, S.array), S.datasize)
 
 axes(A::CachedArray) = axes(A.array)
@@ -223,13 +225,10 @@ function zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N
     zero!(A.data)
     A
 end
-function _cached_getindex_vector(A, I)
+function cache_getindex(_, A::CachedVector{<:Any,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector)
     @boundscheck checkbounds(A, I)
     CachedArray(A.data[I ∩ OneTo(A.datasize[1])], A.array[oneto(length(I))])
 end
-
-getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector) where T = _cached_getindex_vector(A, I)
-getindex(A::CachedVector{T,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractUnitRange) where T = _cached_getindex_vector(A, I)
 
 ###
 # MemoryLayout
