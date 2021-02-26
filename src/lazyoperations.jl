@@ -462,6 +462,10 @@ cumsum(a::LazyArray; kwds...) = Cumsum(a; kwds...)
 accumulate(op, a::LazyArray; kwds...) = Accumulate(op, a; kwds...)
 
 
+const AccumulateAbstractVector{T,Op} = Accumulate{T,1,Op,Vector{T},AbstractVector{T}}
+AccumulateAbstractVector(op, A::AbstractVector{T}) where T = AccumulateAbstractVector{T,typeof(op)}(op, [A[1]], A, 1, (1,))
+
+
 ## Rotations
 
 for op in (:rot180, :rotl90, :rotr90)
