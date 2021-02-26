@@ -1,5 +1,6 @@
 using LazyArrays, FillArrays, ArrayLayouts, StaticArrays, Test
-import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!
+import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
+                    CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix
 
 @testset "Cache" begin
     @testset "basics" begin
@@ -29,7 +30,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
 
         @test C[1,:] == C[1,1:10] == C[1,collect(1:10)] == A[1,1:10]
         @test C[:,1] == C[1:10,1] == C[collect(1:10),1] == A[1:10,1]
-        @test C[1:10,1:10] == C[collect(1:10),collect(1:10)] == C[:,:] == C[1:10,:] == 
+        @test C[1:10,1:10] == C[collect(1:10),collect(1:10)] == C[:,:] == C[1:10,:] ==
                 C[collect(1:10),:] == C[:,1:10] == C[:,collect(1:10)] == A
 
         A = reshape(1:10^3, 10,10,10)
@@ -349,5 +350,18 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         A[2,3] = 2;
         @test permutedims(A) isa CachedMatrix
         @test permutedims(A).datasize == (3,2)
+    end
+
+    @testset "CachedAbstract" begin
+        A = CachedAbstractArray(1:5);
+        A[2] = 3
+        @test -A isa CachedAbstractVector
+        @test A .+ 1 isa CachedAbstractVector
+        @test A .+ Ref(1) isa CachedAbstractVector
+        @test 1 .+ A isa CachedAbstractVector
+        @test Ref(1) .+ A isa CachedAbstractVector
+
+        @test CachedAbstractVector(1:5) isa CachedAbstractVector
+        @test CachedAbstractMatrix(reshape(1:6,2,3)) isa CachedAbstractMatrix
     end
 end
