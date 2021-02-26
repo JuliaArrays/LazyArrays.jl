@@ -107,13 +107,14 @@ getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, 
 getindex(A::AbstractCachedVector, ::Colon) = copy(A)
 getindex(A::AbstractCachedVector, ::Slice) = copy(A)
 
-function cache_getindex(n, A::AbstractVector, I, J...)
+function cache_getindex(_, A::AbstractVector, I, J...)
+    n = _maximum(axes(A,1), I)
     @boundscheck checkbounds(A, I, J...)
     isempty(I) || resizedata!(A, n)
     A.data[I]
 end
 # allow dispatch on resize length for infinite arrays
-cache_getindex(A::AbstractVector, I, J...) = cache_getindex(_maximum(axes(A,1), I), A::AbstractVector, I, J...)
+cache_getindex(A::AbstractVector, I, J...) = cache_getindex(length(I), A, I, J...)
 
 getindex(A::AbstractCachedVector, I, J...) = cache_getindex(A, I, J...)
 getindex(A::AbstractCachedVector, I::AbstractVector) = cache_getindex(A, I)
