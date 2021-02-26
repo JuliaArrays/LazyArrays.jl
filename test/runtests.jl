@@ -350,7 +350,8 @@ end
         a = accumulate(*, v)
         @test a isa Accumulate
         @test a[end] ≈ prod(1 .+ (1:10_000_000).^(-2.0))
-        
+        @test LazyArrays.AccumulateAbstractVector(*, 1:5) == a
+        @test LazyArrays.AccumulateAbstractVector(*, 1:5) isa LazyArrays.AccumulateAbstractVector
     end
 end
 
