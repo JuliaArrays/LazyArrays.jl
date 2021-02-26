@@ -403,7 +403,12 @@ CachedAbstractArray{T,N}(data::AbstractArray{T,N}, array::AbstractArray{T,N}) wh
 CachedAbstractArray{T,N}(array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(Array{T,N}(undef, ntuple(zero,N)), array)
 CachedAbstractArray(array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(array)
 CachedAbstractArray(data::AbstractArray{T,N}, array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(data, array)
-(CachedAbstractArray{V,N} where V)(array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(array)
+
+# TODO: uncomment when Julia v1.6 is required
+# (CachedAbstractArray{V,N} where V)(array::AbstractArray{T,N}) where {T,N} = CachedAbstractArray{T,N}(array)
+CachedAbstractVector(array::AbstractVector{T}) where T = CachedAbstractVector{T}(array)
+CachedAbstractMatrix(array::AbstractMatrix{T}) where T = CachedAbstractMatrix{T}(array)
+
 
 broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
 broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray, c::Number) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
