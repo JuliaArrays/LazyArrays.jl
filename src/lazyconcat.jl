@@ -953,18 +953,11 @@ function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractVector})
     _lazy_getindex(dat, kr2)
 end
 
-function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractMatrix})
+function sub_paddeddata(_, S::SubArray)
     P = parent(S)
-    (kr,j) = parentindices(S)
-    resizedata!(P, 1, j) # ensure enough rows
-    dat = paddeddata(P)
-    kr2 = kr ∩ axes(dat,1)
-    _lazy_getindex(dat, kr2, j)
-end
-
-function sub_paddeddata(_, S::SubArray{<:Any,2})
-    dat = paddeddata(parent(S))
     (kr,jr) = parentindices(S)
+    resizedata!(P, 1, maximum(jr)) # ensure enough rows
+    dat = paddeddata(P)
     kr2 = kr ∩ axes(dat,1)
     _lazy_getindex(dat, kr2, jr)
 end
