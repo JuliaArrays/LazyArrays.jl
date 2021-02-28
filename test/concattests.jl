@@ -621,7 +621,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         # allow emulating a cached Vector
         a = Vcat([1,2], Zeros(8))
         @test resizedata!(a, 2) ≡ a
-        @test_throws ArgumentError resizedata!(a,3)
+        @test_throws BoundsError resizedata!(a,3)
     end
 
     @testset "Axpy" begin

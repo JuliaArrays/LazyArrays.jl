@@ -588,11 +588,12 @@ paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
 
 colsupport(::PaddedLayout, A, j) = colsupport(paddeddata(A),j)
 
-function _vcat_resizedata!(::PaddedLayout, B, m)
-    m ≤ length(paddeddata(B))  || throw(ArgumentError("Cannot resize"))
+function _vcat_resizedata!(::PaddedLayout, B, m...)
+    Base.checkbounds(paddeddata(B), m...)
     B
 end
-resizedata!(B::Vcat, m) = _vcat_resizedata!(MemoryLayout(B), B, m)
+
+resizedata!(B::Vcat, m...) = _vcat_resizedata!(MemoryLayout(B), B, m...)
 
 function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
     length(A) == length(B) || return false
@@ -953,18 +954,11 @@ function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractVector})
     _lazy_getindex(dat, kr2)
 end
 
-function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractMatrix})
+function sub_paddeddata(_, S::SubArray)
     P = parent(S)
-    (kr,j) = parentindices(S)
-    resizedata!(P, 1, j) # ensure enough rows
-    dat = paddeddata(P)
-    kr2 = kr ∩ axes(dat,1)
-    _lazy_getindex(dat, kr2, j)
-end
-
-function sub_paddeddata(_, S::SubArray{<:Any,2})
-    dat = paddeddata(parent(S))
     (kr,jr) = parentindices(S)
+    resizedata!(P, 1, maximum(jr)) # ensure enough rows
+    dat = paddeddata(P)
     kr2 = kr ∩ axes(dat,1)
     _lazy_getindex(dat, kr2, jr)
 end
