@@ -588,11 +588,12 @@ paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
 
 colsupport(::PaddedLayout, A, j) = colsupport(paddeddata(A),j)
 
-function _vcat_resizedata!(::PaddedLayout, B, m)
-    m ≤ length(paddeddata(B))  || throw(ArgumentError("Cannot resize"))
+function _vcat_resizedata!(::PaddedLayout, B, m...)
+    Base.checkbounds(paddeddata(B), m...)
     B
 end
-resizedata!(B::Vcat, m) = _vcat_resizedata!(MemoryLayout(B), B, m)
+
+resizedata!(B::Vcat, m...) = _vcat_resizedata!(MemoryLayout(B), B, m...)
 
 function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
     length(A) == length(B) || return false
