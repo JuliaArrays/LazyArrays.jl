@@ -201,7 +201,7 @@ _vec_mul_arguments(V) = _vec_mul_arguments(arguments(parent(V)), parentindices(V
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V)
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
 
-@inline sub_materialize(::ApplyLayout{typeof(*)}, V) = apply(*, arguments(V)...)
+@inline sub_materialize(lay::ApplyLayout{typeof(*)}, V) = apply(*, map(sub_materialize, arguments(lay, V))...)
 
 
 ##
