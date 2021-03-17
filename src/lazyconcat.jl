@@ -843,7 +843,7 @@ function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr)
     sz = size.(arguments(A),1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
-    _view_vcat.(arguments(A), skr2)
+    map(_view_vcat, arguments(A), skr2)
 end
 
 function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr, jr)
