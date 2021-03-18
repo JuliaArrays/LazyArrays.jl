@@ -153,9 +153,10 @@ function _vec_resizedata!(B::AbstractVector, n)
         B.data = similar(B.data, min(2n,length(B)))
         B.data[axes(olddata,1)] = olddata
     end
-
-    cache_filldata!(B, ν+1:n)
-    B.datasize = (n,)
+    if n > ν
+        cache_filldata!(B, ν+1:n)
+        B.datasize = (n,)
+    end
 
     B
 end
@@ -410,6 +411,14 @@ CachedAbstractMatrix(array::AbstractMatrix{T}) where T = CachedAbstractMatrix{T}
 
 
 broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
+function broadcasted(::LazyArrayStyle, op, A::CachedAbstractVector, B::CachedAbstractVector)
+    n = max(A.datasize[1],B.datasize[1])
+    resizedata!(A,n)
+    resizedata!(B,n)
+    Adat = view(cacheddata(A),1:n)
+    Bdat = view(cacheddata(B),1:n)
+    CachedAbstractArray(broadcast(op, Adat, Bdat), broadcast(op, A.array, B.array))
+end
 broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray, c::Number) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
 broadcasted(::LazyArrayStyle, op, c::Number, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray, c::Ref) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
