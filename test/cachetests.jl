@@ -360,6 +360,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test A .+ Ref(1) isa CachedAbstractVector
         @test 1 .+ A isa CachedAbstractVector
         @test Ref(1) .+ A isa CachedAbstractVector
+        @test A .+ A isa CachedAbstractVector
 
         @test CachedAbstractVector(1:5) isa CachedAbstractVector
         @test CachedAbstractMatrix(reshape(1:6,2,3)) isa CachedAbstractMatrix
