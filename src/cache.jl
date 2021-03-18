@@ -190,8 +190,15 @@ function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) whe
 end
 
 # sub array
-function resizedata!(v::SubArray{<:Any,1,<:AbstractMatrix}, m::Integer)
-    resizedata!(parent(v), m, parentindices(v)[2])
+function resizedata!(v::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{AbstractUnitRange,Integer}}, m::Integer)
+    kr,j = parentindices(v)
+    resizedata!(parent(v), kr[m], j)
+    v
+end
+
+function resizedata!(v::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{Integer,AbstractUnitRange}}, m::Integer)
+    k,jr = parentindices(v)
+    resizedata!(parent(v), k, jr[m])
     v
 end
 
