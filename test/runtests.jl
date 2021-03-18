@@ -349,6 +349,8 @@ end
         v = BroadcastArray(+, 1, BroadcastArray(^, 1:10_000_000, -2.0))
         a = accumulate(*, v)
         @test a isa Accumulate
+        @test copy(a) isa Accumulate
+        @test copy(a) == a
         @test a[end] ≈ prod(1 .+ (1:10_000_000).^(-2.0))
         @test LazyArrays.AccumulateAbstractVector(*, 1:5) == Accumulate(*, 1:5)
         @test LazyArrays.AccumulateAbstractVector(*, 1:5) isa LazyArrays.AccumulateAbstractVector

@@ -431,6 +431,8 @@ IndexStyle(::Type{<:Accumulate{<:Any,2}}) = IndexCartesian()
 
 size(Q::Accumulate) = size(Q.v)
 
+copy(Q::Accumulate) = Accumulate(Q.op, copy(Q.data), copy(Q.v), Q.dims, Q.datasize)
+
 
 ==(a::Cumsum{<:Any,1}, b::Cumsum{<:Any,1}) = a.v == b.v
 

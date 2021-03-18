@@ -189,11 +189,6 @@ function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) whe
     B
 end
 
-# sub array
-function resizedata!(v::SubArray{<:Any,1,<:AbstractMatrix}, m::Integer)
-    resizedata!(parent(v), m, parentindices(v)[2])
-    v
-end
 
 convexunion(a::AbstractVector) = a
 
@@ -423,3 +418,43 @@ broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray, c::Number) = CachedAbs
 broadcasted(::LazyArrayStyle, op, c::Number, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray, c::Ref) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
 broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
+
+
+###
+# copyto!
+###
+
+function _copyto!(_, ::CachedLayout, dest::AbstractArray{T,N}, src::AbstractArray{V,N}) where {T,V,N}
+    resizedata!(src, size(dest)...)
+    copyto!(dest, view(cacheddata(src), axes(dest)...))
+end
+
+###
+# SubArray
+###
+
+sublayout(::CachedLayout{MLAY,ALAY}, ::Type{I}) where {MLAY,ALAY,I} = 
+    cachedlayout(sublayout(MLAY(),I), sublayout(ALAY,I))
+
+function resizedata!(V::SubArray, n::Integer...)
+    resizedata!(parent(V), getindex.(parentindices(V), n)...)
+    V
+end
+
+function resizedata!(v::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{AbstractVector,Integer}}, m::Integer)
+    kr,j = parentindices(v)
+    resizedata!(parent(v), maximum(view(kr,1:m)), j)
+    v
+end
+
+function resizedata!(v::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{Integer,AbstractVector}}, m::Integer)
+    k,jr = parentindices(v)
+    resizedata!(parent(v), k, maximum(view(jr,1:m)))
+    v
+end
+
+function cacheddata(V::SubArray)
+    P = parent(V)
+    data = cacheddata(P)
+    view(data, intersect.(axes(data), parentindices(V))...)
+end
