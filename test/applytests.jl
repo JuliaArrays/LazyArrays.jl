@@ -30,7 +30,6 @@ import ArrayLayouts: StridedLayout
 
         @test ApplyArray(+,[1,2],[3,4]) == ApplyVector(+,[1,2],[3,4]) == ApplyArray(+,[1,2],[3,4])
 
-        @test LazyArrays.rowsupport(Diagonal(1:10),3) == 3:3
         M = ApplyArray(*, Ones(100_000_000,100_000_000), Diagonal(1:100_000_000))
         @test M[1,1] === 1.0
         @test M[1:10,1:10] == ones(10,10)*Diagonal(1:10)

@@ -1118,8 +1118,8 @@ end
     @testset "Mul colsupport" begin
         D = ApplyArray(*,Diagonal(randn(5)),Diagonal(randn(5)),Diagonal(randn(5)))
         D̃ = Applied(*,Diagonal(randn(5)),Diagonal(randn(5)),Diagonal(randn(5)))
-        @test colsupport(D,3) == colsupport(D̃,3) == 3:3
-        @test rowsupport(D,3) == rowsupport(D̃,3) == 3:3
+        @test colsupport(D,3) == colsupport(D̃,3) == 3
+        @test rowsupport(D,3) == rowsupport(D̃,3) == 3
     end
 
     @testset "Constructors" begin
