@@ -201,9 +201,15 @@ end
 convexunion(a::AbstractVector, b::AbstractVector, c::AbstractVector...) =
     convexunion(convexunion(a,b), c...)
 
+convexunion(a::Number, b::Number, c...) = convexunion(a:a, b:b, c...)
+convexunion(a::Number, b, c...) = convexunion(a:a, b, c...)
+convexunion(a, b::Number, c...) = convexunion(a, b:b, c...)
+
+_tounitrange(a) = first(a):last(a)
+
 function colsupport(A::CachedMatrix, i)
     isempty(i) && return 1:0
-    minimum(i) ≤ A.datasize[2] ? convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1])) : colsupport(A.array, i)
+    _tounitrange(minimum(i) ≤ A.datasize[2] ? convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1])) : colsupport(A.array, i))
 end
 colsupport(A::CachedVector, i) =
     convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1]))

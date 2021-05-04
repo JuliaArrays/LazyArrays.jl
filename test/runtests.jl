@@ -362,13 +362,13 @@ end
     @test rowsupport(A,1) === Base.OneTo(6)
     @test colsupport(A,1) === Base.OneTo(5)
     D = Diagonal(randn(5))
-    @test rowsupport(D,3) === colsupport(D,3) === 3:3
+    @test rowsupport(D,3) === colsupport(D,3) === 3
     Z = Zeros(5)
     @test rowsupport(Z,1) === colsupport(Z,1) === 1:0
     @test_broken cache(D)
     C = cache(Array,D);
     @test colsupport(C,2) === 2:2
-    @test colsupport(C,1) === 1:1
+    @test @inferred(colsupport(C,1)) === 1:1
     @test colsupport(cache(Zeros(5,5)),1) == 1:0
     C = cache(Zeros(5));
     @test colsupport(C,1) == 1:0
