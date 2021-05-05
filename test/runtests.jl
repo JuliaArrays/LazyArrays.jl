@@ -379,8 +379,11 @@ end
     @test colsupport(C,1) == 1:3
     @test C == zeros(5)
 
-    # bug from BandedMartrices.jl
-    @test LazyArrays.convexunion(7:10,9:8) == LazyArrays.convexunion(9:8,7:10) == 7:10
+    @testset "convexunion" begin
+        # bug from BandedMartrices.jl
+        @test LazyArrays.convexunion(7:10,9:8) == LazyArrays.convexunion(9:8,7:10) == 7:10
+        @test LazyArrays.convexunion(1,5) == LazyArrays.convexunion(1:3,5) == LazyArrays.convexunion(5,1:3) == 1:5
+    end
 end
 
 @testset "triu/tril" begin
