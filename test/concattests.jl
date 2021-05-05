@@ -576,9 +576,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
     @testset "col/rowsupport" begin
         H = Hcat(Diagonal([1,2,3]), Zeros(3,3), Diagonal([1,2,3]))
         V = Vcat(Diagonal([1,2,3]), Zeros(3,3), Diagonal([1,2,3]))
-        @test colsupport(H,2) == rowsupport(V,2) == 2:2
+        @test colsupport(H,2) == rowsupport(V,2) == 2
         @test colsupport(H,4) == rowsupport(V,4) == 1:0
-        @test colsupport(H,8) == rowsupport(V,8) == 2:2
+        @test colsupport(H,8) == rowsupport(V,8) == 2
         @test colsupport(H,10) == rowsupport(V,10)== 1:0
         @test rowsupport(H,1) == colsupport(V,1) == 1:7
         @test rowsupport(H,2) == colsupport(V,2) == 2:8
