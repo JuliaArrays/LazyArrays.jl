@@ -303,6 +303,7 @@ end
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, _2) where N = DefaultArrayStyle{N}()
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::LazyLayout) where N = LazyArrayStyle{N}()
 BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
+BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray}}) where N = applybroadcaststyle(M, MemoryLayout(M))
 
 ### 
 # Eager applications
