@@ -241,9 +241,11 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             @test @inferred(B * b) isa Vector
             @test @inferred(B * A) isa Matrix
             @test @inferred(A * B) isa Matrix
+            @test B * B isa Matrix
             @test B * b ≈ (a .+ A) * b
             @test B * A ≈ (a .+ A) * A
             @test A * B ≈ A * (a .+ A)
+            @test B * B ≈ (a .+ A) * (a .+ A)
             B = BroadcastArray(+, A, a)
             @test B * b ≈ (a .+ A) * b
             @test B * A ≈ (a .+ A) * A
@@ -297,6 +299,13 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             B = BroadcastArray(-, c, A)
             @test B * b ≈ (c .- A) * b
             @test B * A ≈ (c .- A) * A
+        end
+
+        @testset "Mixed" begin
+            B = BroadcastArray(+, A, 2A)
+            C = BroadcastArray(-, A, 2A)
+            @test B*C ≈ 3A * (-A)
+            @test C*B ≈ (-A) * 3A 
         end
     end
 end

@@ -110,5 +110,9 @@ for op in (:+, :-)
     @eval begin
         simplify(M::Mul{Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(arguments(Lay(), M.A), M.B)...)
         simplify(M::Mul{<:Any,Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(M.A, arguments(Lay(), M.B))...)
+        simplify(M::Mul{Lay,Lay}) where Lay<:BroadcastLayout{typeof($op)} = simplify(Mul{Lay,UnknownLayout}(M.A, M.B))
     end
 end
+
+simplify(M::Mul{Lay,BroadcastLayout{typeof(-)}}) where Lay<:BroadcastLayout{typeof(+)} = simplify(Mul{Lay,UnknownLayout}(M.A, M.B))
+simplify(M::Mul{Lay,BroadcastLayout{typeof(+)}}) where Lay<:BroadcastLayout{typeof(-)} = simplify(Mul{Lay,UnknownLayout}(M.A, M.B))
