@@ -84,3 +84,17 @@ for op in (:+, :-)
         call(::ApplyLayout{typeof($op)}, a::SubArray) = $op            
     end
 end
+
+
+###
+# suport BroadcastLayout
+###
+
+_broadcasted_mul(a::AbstractVector, b::AbstractVector) = a*sum(b)
+_broadcasted_mul(a::AbstractVector, B::AbstractMatrix) = a*sum(B; dims=1)
+_broadcasted_mul(A::AbstractMatrix, b::AbstractVector) = size(A,2) == 1 ? _broadcasted_mul(vec(A),b) : (A*b)
+_broadcasted_mul(A::AbstractMatrix, b::AbstractMatrix) = size(A,2) == 1 ? _broadcasted_mul(vec(A),b) : (A*b)
+
+for op in (:+, :-)
+    @eval simplify(M::Mul{Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul.(arguments(Lay(), M.A), Ref(M.B))...)
+end
