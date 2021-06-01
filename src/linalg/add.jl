@@ -90,11 +90,25 @@ end
 # suport BroadcastLayout
 ###
 
-_broadcasted_mul(a::AbstractVector, b::AbstractVector) = a*sum(b)
-_broadcasted_mul(a::AbstractVector, B::AbstractMatrix) = a*sum(B; dims=1)
-_broadcasted_mul(A::AbstractMatrix, b::AbstractVector) = size(A,2) == 1 ? _broadcasted_mul(vec(A),b) : (A*b)
-_broadcasted_mul(A::AbstractMatrix, b::AbstractMatrix) = size(A,2) == 1 ? _broadcasted_mul(vec(A),b) : (A*b)
+_broadcasted_mul(::Tuple{}, _) = ()
+_broadcasted_mul(_, ::Tuple{}) = ()
+_broadcasted_mul(a::Tuple{Number,Vararg{Any}}, b::AbstractVector) = (first(a)*sum(b), _broadcasted_mul(tail(a), b)...)
+_broadcasted_mul(a::Tuple{Number,Vararg{Any}}, B::AbstractMatrix) = (first(a)*sum(B; dims=1), _broadcasted_mul(tail(a), B)...)
+_broadcasted_mul(a::Tuple{AbstractVector,Vararg{Any}}, b::AbstractVector) = (first(a)*sum(b), _broadcasted_mul(tail(a), b)...)
+_broadcasted_mul(a::Tuple{AbstractVector,Vararg{Any}}, B::AbstractMatrix) = (first(a)*sum(B; dims=1), _broadcasted_mul(tail(a), B)...)
+_broadcasted_mul(A::Tuple{AbstractMatrix,Vararg{Any}}, b::AbstractVector) = (size(first(A),2) == 1 ? vec(first(A))*sum(b) : (first(A)*b), _broadcasted_mul(tail(A), b)...)
+_broadcasted_mul(A::Tuple{AbstractMatrix,Vararg{Any}}, B::AbstractMatrix) = (size(first(A),2) == 1 ? first(A)*sum(B; dims=1) : (first(A)*B), _broadcasted_mul(tail(A), B)...)
+_broadcasted_mul(a::AbstractVector, b::Tuple{Number,Vararg{Any}}) = (sum(a) * first(b), _broadcasted_mul(a, tail(b))...)
+_broadcasted_mul(A::AbstractMatrix, b::Tuple{Number,Vararg{Any}}) = (sum(A; dims=2)*first(b)[1], _broadcasted_mul(A, tail(b))...)
+_broadcasted_mul(a::AbstractVector, b::Tuple{AbstractVector,Vararg{Any}}) = (dot(a,first(b)), _broadcasted_mul(a, tail(b))...)
+_broadcasted_mul(A::AbstractMatrix, b::Tuple{AbstractVector,Vararg{Any}}) = (size(first(b),1) == 1 ? (sum(A; dims=2)*first(b)[1]) : (A*first(b)), _broadcasted_mul(A, tail(b))...)
+_broadcasted_mul(a::AbstractVector, B::Tuple{AbstractMatrix,Vararg{Any}}) = (a * first(B), _broadcasted_mul(A, tail(b))...)
+_broadcasted_mul(A::AbstractMatrix, B::Tuple{AbstractMatrix,Vararg{Any}}) = (size(first(B),1) == 1 ? (sum(A; dims=2) * first(B)) : (A * first(B)), _broadcasted_mul(A, tail(B))...)
+
 
 for op in (:+, :-)
-    @eval simplify(M::Mul{Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul.(arguments(Lay(), M.A), Ref(M.B))...)
+    @eval begin
+        simplify(M::Mul{Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(arguments(Lay(), M.A), M.B)...)
+        simplify(M::Mul{<:Any,Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(M.A, arguments(Lay(), M.B))...)
+    end
 end

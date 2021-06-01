@@ -238,38 +238,53 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
 
         @testset "+" begin
             B = BroadcastArray(+, a, A)
+            @test @inferred(B * b) isa Vector
+            @test @inferred(B * A) isa Matrix
+            @test @inferred(A * B) isa Matrix
             @test B * b ≈ (a .+ A) * b
             @test B * A ≈ (a .+ A) * A
+            @test A * B ≈ A * (a .+ A)
             B = BroadcastArray(+, A, a)
             @test B * b ≈ (a .+ A) * b
             @test B * A ≈ (a .+ A) * A
+            @test A * B ≈ A * (a .+ A)
             B = BroadcastArray(+, A, A)
             @test B * b ≈ (A .+ A) * b
             @test B * A ≈ (A .+ A) * A
+            @test A * B ≈ A * (A .+ A)
             B = BroadcastArray(+, ã, A)
             @test B * b ≈ (ã .+ A) * b
             @test B * A ≈ (ã .+ A) * A
+            @test A * B ≈ A * (ã .+ A)
             B = BroadcastArray(+, A, ã)
             @test B * b ≈ (ã .+ A) * b
             @test B * A ≈ (ã .+ A) * A
+            @test A * B ≈ A * (ã .+ A)
             B = BroadcastArray(+, a', A)
             @test B * b ≈ (a' .+ A) * b
             @test B * A ≈ (a' .+ A) * A
+            @test A * B ≈ A * (a' .+ A)
             B = BroadcastArray(+, c, A)
             @test B * b ≈ (c .+ A) * b
             @test B * A ≈ (c .+ A) * A
+            @test A * B ≈ A * (c .+ A)
+            B = BroadcastArray(+, c, b)
+            @test B * reshape(b,1,5) ≈ (c .+ b) * reshape(b,1,5)
         end
 
         @testset "-" begin
             B = BroadcastArray(-, a, A)
             @test B * b ≈ (a .- A) * b
             @test B * A ≈ (a .- A) * A
+            @test A * B ≈ A * (a .- A)
             B = BroadcastArray(-, A, a)
             @test B * b ≈ (A .- a) * b
             @test B * A ≈ (A .- a) * A
+            @test A * B ≈ A * (A .- a)
             B = BroadcastArray(-, A, 2A)
             @test B * b ≈ (A .- 2A) * b
             @test B * A ≈ (A .- 2A) * A
+            @test A * B ≈ A * (A .- 2A)
             B = BroadcastArray(-, ã, A)
             @test B * b ≈ (ã .- A) * b
             @test B * A ≈ (ã .- A) * A
