@@ -228,4 +228,8 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
         materialize!(MulAdd(1.0, V, b, 0.0, c))
         @test c ≈ view(Ã,2:3,2:4)*b
     end
+
+    @testset "Broadcast add" begin
+
+    end
 end
