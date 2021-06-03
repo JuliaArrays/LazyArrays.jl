@@ -228,4 +228,76 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
         materialize!(MulAdd(1.0, V, b, 0.0, c))
         @test c ≈ view(Ã,2:3,2:4)*b
     end
+
+    @testset "Broadcast add" begin
+        a = randn(5)
+        ã = reshape(a,5,1)
+        b = randn(5)
+        A = randn(5,5)
+        c = [2.3]
+
+        for op in (+, -)
+            @testset "$op" begin
+                @testset "vec .$op mat" begin
+                    B = BroadcastArray(op, a, A)
+                    @test @inferred(B * b) isa Vector
+                    @test @inferred(B * A) isa Matrix
+                    @test @inferred(A * B) isa Matrix
+                    @test B * B isa Matrix
+                    @test B * b ≈ op.(a, A) * b
+                    @test B * A ≈ op.(a, A) * A
+                    @test A * B ≈ A * op.(a, A)
+                    @test B * B ≈ op.(a, A) * op.(a, A)
+                end
+                @testset "mat .$op vec" begin
+                    B = BroadcastArray(op, A, a)
+                    @test B * b ≈ op.(A, a) * b
+                    @test B * A ≈ op.(A, a) * A
+                    @test A * B ≈ A * op.(A, a)
+                end
+                @testset "mat .$op mat" begin
+                    B = BroadcastArray(op, A, 2A)
+                    @test B * b ≈ op.(A, 2A) * b
+                    @test B * A ≈ op.(A, 2A) * A
+                    @test A * B ≈ A * op.(A, 2A)
+                end
+                @testset "vecmat .$op mat" begin
+                    B = BroadcastArray(op, ã, A)
+                    @test B * b ≈ op.(ã, A) * b
+                    @test B * A ≈ op.(ã, A) * A
+                    @test A * B ≈ A * op.(ã, A)
+                end
+                @testset "mat .$op vecmat" begin
+                    B = BroadcastArray(op, A, ã)
+                    @test B * b ≈ op.(A, ã) * b
+                    @test B * A ≈ op.(A, ã) * A
+                    @test A * B ≈ A * op.(A, ã)
+                end
+                @testset "rowvec .$op mat" begin
+                    B = BroadcastArray(op, a', A)
+                    @test B * b ≈ op.(a', A) * b
+                    @test B * A ≈ op.(a', A) * A
+                    @test A * B ≈ A * op.(a', A)
+                end
+                @testset "constvec .$op mat" begin
+                    B = BroadcastArray(op, c, A)
+                    B̃ = BroadcastArray(op, c[1], A)
+                    @test B * b ≈ B̃ * b ≈ op.(c, A) * b 
+                    @test B * A ≈ B̃ * A ≈ op.(c, A) * A
+                    @test A * B ≈ A * B̃ ≈ A * op.(c, A)
+                end
+                @testset "constvec .$op vec" begin
+                    B = BroadcastArray(op, c, b)
+                    @test B * reshape(b,1,5) ≈ op.(c, b) * reshape(b,1,5)
+                end
+            end
+        end
+
+        @testset "Mixed" begin
+            B = BroadcastArray(+, A, 2A)
+            C = BroadcastArray(-, A, 2A)
+            @test B*C ≈ 3A * (-A)
+            @test C*B ≈ (-A) * 3A 
+        end
+    end
 end
