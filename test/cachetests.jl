@@ -63,6 +63,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test C isa Vector{Int}
         C[1] = 2
         @test A[1] ≠ 2
+        @test resizedata!(C,6) === C
 
         A = cache(Matrix(reshape(1:6,2,3)));
         C = cache(A);
@@ -71,6 +72,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test A[1,1] ≠ 2
         C[1] = 3
         @test A[1,1] ≠ 3
+        @test resizedata!(C,2,3) === C
     end
 
     @testset "setindex!" begin
