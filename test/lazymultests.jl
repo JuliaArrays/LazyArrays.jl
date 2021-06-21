@@ -238,4 +238,16 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         b = a .^ 2
         @test BroadcastArray(view(b,1:3)) == Vector(a)[1:3] .^2
     end
+
+    @testset "Apply*Broadcast" begin
+        A = randn(5,5)
+        B = randn(5,5)
+
+        @test ApplyArray(*, A, B) * BroadcastArray(*, A, B) ≈ (A*B) * (A .* B)
+        @test BroadcastArray(*, A, B) * ApplyArray(*, A, B) ≈ (A .* B) * (A*B)
+
+        @test ApplyArray(*, A, B) \ BroadcastArray(*, A, B) ≈ (A*B) \ (A .* B)
+        @test BroadcastArray(*, A, B) \ ApplyArray(*, A, B) ≈ (A .* B) \ (A * B)
+        @test BroadcastArray(*, A, B) \ BroadcastArray(*, A, B) ≈ (A .* B) \ (A .* B)
+    end
 end
