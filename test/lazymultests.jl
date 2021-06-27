@@ -250,4 +250,11 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test BroadcastArray(*, A, B) \ ApplyArray(*, A, B) ≈ (A .* B) \ (A * B)
         @test BroadcastArray(*, A, B) \ BroadcastArray(*, A, B) ≈ (A .* B) \ (A .* B)
     end
+
+    @testset "CartesianIndex view" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        M = ApplyArray(*, A, B)
+        @test M[[CartesianIndex(1,2),CartesianIndex(3,3)]] == [M[1,2], M[3,3]]
+    end
 end
