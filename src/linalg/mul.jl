@@ -170,6 +170,7 @@ _mul_args_cols(jr, z, y...) = __mul_args_cols(_mul_args_colsupport(z,jr), y...)
 sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 # matrix-indexing loses the multiplication structure as we don't support tensor multiplication
 sublayout(::ApplyLayout{typeof(*)}, ::Type{<:Tuple{AbstractMatrix}}) = UnknownLayout()
+sublayout(::ApplyLayout{typeof(*)}, ::Type{<:Tuple{AbstractVector{<:CartesianIndex}}}) = UnknownLayout()
 
 call(::ApplyLayout{typeof(*)}, V::SubArray) = *
 
