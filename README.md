@@ -38,6 +38,17 @@ julia> exp(1)
 2.718281828459045
 ```
 
+Note that `@~` causes sub-expressions to be wrapped in an `applied` call, not
+just the top-level expression. This can lead to `MethodError`s when lazy
+application of sub-expressions is not yet implemented. For example,
+```julia
+julia> @~ Vector(1:10) .* ones(10)'
+ERROR: MethodError: ...
+
+julia> A = Vector(1:10); B = ones(10); (@~ sum(A .* B')) |> materialize
+550.0
+```
+
 The benefit of lazy operations is that they can be materialized in-place, 
 possible using simplifications. For example, it is possible to 
 do BLAS-like Matrix-Vector operations of the form `α*A*x + β*y` as 
@@ -104,13 +115,13 @@ julia> E = ApplyArray(exp, [1 2; 3 4])
   51.969   74.7366
  112.105  164.074 
 ```
-A lazy matrix exponential is useful for, say, in-place matrix-exponetial*vector:
+A lazy matrix exponential is useful for, say, in-place matrix-exponential*vector:
 ```julia
 julia> b = Vector{Float64}(undef, 2); b .= @~ E*[4,4]
 2-element Array{Float64,1}:
   506.8220830628333
  1104.7145995988594
- ```
+```
  While this works, it is not actually optimised (yet). 
 
  Other options do have special implementations that make them fast. We
