@@ -109,6 +109,8 @@ similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
 @inline copy(L::Ldiv{<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 @inline copy(L::Ldiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 
+@inline copy(L::Ldiv{D,<:AbstractLazyLayout}) where D<:DiagonalLayout = copy(Ldiv{D,UnknownLayout}(L.A,L.B))
+
 
 function copy(M::Mul{ApplyLayout{typeof(\)}})
     A,B = arguments(ApplyLayout{typeof(\)}(), M.A)

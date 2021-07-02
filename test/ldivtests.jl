@@ -132,4 +132,10 @@ import Base.Broadcast: materialize
         b = randn(5)
         @test A * b ≈ Matrix(A) * b
     end
+
+    @testset "Diagonal \\ Lazy" begin
+        D = Diagonal(randn(5))
+        A = BroadcastArray(*, randn(5,5), randn(5))
+        @test D \ A ≈ D \ Matrix(A)
+    end
 end
