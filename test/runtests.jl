@@ -36,6 +36,7 @@ include("lazymultests.jl")
 include("concattests.jl")
 include("broadcasttests.jl")
 include("cachetests.jl")
+include("ndgrid.jl")
 
 @testset "Kron"  begin
     A = [1,2,3]

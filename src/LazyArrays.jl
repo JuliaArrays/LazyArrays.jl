@@ -76,6 +76,7 @@ include("lazyconcat.jl")
 include("lazysetoperations.jl")
 include("lazyoperations.jl")
 include("lazymacro.jl")
+include("ndgrid.jl")
 
 # support x^2
 Base.to_power_type(x::LazyArray) = x
