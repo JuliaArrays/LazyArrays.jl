@@ -927,7 +927,7 @@ end
         @test MemoryLayout(typeof(Q')) isa AdjQRCompactWYQLayout
         @test all(Q'b .=== apply(*,Q',b))
         @test all(Q'B .=== apply(*,Q',B))
-        @test all(Q'B*b .=== apply(*,Q',B,b))
+        @test all(*(Q',B,b) .=== apply(*,Q',B,b))
         @test_throws DimensionMismatch apply(*,Q',randn(3))
         @test_throws DimensionMismatch apply(*,Q',randn(3,3))
         dest = fill(NaN,5)
@@ -1056,7 +1056,7 @@ end
         copyto!(c,Applied(V))
         @test @allocated(copyto!(c,Applied(V))) ≤ 200
         copyto!(c, V)
-        @test @allocated(copyto!(c, V)) ≤ 200
+        @test @allocated(copyto!(c, V)) ≤ 500
         @test all(c .=== apply(*, arguments(V)...))
 
         B = randn(500,500)
