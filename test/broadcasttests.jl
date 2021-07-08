@@ -110,7 +110,7 @@ import Base: broadcasted
         @test broadcasted(LazyArrayStyle{1}(), +, Fill(2,5), Fill(3,5)) ≡ Fill(5,5)
 
         @test broadcasted(LazyArrayStyle{1}(), *, Zeros(5), Zeros(5)) ≡ Zeros(5)
-        @test broadcasted(LazyArrayStyle{1}(), *, Fill(2,5), 1:5) ≡ broadcasted(LazyArrayStyle{1}(), *, 1:5, Fill(2,5)) ≡ 2:2:10
+        @test broadcasted(LazyArrayStyle{1}(), *, Fill(2,5), 1:5) ≡ broadcasted(LazyArrayStyle{1}(), *, 1:5, Fill(2,5)) ≡ 2 * (1:5)
         @test broadcasted(LazyArrayStyle{1}(), *, Zeros(5), 1:5) ≡ broadcasted(LazyArrayStyle{1}(), *, 1:5, Zeros(5)) ≡ Zeros(5)
         @test broadcasted(LazyArrayStyle{1}(), *, Ones{Int}(5), 1:5) ≡ broadcasted(LazyArrayStyle{1}(), *, 1:5, Ones{Int}(5)) ≡ 1:5
 
@@ -251,9 +251,15 @@ import Base: broadcasted
         v = BroadcastArray(+, SubArray(1:3, (Base.IdentityUnitRange(1:3),)), 1)
         @test axes(v) == (Base.IdentityUnitRange(1:3),)
         @test v[1] == 2
-        @test stringmime("text/plain", v) == "(3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3:\n 2\n 3\n 4"
-        @test stringmime("text/plain", v') == "((3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3)' with indices Base.OneTo(1)×1:3:\n 2  3  4"
-        @test stringmime("text/plain", transpose(v)) == "transpose((3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3) with indices Base.OneTo(1)×1:3:\n 2  3  4"
+        if VERSION < v"1.7-"
+            @test stringmime("text/plain", v) == "(3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3:\n 2\n 3\n 4"
+            @test stringmime("text/plain", v') == "((3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3)' with indices Base.OneTo(1)×1:3:\n 2  3  4"
+            @test stringmime("text/plain", transpose(v)) == "transpose((3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3) with indices Base.OneTo(1)×1:3:\n 2  3  4"
+        else
+            @test stringmime("text/plain", v) == "(3-element view(::UnitRange{$Int}, Base.IdentityUnitRange(1:3)) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3:\n 2\n 3\n 4"
+            @test stringmime("text/plain", v') == "((3-element view(::UnitRange{$Int}, Base.IdentityUnitRange(1:3)) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3)' with indices Base.OneTo(1)×1:3:\n 2  3  4"
+            @test stringmime("text/plain", transpose(v)) == "transpose((3-element view(::UnitRange{$Int}, Base.IdentityUnitRange(1:3)) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3) with indices Base.OneTo(1)×1:3:\n 2  3  4"
+        end
     end
 
     @testset "Ref" begin
@@ -281,7 +287,7 @@ import Base: broadcasted
         z = BroadcastArray(Zeros, Base.OneTo(5))
         v = BroadcastArray(Vcat, n, k)
         @test map(length, n) ≡ map(length, k) ≡ map(length, z) ≡ Base.OneTo(5)
-        @test map(length, v) ≡ 2:2:10
+        @test map(length, v) ≡ 2 * (1:5)
         @test map(length, BroadcastArray(Fill,Base.OneTo(5))) == ones(5)
 
         @test broadcast(length, n) ≡ broadcast(length, k) ≡ Base.OneTo(5)
