@@ -272,11 +272,12 @@ struct LazyLayout <: AbstractLazyLayout end
 MemoryLayout(::Type{<:LazyArray}) = LazyLayout()
 
 transposelayout(::AbstractLazyLayout) = LazyLayout()
-conjlayout(::AbstractLazyLayout) = LazyLayout()
+conjlayout(_, ::AbstractLazyLayout) = LazyLayout()
 sublayout(::AbstractLazyLayout, _) = LazyLayout()
 reshapedlayout(::AbstractLazyLayout, _) = LazyLayout()
 symmetriclayout(::AbstractLazyLayout) = SymmetricLayout{LazyLayout}()
-hermitianlayout(::AbstractLazyLayout) = HermitianLayout{LazyLayout}()
+hermitianlayout(::Type{<:Complex}, ::AbstractLazyLayout) = HermitianLayout{LazyLayout}()
+hermitianlayout(::Type{<:Real}, ::AbstractLazyLayout) = SymmetricLayout{LazyLayout}()
 
 
 struct ApplyLayout{F} <: AbstractLazyLayout end

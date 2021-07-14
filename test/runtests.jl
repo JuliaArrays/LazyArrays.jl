@@ -24,6 +24,19 @@ import ArrayLayouts: OnesLayout
         @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{OnesLayout}()
         @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
     end
+
+    @testset "adjtrans/symherm" begin
+        A = ApplyArray(+, randn(2,2), randn(2,2))
+        B = ApplyArray(+, randn(2,2), im*randn(2,2))
+        @test MemoryLayout(Symmetric(A)) isa SymmetricLayout{LazyLayout}
+        @test MemoryLayout(Symmetric(B)) isa SymmetricLayout{LazyLayout}
+        @test MemoryLayout(Hermitian(A)) isa SymmetricLayout{LazyLayout}
+        @test MemoryLayout(Hermitian(B)) isa HermitianLayout{LazyLayout}
+        @test MemoryLayout(A') isa LazyLayout
+        @test MemoryLayout(B') isa LazyLayout
+        @test MemoryLayout(transpose(A)) isa LazyLayout
+        @test MemoryLayout(transpose(B)) isa LazyLayout
+    end
 end
 
 include("applytests.jl")
