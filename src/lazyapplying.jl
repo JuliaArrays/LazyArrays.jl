@@ -272,7 +272,7 @@ struct LazyLayout <: AbstractLazyLayout end
 MemoryLayout(::Type{<:LazyArray}) = LazyLayout()
 
 transposelayout(::AbstractLazyLayout) = LazyLayout()
-conjlayout(_, ::AbstractLazyLayout) = LazyLayout()
+conjlayout(::Type{<:Complex}, ::AbstractLazyLayout) = LazyLayout()
 sublayout(::AbstractLazyLayout, _) = LazyLayout()
 reshapedlayout(::AbstractLazyLayout, _) = LazyLayout()
 symmetriclayout(::AbstractLazyLayout) = SymmetricLayout{LazyLayout}()
