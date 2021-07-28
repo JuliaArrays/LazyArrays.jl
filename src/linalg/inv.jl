@@ -30,16 +30,25 @@ eltype(A::InvOrPInv) = Base.promote_op(inv, eltype(parent(A)))
 
 # Use ArrayLayouts.ldiv instead of \
 struct LdivStyle <: ApplyStyle end
+struct RdivStyle <: ApplyStyle end
 
 ApplyStyle(::typeof(\), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = LdivStyle()
+ApplyStyle(::typeof(/), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = RdivStyle()
 
 
 axes(M::Applied{Style,typeof(\)}) where Style = ldivaxes(M.args...)
 axes(M::Applied{Style,typeof(\)}, p::Int)  where Style = axes(M)[p]
 size(M::Applied{Style,typeof(\)}) where Style = length.(axes(M))
-
 @inline eltype(M::Applied{Style,typeof(\)}) where Style = eltype(Ldiv(M.args...))
 @inline ndims(M::Applied{Style,typeof(\)}) where Style = ndims(last(M.args))
+
+
+axes(M::Applied{Style,typeof(/)}) where Style = axes(Rdiv(M.args...))
+axes(M::Applied{Style,typeof(/)}, p::Int)  where Style = axes(M)[p]
+size(M::Applied{Style,typeof(/)}) where Style = length.(axes(M))
+@inline eltype(M::Applied{Style,typeof(/)}) where Style = eltype(Rdiv(M.args...))
+@inline ndims(M::Applied{Style,typeof(/)}) where Style = ndims(first(M.args))
+
 
 check_applied_axes(A::Applied{<:Any,typeof(\)}) = check_ldiv_axes(A.args...)
 
@@ -103,19 +112,29 @@ similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
 
 @inline _copy_ldiv_ldiv(B, A₀) = A₀ \ B
 @inline _copy_ldiv_ldiv(B, A₀, A₁...) = _copy_ldiv_ldiv(A₀ \ B, A₁...)
-@inline copy(L::Ldiv{<:ApplyLayout{typeof(*)}}) = _copy_ldiv_ldiv(L.B, arguments(ApplyLayout{typeof(*)}(), L.A)...)
-@inline copy(L::Ldiv{<:ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = _copy_ldiv_ldiv(L.B, arguments(ApplyLayout{typeof(*)}(), L.A)...)
+@inline copy(L::Ldiv{ApplyLayout{typeof(*)}}) = _copy_ldiv_ldiv(L.B, arguments(ApplyLayout{typeof(*)}(), L.A)...)
+@inline copy(L::Ldiv{ApplyLayout{typeof(*)},<:AbstractLazyLayout}) = _copy_ldiv_ldiv(L.B, arguments(ApplyLayout{typeof(*)}(), L.A)...)
 @inline copy(L::Ldiv{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 @inline copy(L::Ldiv{<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 @inline copy(L::Ldiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 
 @inline copy(L::Ldiv{D,<:AbstractLazyLayout}) where D<:DiagonalLayout = copy(Ldiv{D,UnknownLayout}(L.A,L.B))
 
+@inline copy(L::Rdiv{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(/, L.A, L.B)
+@inline copy(L::Rdiv{<:AbstractLazyLayout}) = lazymaterialize(/, L.A, L.B)
+@inline copy(L::Rdiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(/, L.A, L.B)
+
 
 function copy(M::Mul{ApplyLayout{typeof(\)}})
     A,B = arguments(ApplyLayout{typeof(\)}(), M.A)
     A \ (B * M.B)
 end
+
+function copy(L::Ldiv{ApplyLayout{typeof(/)}})
+    A,B = arguments(ApplyLayout{typeof(/)}(), L.A)
+    B * (A \ L.B)
+end
+copy(L::Ldiv{ApplyLayout{typeof(/)},<:AbstractLazyLayout}) = copy(Ldiv{ApplyLayout{typeof(/)},UnknownLayout}(L.A,L.B))
 ###
 # Diagonal
 ###
