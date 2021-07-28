@@ -139,3 +139,10 @@ import Base.Broadcast: materialize
         @test D \ A ≈ D \ Matrix(A)
     end
 end
+
+@testset "Rdiv" begin
+    A = randn(5,5)
+    R = ApplyArray(/, A, A)
+    @test axes(R) == (axes(R,1),axes(R,2)) == axes(A)
+    @test R ≈ apply(/, A, A) ≈ Eye(5) 
+end

@@ -17,6 +17,7 @@ Base.convert(::Type{MyMatrix{T}}, A::AbstractArray{T}) where T = MyMatrix{T}(A)
 Base.convert(::Type{MyMatrix{T}}, A::AbstractArray) where T = MyMatrix{T}(convert(AbstractArray{T}, A))
 Base.convert(::Type{MyMatrix}, A::AbstractArray{T}) where T = MyMatrix{T}(A)
 Base.getindex(A::MyMatrix, kj...) = A.A[kj...]
+Base.getindex(A::MyMatrix, k::Integer, ::Colon) = A.A[k,:]
 Base.getindex(A::MyMatrix, ::Colon, j::Integer) = A.A[:,j]
 Base.getindex(A::MyMatrix, ::Colon, j::AbstractVector) = MyMatrix(A.A[:,j])
 Base.setindex!(A::MyMatrix, v, kj...) = setindex!(A.A, v, kj...)
@@ -108,6 +109,15 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
 
         @test_throws DimensionMismatch apply(\,MyMatrix(C),randn(4))
         @test_throws DimensionMismatch apply(\,MyMatrix(C),randn(4,3))
+    end
+
+    @testset "/" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        @test MyMatrix(A) / B == apply(/, MyMatrix(A), B)
+        @test MyMatrix(A) / B ≈ MyMatrix(A) / MyMatrix(B) ≈  A/B
+
+        @test ApplyArray(/, MyMatrix(A), B) \ A ≈ ApplyArray(/, A, B) \ A ≈ B
     end
 
     @testset "Lazy" begin
