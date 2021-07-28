@@ -114,10 +114,15 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
     @testset "/" begin
         A = randn(5,5)
         B = randn(5,5)
-        @test MyMatrix(A) / B == apply(/, MyMatrix(A), B)
-        @test MyMatrix(A) / B ≈ MyMatrix(A) / MyMatrix(B) ≈  A/B
 
-        @test ApplyArray(/, MyMatrix(A), B) \ A ≈ ApplyArray(/, A, B) \ A ≈ B
+        Ap = applied(/, A, B)
+        @test axes(Ap) == (axes(Ap,1), axes(Ap,2))
+        @test size(Ap) == size(A)
+
+        @test MyMatrix(A) / B == apply(/, MyMatrix(A), B)
+        @test MyMatrix(A) / B ≈ MyMatrix(A) / MyMatrix(B) ≈ A / MyMatrix(B) ≈  A/B
+
+        @test ApplyArray(/, MyMatrix(A), B) \ A ≈ ApplyArray(/, A, B) \ A ≈ ApplyArray(/, A, B) \ MyMatrix(A) ≈ B
     end
 
     @testset "Lazy" begin
