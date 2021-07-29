@@ -255,7 +255,7 @@ import Base: broadcasted
         v = BroadcastArray(+, SubArray(1:3, (Base.IdentityUnitRange(1:3),)), 1)
         @test axes(v) == (Base.IdentityUnitRange(1:3),)
         @test v[1] == 2
-        if VERSION < v"1.7-"
+        if VERSION < v"1.6.2"
             @test stringmime("text/plain", v) == "(3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3:\n 2\n 3\n 4"
             @test stringmime("text/plain", v') == "((3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3)' with indices Base.OneTo(1)×1:3:\n 2  3  4"
             @test stringmime("text/plain", transpose(v)) == "transpose((3-element view(::UnitRange{$Int}, :) with eltype $Int with indices 1:3) .+ ($Int) with indices 1:3) with indices Base.OneTo(1)×1:3:\n 2  3  4"
