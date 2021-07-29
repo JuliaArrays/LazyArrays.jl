@@ -50,8 +50,9 @@ call(a) = a.f
 call(_, a) = a.f
 
 @inline call(a::AbstractArray) = call(MemoryLayout(a), a)
-@inline arguments(a) = a.args
-@inline arguments(_, a) = a.args
+@inline arguments(a) = a.args #TODO: Deprecate
+@inline arguments(::MemoryLayout, a) = a.args #TODO: Deprecate
+@inline arguments(f::Function, a) = arguments(ApplyLayout{typeof(f)}(), a)
 @inline call(::DualLayout{ML}, a) where ML = call(ML(), a)
 @inline arguments(::DualLayout{ML}, a) where ML = arguments(ML(), a)
 @inline arguments(a::AbstractArray) = arguments(MemoryLayout(a), a)
