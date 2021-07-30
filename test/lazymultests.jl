@@ -191,7 +191,7 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test InvMatrix(A) * b ≈ A \ b
         @test InvMatrix(A) * M ≈ A \ B * b
 
-        @test ArrayLayouts.ldiv(MyMatrix(A), M) ≈ A\ B * b
+        @test @inferred(ArrayLayouts.ldiv(MyMatrix(A), M)) ≈ A\ B * b
     end
 
     @testset "Tri/Diagonal" begin 
