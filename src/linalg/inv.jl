@@ -130,15 +130,17 @@ end
 
 
 function copy(M::Mul{ApplyLayout{typeof(\)}})
-    A,B = arguments(ApplyLayout{typeof(\)}(), M.A)
+    A,B = arguments(\, M.A)
     A \ (B * M.B)
 end
+copy(L::Mul{ApplyLayout{typeof(\)},<:AbstractLazyLayout}) = copy(Mul{ApplyLayout{typeof(\)},UnknownLayout}(L.A,L.B))
 
 function copy(L::Ldiv{ApplyLayout{typeof(/)}})
     A,B = arguments(ApplyLayout{typeof(/)}(), L.A)
     B * (A \ L.B)
 end
 copy(L::Ldiv{ApplyLayout{typeof(/)},<:AbstractLazyLayout}) = copy(Ldiv{ApplyLayout{typeof(/)},UnknownLayout}(L.A,L.B))
+
 ###
 # Diagonal
 ###

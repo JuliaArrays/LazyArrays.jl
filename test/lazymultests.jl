@@ -278,6 +278,6 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         B = randn(5,5)
         C = randn(5,5)
         L = ApplyArray(\,A,B)
-        @test all(L*C .=== A \ (B*C))
+        @test L*C ≈ L*MyMatrix(C) ≈ A \ (B*C)
     end
 end
