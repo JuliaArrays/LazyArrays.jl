@@ -318,8 +318,6 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 
 # inv
 
-@inline copy(M::Mul{ApplyLayout{typeof(\)},<:AbstractLazyLayout}) = simplify(M)
-
 function _inv(Lay::ApplyLayout{typeof(*)}, _, A)
     args = arguments(Lay, A)
     map(checksquare,args)

@@ -191,7 +191,7 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test InvMatrix(A) * b ≈ A \ b
         @test InvMatrix(A) * M ≈ A \ B * b
 
-        @test ArrayLayouts.ldiv(MyMatrix(A), M) ≈ A\ B * b
+        @test @inferred(ArrayLayouts.ldiv(MyMatrix(A), M)) ≈ A\ B * b
     end
 
     @testset "Tri/Diagonal" begin 
@@ -271,5 +271,13 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         B = randn(5,5)
         M = ApplyArray(*, A, B)
         @test layout_getindex(M,[CartesianIndex(1,2),CartesianIndex(3,3)]) == M[[CartesianIndex(1,2),CartesianIndex(3,3)]] == [M[1,2], M[3,3]]
+    end
+
+    @testset "(A\\B)*C" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        C = randn(5,5)
+        L = ApplyArray(\,A,B)
+        @test L*C ≈ L*MyMatrix(C) ≈ A \ (B*C)
     end
 end
