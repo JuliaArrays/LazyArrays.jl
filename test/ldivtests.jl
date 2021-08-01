@@ -102,7 +102,7 @@ import Base.Broadcast: materialize
         B = randn(5,5)
         M = ApplyArray(*, A, B)
         b = 1:5
-        @test apply(\,B,ApplyArray(*,A,b)) == B\A*b
+        @test apply(\,B,ApplyArray(*,A,b)) ≈ B\A*b
         @test M \ b ≈ B\(A\b)
         @test M \ M ≈ Eye(5)
         @test M \ b isa Vector
