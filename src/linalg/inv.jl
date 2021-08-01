@@ -105,9 +105,10 @@ similar(M::Applied{LdivStyle}, ::Type{T}) where T = similar(Ldiv(M), T)
 # * layout
 ###
 @inline function _copy_ldiv_mul(A, B₀, B₁...)
+    simplifiable(*, B₀, B₁...) isa Val{true} && return A \ apply(*, B₀, B₁...)
     AB₀ = A \  B₀
-    MemoryLayout(AB₀) isa ApplyLayout{typeof(\)} && return lazymaterialize(*, AB₀, B₁...)
-    apply(*, AB₀, B₁...)
+    simplifiable(*, AB₀,  B₁...) isa Val{true} && return apply(*, AB₀, B₁...)
+    lazymaterialize(*, AB₀, B₁...)
 end
 @inline copy(L::Ldiv{<:DiagonalLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 @inline copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
@@ -128,7 +129,7 @@ end
 @inline copy(L::Rdiv{<:AbstractLazyLayout}) = lazymaterialize(/, L.A, L.B)
 @inline copy(L::Rdiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(/, L.A, L.B)
 
-
+simplifiable(M::Mul{ApplyLayout{typeof(\)}}) = simplifiable(*, last(arguments(\, M.A)), M.B)
 function copy(M::Mul{ApplyLayout{typeof(\)}})
     A,B = arguments(\, M.A)
     A \ (B * M.B)
