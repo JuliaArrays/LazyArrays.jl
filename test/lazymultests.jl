@@ -1,5 +1,5 @@
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays
-import LazyArrays: materialize!, MemoryLayout, triangulardata, LazyLayout, UnknownLayout, LazyMatrix
+import LazyArrays: materialize!, MemoryLayout, triangulardata, LazyLayout, UnknownLayout, LazyMatrix, simplifiable
 
 # used to test general matrix backends
 struct MyMatrix{T} <: LazyMatrix{T}
@@ -246,6 +246,10 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         B = randn(5,5)
         @test Eye(5) * MyLazyArray(b) == b
         @test MyLazyArray(B) * Eye(5) == B
+        
+        @test simplifiable(*, Eye(5), MyLazyArray(B)) isa Val{true}
+        @test simplifiable(*, Eye(5), Eye(5)) isa Val{true}
+        @test simplifiable(*, MyLazyArray(B), Eye(5)) isa Val{true}
     end
 
     @testset "LazyBroadcast" begin
