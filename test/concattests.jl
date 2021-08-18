@@ -119,7 +119,256 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @testset "adjoint sub" begin
             @test arguments(view(Vcat(1,1:10)',1,:)) == (Fill(1,1),1:10)
         end
+
+        @testset "PaddedLayout" begin
+            A = Vcat([1,2,3], Zeros(7))
+            B = Vcat([1,2], Zeros(8))
+
+            C = @inferred(A+B)
+            @test C isa Vcat{Float64,1}
+            @test C.args[1] isa Vector{Float64}
+            @test C.args[2] isa Zeros{Float64}
+            @test C == Vector(A) + Vector(B)
+
+            @test colsupport(A, 1) == 1:3
+
+            B = Vcat([1,2], Ones(8))
+
+            C = @inferred(A+B)
+            @test C isa Vcat{Float64,1}
+            @test C.args[1] isa Vector{Float64}
+            @test C.args[2] isa Ones{Float64}
+            @test C == Vector(A) + Vector(B)
+
+            B = Vcat([1,2], randn(8))
+
+            C = @inferred(A+B)
+            @test C isa CachedVector{Float64}
+            @test C == Vector(A) + Vector(B)
+
+            B = Vcat(SVector(1,2), Ones(8))
+            C = @inferred(A+B)
+            @test C isa Vcat{Float64,1}
+            @test C.args[1] isa Vector{Float64}
+            @test C.args[2] isa Ones{Float64}
+            @test C == Vector(A) + Vector(B)
+
+
+            A = Vcat(SVector(3,4), Zeros(8))
+            B = Vcat(SVector(1,2), Ones(8))
+            C = @inferred(A+B)
+            @test C isa Vcat{Float64,1}
+            @test C.args[1] isa SVector{2,Int}
+            @test C.args[2] isa Ones{Float64}
+            @test C == Vector(A) + Vector(B)
+
+            @testset "multiple scalar" begin
+                # We only do 1 or 2 for now, this should be redesigned later
+                A = Vcat(1, Zeros(8))
+                @test MemoryLayout(A) isa PaddedLayout{ScalarLayout}
+                @test paddeddata(A) == 1
+                B = Vcat(1, 2, Zeros(8))
+                @test paddeddata(B) == [1,2]
+                @test MemoryLayout(B) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+                C = Vcat(1, cache(Zeros(8)));
+                @test paddeddata(C) == [1]
+                @test MemoryLayout(C) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+                D = Vcat(1, 2, cache(Zeros(8)));
+                @test paddeddata(D) == [1,2]
+                @test MemoryLayout(D) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+            end
+        end
+
+        @testset "Empty Vcat" begin
+            @test @inferred(Vcat{Int}([1])) == [1]
+            @test @inferred(Vcat{Int}()) == Int[]
+        end
+
+        @testset "in" begin
+            @test 1 in Vcat(1, 1:10_000_000_000)
+            @test 100_000_000 in Vcat(1, 1:10_000_000_000)
+        end
+
+        @testset "convert" begin
+            for T in (Float32, Float64, ComplexF32, ComplexF64)
+                Z = Vcat(zero(T),Zeros{T}(10))
+                @test convert(AbstractArray,Z) ≡ Z
+                @test convert(AbstractArray{T},Z) ≡ AbstractArray{T}(Z) ≡ Z
+                @test convert(AbstractVector{T},Z) ≡ AbstractVector{T}(Z) ≡ Z
+            end
+        end
+
+         @testset "Any/All" begin
+            @test all(Vcat(true, Fill(true,100_000_000)))
+            @test any(Vcat(false, Fill(true,100_000_000)))
+            @test all(iseven, Vcat(2, Fill(4,100_000_000)))
+            @test any(iseven, Vcat(2, Fill(1,100_000_000)))
+            @test_throws TypeError all(Vcat(1))
+            @test_throws TypeError any(Vcat(1))
+        end
+
+        @testset "isbitsunion #45" begin
+            @test copyto!(Vector{Vector{Int}}(undef,6), Vcat([[1], [2], [3]], [[1], [2], [3]])) ==
+                [[1], [2], [3], [1], [2], [3]]
+
+            a = Vcat{Union{Float64,UInt8}}([1.0], [UInt8(1)])
+            @test Base.isbitsunion(eltype(a))
+            r = Vector{Union{Float64,UInt8}}(undef,2)
+            @test copyto!(r, a) == a
+            @test r == a
+            @test copyto!(Vector{Float64}(undef,2), a) == [1.0,1.0]
+        end
+
+         @testset "maximum/minimum Vcat" begin
+            x = Vcat(1:2, [1,1,1,1,1], 3)
+            @test maximum(x) == 3
+            @test minimum(x) == 1
+        end
+
+        @testset "copyto!" begin
+            a = Vcat(1, Zeros(10));
+            c = cache(Zeros(11));
+            @test MemoryLayout(typeof(a)) isa PaddedLayout
+            @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
+            @test copyto!(c, a) ≡ c;
+            @test c.datasize[1] == 1
+            @test c == a
+
+            a = Vcat(1:3, Zeros(10))
+            c = cache(Zeros(13));
+            @test MemoryLayout(typeof(a)) isa PaddedLayout
+            @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
+            @test copyto!(c, a) ≡ c;
+            @test c.datasize[1] == 3
+            @test c == a
+
+            @test dot(a,a) ≡ dot(a,c) ≡ dot(c,a) ≡ dot(c,c) ≡ 14.0
+
+
+            a = Vcat(1:3, Zeros(5))
+            c = cache(Zeros(13));
+            @test copyto!(c, a) ≡ c;
+            @test c.datasize[1] == 3
+            @test c[1:8] == a
+
+            a = cache(Zeros(13)); b = cache(Zeros(15));
+            @test a ≠ b
+            b = cache(Zeros(13));
+            a[3] = 2; b[3] = 2; b[5]=0;
+            @test a == b
+        end
+
+        @testset "Padded subarrays" begin
+            a = Vcat([1,2,3],[4,5,6])
+            @test sub_materialize(view(a,2:6)) == a[2:6]
+            a = Vcat([1,2,3], Zeros(10))
+            c = cache(Zeros(10)); c[1:3] = 1:3;
+            v = view(a,2:4)
+            w = view(c,2:4);
+            @test MemoryLayout(typeof(a)) isa PaddedLayout{DenseColumnMajor}
+            @test MemoryLayout(typeof(v)) isa PaddedLayout{DenseColumnMajor}
+            @test sub_materialize(v) == a[2:4] == sub_materialize(w)
+            @test sub_materialize(v) isa Vcat
+            @test sub_materialize(w) isa Vcat
+            A = Vcat(Eye(2), Zeros(10,2))
+            V = view(A, 1:5, 1:2)
+            @test sub_materialize(V) == A[1:5,1:2]
+        end
+
+        @testset "searchsorted" begin
+            a = Vcat(1:1_000_000, [10_000_000_000,12_000_000_000], 14_000_000_000)
+            b = Vcat(1, 3:1_000_000, [2_000_000, 3_000_000])
+            @test @inferred(searchsortedfirst(a, 6_000_000_001)) == 1_000_001
+            @test @inferred(searchsortedlast(a, 2)) == 2
+            @test @inferred(searchsortedfirst(b, 5)) == 4
+            @test @inferred(searchsortedlast(b, 1)) == 1
+        end
+
+        @testset "args with hcat and view" begin
+            A = Vcat(fill(2.0,1,10),ApplyArray(hcat, Zeros(1), fill(3.0,1,9)))
+            @test arguments(view(A,:,10)) == ([2.0], [3.0])
+        end
+
+        @testset "union" begin
+            a = Vcat([1,3,4],5:7)
+            b = Vcat([1,3,4],5:7)
+            union(a,b)
+        end
+
+        @testset "==" begin
+            A = Vcat([1,2],[0])
+            B = Vcat([1,2],[0])
+            C = Vcat([1],[2,0])
+            @test A == B == C == [1,2,0]
+            @test A ≠ [1,2,4]
+        end
+
+        @testset "resizedata!" begin
+            # allow emulating a cached Vector
+            a = Vcat([1,2], Zeros(8))
+            @test resizedata!(a, 2) ≡ a
+            @test_throws BoundsError resizedata!(a,3)
+        end
+
+        @testset "Axpy" begin
+            a = Vcat([1.,2],Zeros(1_000_000))
+            b = Vcat([1.,2],Zeros(1_000_000))
+            BLAS.axpy!(2.0, a, b)
+            @test b[1:10] == [3; 6; zeros(8)]
+            BLAS.axpy!(2.0, view(a,:), b)
+            @test b[1:10] == [5; 10; zeros(8)]
+        end
+
+        @testset "l/rmul!" begin
+            a = Vcat([1.,2],Zeros(1_000_000))
+            @test ArrayLayouts.lmul!(2,a) ≡ a
+            @test a[1:10] == [2; 4; zeros(8)]
+            @test ArrayLayouts.rmul!(a,2) ≡ a
+            @test a[1:10] == [4; 8; zeros(8)]
+        end
+
+        @testset "Dot" begin
+            a = Vcat([1,2],Zeros(1_000_000))
+            b = Vcat([1,2,3],Zeros(1_000_000))
+            @test @inferred(dot(a,b)) ≡ 5.0
+            @test @inferred(dot(a,1:1_000_002)) ≡ @inferred(dot(1:1_000_002,a)) ≡ 5.0
+        end
+
+        @testset "search" begin
+            a = Vcat([1,2], 5:100)
+            v = Vector(a)
+            @test searchsortedfirst(a, 0) ≡ searchsortedfirst(v, 0) ≡ 1
+            @test searchsortedfirst(a, 2) ≡ searchsortedfirst(v, 2) ≡ 2
+            @test searchsortedfirst(a, 4) ≡ searchsortedfirst(v, 4) ≡ 3
+            @test searchsortedfirst(a, 50) ≡ searchsortedfirst(v, 50) ≡ 48
+            @test searchsortedfirst(a, 101) ≡ searchsortedfirst(v, 101) ≡ 99
+            @test searchsortedlast(a, 0) ≡ searchsortedlast(v, 0) ≡ 0
+            @test searchsortedlast(a, 2) ≡ searchsortedlast(v, 2) ≡ 2
+            @test searchsortedlast(a, 4) ≡ searchsortedlast(v, 4) ≡ 2
+            @test searchsortedlast(a, 50) ≡ searchsortedlast(v, 50) ≡ 48
+            @test searchsortedlast(a, 101) ≡ searchsortedlast(v, 101) ≡ 98
+            @test searchsorted(a, 0) ≡ searchsorted(v, 0) ≡ 1:0
+            @test searchsorted(a, 2) ≡ searchsorted(v, 2) ≡ 2:2
+            @test searchsorted(a, 4) ≡ searchsorted(v, 4) ≡ 3:2
+            @test searchsorted(a, 50) ≡ searchsorted(v, 50) ≡ 48:48
+            @test searchsorted(a, 101) ≡ searchsorted(v, 101) ≡ 99:98
+        end
+
+        @testset "print" begin
+            @test Base.replace_in_print_matrix(Vcat(1:3,Zeros(10)), 4, 1, "0.0") == " ⋅ "
+        end
+
+        @testset "projection" begin
+            a = Vcat(Ones(5), Zeros(5))
+            b = randn(10)
+            @test colsupport(a .* b) ≡ Base.OneTo(5)
+            @test a .* b isa CachedVector
+            @test Diagonal(a) * b isa CachedVector
+            @test b .* a isa CachedVector
+            @test a .* b == Diagonal(a) * b == b .* a
+        end
     end
+
     @testset "Hcat" begin
         A = @inferred(Hcat(1:10, 2:11))
         @test_throws BoundsError A[1,3]
@@ -197,6 +446,12 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
             @test A[:,2] == Matrix(A)[:,2]
             @test A[:,:] == A[1:2,:] == A[:,1:5] == A[1:2,1:5] == A
         end
+
+        @testset "Hcat getindex" begin
+            A = Hcat(1, (1:10)')
+            @test A[1,:] isa Vcat{<:Any,1}
+            @test A[1,:][1:10] == A[1,1:10]
+        end
     end
 
     @testset "Hcat/Vcat adjoints" begin
@@ -217,6 +472,25 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test arguments(Adjoint(h)) ≡ ((1:5)', (2:6)')
         @test arguments(transpose(v)) ≡ (1, transpose(1:5))
         @test arguments(Transpose(h)) ≡ (transpose(1:5), transpose(2:6))
+
+        @test v'*(1:6) ≡ 71
+
+        A = Vcat(rand(2,3), randn(3,3))
+        @test A' isa Hcat
+        @test transpose(A) isa Hcat
+        @test MemoryLayout(Adjoint(A)) isa ApplyLayout{typeof(hcat)}
+        @test MemoryLayout(Transpose(A)) isa ApplyLayout{typeof(hcat)}
+        @test Hcat(Adjoint(A)) == Hcat(Transpose(A)) == transpose(A) == A'
+    end
+
+    @testset "Hvcat" begin
+        A = ApplyArray(hvcat, 2, randn(5,5), zeros(5,6), zeros(6,5), zeros(6,6))
+        @test eltype(A) == Float64
+        @test A == hvcat(A.args...)
+
+        B = ApplyArray(hvcat, (3,2,1), randn(5,2), ones(5,3), zeros(5,6), zeros(6,5), zeros(6,6), randn(2,11))
+        @test eltype(B) == Float64
+        @test B == hvcat(B.args...)
     end
 
     @testset "DefaultApplyStyle" begin
@@ -226,84 +500,6 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test v[1,1] == 1
         H = Applied{DefaultApplyStyle}(hcat, (1, zeros(1,3)))
         @test H[1,1] == 1
-    end
-
-    @testset "PaddedLayout" begin
-        A = Vcat([1,2,3], Zeros(7))
-        B = Vcat([1,2], Zeros(8))
-
-        C = @inferred(A+B)
-        @test C isa Vcat{Float64,1}
-        @test C.args[1] isa Vector{Float64}
-        @test C.args[2] isa Zeros{Float64}
-        @test C == Vector(A) + Vector(B)
-
-        @test colsupport(A, 1) == 1:3
-
-        B = Vcat([1,2], Ones(8))
-
-        C = @inferred(A+B)
-        @test C isa Vcat{Float64,1}
-        @test C.args[1] isa Vector{Float64}
-        @test C.args[2] isa Ones{Float64}
-        @test C == Vector(A) + Vector(B)
-
-        B = Vcat([1,2], randn(8))
-
-        C = @inferred(A+B)
-        @test C isa CachedVector{Float64}
-        @test C == Vector(A) + Vector(B)
-
-        B = Vcat(SVector(1,2), Ones(8))
-        C = @inferred(A+B)
-        @test C isa Vcat{Float64,1}
-        @test C.args[1] isa Vector{Float64}
-        @test C.args[2] isa Ones{Float64}
-        @test C == Vector(A) + Vector(B)
-
-
-        A = Vcat(SVector(3,4), Zeros(8))
-        B = Vcat(SVector(1,2), Ones(8))
-        C = @inferred(A+B)
-        @test C isa Vcat{Float64,1}
-        @test C.args[1] isa SVector{2,Int}
-        @test C.args[2] isa Ones{Float64}
-        @test C == Vector(A) + Vector(B)
-
-        @testset "multiple scalar" begin
-            # We only do 1 or 2 for now, this should be redesigned later
-            A = Vcat(1, Zeros(8))
-            @test MemoryLayout(A) isa PaddedLayout{ScalarLayout}
-            @test paddeddata(A) == 1
-            B = Vcat(1, 2, Zeros(8))
-            @test paddeddata(B) == [1,2]
-            @test MemoryLayout(B) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
-            C = Vcat(1, cache(Zeros(8)));
-            @test paddeddata(C) == [1]
-            @test MemoryLayout(C) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
-            D = Vcat(1, 2, cache(Zeros(8)));
-            @test paddeddata(D) == [1,2]
-            @test MemoryLayout(D) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
-        end
-    end
-
-    @testset "Empty Vcat" begin
-        @test @inferred(Vcat{Int}([1])) == [1]
-        @test @inferred(Vcat{Int}()) == Int[]
-    end
-
-    @testset "in" begin
-        @test 1 in Vcat(1, 1:10_000_000_000)
-        @test 100_000_000 in Vcat(1, 1:10_000_000_000)
-    end
-
-    @testset "convert" begin
-        for T in (Float32, Float64, ComplexF32, ComplexF64)
-            Z = Vcat(zero(T),Zeros{T}(10))
-            @test convert(AbstractArray,Z) ≡ Z
-            @test convert(AbstractArray{T},Z) ≡ AbstractArray{T}(Z) ≡ Z
-            @test convert(AbstractVector{T},Z) ≡ AbstractVector{T}(Z) ≡ Z
-        end
     end
 
     @testset "setindex!" begin
@@ -346,27 +542,6 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         A = Hcat([1,2,3],[4,5,6])
         fill!(A,2)
         @test A == fill(2,3,2)
-    end
-
-    @testset "Any/All" begin
-        @test all(Vcat(true, Fill(true,100_000_000)))
-        @test any(Vcat(false, Fill(true,100_000_000)))
-        @test all(iseven, Vcat(2, Fill(4,100_000_000)))
-        @test any(iseven, Vcat(2, Fill(1,100_000_000)))
-        @test_throws TypeError all(Vcat(1))
-        @test_throws TypeError any(Vcat(1))
-    end
-
-    @testset "isbitsunion #45" begin
-        @test copyto!(Vector{Vector{Int}}(undef,6), Vcat([[1], [2], [3]], [[1], [2], [3]])) ==
-            [[1], [2], [3], [1], [2], [3]]
-
-        a = Vcat{Union{Float64,UInt8}}([1.0], [UInt8(1)])
-        @test Base.isbitsunion(eltype(a))
-        r = Vector{Union{Float64,UInt8}}(undef,2)
-        @test copyto!(r, a) == a
-        @test r == a
-        @test copyto!(Vector{Float64}(undef,2), a) == [1.0,1.0]
     end
 
     @testset "Mul" begin
@@ -458,45 +633,6 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         end
     end
 
-    @testset "maximum/minimum Vcat" begin
-        x = Vcat(1:2, [1,1,1,1,1], 3)
-        @test maximum(x) == 3
-        @test minimum(x) == 1
-    end
-
-    @testset "copyto!" begin
-        a = Vcat(1, Zeros(10));
-        c = cache(Zeros(11));
-        @test MemoryLayout(typeof(a)) isa PaddedLayout
-        @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
-        @test copyto!(c, a) ≡ c;
-        @test c.datasize[1] == 1
-        @test c == a
-
-        a = Vcat(1:3, Zeros(10))
-        c = cache(Zeros(13));
-        @test MemoryLayout(typeof(a)) isa PaddedLayout
-        @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
-        @test copyto!(c, a) ≡ c;
-        @test c.datasize[1] == 3
-        @test c == a
-
-        @test dot(a,a) ≡ dot(a,c) ≡ dot(c,a) ≡ dot(c,c) ≡ 14.0
-
-
-        a = Vcat(1:3, Zeros(5))
-        c = cache(Zeros(13));
-        @test copyto!(c, a) ≡ c;
-        @test c.datasize[1] == 3
-        @test c[1:8] == a
-
-        a = cache(Zeros(13)); b = cache(Zeros(15));
-        @test a ≠ b
-        b = cache(Zeros(13));
-        a[3] = 2; b[3] = 2; b[5]=0;
-        @test a == b
-    end
-
     @testset "norm" begin
         for a in (Vcat(1,2,Fill(5,3)), Hcat([1,2],randn(2,2)), Vcat(1,Float64[])),
             p in (-Inf, 0, 0.1, 1, 2, 3, Inf)
@@ -504,7 +640,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         end
     end
 
-    @testset "SubVcat" begin
+    @testset "SubV/Hcat" begin
         A = Vcat(1,[2,3], Fill(5,10))
         V = view(A,3:5)
         @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
@@ -534,43 +670,6 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test arguments(v) == ([2], zeros(4))
         @test @inferred(call(v)) == vcat
         @test A[2,1:5] == copy(v) == sub_materialize(v)
-    end
-
-    @testset "Padded subarrays" begin
-        a = Vcat([1,2,3],[4,5,6])
-        @test sub_materialize(view(a,2:6)) == a[2:6]
-        a = Vcat([1,2,3], Zeros(10))
-        c = cache(Zeros(10)); c[1:3] = 1:3;
-        v = view(a,2:4)
-        w = view(c,2:4);
-        @test MemoryLayout(typeof(a)) isa PaddedLayout{DenseColumnMajor}
-        @test MemoryLayout(typeof(v)) isa PaddedLayout{DenseColumnMajor}
-        @test sub_materialize(v) == a[2:4] == sub_materialize(w)
-        @test sub_materialize(v) isa Vcat
-        @test sub_materialize(w) isa Vcat
-        A = Vcat(Eye(2), Zeros(10,2))
-        V = view(A, 1:5, 1:2)
-        @test sub_materialize(V) == A[1:5,1:2]
-    end
-
-    @testset "searchsorted" begin
-        a = Vcat(1:1_000_000, [10_000_000_000,12_000_000_000], 14_000_000_000)
-        b = Vcat(1, 3:1_000_000, [2_000_000, 3_000_000])
-        @test @inferred(searchsortedfirst(a, 6_000_000_001)) == 1_000_001
-        @test @inferred(searchsortedlast(a, 2)) == 2
-        @test @inferred(searchsortedfirst(b, 5)) == 4
-        @test @inferred(searchsortedlast(b, 1)) == 1
-    end
-
-    @testset "args with hcat and view" begin
-        A = Vcat(fill(2.0,1,10),ApplyArray(hcat, Zeros(1), fill(3.0,1,9)))
-        @test arguments(view(A,:,10)) == ([2.0], [3.0])
-    end
-
-    @testset "union" begin
-        a = Vcat([1,3,4],5:7)
-        b = Vcat([1,3,4],5:7)
-        union(a,b)
     end
 
     @testset "col/rowsupport" begin
@@ -607,98 +706,5 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
 	            @test stringmime("text/plain", A) == "vcat(1×3 Ones{$Int}, 3×3 Diagonal{$Int, UnitRange{$Int}}):\n 1  1  1\n 1  ⋅  ⋅\n ⋅  2  ⋅\n ⋅  ⋅  3"
 	        end
         end
-    end
-
-    @testset "==" begin
-        A = Vcat([1,2],[0])
-        B = Vcat([1,2],[0])
-        C = Vcat([1],[2,0])
-        @test A == B == C == [1,2,0]
-        @test A ≠ [1,2,4]
-    end
-
-    @testset "resizedata!" begin
-        # allow emulating a cached Vector
-        a = Vcat([1,2], Zeros(8))
-        @test resizedata!(a, 2) ≡ a
-        @test_throws BoundsError resizedata!(a,3)
-    end
-
-    @testset "Axpy" begin
-        a = Vcat([1.,2],Zeros(1_000_000))
-        b = Vcat([1.,2],Zeros(1_000_000))
-        BLAS.axpy!(2.0, a, b)
-        @test b[1:10] == [3; 6; zeros(8)]
-        BLAS.axpy!(2.0, view(a,:), b)
-        @test b[1:10] == [5; 10; zeros(8)]
-    end
-
-    @testset "l/rmul!" begin
-        a = Vcat([1.,2],Zeros(1_000_000))
-        @test ArrayLayouts.lmul!(2,a) ≡ a
-        @test a[1:10] == [2; 4; zeros(8)]
-        @test ArrayLayouts.rmul!(a,2) ≡ a
-        @test a[1:10] == [4; 8; zeros(8)]
-    end
-
-    @testset "Dot" begin
-        a = Vcat([1,2],Zeros(1_000_000))
-        b = Vcat([1,2,3],Zeros(1_000_000))
-        @test @inferred(dot(a,b)) ≡ 5.0
-        @test @inferred(dot(a,1:1_000_002)) ≡ @inferred(dot(1:1_000_002,a)) ≡ 5.0
-    end
-
-    @testset "search" begin
-        a = Vcat([1,2], 5:100)
-        v = Vector(a)
-        @test searchsortedfirst(a, 0) ≡ searchsortedfirst(v, 0) ≡ 1
-        @test searchsortedfirst(a, 2) ≡ searchsortedfirst(v, 2) ≡ 2
-        @test searchsortedfirst(a, 4) ≡ searchsortedfirst(v, 4) ≡ 3
-        @test searchsortedfirst(a, 50) ≡ searchsortedfirst(v, 50) ≡ 48
-        @test searchsortedfirst(a, 101) ≡ searchsortedfirst(v, 101) ≡ 99
-        @test searchsortedlast(a, 0) ≡ searchsortedlast(v, 0) ≡ 0
-        @test searchsortedlast(a, 2) ≡ searchsortedlast(v, 2) ≡ 2
-        @test searchsortedlast(a, 4) ≡ searchsortedlast(v, 4) ≡ 2
-        @test searchsortedlast(a, 50) ≡ searchsortedlast(v, 50) ≡ 48
-        @test searchsortedlast(a, 101) ≡ searchsortedlast(v, 101) ≡ 98
-        @test searchsorted(a, 0) ≡ searchsorted(v, 0) ≡ 1:0
-        @test searchsorted(a, 2) ≡ searchsorted(v, 2) ≡ 2:2
-        @test searchsorted(a, 4) ≡ searchsorted(v, 4) ≡ 3:2
-        @test searchsorted(a, 50) ≡ searchsorted(v, 50) ≡ 48:48
-        @test searchsorted(a, 101) ≡ searchsorted(v, 101) ≡ 99:98
-    end
-
-    @testset "print" begin
-        @test Base.replace_in_print_matrix(Vcat(1:3,Zeros(10)), 4, 1, "0.0") == " ⋅ "
-    end
-
-    @testset "projection" begin
-        a = Vcat(Ones(5), Zeros(5))
-        b = randn(10)
-        @test colsupport(a .* b) ≡ Base.OneTo(5)
-        @test a .* b isa CachedVector
-        @test Diagonal(a) * b isa CachedVector
-        @test b .* a isa CachedVector
-        @test a .* b == Diagonal(a) * b == b .* a
-    end
-
-    @testset "Hcat getindex" begin
-        A = Hcat(1, (1:10)')
-        @test A[1,:] isa Vcat{<:Any,1}
-        @test A[1,:][1:10] == A[1,1:10]
-    end
-
-    @testset "Adjoint" begin
-        a = Vcat(1, 1:5)
-        @test a' isa Adjoint
-        @test MemoryLayout(a') isa DualLayout{ApplyLayout{typeof(hcat)}}
-        @test a'*(1:6) ≡ 71
-
-        A = Vcat(rand(2,3), randn(3,3))
-        @test A' isa Hcat
-        @test transpose(A) isa Hcat
-        @test MemoryLayout(Adjoint(A)) isa ApplyLayout{typeof(hcat)}
-        @test MemoryLayout(Transpose(A)) isa ApplyLayout{typeof(hcat)}
-        @test Hcat(Adjoint(A)) == Hcat(Transpose(A)) == transpose(A) == A'
     end
 end
