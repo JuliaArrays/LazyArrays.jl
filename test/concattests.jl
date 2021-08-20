@@ -484,13 +484,17 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
     end
 
     @testset "Hvcat" begin
-        A = ApplyArray(hvcat, 2, randn(5,5), zeros(5,6), zeros(6,5), zeros(6,6))
+        A = ApplyArray(hvcat, 2, randn(5,5), randn(5,6), randn(6,5), randn(6,6))
         @test eltype(A) == Float64
         @test A == hvcat(A.args...)
 
-        B = ApplyArray(hvcat, (3,2,1), randn(5,2), ones(5,3), zeros(5,6), zeros(6,5), zeros(6,6), randn(2,11))
+        B = ApplyArray(hvcat, (3,2,1), randn(5,2), ones(5,3), randn(5,6), randn(6,5), randn(6,6), randn(2,11))
         @test eltype(B) == Float64
         @test B == hvcat(B.args...)
+
+        P = ApplyArray(hvcat, 2, randn(5,5), Zeros(5,6), Zeros(6,5), Zeros(6,6))
+        @test eltype(A) == Float64
+        @test A == hvcat(A.args...)
     end
 
     @testset "DefaultApplyStyle" begin

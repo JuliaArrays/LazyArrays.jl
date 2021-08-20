@@ -621,6 +621,7 @@ applylayout(::Type{typeof(vcat)}, ::A, ::ZerosLayout) where A = PaddedLayout{A}(
 applylayout(::Type{typeof(vcat)}, ::ScalarLayout, ::ScalarLayout, ::ZerosLayout) = PaddedLayout{ApplyLayout{typeof(vcat)}}()
 applylayout(::Type{typeof(vcat)}, ::A, ::PaddedLayout) where A = PaddedLayout{ApplyLayout{typeof(vcat)}}()
 applylayout(::Type{typeof(vcat)}, ::ScalarLayout, ::ScalarLayout, ::PaddedLayout) = PaddedLayout{ApplyLayout{typeof(vcat)}}()
+applylayout(::Type{typeof(hvcat)}, _, ::A, ::ZerosLayout...) where A = PaddedLayout{A}()
 cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
@@ -631,7 +632,19 @@ _vcat_paddeddata(A, B) = Vcat(A, paddeddata(B))
 _vcat_paddeddata(A, B, C...) = Vcat(A, _vcat_paddeddata(B, C...))
 paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
 
-colsupport(::PaddedLayout, A, j) = colsupport(paddeddata(A),j)
+_hvcat_paddeddata(N, A, B::Zeros...) = A
+paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
+
+function colsupport(::PaddedLayout, A, j)
+    P = paddeddata(A)
+    !isempty(j) && maximum(j) ≤ size(P,2) && return colsupport(P,j)
+    1:0
+end
+function rowsupport(::PaddedLayout, A, k)
+    P = paddeddata(A)
+    !isempty(k) && maximum(k) ≤ size(P,1) && return rowsupport(P,k)
+    1:0
+end
 
 function _vcat_resizedata!(::PaddedLayout, B, m...)
     Base.checkbounds(paddeddata(B), m...)
@@ -1040,7 +1053,8 @@ end
 
 function layout_replace_in_print_matrix(::PaddedLayout, f::AbstractVecOrMat, k, j, s)
     data = paddeddata(f)
-    k in axes(data,1) ? _replace_in_print_matrix(data, k, j, s) : Base.replace_with_centered_mark(s)
+    k in axes(data,1) && j in axes(data,2) && return _replace_in_print_matrix(data, k, j, s)
+    Base.replace_with_centered_mark(s)
 end
 
 # searchsorted
