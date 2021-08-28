@@ -637,12 +637,14 @@ paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 
 function colsupport(::PaddedLayout, A, j)
     P = paddeddata(A)
-    !isempty(j) && maximum(j) ≤ size(P,2) && return colsupport(P,j)
+    j̃ = j ∩ axes(P,2)
+    !isempty(j̃) && return rowsupport(P,j̃)
     1:0
 end
 function rowsupport(::PaddedLayout, A, k)
     P = paddeddata(A)
-    !isempty(k) && maximum(k) ≤ size(P,1) && return rowsupport(P,k)
+    k̃ = k ∩ axes(P,1)
+    !isempty(k̃) && return rowsupport(P,k̃)
     1:0
 end
 
