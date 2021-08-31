@@ -206,24 +206,23 @@ end
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::Int, A, args...)
     T = eltype(f)
     m,n = size(A)
+    N ≤ 0 && throw(BoundsError(f, (k,j))) # ran out of arrays
     k ≤ m && j ≤ n && return convert(T, A[k, j])::T
-    k ≤ m && return hvcat_getindex_recursive(f, (k, j - n), N, args...)
+    k ≤ m && return hvcat_getindex_recursive(f, (k, j - n), N-1, args...)
     hvcat_getindex_recursive(f, (k - m, j), N, args[N:end]...)
 end
 
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::NTuple{M,Int}, A, args...) where M
     T = eltype(f)
     m,n = size(A)
-    k ≤ m && j ≤ n && return convert(T, A[k, j])::T
-    k ≤ m && return hvcat_getindex_recursive(f, (k, j - n), N, args...)
+    k ≤ m && return hvcat_getindex_recursive(f, (k, j), N[1], A, args...)
     hvcat_getindex_recursive(f, (k - m, j), tail(N), args[N[1]:end]...)
 end
 
 
 @inline hvcat_getindex_recursive(f, idx, N) = throw(BoundsError(f, idx))
 
-getindex(f::ApplyArray{<:Any,typeof(hvcat)}, k::Integer, j::Integer) = hvcat_getindex(f, k, j)
-getindex(f::ApplyArray{<:Any,typeof(hvcat)}, k::AbstractVector, j::Integer) = hvcat_getindex(f, k, j)
+getindex(f::ApplyMatrix{<:Any,typeof(hvcat)}, k::Integer, j::Integer) = hvcat_getindex(f, k, j)
 getindex(f::Applied{DefaultArrayApplyStyle,typeof(hvcat)}, k::Integer, j::Integer)= hvcat_getindex(f, k, j)
 getindex(f::Applied{<:Any,typeof(hvcat)}, k::Integer, j::Integer)= hvcat_getindex(f, k, j)
 
@@ -638,14 +637,14 @@ paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 function colsupport(::PaddedLayout, A, j)
     P = paddeddata(A)
     j̃ = j ∩ axes(P,2)
-    !isempty(j̃) && return rowsupport(P,j̃)
-    1:0
+    cs = colsupport(P,j̃)
+    isempty(j̃) ? convert(typeof(cs), Base.OneTo(0)) : cs
 end
 function rowsupport(::PaddedLayout, A, k)
     P = paddeddata(A)
     k̃ = k ∩ axes(P,1)
-    !isempty(k̃) && return rowsupport(P,k̃)
-    1:0
+    rs = rowsupport(P,k̃)
+    isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
 end
 
 function _vcat_resizedata!(::PaddedLayout, B, m...)

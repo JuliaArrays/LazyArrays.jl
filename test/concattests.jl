@@ -487,14 +487,24 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         A = ApplyArray(hvcat, 2, randn(5,5), randn(5,6), randn(6,5), randn(6,6))
         @test eltype(A) == Float64
         @test A == hvcat(A.args...)
+        @test_throws BoundsError A[2,12]
+        @test_throws BoundsError A[12,2]
+        @test A[[1,6],3] == Matrix(A)[[1,6],3]
 
         B = ApplyArray(hvcat, (3,2,1), randn(5,2), ones(5,3), randn(5,6), randn(6,5), randn(6,6), randn(2,11))
         @test eltype(B) == Float64
         @test B == hvcat(B.args...)
+        @test_throws BoundsError A[2,14]
+        @test_throws BoundsError A[14,2]
 
-        P = ApplyArray(hvcat, 2, randn(5,5), Zeros(5,6), Zeros(6,5), Zeros(6,6))
-        @test eltype(A) == Float64
-        @test A == hvcat(A.args...)
+        P = ApplyArray(hvcat, 2, randn(4,5), Zeros(4,6), Zeros(6,5), Zeros(6,6))
+        @test eltype(P) == Float64
+        @test MemoryLayout(P) isa PaddedLayout
+        @test P == hvcat(P.args...)
+        @test @inferred(colsupport(P,3)) == Base.OneTo(4)
+        @test @inferred(colsupport(P,7)) == Base.OneTo(0)
+        @test @inferred(rowsupport(P,3)) == Base.OneTo(5)
+        @test @inferred(rowsupport(P,7)) == Base.OneTo(0)
     end
 
     @testset "DefaultApplyStyle" begin
