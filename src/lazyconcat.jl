@@ -117,6 +117,9 @@ end
 
 reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.args))...)
 
+####
+# Hcat
+####
 
 const Hcat{T,I<:Tuple} = ApplyArray{T,2,typeof(hcat),I}
 
@@ -137,11 +140,9 @@ ndims(::Applied{<:Any,typeof(hcat)}) = 2
 size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
 Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
 
-@inline hcat_getindex(f, k, j::Integer) =
-    hcat_getindex_recursive(f, (k, j), f.args...)
+@inline hcat_getindex(f, k, j::Integer) = hcat_getindex_recursive(f, (k, j), f.args...)
 
-@inline function hcat_getindex_recursive(
-        f, idx::Tuple{Integer,Integer}, A, args...)
+@inline function hcat_getindex_recursive(f, idx::Tuple{Integer,Integer}, A, args...)
     k, j = idx
     T = eltype(f)
     n = size(A, 2)
@@ -149,8 +150,7 @@ Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
     hcat_getindex_recursive(f, (k, j - n), args...)
 end
 
-@inline function hcat_getindex_recursive(
-        f, idx::Tuple{Union{Colon,AbstractVector},Integer}, A, args...)
+@inline function hcat_getindex_recursive(f, idx::Tuple{Union{Colon,AbstractVector},Integer}, A, args...)
     kr, j = idx
     T = eltype(f)
     n = size(A, 2)
@@ -168,8 +168,7 @@ getindex(f::Applied{<:Any,typeof(hcat)}, k::Integer, j::Integer)= hcat_getindex(
 # since its mutable we need to make a copy
 copy(f::Hcat) = Hcat(map(copy, f.args)...)
 
-@inline function hcat_setindex_recursive!(
-        f, v, idx::NTuple{2}, A, args...)
+@inline function hcat_setindex_recursive!(f, v, idx::NTuple{2}, A, args...)
     k, j = idx
     T = eltype(f)
     n = size(A, 2)
@@ -183,8 +182,53 @@ function setindex!(f::Hcat{T}, v, k::Integer, j::Integer) where T
     hcat_setindex_recursive!(f, v, (k, j), f.args...)
 end
 
+####
+# Hvcat
+####
 
-## copyto!
+@inline eltype(A::Applied{<:Any,typeof(hvcat)}) = promote_type(map(eltype,tail(A.args))...)
+ndims(::Applied{<:Any,typeof(hvcat)}) = 2
+function size(f::Applied{<:Any,typeof(hvcat),<:Tuple{Int,Vararg{Any}}})
+    n = f.args[1]
+    sum(size.(f.args[2:n:end],1)),sum(size.(f.args[2:1+n],2))
+end
+
+function size(f::Applied{<:Any,typeof(hvcat),<:Tuple{NTuple{N,Int},Vararg{Any}}}) where N
+    n = f.args[1]
+
+    as = tuple(2, (2 .+ cumsum(most(n)))...)
+    sum(size.(getindex.(Ref(f.args), as),1)),sum(size.(f.args[2:1+n[1]],2))
+end
+
+
+@inline hvcat_getindex(f, k, j::Integer) = hvcat_getindex_recursive(f, (k, j), f.args...)
+
+@inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::Int, A, args...)
+    T = eltype(f)
+    m,n = size(A)
+    N ≤ 0 && throw(BoundsError(f, (k,j))) # ran out of arrays
+    k ≤ m && j ≤ n && return convert(T, A[k, j])::T
+    k ≤ m && return hvcat_getindex_recursive(f, (k, j - n), N-1, args...)
+    hvcat_getindex_recursive(f, (k - m, j), N, args[N:end]...)
+end
+
+@inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::NTuple{M,Int}, A, args...) where M
+    T = eltype(f)
+    m,n = size(A)
+    k ≤ m && return hvcat_getindex_recursive(f, (k, j), N[1], A, args...)
+    hvcat_getindex_recursive(f, (k - m, j), tail(N), args[N[1]:end]...)
+end
+
+
+@inline hvcat_getindex_recursive(f, idx, N) = throw(BoundsError(f, idx))
+
+getindex(f::ApplyMatrix{<:Any,typeof(hvcat)}, k::Integer, j::Integer) = hvcat_getindex(f, k, j)
+getindex(f::Applied{DefaultArrayApplyStyle,typeof(hvcat)}, k::Integer, j::Integer)= hvcat_getindex(f, k, j)
+getindex(f::Applied{<:Any,typeof(hvcat)}, k::Integer, j::Integer)= hvcat_getindex(f, k, j)
+
+#####
+# copyto!
+####
 # based on Base/array.jl, Base/abstractarray.jl
 _copyto!(_, LAY::ApplyLayout{typeof(vcat)}, dest::AbstractArray{<:Any,N}, V::AbstractArray{<:Any,N}) where N =
     vcat_copyto!(dest, arguments(LAY, V)...)
@@ -576,6 +620,7 @@ applylayout(::Type{typeof(vcat)}, ::A, ::ZerosLayout) where A = PaddedLayout{A}(
 applylayout(::Type{typeof(vcat)}, ::ScalarLayout, ::ScalarLayout, ::ZerosLayout) = PaddedLayout{ApplyLayout{typeof(vcat)}}()
 applylayout(::Type{typeof(vcat)}, ::A, ::PaddedLayout) where A = PaddedLayout{ApplyLayout{typeof(vcat)}}()
 applylayout(::Type{typeof(vcat)}, ::ScalarLayout, ::ScalarLayout, ::PaddedLayout) = PaddedLayout{ApplyLayout{typeof(vcat)}}()
+applylayout(::Type{typeof(hvcat)}, _, ::A, ::ZerosLayout...) where A = PaddedLayout{A}()
 cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
@@ -586,7 +631,21 @@ _vcat_paddeddata(A, B) = Vcat(A, paddeddata(B))
 _vcat_paddeddata(A, B, C...) = Vcat(A, _vcat_paddeddata(B, C...))
 paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
 
-colsupport(::PaddedLayout, A, j) = colsupport(paddeddata(A),j)
+_hvcat_paddeddata(N, A, B::Zeros...) = A
+paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
+
+function colsupport(::PaddedLayout, A, j)
+    P = paddeddata(A)
+    j̃ = j ∩ axes(P,2)
+    cs = colsupport(P,j̃)
+    isempty(j̃) ? convert(typeof(cs), Base.OneTo(0)) : cs
+end
+function rowsupport(::PaddedLayout, A, k)
+    P = paddeddata(A)
+    k̃ = k ∩ axes(P,1)
+    rs = rowsupport(P,k̃)
+    isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
+end
 
 function _vcat_resizedata!(::PaddedLayout, B, m...)
     Base.checkbounds(paddeddata(B), m...)
@@ -995,7 +1054,8 @@ end
 
 function layout_replace_in_print_matrix(::PaddedLayout, f::AbstractVecOrMat, k, j, s)
     data = paddeddata(f)
-    k in axes(data,1) ? _replace_in_print_matrix(data, k, j, s) : Base.replace_with_centered_mark(s)
+    k in axes(data,1) && j in axes(data,2) && return _replace_in_print_matrix(data, k, j, s)
+    Base.replace_with_centered_mark(s)
 end
 
 # searchsorted
