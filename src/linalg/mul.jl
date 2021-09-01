@@ -226,11 +226,11 @@ permutedims(A::ApplyArray{<:Any,2,typeof(*)}) = ApplyArray(*, reverse(map(permut
 ##
 
 for op in (:*, :\)
-    @eval broadcasted(::DefaultArrayStyle{N}, ::typeof($op), a::Number, b::ApplyArray{<:Number,N,typeof(*)}) where N =
+    @eval broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Number, b::ApplyArray{<:Number,N,typeof(*)}) where N =
         ApplyArray(*, broadcast($op,a,first(b.args)), tail(b.args)...)
 end
 
-broadcasted(::DefaultArrayStyle{N}, ::typeof(/), b::ApplyArray{<:Number,N,typeof(*)}, a::Number) where N =
+broadcasted(::LazyArrayStyle{N}, ::typeof(/), b::ApplyArray{<:Number,N,typeof(*)}, a::Number) where N =
         ApplyArray(*, most(b.args)..., broadcast(/,last(b.args),a))
 
 for Typ in (:Lmul, :Rmul)
