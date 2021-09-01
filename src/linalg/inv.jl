@@ -76,7 +76,7 @@ pinv(A::PInvMatrix) = parent(A)
 
 
 
-abstract type AbstractInvLayout{L} <: MemoryLayout end
+abstract type AbstractInvLayout{L} <: AbstractLazyLayout end
 struct InvLayout{L} <: AbstractInvLayout{L} end
 struct PInvLayout{L} <: AbstractInvLayout{L} end
 
