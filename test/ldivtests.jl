@@ -112,6 +112,11 @@ import Base.Broadcast: materialize
             @test inv(M) ≈ inv(A*B)
             @test_throws DimensionMismatch inv(ApplyArray(*,randn(5,6), rand(6,5)))
         end
+
+        @testset "Inv * Eye" begin
+            @test ApplyArray(inv,A) * Eye(5) == Eye(5) * ApplyArray(inv,A)
+            @test ApplyArray(inv,A) * Diagonal(Fill(2,5)) == Diagonal(Fill(2,5)) * ApplyArray(inv,A)
+        end
     end
 
     @testset "Triangular ldiv" begin
