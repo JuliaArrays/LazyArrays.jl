@@ -661,42 +661,16 @@ function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:
     view(A.data,OneTo(n)) == view(B.data,OneTo(n))
 end
 
-# special copyto! since `similar` of a padded returns a cached
-for Typ in (:Number, :AbstractVector)
-    @eval begin
-        function _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::AbstractVector)
-            length(src) ≤ length(dest)  || throw(BoundsError())
-            a = paddeddata(src)
-            n = length(a)
-            resizedata!(dest, n) # make sure we are padded enough
-            copyto!(view(dest.data,OneTo(n)), a)
-            dest
-        end
-        function _copyto!(::PaddedLayout, ::PaddedLayout, dest::SubArray{<:Any,1,<:CachedVector{<:$Typ}}, src::AbstractVector)
-            length(src) ≤ length(dest)  || throw(BoundsError())
-            a = paddeddata(src)
-            n = length(a)
-            k = first(parentindices(dest)[1])
-            resizedata!(parent(dest), k+n-1) # make sure we are padded enough
-            copyto!(view(parent(dest).data,k:k+n-1), a)
-            dest
-        end
-
-        _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::CachedVector) =
-            _padded_copyto!(dest, src)
-    end
-end
-
-function _padded_copyto!(dest::CachedVector, src::CachedVector)
+function _copyto!(::PaddedLayout, ::PaddedLayout, dest::AbstractVector, src::AbstractVector)
     length(src) ≤ length(dest)  || throw(BoundsError())
-    n = src.datasize[1]
-    resizedata!(dest, n)
-    copyto!(view(dest.data,OneTo(n)), view(src.data,OneTo(n)))
+    dest_data = paddeddata(dest)
+    src_data = paddeddata(src)
+    n = length(src_data)
+    resizedata!(dest, n) # if resizeable
+    copyto!(view(dest_data,OneTo(n)), src_data)
+    zero!(view(dest_data,n+1:length(dest_data)))
     dest
 end
-
-_copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector, src::CachedVector) =
-    _padded_copyto!(dest, src)
 
 function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::AbstractVector)
     zero!(paddeddata(dest))
