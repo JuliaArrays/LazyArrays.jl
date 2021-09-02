@@ -260,19 +260,18 @@ broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Ref) = CachedArray(broadcas
 broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 
 
-
 function layout_broadcasted(::CachedLayout, _, op, A::AbstractVector, B::AbstractVector)
     dat = cacheddata(A)
     n = length(dat)
     m = length(B)
-    CachedArray(broadcast(op, dat, view(B,1:n)), broadcast(op, A.array, B))
+    CachedArray(convert(Array, broadcast(op, dat, view(B,1:n))), broadcast(op, A.array, B))
 end
 
 function layout_broadcasted(_, ::CachedLayout, op, A::AbstractVector, B::AbstractVector)
     dat = cacheddata(B)
     n = length(dat)
     m = length(A)
-    CachedArray(broadcast(op, view(A,1:n), dat), broadcast(op, A, B.array))
+    CachedArray(convert(Array, broadcast(op, view(A,1:n), dat)), broadcast(op, A, B.array))
 end
 
 function layout_broadcasted(::CachedLayout, ::CachedLayout, op, A::AbstractVector, B::AbstractVector)
@@ -281,7 +280,7 @@ function layout_broadcasted(::CachedLayout, ::CachedLayout, op, A::AbstractVecto
     resizedata!(B,n)
     Adat = view(cacheddata(A),1:n)
     Bdat = view(cacheddata(B),1:n)
-    CachedArray(broadcast(op, Adat, Bdat), broadcast(op, A.array, B.array))
+    CachedArray(convert(Array, broadcast(op, Adat, Bdat)), broadcast(op, A.array, B.array))
 end
 
 function layout_broadcasted(op, A, B)
