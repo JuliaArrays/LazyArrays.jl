@@ -677,6 +677,13 @@ function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::Abst
     dest
 end
 
+function zero!(::PaddedLayout, A)
+    zero!(paddeddata(A))
+    A
+end
+
+ArrayLayouts._norm(::PaddedLayout, A, p) = norm(paddeddata(A), p)
+
 ######
 # Special Vcat broadcasts
 #
@@ -1091,3 +1098,28 @@ function sub_paddeddata(::TriangularLayout{'L','N'}, S::SubArray{<:Any,1,<:Abstr
     (k,jr) = parentindices(S)
     view(triangulardata(P), k, jr ∩ (1:k))
 end
+
+
+###
+# setindex
+###
+
+@inline ndims(A::Applied{<:Any,typeof(setindex)}) = ndims(A.args[1])
+@inline eltype(A::Applied{<:Any,typeof(setindex)}) = eltype(A.args[1])
+axes(A::ApplyArray{<:Any,N,typeof(setindex)}) where N = axes(A.args[1])
+
+function getindex(A::ApplyVector{T,typeof(setindex)}, k::Integer) where T
+    P,v,kr = A.args
+    convert(T, k in kr ? v[something(findlast(isequal(k),kr))] : P[k])::T
+end
+
+function getindex(A::ApplyMatrix{T,typeof(setindex)}, k::Integer, j::Integer) where T
+    P,v,kr,jr = A.args
+    convert(T, k in kr && j in jr ? v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] : P[k,j])::T
+end
+
+# todo: generalize
+MemoryLayout(::Type{<:ApplyVector{T,typeof(setindex),<:Tuple{Zeros,M,OneTo{Int}}}}) where {T,M} = PaddedLayout{typeof(MemoryLayout(M))}()
+MemoryLayout(::Type{<:ApplyMatrix{T,typeof(setindex),<:Tuple{Zeros,M,OneTo{Int},OneTo{Int}}}}) where {T,M} = PaddedLayout{typeof(MemoryLayout(M))}()
+paddeddata(A::ApplyVector{<:Any,typeof(setindex),<:Tuple{Zeros,Any,OneTo{Int}}}) = A.args[2]
+paddeddata(A::ApplyMatrix{<:Any,typeof(setindex),<:Tuple{Zeros,Any,OneTo{Int},OneTo{Int}}}) = A.args[2]

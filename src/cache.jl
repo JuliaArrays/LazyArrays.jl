@@ -223,11 +223,6 @@ end
 ###
 # special for zero cache
 ###
-
-function zero!(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N
-    zero!(A.data)
-    A
-end
 function cache_getindex(_, A::CachedVector{<:Any,<:AbstractVector,<:AbstractFill{<:Any,1}}, I::AbstractVector)
     @boundscheck checkbounds(A, I)
     CachedArray(A.data[I ∩ OneTo(A.datasize[1])], A.array[oneto(length(I))])
@@ -241,7 +236,6 @@ struct CachedLayout{Data,Array} <: MemoryLayout end
 
 cachedlayout(::Data, ::Array) where {Data,Array} = CachedLayout{Data,Array}()
 MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayout(MemoryLayout(DAT), MemoryLayout(ARR))
-
 
 
 #####

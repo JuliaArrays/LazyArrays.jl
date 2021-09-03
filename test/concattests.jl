@@ -721,4 +721,36 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
 	        end
         end
     end
+
+    @testset "setindex" begin
+        a = ApplyArray(setindex, 1:6, 5, 2)
+        @test a == [1; 5; 3:6]
+        @test_throws BoundsError a[7]
+        a = ApplyArray(setindex, 1:6, [9,8,7], 1:3)
+        @test a == [9; 8; 7; 4:6]
+        @test_throws BoundsError a[7]
+
+        a = ApplyArray(setindex, Zeros(5,5), 2, 2, 3)
+        @test a[2,3] === 2.0
+        @test a == setindex!(zeros(5,5),2,2,3)
+
+        a = ApplyArray(setindex, Zeros(5,5), [4,5], 2:3, 3)
+        @test a == setindex!(zeros(5,5),[4,5], 2:3, 3)
+
+        a = ApplyArray(setindex, Zeros(5,5), [1 2 3; 4 5 6], 2:3, 3:5)
+        @test a == setindex!(zeros(5,5),[1 2 3; 4 5 6], 2:3, 3:5)
+
+
+        a = ApplyArray(setindex, Zeros(5), [1,2], Base.OneTo(2))
+        @test MemoryLayout(a) isa PaddedLayout{DenseColumnMajor}
+        @test paddeddata(a) == 1:2
+
+        a = ApplyArray(setindex, Zeros(5,5), [1 2 3; 4 5 6], Base.OneTo(2), Base.OneTo(3))
+        @test a == setindex!(zeros(5,5),[1 2 3; 4 5 6], 1:2, 1:3)
+        @test MemoryLayout(a) isa PaddedLayout{DenseColumnMajor}
+        @test paddeddata(a) == [1 2 3; 4 5 6]
+
+        # need to add bounds checking
+        @test_broken ApplyArray(setindex, Zeros(5,5), [1 2; 4 5], 2:3, 3:5)
+    end
 end
