@@ -997,17 +997,18 @@ end
 function sub_paddeddata(_, S::SubArray)
     P = parent(S)
     (kr,jr) = parentindices(S)
-    resizedata!(P, 1, maximum(jr)) # ensure enough rows
+    resizedata!(P, maximum(kr), maximum(jr)) # ensure enough rows/cols
     dat = paddeddata(P)
     kr2 = kr ∩ axes(dat,1)
-    _lazy_getindex(dat, kr2, jr)
+    jr2 = jr ∩ axes(dat,2)
+    _lazy_getindex(dat, kr2, jr2)
 end
 
 paddeddata(S::SubArray) = sub_paddeddata(MemoryLayout(parent(S)), S)
 
 function _padded_sub_materialize(v::AbstractVector{T}) where T
     dat = paddeddata(v)
-    Vcat(dat, Zeros{T}(length(v) - length(dat)))
+    Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat)))
 end
 
 sub_materialize(::PaddedLayout, v::AbstractVector{T}, _) where T =
@@ -1015,7 +1016,7 @@ sub_materialize(::PaddedLayout, v::AbstractVector{T}, _) where T =
 
 function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}, _) where T
     dat = paddeddata(v)
-    Vcat(dat, Zeros{T}(size(v,1) - size(dat,1), size(dat,2)))
+    PaddedArray(sub_materialize(dat), size(v)...)
 end
 
 ## print
@@ -1118,8 +1119,11 @@ function getindex(A::ApplyMatrix{T,typeof(setindex)}, k::Integer, j::Integer) wh
     convert(T, k in kr && j in jr ? v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] : P[k,j])::T
 end
 
-# todo: generalize
-MemoryLayout(::Type{<:ApplyVector{T,typeof(setindex),<:Tuple{Zeros,M,OneTo{Int}}}}) where {T,M} = PaddedLayout{typeof(MemoryLayout(M))}()
-MemoryLayout(::Type{<:ApplyMatrix{T,typeof(setindex),<:Tuple{Zeros,M,OneTo{Int},OneTo{Int}}}}) where {T,M} = PaddedLayout{typeof(MemoryLayout(M))}()
-paddeddata(A::ApplyVector{<:Any,typeof(setindex),<:Tuple{Zeros,Any,OneTo{Int}}}) = A.args[2]
-paddeddata(A::ApplyMatrix{<:Any,typeof(setindex),<:Tuple{Zeros,Any,OneTo{Int},OneTo{Int}}}) = A.args[2]
+const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{OneTo{Int},N}}}
+const PaddedVector{T,M} = PaddedArray{T,1,M}
+const PaddedMatrix{T,M} = PaddedArray{T,2,M}
+
+MemoryLayout(::Type{<:PaddedArray{T,N,M}}) where {T,N,M} = PaddedLayout{typeof(MemoryLayout(M))}()
+paddeddata(A::PaddedArray) = A.args[2]
+
+PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, axes(A)...)
