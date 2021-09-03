@@ -663,10 +663,10 @@ end
 
 function _copyto!(::PaddedLayout, ::PaddedLayout, dest::AbstractVector, src::AbstractVector)
     length(src) ≤ length(dest)  || throw(BoundsError())
-    dest_data = paddeddata(dest)
     src_data = paddeddata(src)
     n = length(src_data)
-    resizedata!(dest, n) # if resizeable
+    resizedata!(dest, n) # if resizeable, otherwise this is a no-op
+    dest_data = paddeddata(dest)
     copyto!(view(dest_data,OneTo(n)), src_data)
     zero!(view(dest_data,n+1:length(dest_data)))
     dest
