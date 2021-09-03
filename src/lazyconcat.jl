@@ -994,10 +994,34 @@ function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractVector})
     _lazy_getindex(dat, kr2)
 end
 
-function sub_paddeddata(_, S::SubArray)
+
+
+function sub_paddeddata(_, S::SubArray{<:Any,1,<:Any,<:Tuple{Integer,Any}})
+    P = parent(S)
+    (k,jr) = parentindices(S)
+    # need to resize in case dat is empty... not clear how to take a vector view of a 0-dimensional matrix in a type-stable way
+    resizedata!(P, k, 1); dat = paddeddata(P)
+    if k in axes(dat,1)
+        _lazy_getindex(dat, k, jr ∩ axes(dat,2))
+    else
+        _lazy_getindex(dat, first(axes(dat,1)), jr ∩ Base.OneTo(0))
+    end
+end
+function sub_paddeddata(_, S::SubArray{<:Any,1,<:Any,<:Tuple{Any,Integer}})
+    P = parent(S)
+    (kr,j) = parentindices(S)
+    # need to resize in case dat is empty... not clear how to take a vector view of a 0-dimensional matrix in a type-stable way
+    resizedata!(P, 1, j); dat = paddeddata(P)
+    if j in axes(dat,2)
+        _lazy_getindex(dat, kr ∩ axes(dat,1), j)
+    else
+        _lazy_getindex(dat, kr ∩ Base.OneTo(0), first(axes(dat,2)))
+    end
+end
+
+function sub_paddeddata(_, S::SubArray{<:Any,2})
     P = parent(S)
     (kr,jr) = parentindices(S)
-    resizedata!(P, maximum(kr), maximum(jr)) # ensure enough rows/cols
     dat = paddeddata(P)
     kr2 = kr ∩ axes(dat,1)
     jr2 = jr ∩ axes(dat,2)
