@@ -624,6 +624,8 @@ applylayout(::Type{typeof(hvcat)}, _, ::A, ::ZerosLayout...) where A = PaddedLay
 cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
+sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Integer,Slice}}) where Lay =
+    PaddedLayout{typeof(sublayout(Lay(), sl))}()
 
 paddeddata(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = cacheddata(A)
 _vcat_paddeddata(A, B::Zeros) = A
@@ -661,47 +663,28 @@ function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:
     view(A.data,OneTo(n)) == view(B.data,OneTo(n))
 end
 
-# special copyto! since `similar` of a padded returns a cached
-for Typ in (:Number, :AbstractVector)
-    @eval begin
-        function _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::AbstractVector)
-            length(src) ≤ length(dest)  || throw(BoundsError())
-            a = paddeddata(src)
-            n = length(a)
-            resizedata!(dest, n) # make sure we are padded enough
-            copyto!(view(dest.data,OneTo(n)), a)
-            dest
-        end
-        function _copyto!(::PaddedLayout, ::PaddedLayout, dest::SubArray{<:Any,1,<:CachedVector{<:$Typ}}, src::AbstractVector)
-            length(src) ≤ length(dest)  || throw(BoundsError())
-            a = paddeddata(src)
-            n = length(a)
-            k = first(parentindices(dest)[1])
-            resizedata!(parent(dest), k+n-1) # make sure we are padded enough
-            copyto!(view(parent(dest).data,k:k+n-1), a)
-            dest
-        end
-
-        _copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector{<:$Typ}, src::CachedVector) =
-            _padded_copyto!(dest, src)
-    end
-end
-
-function _padded_copyto!(dest::CachedVector, src::CachedVector)
+function _copyto!(::PaddedLayout, ::PaddedLayout, dest::AbstractVector, src::AbstractVector)
     length(src) ≤ length(dest)  || throw(BoundsError())
-    n = src.datasize[1]
-    resizedata!(dest, n)
-    copyto!(view(dest.data,OneTo(n)), view(src.data,OneTo(n)))
+    src_data = paddeddata(src)
+    n = length(src_data)
+    resizedata!(dest, n) # if resizeable, otherwise this is a no-op
+    dest_data = paddeddata(dest)
+    copyto!(view(dest_data,OneTo(n)), src_data)
+    zero!(view(dest_data,n+1:length(dest_data)))
     dest
 end
-
-_copyto!(::PaddedLayout, ::PaddedLayout, dest::CachedVector, src::CachedVector) =
-    _padded_copyto!(dest, src)
 
 function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::AbstractVector)
     zero!(paddeddata(dest))
     dest
 end
+
+function zero!(::PaddedLayout, A)
+    zero!(paddeddata(A))
+    A
+end
+
+ArrayLayouts._norm(::PaddedLayout, A, p) = norm(paddeddata(A), p)
 
 ######
 # Special Vcat broadcasts
@@ -1013,20 +996,45 @@ function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractVector})
     _lazy_getindex(dat, kr2)
 end
 
-function sub_paddeddata(_, S::SubArray)
+
+
+function sub_paddeddata(_, S::SubArray{<:Any,1,<:Any,<:Tuple{Integer,Any}})
+    P = parent(S)
+    (k,jr) = parentindices(S)
+    # need to resize in case dat is empty... not clear how to take a vector view of a 0-dimensional matrix in a type-stable way
+    resizedata!(P, k, 1); dat = paddeddata(P)
+    if k in axes(dat,1)
+        _lazy_getindex(dat, k, jr ∩ axes(dat,2))
+    else
+        _lazy_getindex(dat, first(axes(dat,1)), jr ∩ Base.OneTo(0))
+    end
+end
+function sub_paddeddata(_, S::SubArray{<:Any,1,<:Any,<:Tuple{Any,Integer}})
+    P = parent(S)
+    (kr,j) = parentindices(S)
+    # need to resize in case dat is empty... not clear how to take a vector view of a 0-dimensional matrix in a type-stable way
+    resizedata!(P, 1, j); dat = paddeddata(P)
+    if j in axes(dat,2)
+        _lazy_getindex(dat, kr ∩ axes(dat,1), j)
+    else
+        _lazy_getindex(dat, kr ∩ Base.OneTo(0), first(axes(dat,2)))
+    end
+end
+
+function sub_paddeddata(_, S::SubArray{<:Any,2})
     P = parent(S)
     (kr,jr) = parentindices(S)
-    resizedata!(P, 1, maximum(jr)) # ensure enough rows
     dat = paddeddata(P)
     kr2 = kr ∩ axes(dat,1)
-    _lazy_getindex(dat, kr2, jr)
+    jr2 = jr ∩ axes(dat,2)
+    _lazy_getindex(dat, kr2, jr2)
 end
 
 paddeddata(S::SubArray) = sub_paddeddata(MemoryLayout(parent(S)), S)
 
 function _padded_sub_materialize(v::AbstractVector{T}) where T
     dat = paddeddata(v)
-    Vcat(dat, Zeros{T}(length(v) - length(dat)))
+    Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat)))
 end
 
 sub_materialize(::PaddedLayout, v::AbstractVector{T}, _) where T =
@@ -1034,7 +1042,7 @@ sub_materialize(::PaddedLayout, v::AbstractVector{T}, _) where T =
 
 function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}, _) where T
     dat = paddeddata(v)
-    Vcat(dat, Zeros{T}(size(v,1) - size(dat,1), size(dat,2)))
+    PaddedArray(sub_materialize(dat), size(v)...)
 end
 
 ## print
@@ -1106,14 +1114,42 @@ sublayout(::TriangularLayout{'L','N', ML}, INDS::Type{<:Tuple{Integer,JR}}) wher
 resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
 resizedata!(A::LowerTriangular, k::Integer, j::Integer) = resizedata!(parent(A), k, min(k,j))
 
-function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
+function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{Any,Integer}})
     P = parent(S)
     (kr,j) = parentindices(S)
     view(triangulardata(P), kr ∩ (1:j), j)
 end
 
-function sub_paddeddata(::TriangularLayout{'L','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
+function sub_paddeddata(::TriangularLayout{'L','N'}, S::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{Integer,Any}})
     P = parent(S)
     (k,jr) = parentindices(S)
     view(triangulardata(P), k, jr ∩ (1:k))
 end
+
+
+###
+# setindex
+###
+
+@inline ndims(A::Applied{<:Any,typeof(setindex)}) = ndims(A.args[1])
+@inline eltype(A::Applied{<:Any,typeof(setindex)}) = eltype(A.args[1])
+axes(A::ApplyArray{<:Any,N,typeof(setindex)}) where N = axes(A.args[1])
+
+function getindex(A::ApplyVector{T,typeof(setindex)}, k::Integer) where T
+    P,v,kr = A.args
+    convert(T, k in kr ? v[something(findlast(isequal(k),kr))] : P[k])::T
+end
+
+function getindex(A::ApplyMatrix{T,typeof(setindex)}, k::Integer, j::Integer) where T
+    P,v,kr,jr = A.args
+    convert(T, k in kr && j in jr ? v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] : P[k,j])::T
+end
+
+const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{OneTo{Int},N}}}
+const PaddedVector{T,M} = PaddedArray{T,1,M}
+const PaddedMatrix{T,M} = PaddedArray{T,2,M}
+
+MemoryLayout(::Type{<:PaddedArray{T,N,M}}) where {T,N,M} = PaddedLayout{typeof(MemoryLayout(M))}()
+paddeddata(A::PaddedArray) = A.args[2]
+
+PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, axes(A)...)
