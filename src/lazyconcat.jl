@@ -1112,13 +1112,13 @@ sublayout(::TriangularLayout{'L','N', ML}, INDS::Type{<:Tuple{Integer,JR}}) wher
 resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
 resizedata!(A::LowerTriangular, k::Integer, j::Integer) = resizedata!(parent(A), k, min(k,j))
 
-function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
+function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{Any,Integer}})
     P = parent(S)
     (kr,j) = parentindices(S)
     view(triangulardata(P), kr ∩ (1:j), j)
 end
 
-function sub_paddeddata(::TriangularLayout{'L','N'}, S::SubArray{<:Any,1,<:AbstractMatrix})
+function sub_paddeddata(::TriangularLayout{'L','N'}, S::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{Integer,Any}})
     P = parent(S)
     (k,jr) = parentindices(S)
     view(triangulardata(P), k, jr ∩ (1:k))
