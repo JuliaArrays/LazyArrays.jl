@@ -505,6 +505,15 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test @inferred(colsupport(P,7)) == Base.OneTo(0)
         @test @inferred(rowsupport(P,3)) == Base.OneTo(5)
         @test @inferred(rowsupport(P,7)) == Base.OneTo(0)
+
+        @test P[3,:] isa Vcat
+        @test P[3,1:11] == P[3,:]
+        @test P[:,3] isa Vcat
+        @test P[1:10,3] == P[:,3]
+        @test P[6,:] isa Vcat
+        @test P[1:10,6] == P[:,6]
+        @test P[:,6] isa Vcat
+        @test P[6,1:11] == P[6,:]
     end
 
     @testset "DefaultApplyStyle" begin

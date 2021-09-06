@@ -624,6 +624,8 @@ applylayout(::Type{typeof(hvcat)}, _, ::A, ::ZerosLayout...) where A = PaddedLay
 cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
 sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
+sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Integer,Slice}}) where Lay =
+    PaddedLayout{typeof(sublayout(Lay(), sl))}()
 
 paddeddata(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = cacheddata(A)
 _vcat_paddeddata(A, B::Zeros) = A
