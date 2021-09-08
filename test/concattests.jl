@@ -490,12 +490,14 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test_throws BoundsError A[2,12]
         @test_throws BoundsError A[12,2]
         @test A[[1,6],3] == Matrix(A)[[1,6],3]
+        @test copyto!(similar(A), A) == A
 
         B = ApplyArray(hvcat, (3,2,1), randn(5,2), ones(5,3), randn(5,6), randn(6,5), randn(6,6), randn(2,11))
         @test eltype(B) == Float64
         @test B == hvcat(B.args...)
         @test_throws BoundsError A[2,14]
         @test_throws BoundsError A[14,2]
+        @test copyto!(similar(B), B) == B
 
         P = ApplyArray(hvcat, 2, randn(4,5), Zeros(4,6), Zeros(6,5), Zeros(6,6))
         @test eltype(P) == Float64
@@ -505,6 +507,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test @inferred(colsupport(P,7)) == Base.OneTo(0)
         @test @inferred(rowsupport(P,3)) == Base.OneTo(5)
         @test @inferred(rowsupport(P,7)) == Base.OneTo(0)
+        @test copyto!(similar(P), P) == P
 
         @test P[3,:] isa Vcat
         @test P[3,1:11] == P[3,:]
@@ -516,7 +519,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test P[6,1:11] == P[6,:]
 
         A = ApplyArray(hvcat, 2, 1, 2, 3, 4)
-        @test A == [1 2; 3 4]
+        @test A == copyto!(similar(A), A) == [1 2; 3 4]
     end
 
     @testset "DefaultApplyStyle" begin

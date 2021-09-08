@@ -413,7 +413,7 @@ function hvcat_copyto!(out::AbstractMatrix{T}, rows::Tuple{Vararg{Int}}, as::Abs
         a += rows[i]
     end
 
-    size(out) == (nc,nr) || throw(DimensionMismatch())
+    size(out) == (nr,nc) || throw(DimensionMismatch())
 
     a = 1
     r = 1
