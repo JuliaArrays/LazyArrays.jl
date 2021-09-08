@@ -203,9 +203,13 @@ end
 
 @inline hvcat_getindex(f, k, j::Integer) = hvcat_getindex_recursive(f, (k, j), f.args...)
 
+_hvcat_size(A) = size(A)
+_hvcat_size(A::Number) = (1,1)
+_hvcat_size(A::AbstractVector) = (size(A,1),1)
+
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::Int, A, args...)
     T = eltype(f)
-    m,n = size(A)
+    m,n = _hvcat_size(A)
     N ≤ 0 && throw(BoundsError(f, (k,j))) # ran out of arrays
     k ≤ m && j ≤ n && return convert(T, A[k, j])::T
     k ≤ m && return hvcat_getindex_recursive(f, (k, j - n), N-1, args...)
@@ -214,7 +218,7 @@ end
 
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::NTuple{M,Int}, A, args...) where M
     T = eltype(f)
-    m,n = size(A)
+    m,n = _hvcat_size(A)
     k ≤ m && return hvcat_getindex_recursive(f, (k, j), N[1], A, args...)
     hvcat_getindex_recursive(f, (k - m, j), tail(N), args[N[1]:end]...)
 end

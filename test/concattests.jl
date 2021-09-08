@@ -514,6 +514,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test P[1:10,6] == P[:,6]
         @test P[:,6] isa Vcat
         @test P[6,1:11] == P[6,:]
+
+        A = ApplyArray(hvcat, 2, 1, 2, 3, 4)
+        @test A == [1 2; 3 4]
     end
 
     @testset "DefaultApplyStyle" begin

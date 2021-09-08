@@ -16,7 +16,7 @@ abstract type AbstractArrayApplyStyle <: ApplyStyle end
 """
 DefaultApplyStyle
 
-indicate that a lazy function application `applied(f, A...)` 
+indicate that a lazy function application `applied(f, A...)`
 is materialized as `f(A...)`.
 """
 struct DefaultApplyStyle <: ApplyStyle end
@@ -121,7 +121,7 @@ similar(bc::Broadcasted{ApplyArrayBroadcastStyle{N}}, ::Type{ElType}) where {N,E
     similar(Array{ElType}, axes(bc))
 
 
-@inline function copyto!(dest::AbstractArray, bc::Broadcasted{ApplyArrayBroadcastStyle{N}}) where N 
+@inline function copyto!(dest::AbstractArray, bc::Broadcasted{ApplyArrayBroadcastStyle{N}}) where N
     if length(bc.args) == 1
         copyto!(dest, first(bc.args))
         if bc.f !== identity
@@ -152,7 +152,7 @@ for f in (:exp, :sin, :cos, :sqrt)
     @eval ApplyStyle(::typeof($f), ::Type{<:AbstractMatrix}) = MatrixFunctionStyle{typeof($f)}()
 end
 
-function check_applied_axes(A::Applied{<:MatrixFunctionStyle}) 
+function check_applied_axes(A::Applied{<:MatrixFunctionStyle})
     length(A.args) == 1 || throw(ArgumentError("MatrixFunctions only defined with 1 arg"))
     axes(A.args[1],1) == axes(A.args[1],2) || throw(DimensionMismatch("matrix is not square: dimensions are $axes(A.args[1])"))
 end
@@ -287,15 +287,15 @@ call(::ApplyLayout{F}, a) where F = F.instance
 
 applylayout(::Type{F}, args...) where F = ApplyLayout{F}()
 
-MemoryLayout(::Type{Applied{Style,F,Args}}) where {Style,F,Args} = 
+MemoryLayout(::Type{Applied{Style,F,Args}}) where {Style,F,Args} =
     applylayout(F, tuple_type_memorylayouts(Args)...)
-MemoryLayout(::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} = 
+MemoryLayout(::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} =
     applylayout(F, tuple_type_memorylayouts(Args)...)
 
 @inline Applied(A::AbstractArray) = Applied(call(A), arguments(A)...)
 @inline ApplyArray(A::AbstractArray) = ApplyArray(call(A), arguments(A)...)
 
-function show(io::IO, A::Applied) 
+function show(io::IO, A::Applied)
     print(io, "Applied(", A.f)
     for a in A.args
         print(io, ',', a)
@@ -308,7 +308,7 @@ applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::AbstractLazyLayout) wher
 BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
 BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray}}) where N = applybroadcaststyle(M, MemoryLayout(M))
 
-### 
+###
 # Eager applications
 ###
 
@@ -330,18 +330,18 @@ end
 # on the memory layout
 ###
 
-function _copyto!(::LAY, ::LAY, dest::AbstractArray{<:Any,N}, src::AbstractArray{<:Any,N}) where {LAY<:ApplyLayout,N} 
+function _copyto!(::LAY, ::LAY, dest::AbstractArray{<:Any,N}, src::AbstractArray{<:Any,N}) where {LAY<:ApplyLayout,N}
     map(copyto!, arguments(dest), arguments(src))
     dest
 end
 
-@inline _copyto!(_, ::ApplyLayout, dest::AbstractArray, src::AbstractArray) = copyto!(dest, Applied(src))    
+@inline _copyto!(_, ::ApplyLayout, dest::AbstractArray, src::AbstractArray) = copyto!(dest, Applied(src))
 
 # avoid infinite-loop
 _base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)
 _base_copyto!(dest::AbstractArray, src::AbstractArray) = Base.invoke(copyto!, NTuple{2,AbstractArray}, dest, src)
 
-## 
+##
 # triu/tril
 ##
 for tri in (:tril, :triu)
@@ -351,7 +351,7 @@ for tri in (:tril, :triu)
             $op(A::Applied{<:Any,typeof($tri)}, j) = $op(first(A.args), j)
         end
     end
-    @eval begin 
+    @eval begin
         ndims(::Applied{<:Any,typeof($tri)}) = 2
         eltype(A::Applied{<:Any,typeof($tri)}) = eltype(first(A.args))
         $tri(A::LazyMatrix) = ApplyMatrix($tri, A)
@@ -359,17 +359,17 @@ for tri in (:tril, :triu)
     end
 end
 
-getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix}}, k::Integer, j::Integer) where T = 
+getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix}}, k::Integer, j::Integer) where T =
     j ≥ k ? A.args[1][k,j] : zero(T)
 
-getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T = 
-    j ≥ k+A.args[2] ? A.args[1][k,j] : zero(T)    
+getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T =
+    j ≥ k+A.args[2] ? A.args[1][k,j] : zero(T)
 
-getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix}}, k::Integer, j::Integer) where T = 
+getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix}}, k::Integer, j::Integer) where T =
     j ≤ k ? A.args[1][k,j] : zero(T)
 
-getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T = 
-    j ≤ k+A.args[2] ? A.args[1][k,j] : zero(T)    
+getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T =
+    j ≤ k+A.args[2] ? A.args[1][k,j] : zero(T)
 
 
 ###
@@ -393,7 +393,7 @@ function map(::typeof(copy), D::Tridiagonal{<:Any,<:LazyArray})
         Tridiagonal(map(copy,D.dl), map(copy,D.d), map(copy,D.du))
     end
 end
-    
+
 
 
 
