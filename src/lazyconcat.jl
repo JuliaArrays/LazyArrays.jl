@@ -365,6 +365,82 @@ function hcat_copyto!(dest::AbstractMatrix, arrays::AbstractVector...)
     dest
 end
 
+_copyto!(_, lay::ApplyLayout{typeof(hvcat)}, dest::AbstractMatrix, src::AbstractMatrix) = hvcat_copyto!(dest, arguments(lay, src)...)
+
+function hvcat_copyto!(out::AbstractMatrix{T}, nbc::Integer, as...) where T
+    # nbc = # of block columns
+    n = length(as)
+    mod(n,nbc) != 0 &&
+        throw(ArgumentError("number of arrays $n is not a multiple of the requested number of block columns $nbc"))
+    nbr = div(n,nbc)
+    hvcat_copyto!(out, ntuple(i->nbc, nbr), as...)
+end
+
+function hvcat_copyto!(a::AbstractMatrix{T}, rows::Tuple{Vararg{Int}}, xs::T...) where T<:Number
+    nr = length(rows)
+    nc = rows[1]
+
+    size(a) == (nc,nr) || throw(DimensionMismatch())
+    
+    if length(a) != length(xs)
+        throw(ArgumentError("argument count does not match specified shape (expected $(length(a)), got $(length(xs)))"))
+    end
+    k = 1
+    @inbounds for i=1:nr
+        if nc != rows[i]
+            throw(ArgumentError("row $(i) has mismatched number of columns (expected $nc, got $(rows[i]))"))
+        end
+        for j=1:nc
+            a[i,j] = xs[k]
+            k += 1
+        end
+    end
+    a
+end
+
+function hvcat_copyto!(out::AbstractMatrix{T}, rows::Tuple{Vararg{Int}}, as::AbstractVecOrMat...) where T
+    nbr = length(rows)  # number of block rows
+
+    nc = 0
+    for i=1:rows[1]
+        nc += size(as[i],2)
+    end
+
+    nr = 0
+    a = 1
+    for i = 1:nbr
+        nr += size(as[a],1)
+        a += rows[i]
+    end
+
+    size(out) == (nc,nr) || throw(DimensionMismatch())
+
+    a = 1
+    r = 1
+    for i = 1:nbr
+        c = 1
+        szi = size(as[a],1)
+        for j = 1:rows[i]
+            Aj = as[a+j-1]
+            szj = size(Aj,2)
+            if size(Aj,1) != szi
+                throw(ArgumentError("mismatched height in block row $(i) (expected $szi, got $(size(Aj,1)))"))
+            end
+            if c-1+szj > nc
+                throw(ArgumentError("block row $(i) has mismatched number of columns (expected $nc, got $(c-1+szj))"))
+            end
+            out[r:r-1+szi, c:c-1+szj] = Aj
+            c += szj
+        end
+        if c != nc+1
+            throw(ArgumentError("block row $(i) has mismatched number of columns (expected $nc, got $(c-1))"))
+        end
+        r += szi
+        a += rows[i]
+    end
+    out
+end
+
 
 #####
 # adjoint/transpose
@@ -1065,6 +1141,8 @@ function layout_replace_in_print_matrix(LAY::ApplyLayout{typeof(vcat)}, f::Abstr
 end
 
 function layout_replace_in_print_matrix(::PaddedLayout, f::AbstractVecOrMat, k, j, s)
+    # avoid infinite-loop
+    f isa SubArray && return Base.replace_in_print_matrix(parent(f), Base.reindex(f.indices, (k,j))..., s)
     data = paddeddata(f)
     k in axes(data,1) && j in axes(data,2) && return _replace_in_print_matrix(data, k, j, s)
     Base.replace_with_centered_mark(s)
