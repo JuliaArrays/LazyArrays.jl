@@ -520,6 +520,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
 
         A = ApplyArray(hvcat, 2, 1, 2, 3, 4)
         @test A == copyto!(similar(A), A) == [1 2; 3 4]
+
+        V = ApplyArray(hvcat, 2, [1,2], [3,4], [5,6], [7,8])
+        @test V == [1 3; 2 4; 5 7; 6 8]
     end
 
     @testset "DefaultApplyStyle" begin
