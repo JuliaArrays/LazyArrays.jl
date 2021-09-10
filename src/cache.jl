@@ -437,7 +437,7 @@ sublayout(::CachedLayout{MLAY,ALAY}, ::Type{I}) where {MLAY,ALAY,I} =
     cachedlayout(sublayout(MLAY(),I), sublayout(ALAY,I))
 
 function resizedata!(V::SubArray, n::Integer...)
-    resizedata!(parent(V), getindex.(parentindices(V), n)...)
+    resizedata!(parent(V), getindex.(parentindices(V), max.(1,n))...)
     V
 end
 

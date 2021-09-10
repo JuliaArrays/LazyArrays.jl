@@ -777,7 +777,7 @@ function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{AbstractVe
                                               B::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}})
     (Ahead, Atail) = A.args
     (Bhead, Btail) = B.args
-    T = promote_type(eltype(A), eltype(B))
+    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
 
     if length(Ahead) ≥ length(Bhead)
         M,m = length(Ahead), length(Bhead)
@@ -932,13 +932,24 @@ end
 function copy(D::Dot{<:PaddedLayout})
     a = paddeddata(D.A)
     m = length(a)
-    convert(eltype(D), dot(a, view(D.B, 1:m)))
+    v = view(D.B, 1:m)
+    if MemoryLayout(a) isa PaddedLayout
+        convert(eltype(D), dot(Array(a), v))
+    else
+        convert(eltype(D), dot(a, v))
+    end
+        
 end
 
 function copy(D::Dot{<:Any, <:PaddedLayout})
     b = paddeddata(D.B)
     m = length(b)
-    convert(eltype(D), dot(view(D.A, 1:m), b))
+    v = view(D.A, 1:m)
+    if MemoryLayout(b) isa PaddedLayout
+        convert(eltype(D), dot(v, Array(b)))
+    else
+        convert(eltype(D), dot(v, b))
+    end
 end
 
 
