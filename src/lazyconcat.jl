@@ -716,14 +716,16 @@ paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
 _hvcat_paddeddata(N, A, B::Zeros...) = A
 paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 
-function colsupport(::PaddedLayout, A, j)
+function colsupport(lay::PaddedLayout{Lay}, A, j) where Lay
     P = paddeddata(A)
+    MemoryLayout(P) isa PaddedLayout{Lay} && return colsupport(UnknownLayout, A, j)
     j̃ = j ∩ axes(P,2)
     cs = colsupport(P,j̃)
     isempty(j̃) ? convert(typeof(cs), Base.OneTo(0)) : cs
 end
-function rowsupport(::PaddedLayout, A, k)
+function rowsupport(::PaddedLayout{Lay}, A, k) where Lay
     P = paddeddata(A)
+    MemoryLayout(P) isa PaddedLayout{Lay} && return rowsupport(UnknownLayout, A, j)
     k̃ = k ∩ axes(P,1)
     rs = rowsupport(P,k̃)
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
@@ -926,7 +928,12 @@ function copy(D::Dot{<:PaddedLayout, <:PaddedLayout})
     a = paddeddata(D.A)
     b = paddeddata(D.B)
     m = min(length(a), length(b))
-    convert(eltype(D), dot(view(a, 1:m), view(b, 1:m)))
+    v, w = view(a, 1:m), view(b, 1:m)
+    if MemoryLayout(v) isa PaddedLayout && MemoryLayout(w) isa PaddedLayout
+        convert(eltype(D), dot(Array(v),Array(w)))
+    else
+        convert(eltype(D), dot(v,w))
+    end
 end
 
 function copy(D::Dot{<:PaddedLayout})
@@ -1151,10 +1158,11 @@ function layout_replace_in_print_matrix(LAY::ApplyLayout{typeof(vcat)}, f::Abstr
     throw(BoundsError(f, (k,j)))
 end
 
-function layout_replace_in_print_matrix(::PaddedLayout, f::AbstractVecOrMat, k, j, s)
+function layout_replace_in_print_matrix(::PaddedLayout{Lay}, f::AbstractVecOrMat, k, j, s) where Lay
     # avoid infinite-loop
     f isa SubArray && return Base.replace_in_print_matrix(parent(f), Base.reindex(f.indices, (k,j))..., s)
     data = paddeddata(f)
+    MemoryLayout(data) isa PaddedLayout{Lay} && return layout_replace_in_print_matrix(UnknownLayout(), f, k, j, s)
     k in axes(data,1) && j in axes(data,2) && return _replace_in_print_matrix(data, k, j, s)
     Base.replace_with_centered_mark(s)
 end

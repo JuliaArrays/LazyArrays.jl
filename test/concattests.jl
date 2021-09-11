@@ -1,7 +1,15 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call, paddeddata,
-                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!,
+                    MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
                     CachedVector, ApplyLayout, arguments
+
+# padded block arrays have padded data that is also padded. This is to test this
+struct PaddedPadded <: LayoutVector{Int} end
+
+MemoryLayout(::Type{PaddedPadded}) = PaddedLayout{UnknownLayout}()
+Base.size(::PaddedPadded) = (10,)
+Base.getindex(::PaddedPadded, k::Int) = k ≤ 5 ? 1 : 0
+paddeddata(a::PaddedPadded) = a
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -176,6 +184,13 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
                 D = Vcat(1, 2, cache(Zeros(8)));
                 @test paddeddata(D) == [1,2]
                 @test MemoryLayout(D) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+            end
+
+            @testset "PaddedPadded" begin
+                @test colsupport(PaddedPadded()) ≡ Base.OneTo(10)
+                @test stringmime("text/plain", PaddedPadded()) == "10-element PaddedPadded:\n 1\n 1\n 1\n 1\n 1\n 0\n 0\n 0\n 0\n 0"
+                @test dot(PaddedPadded(), PaddedPadded()) == 5
+                @test dot(PaddedPadded(), 1:10) == dot(1:10, PaddedPadded()) == 15
             end
         end
 
