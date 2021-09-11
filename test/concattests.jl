@@ -520,9 +520,17 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
 
         A = ApplyArray(hvcat, 2, 1, 2, 3, 4)
         @test A == copyto!(similar(A), A) == [1 2; 3 4]
+        @test_throws DimensionMismatch copyto!(zeros(Int,1,1), A)
+        B = ApplyArray(hvcat, 3, 1, 2, 3, 4)
+        @test_throws ArgumentError copyto!(similar(B), B)
+        B = ApplyArray(hvcat, (1,2), 1, 2)
+        @test_throws ArgumentError copyto!(zeros(Int,1,2), B)
 
         V = ApplyArray(hvcat, 2, [1,2], [3,4], [5,6], [7,8])
         @test V == [1 3; 2 4; 5 7; 6 8]
+
+        W = ApplyArray(hvcat, 2, [1,2], [3], [5,6], [7,8])
+        @test_throws ArgumentError copyto!(similar(W), W)
     end
 
     @testset "DefaultApplyStyle" begin
