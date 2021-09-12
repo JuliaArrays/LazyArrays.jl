@@ -1,7 +1,15 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call, paddeddata,
-                    MulAdd, Applied, ApplyLayout, arguments, DefaultApplyStyle, sub_materialize, resizedata!,
+                    MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
                     CachedVector, ApplyLayout, arguments
+
+# padded block arrays have padded data that is also padded. This is to test this
+struct PaddedPadded <: LayoutVector{Int} end
+
+MemoryLayout(::Type{PaddedPadded}) = PaddedLayout{UnknownLayout}()
+Base.size(::PaddedPadded) = (10,)
+Base.getindex(::PaddedPadded, k::Int) = k ≤ 5 ? 1 : 0
+paddeddata(a::PaddedPadded) = a
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -176,6 +184,13 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
                 D = Vcat(1, 2, cache(Zeros(8)));
                 @test paddeddata(D) == [1,2]
                 @test MemoryLayout(D) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+            end
+
+            @testset "PaddedPadded" begin
+                @test colsupport(PaddedPadded()) ≡ Base.OneTo(10)
+                @test stringmime("text/plain", PaddedPadded()) == "10-element PaddedPadded:\n 1\n 1\n 1\n 1\n 1\n 0\n 0\n 0\n 0\n 0"
+                @test dot(PaddedPadded(), PaddedPadded()) == 5
+                @test dot(PaddedPadded(), 1:10) == dot(1:10, PaddedPadded()) == 15
             end
         end
 
@@ -490,12 +505,14 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test_throws BoundsError A[2,12]
         @test_throws BoundsError A[12,2]
         @test A[[1,6],3] == Matrix(A)[[1,6],3]
+        @test copyto!(similar(A), A) == A
 
         B = ApplyArray(hvcat, (3,2,1), randn(5,2), ones(5,3), randn(5,6), randn(6,5), randn(6,6), randn(2,11))
         @test eltype(B) == Float64
         @test B == hvcat(B.args...)
         @test_throws BoundsError A[2,14]
         @test_throws BoundsError A[14,2]
+        @test copyto!(similar(B), B) == B
 
         P = ApplyArray(hvcat, 2, randn(4,5), Zeros(4,6), Zeros(6,5), Zeros(6,6))
         @test eltype(P) == Float64
@@ -505,6 +522,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test @inferred(colsupport(P,7)) == Base.OneTo(0)
         @test @inferred(rowsupport(P,3)) == Base.OneTo(5)
         @test @inferred(rowsupport(P,7)) == Base.OneTo(0)
+        @test copyto!(similar(P), P) == P
 
         @test P[3,:] isa Vcat
         @test P[3,1:11] == P[3,:]
@@ -514,6 +532,20 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, c
         @test P[1:10,6] == P[:,6]
         @test P[:,6] isa Vcat
         @test P[6,1:11] == P[6,:]
+
+        A = ApplyArray(hvcat, 2, 1, 2, 3, 4)
+        @test A == copyto!(similar(A), A) == [1 2; 3 4]
+        @test_throws DimensionMismatch copyto!(zeros(Int,1,1), A)
+        B = ApplyArray(hvcat, 3, 1, 2, 3, 4)
+        @test_throws ArgumentError copyto!(similar(B), B)
+        B = ApplyArray(hvcat, (1,2), 1, 2)
+        @test_throws ArgumentError copyto!(zeros(Int,1,2), B)
+
+        V = ApplyArray(hvcat, 2, [1,2], [3,4], [5,6], [7,8])
+        @test V == [1 3; 2 4; 5 7; 6 8]
+
+        W = ApplyArray(hvcat, 2, [1,2], [3], [5,6], [7,8])
+        @test_throws ArgumentError copyto!(similar(W), W)
     end
 
     @testset "DefaultApplyStyle" begin

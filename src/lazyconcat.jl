@@ -203,9 +203,13 @@ end
 
 @inline hvcat_getindex(f, k, j::Integer) = hvcat_getindex_recursive(f, (k, j), f.args...)
 
+_hvcat_size(A) = size(A)
+_hvcat_size(A::Number) = (1,1)
+_hvcat_size(A::AbstractVector) = (size(A,1),1)
+
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::Int, A, args...)
     T = eltype(f)
-    m,n = size(A)
+    m,n = _hvcat_size(A)
     N ≤ 0 && throw(BoundsError(f, (k,j))) # ran out of arrays
     k ≤ m && j ≤ n && return convert(T, A[k, j])::T
     k ≤ m && return hvcat_getindex_recursive(f, (k, j - n), N-1, args...)
@@ -214,7 +218,7 @@ end
 
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::NTuple{M,Int}, A, args...) where M
     T = eltype(f)
-    m,n = size(A)
+    m,n = _hvcat_size(A)
     k ≤ m && return hvcat_getindex_recursive(f, (k, j), N[1], A, args...)
     hvcat_getindex_recursive(f, (k - m, j), tail(N), args[N[1]:end]...)
 end
@@ -359,6 +363,82 @@ function hcat_copyto!(dest::AbstractMatrix, arrays::AbstractVector...)
     end
 
     dest
+end
+
+_copyto!(_, lay::ApplyLayout{typeof(hvcat)}, dest::AbstractMatrix, src::AbstractMatrix) = hvcat_copyto!(dest, arguments(lay, src)...)
+
+function hvcat_copyto!(out::AbstractMatrix{T}, nbc::Integer, as...) where T
+    # nbc = # of block columns
+    n = length(as)
+    mod(n,nbc) != 0 &&
+        throw(ArgumentError("number of arrays $n is not a multiple of the requested number of block columns $nbc"))
+    nbr = div(n,nbc)
+    hvcat_copyto!(out, ntuple(i->nbc, nbr), as...)
+end
+
+function hvcat_copyto!(a::AbstractMatrix{T}, rows::Tuple{Vararg{Int}}, xs::T...) where T<:Number
+    nr = length(rows)
+    nc = rows[1]
+
+    size(a) == (nc,nr) || throw(DimensionMismatch())
+    
+    if length(a) != length(xs)
+        throw(ArgumentError("argument count does not match specified shape (expected $(length(a)), got $(length(xs)))"))
+    end
+    k = 1
+    @inbounds for i=1:nr
+        if nc != rows[i]
+            throw(ArgumentError("row $(i) has mismatched number of columns (expected $nc, got $(rows[i]))"))
+        end
+        for j=1:nc
+            a[i,j] = xs[k]
+            k += 1
+        end
+    end
+    a
+end
+
+function hvcat_copyto!(out::AbstractMatrix{T}, rows::Tuple{Vararg{Int}}, as::AbstractVecOrMat...) where T
+    nbr = length(rows)  # number of block rows
+
+    nc = 0
+    for i=1:rows[1]
+        nc += size(as[i],2)
+    end
+
+    nr = 0
+    a = 1
+    for i = 1:nbr
+        nr += size(as[a],1)
+        a += rows[i]
+    end
+
+    size(out) == (nr,nc) || throw(DimensionMismatch())
+
+    a = 1
+    r = 1
+    for i = 1:nbr
+        c = 1
+        szi = size(as[a],1)
+        for j = 1:rows[i]
+            Aj = as[a+j-1]
+            szj = size(Aj,2)
+            if size(Aj,1) != szi
+                throw(ArgumentError("mismatched height in block row $(i) (expected $szi, got $(size(Aj,1)))"))
+            end
+            if c-1+szj > nc
+                throw(ArgumentError("block row $(i) has mismatched number of columns (expected $nc, got $(c-1+szj))"))
+            end
+            out[r:r-1+szi, c:c-1+szj] = Aj
+            c += szj
+        end
+        if c != nc+1
+            throw(ArgumentError("block row $(i) has mismatched number of columns (expected $nc, got $(c-1))"))
+        end
+        r += szi
+        a += rows[i]
+    end
+    out
 end
 
 
@@ -636,14 +716,16 @@ paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
 _hvcat_paddeddata(N, A, B::Zeros...) = A
 paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 
-function colsupport(::PaddedLayout, A, j)
+function colsupport(lay::PaddedLayout{Lay}, A, j) where Lay
     P = paddeddata(A)
+    MemoryLayout(P) isa PaddedLayout{Lay} && return colsupport(UnknownLayout, A, j)
     j̃ = j ∩ axes(P,2)
     cs = colsupport(P,j̃)
     isempty(j̃) ? convert(typeof(cs), Base.OneTo(0)) : cs
 end
-function rowsupport(::PaddedLayout, A, k)
+function rowsupport(::PaddedLayout{Lay}, A, k) where Lay
     P = paddeddata(A)
+    MemoryLayout(P) isa PaddedLayout{Lay} && return rowsupport(UnknownLayout, A, j)
     k̃ = k ∩ axes(P,1)
     rs = rowsupport(P,k̃)
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
@@ -697,7 +779,7 @@ function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{AbstractVe
                                               B::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}})
     (Ahead, Atail) = A.args
     (Bhead, Btail) = B.args
-    T = promote_type(eltype(A), eltype(B))
+    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
 
     if length(Ahead) ≥ length(Bhead)
         M,m = length(Ahead), length(Bhead)
@@ -846,19 +928,35 @@ function copy(D::Dot{<:PaddedLayout, <:PaddedLayout})
     a = paddeddata(D.A)
     b = paddeddata(D.B)
     m = min(length(a), length(b))
-    convert(eltype(D), dot(view(a, 1:m), view(b, 1:m)))
+    v, w = view(a, 1:m), view(b, 1:m)
+    if MemoryLayout(v) isa PaddedLayout && MemoryLayout(w) isa PaddedLayout
+        convert(eltype(D), dot(Array(v),Array(w)))
+    else
+        convert(eltype(D), dot(v,w))
+    end
 end
 
 function copy(D::Dot{<:PaddedLayout})
     a = paddeddata(D.A)
     m = length(a)
-    convert(eltype(D), dot(a, view(D.B, 1:m)))
+    v = view(D.B, 1:m)
+    if MemoryLayout(a) isa PaddedLayout
+        convert(eltype(D), dot(Array(a), v))
+    else
+        convert(eltype(D), dot(a, v))
+    end
+        
 end
 
 function copy(D::Dot{<:Any, <:PaddedLayout})
     b = paddeddata(D.B)
     m = length(b)
-    convert(eltype(D), dot(view(D.A, 1:m), b))
+    v = view(D.A, 1:m)
+    if MemoryLayout(b) isa PaddedLayout
+        convert(eltype(D), dot(v, Array(b)))
+    else
+        convert(eltype(D), dot(v, b))
+    end
 end
 
 
@@ -1060,8 +1158,11 @@ function layout_replace_in_print_matrix(LAY::ApplyLayout{typeof(vcat)}, f::Abstr
     throw(BoundsError(f, (k,j)))
 end
 
-function layout_replace_in_print_matrix(::PaddedLayout, f::AbstractVecOrMat, k, j, s)
+function layout_replace_in_print_matrix(::PaddedLayout{Lay}, f::AbstractVecOrMat, k, j, s) where Lay
+    # avoid infinite-loop
+    f isa SubArray && return Base.replace_in_print_matrix(parent(f), Base.reindex(f.indices, (k,j))..., s)
     data = paddeddata(f)
+    MemoryLayout(data) isa PaddedLayout{Lay} && return layout_replace_in_print_matrix(UnknownLayout(), f, k, j, s)
     k in axes(data,1) && j in axes(data,2) && return _replace_in_print_matrix(data, k, j, s)
     Base.replace_with_centered_mark(s)
 end
