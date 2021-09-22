@@ -640,6 +640,8 @@ end
 # *
 ###
 
+copy(M::Mul{ApplyLayout{typeof(vcat)},<:AbstractLazyLayout}) = vcat((arguments(vcat, M.A) .* Ref(M.B))...)
+
 function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{typeof(vcat)}})
     α,A,B,β,C =  M.α,M.A,M.B,M.β,M.C
     T = eltype(C)
@@ -666,11 +668,14 @@ function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{type
 
 
 most(a) = reverse(tail(reverse(a)))
-colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))
+function colsupport(lay::ApplyLayout{typeof(vcat)}, M::AbstractArray, j)
+    args = arguments(lay, M)
+    first(colsupport(first(args),j)):(size(Vcat(most(args)...),1)+last(colsupport(last(args),j)))
+end
 
-function rowsupport(V::Vcat, k::Integer)
+function rowsupport(lay::ApplyLayout{typeof(vcat)}, V::AbstractArray, k::Integer)
     ξ = k
-    for A in arguments(V)
+    for A in arguments(lay, V)
         n = size(A,1)
         ξ ≤ n && return rowsupport(A, ξ)
         ξ -= n
@@ -678,9 +683,9 @@ function rowsupport(V::Vcat, k::Integer)
     return 1:0
 end
 
-function colsupport(H::Hcat, j::Integer)
+function colsupport(lay::ApplyLayout{typeof(hcat)}, H::AbstractArray, j::Integer)
     ξ = j
-    for A in arguments(H)
+    for A in arguments(lay,H)
         n = size(A,2)
         ξ ≤ n && return colsupport(A, ξ)
         ξ -= n
@@ -688,7 +693,10 @@ function colsupport(H::Hcat, j::Integer)
     return 1:0
 end
 
-rowsupport(M::Hcat, k) = first(rowsupport(first(M.args),k)):(size(Hcat(most(M.args)...),2)+last(rowsupport(last(M.args),k)))
+function rowsupport(lay::ApplyLayout{typeof(hcat)}, M::AbstractArray, k)
+    args = arguments(lay, M)
+    first(rowsupport(first(args),k)):(size(Hcat(most(args)...),2)+last(rowsupport(last(args),k)))
+end
 
 
 ###
@@ -706,12 +714,16 @@ sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
 sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Integer,Slice}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
+transposelayout(::PaddedLayout{L}) where L = PaddedLayout{typeof(transposelayout(L))}()
 
 paddeddata(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = cacheddata(A)
 _vcat_paddeddata(A, B::Zeros) = A
 _vcat_paddeddata(A, B) = Vcat(A, paddeddata(B))
 _vcat_paddeddata(A, B, C...) = Vcat(A, _vcat_paddeddata(B, C...))
 paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
+
+paddeddata(A::Transpose) = transpose(paddeddata(parent(A)))
+paddeddata(A::Adjoint) = paddeddata(parent(A))'
 
 _hvcat_paddeddata(N, A, B::Zeros...) = A
 paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
