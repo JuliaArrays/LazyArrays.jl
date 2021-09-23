@@ -612,6 +612,8 @@ _vcat_diff(a, b, c...) = (diff(a), first(b)-last(a), _vcat_diff(b,c...)...)
 # maximum/minimum
 ####
 
+sum(v::Vcat{<:Any,1}) = sum(map(sum,v.args))
+
 for op in (:maximum, :minimum)
     @eval $op(V::Vcat) = $op($op.(V.args))
 end
