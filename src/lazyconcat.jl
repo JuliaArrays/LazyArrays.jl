@@ -642,6 +642,16 @@ end
 
 copy(M::Mul{ApplyLayout{typeof(vcat)},<:AbstractLazyLayout}) = vcat((arguments(vcat, M.A) .* Ref(M.B))...)
 
+_all_prods(a::Tuple, ::Tuple{}) = ()
+_all_prods(a::Tuple{}, ::Tuple{}) = ()
+_all_prods(a::Tuple{}, ::Tuple) = ()
+_all_prods(a::Tuple, b::Tuple) = tuple((Ref(first(a)) .* b)..., _all_prods(tail(a), b)...)
+function copy(M::Mul{ApplyLayout{typeof(vcat)},ApplyLayout{typeof(hcat)}})
+    b = arguments(hcat,M.B)
+    ApplyArray(hvcat, length(b), _all_prods(arguments(vcat, M.A), b)...)
+end
+
+
 function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{typeof(vcat)}})
     α,A,B,β,C =  M.α,M.A,M.B,M.β,M.C
     T = eltype(C)
@@ -939,6 +949,9 @@ _normp(::PaddedLayout, a, p) = norm(paddeddata(a),p)
 function copy(D::Dot{<:PaddedLayout, <:PaddedLayout})
     a = paddeddata(D.A)
     b = paddeddata(D.B)
+    length(a) == length(b) && return dot(a,b)
+    # following handles scalars
+    ((length(a) == 1) || (length(b) == 1)) && return a[1] * b[1]
     m = min(length(a), length(b))
     v, w = view(a, 1:m), view(b, 1:m)
     if MemoryLayout(v) isa PaddedLayout && MemoryLayout(w) isa PaddedLayout
