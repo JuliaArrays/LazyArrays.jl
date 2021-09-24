@@ -740,23 +740,25 @@ paddeddata(A::Adjoint) = paddeddata(parent(A))'
 _hvcat_paddeddata(N, A, B::Zeros...) = A
 paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 
-function colsupport(lay::PaddedLayout{Lay}, A, j) where Lay
+const DualOrPaddedLayout{Lay} = Union{PaddedLayout{Lay},DualLayout{PaddedLayout{Lay}}}
+
+function colsupport(lay::DualOrPaddedLayout{Lay}, A, j) where Lay
     P = paddeddata(A)
-    MemoryLayout(P) isa PaddedLayout{Lay} && return colsupport(UnknownLayout, A, j)
+    MemoryLayout(P) == lay && return colsupport(UnknownLayout, A, j)
     j̃ = j ∩ axes(P,2)
     cs = colsupport(P,j̃)
     isempty(j̃) ? convert(typeof(cs), Base.OneTo(0)) : cs
 end
-function rowsupport(::PaddedLayout{Lay}, A, k) where Lay
+function rowsupport(lay::DualOrPaddedLayout{Lay}, A, k) where Lay
     P = paddeddata(A)
-    MemoryLayout(P) isa PaddedLayout{Lay} && return rowsupport(UnknownLayout, A, j)
+    MemoryLayout(P) == lay && return rowsupport(UnknownLayout, A, j)
     k̃ = k ∩ axes(P,1)
     rs = rowsupport(P,k̃)
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
 end
 
-function _vcat_resizedata!(::PaddedLayout, B, m...)
-    Base.checkbounds(paddeddata(B), m...)
+function _vcat_resizedata!(::DualOrPaddedLayout{Lay}, B, m...) where Lay
+    any(iszero,m) || Base.checkbounds(paddeddata(B), m...)
     B
 end
 
