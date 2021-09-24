@@ -281,7 +281,7 @@ paddeddata(a::PaddedPadded) = a
             v = view(a,2:4)
             w = view(c,2:4);
             @test MemoryLayout(typeof(a)) isa PaddedLayout{DenseColumnMajor}
-            @test MemoryLayout(typeof(v)) isa PaddedLayout{DenseColumnMajor}
+            @test MemoryLayout(v) isa PaddedLayout{DenseColumnMajor}
             @test sub_materialize(v) == a[2:4] == sub_materialize(w)
             @test sub_materialize(v) isa Vcat
             @test sub_materialize(w) isa Vcat
@@ -698,32 +698,30 @@ paddeddata(a::PaddedPadded) = a
     @testset "SubV/Hcat" begin
         A = Vcat(1,[2,3], Fill(5,10))
         V = view(A,3:5)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
+        @test MemoryLayout(V) isa ApplyLayout{typeof(vcat)}
         @inferred(arguments(V))
         @test arguments(V)[1] ≡ Fill(1,0)
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
 
         A = Vcat((1:100)', Zeros(1,100),Fill(1,2,100))
         V = view(A,:,3:5)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
+        @test MemoryLayout(V) isa ApplyLayout{typeof(vcat)}
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
         V = view(A,2:3,3:5)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
+        @test MemoryLayout(V) isa ApplyLayout{typeof(vcat)}
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
 
         A = Hcat(1:10, Zeros(10,10))
         V = view(A,3:5,:)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(hcat)}
+        @test MemoryLayout(V) isa PaddedLayout
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
         V = view(A,3:5,1:4)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(hcat)}
-        @inferred(arguments(V))
-        @test arguments(V)[1] == reshape(3:5,3,1)
+        @test MemoryLayout(V) isa PaddedLayout
+        @test @inferred(paddeddata(V)) == reshape(3:5,3,1)
 
         v = view(A,2,1:5)
-        @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(vcat)}
-        @test arguments(v) == ([2], zeros(4))
-        @test @inferred(call(v)) == vcat
+        @test MemoryLayout(v) isa PaddedLayout
+        @test paddeddata(v) == [2]
         @test A[2,1:5] == copy(v) == sub_materialize(v)
     end
 

@@ -14,9 +14,13 @@ for op in (:hcat, :vcat)
 end
 applylayout(::Type{typeof(hvcat)}, _, ::A, ::ZerosLayout...) where A = PaddedLayout{A}()
 cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
-sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
+sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange}} =
+    PaddedLayout{typeof(sublayout(L(), I))}()
+sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,AbstractUnitRange}} =
+    PaddedLayout{typeof(sublayout(L(), I))}()
+sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{AbstractUnitRange,Integer}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
-sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Integer,Slice}}) where Lay =
+sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Integer,AbstractUnitRange}}) where Lay =
     PaddedLayout{typeof(sublayout(Lay(), sl))}()
 transposelayout(::PaddedLayout{L}) where L = PaddedLayout{typeof(transposelayout(L))}()
 
@@ -175,6 +179,7 @@ function layout_broadcasted(_, ::PaddedLayout, ::typeof(*), A::AbstractVector, B
     Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-m))
 end
 
+
 function layout_broadcasted(::PaddedLayout, _, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector)
     a = paddeddata(A)
     n = length(a)
@@ -182,9 +187,8 @@ function layout_broadcasted(::PaddedLayout, _, ::typeof(*), A::Vcat{<:Any,1}, B:
     Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-n))
 end
 
-layout_broadcasted(::PaddedLayout, lay::ApplyLayout{typeof(vcat)}, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector) =
-    layout_broadcasted(lay, lay, *, A, B)
-
+layout_broadcasted(::PaddedLayout, lay::ApplyLayout{typeof(vcat)}, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcasted(lay, lay, *, A, B)
+layout_broadcasted(lay::ApplyLayout{typeof(vcat)}, ::PaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcasted(lay, lay, *, A, B)
 
 ###
 # Dot/Axpy
@@ -272,14 +276,8 @@ end
 
 _vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
 
-
-sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange}} =
-    PaddedLayout{typeof(sublayout(L(), I))}()
-sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,AbstractUnitRange}} =
-    PaddedLayout{typeof(sublayout(L(), I))}()
-
 _lazy_getindex(dat, kr...) = view(dat, kr...)
-_lazy_getindex(dat::Number, _) = dat
+_lazy_getindex(dat::Number, _...) = dat
 
 function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractVector})
     dat = paddeddata(parent(S))
@@ -398,3 +396,4 @@ MemoryLayout(::Type{<:PaddedArray{T,N,M}}) where {T,N,M} = PaddedLayout{typeof(M
 paddeddata(A::PaddedArray) = A.args[2]
 
 PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, axes(A)...)
+PaddedArray(A::T, n::Vararg{Integer,N}) where {T<:Number,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, ntuple(_ -> OneTo(1),N)...)
