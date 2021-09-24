@@ -377,9 +377,9 @@ paddeddata(a::PaddedPadded) = a
             a = Vcat(Ones(5), Zeros(5))
             b = randn(10)
             @test colsupport(a .* b) ≡ Base.OneTo(5)
-            @test a .* b isa CachedVector
-            @test Diagonal(a) * b isa CachedVector
-            @test b .* a isa CachedVector
+            @test a .* b isa Vcat
+            @test Diagonal(a) * b isa Vcat
+            @test b .* a isa Vcat
             @test a .* b == Diagonal(a) * b == b .* a
         end
     end

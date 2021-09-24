@@ -896,9 +896,22 @@ layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, op, A::Abstra
 
 # special case for * to preserve Vcat Structure
 
+for op in (:+, :-)
+    @eval function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof($op), A::Vcat{<:Any,1}, B::Vcat{<:Any,1})
+        a,b = paddeddata(A),paddeddata(B)
+        n,m = length(a),length(b)
+        dat = if n > m
+            [broadcast($op, view(a,1:m), b); view(a,m+1:n)]
+        else # n ≤ m
+            [broadcast($op, a, view(b,1:n)); broadcast($op,view(b,n+1:m))]
+        end
+        Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-length(dat)))
+    end
+end
+
 function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::Vcat{<:Any,1}, B::Vcat{<:Any,1})
     a,b = paddeddata(A),paddeddata(B)
-    namify = min(length(a),length(b))
+    n = min(length(a),length(b))
     dat = broadcast(*, view(a,1:n), view(b,1:n))
     Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-n))
 end
@@ -974,19 +987,17 @@ _normInf(::PaddedLayout, a) = norm(paddeddata(a),Inf)
 _normp(::PaddedLayout, a, p) = norm(paddeddata(a),p)
 
 
-function copy(D::Dot{<:PaddedLayout, <:PaddedLayout})
+function copy(D::Dot{layA, layB}) where {layA<:PaddedLayout,layB<:PaddedLayout}
     a = paddeddata(D.A)
     b = paddeddata(D.B)
-    length(a) == length(b) && return dot(a,b)
+    if MemoryLayout(a) == layA && MemoryLayout(b) == layB
+        return convert(eltype(D), dot(Array(v),Array(w)))
+    end
+    length(a) == length(b) && return convert(eltype(D), dot(a,b))
     # following handles scalars
     ((length(a) == 1) || (length(b) == 1)) && return a[1] * b[1]
     m = min(length(a), length(b))
-    v, w = view(a, 1:m), view(b, 1:m)
-    if MemoryLayout(v) isa PaddedLayout && MemoryLayout(w) isa PaddedLayout
-        convert(eltype(D), dot(Array(v),Array(w)))
-    else
-        convert(eltype(D), dot(v,w))
-    end
+    convert(eltype(D), dot(view(a, 1:m), view(b, 1:m)))
 end
 
 function copy(D::Dot{<:PaddedLayout})
