@@ -892,6 +892,30 @@ layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, op, A::Abstra
     layout_broadcasted(lay, UnknownLayout(), op, A, B)
 
 
+# special case for * to preserve Vcat Structure
+
+function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::Vcat{<:Any,1}, B::Vcat{<:Any,1})
+    a,b = paddeddata(A),paddeddata(B)
+    namify = min(length(a),length(b))
+    dat = broadcast(*, view(a,1:n), view(b,1:n))
+    Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-n))
+end
+
+function layout_broadcasted(_, ::PaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1})
+    b = paddeddata(B)
+    m = length(b)
+    dat = broadcast(*, view(A,1:m), b)
+    Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-m))
+end
+
+function layout_broadcasted(::PaddedLayout, _, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector)
+    a = paddeddata(A)
+    n = length(a)
+    dat = broadcast(*, a, view(B,1:n))
+    Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-n))
+end
+
+
 ###
 # Dot/Axpy
 ###
