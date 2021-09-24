@@ -458,3 +458,7 @@ function cacheddata(V::SubArray)
     data = cacheddata(P)
     view(data, intersect.(axes(data), parentindices(V))...)
 end
+
+# Triangular
+resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
+resizedata!(A::LowerTriangular, k::Integer, j::Integer) = resizedata!(parent(A), k, min(k,j))
