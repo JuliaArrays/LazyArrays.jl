@@ -510,8 +510,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
 
         @testset "special cased" begin
             @test Vcat(1, Ones(5))  + Vcat(2, Fill(2.0,5)) ≡ Vcat(3, Fill(3.0,5))
-            @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡
-                Vcat(SVector(5,7,9), Fill(3.0,5))
+            @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡ Vcat(SVector(5,7,9), Fill(3.0,5))
             @test Vcat([1,2,3],Fill(1,7)) .* Zeros(10) ≡ Zeros(10) .* Vcat([1,2,3],Fill(1,7)) ≡ Zeros(10)
         end
 

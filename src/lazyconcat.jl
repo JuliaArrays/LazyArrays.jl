@@ -531,12 +531,49 @@ function layout_broadcasted(_, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVecto
 end
 
 layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
-    Broadcasted{LazyArrayStyle{1}}(op, (A, B))
+    
 
 layout_broadcasted(::ApplyLayout{typeof(vcat)}, Blay::CachedLayout, op, A::AbstractVector, B::AbstractVector) =
     layout_broadcasted(UnknownLayout(), Blay, op, A, B)
 layout_broadcasted(Alay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
     layout_broadcasted(Alay, UnknownLayout(), op, A, B)
+
+######
+# Special Vcat broadcasts
+#
+# We use Vcat for infinite padded vectors, so we need to special case
+# two arrays. This may be generalisable in the future
+######
+
+layout_broadcasted(lay::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
+    _vcat_layout_broadcasted(arguments(lay, A), arguments(lay, B), op, A, B)
+
+_vcat_layout_broadcasted(Aargs, Bargs, op, A, B) = Broadcasted{LazyArrayStyle{1}}(op, (A,B))
+
+function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{AbstractVector,Any}, (Bhead,Btail)::Tuple{AbstractVector,Any}, op, A, B)
+    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
+
+    if length(Ahead) ≥ length(Bhead)
+        M,m = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
+        view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
+
+        Ctail = op.(Atail[M-m+1:end], Btail[M-m+1:end])
+    else
+        m,M = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
+        view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
+
+        Ctail = op.(Atail[M-m+1:end], Btail[M-m+1:end])
+    end
+
+    Vcat(Chead, Ctail)
+end
+
+_vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail)::Tuple{Number,Any}, op, A, B) = Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
+_vcat_layout_broadcasted((Ahead,Atail)::Tuple{SVector{M},Any}, (Bhead,Btail)::Tuple{SVector{M},Any}, op, A, B) where M = Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
 
 
 broadcasted(::LazyArrayStyle, op, a::Vcat{<:Any,1}, b::AbstractVector) = layout_broadcasted(op, a, b)
