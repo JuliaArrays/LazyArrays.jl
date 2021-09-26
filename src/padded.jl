@@ -397,3 +397,4 @@ paddeddata(A::PaddedArray) = A.args[2]
 
 PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, axes(A)...)
 PaddedArray(A::T, n::Vararg{Integer,N}) where {T<:Number,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, ntuple(_ -> OneTo(1),N)...)
+(PaddedArray{T,N} where T)(A, n::Vararg{Integer,N}) where N = PaddedArray(A, n...)

@@ -502,7 +502,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         z = Vcat(1:2, [1,1,1,1,1], 3)
         @test (x .+ z) isa BroadcastArray
         @test (x + z) isa BroadcastArray
-        @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
+        @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z) == z .+ x
 
         @testset "Lazy mixed with Static treats as Lazy" begin
             s = SVector(1,2,3,4,5,6,7,8)
@@ -514,6 +514,12 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             @test Vcat(1, Ones(5))  + Vcat(2, Fill(2.0,5)) ≡ Vcat(3, Fill(3.0,5))
             @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡ Vcat(SVector(5,7,9), Fill(3.0,5))
             @test Vcat([1,2,3],Fill(1,7)) .* Zeros(10) ≡ Zeros(10) .* Vcat([1,2,3],Fill(1,7)) ≡ Zeros(10)
+        end
+        
+        @testset "2-arg" begin
+            a = Vcat([1,2], 1:3)
+            b = Vcat([1], 1:4)
+            @test a+b == b+a
         end
 
         H = Hcat(1, zeros(1,10))

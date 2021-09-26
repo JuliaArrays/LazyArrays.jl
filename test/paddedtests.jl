@@ -239,6 +239,9 @@ paddeddata(a::PaddedPadded) = a
 
         # need to add bounds checking
         @test_broken ApplyArray(setindex, Zeros(5,5), [1 2; 4 5], 2:3, 3:5)
+
+        @test PaddedArray(1, 3) == PaddedVector(1,3) == [1; zeros(2)]
+        @test PaddedArray(1, 3, 3) == PaddedMatrix(1, 3, 3) == [1 zeros(1,2); zeros(2,3)]
     end
 
     @testset "adjtrans" begin
