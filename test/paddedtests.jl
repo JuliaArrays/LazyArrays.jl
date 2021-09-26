@@ -250,4 +250,10 @@ paddeddata(a::PaddedPadded) = a
         @test paddeddata(b') ≡ SVector(1,2)'
         @test paddeddata(transpose(b)) ≡ transpose(SVector(1,2))
     end
+
+    @testset "norm" begin
+        a = Vcat(1, Zeros(3))
+        c = cache(Zeros(4)); c[1] = 1
+        @test norm(a) ≡ LinearAlgebra.normInf(c) ≡ LinearAlgebra.norm2(c) ≡ LinearAlgebra.norm1(c) ≡ LinearAlgebra.normp(c,2) ≡ 1.0
+    end
 end

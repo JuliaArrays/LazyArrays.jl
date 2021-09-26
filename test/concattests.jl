@@ -467,7 +467,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test A*B == Matrix(A)*Vector(B) == mul!(Vector{Float64}(undef,1),A,B) == (Vector{Float64}(undef,1) .= @~ A*B)
         @test materialize!(MulAdd(1.1,A,B,2.2,[5.0])) == 1.1*Matrix(A)*Vector(B)+2.2*[5.0]
 
-        @test B * A ≈ Array(B) * Array(A)
+        @test B * A ≈ Array(B) * Array(A) ≈ Vcat([1 2]', [3 4]') * A
+
+        
 
         @test B * BroadcastArray(exp, [1 2]) ≈ B * exp.([1 2])
 

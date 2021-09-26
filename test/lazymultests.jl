@@ -250,6 +250,12 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test simplifiable(*, Eye(5), MyLazyArray(B)) isa Val{true}
         @test simplifiable(*, Eye(5), Eye(5)) isa Val{true}
         @test simplifiable(*, MyLazyArray(B), Eye(5)) isa Val{true}
+
+        @test simplifiable(*, Zeros(5), Zeros(5)') isa Val{true}
+        @test simplifiable(*, Zeros(5), randn(5)') isa Val{true}
+        @test simplifiable(*, randn(5), Zeros(5)') isa Val{true}
+        @test simplifiable(*, randn(5), Eye(5)) isa Val{true}
+        @test simplifiable(*, Eye(5), Zeros(5)) isa Val{true}
     end
 
     @testset "LazyBroadcast" begin
