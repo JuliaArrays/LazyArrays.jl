@@ -518,6 +518,9 @@ layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::AbstractLazyLayout, op, A::Abs
 layout_broadcasted(::AbstractLazyLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
     Broadcasted{LazyArrayStyle{1}}(op, (A, B))
 
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::CachedLayout, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(UnknownLayout(), lay, op, A, B)
+layout_broadcasted(lay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(lay, UnknownLayout(), op, A, B)
+
 function layout_broadcasted(::ApplyLayout{typeof(vcat)}, _, op, A::AbstractVector, B::AbstractVector)
     kr = _vcat_axes(map(axes,A.args)...)  # determine how to break up B
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A

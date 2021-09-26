@@ -115,8 +115,8 @@ paddeddata(a::PaddedPadded) = a
         @test MemoryLayout(x) isa PaddedLayout
         @test MemoryLayout(y) isa ApplyLayout{typeof(vcat)}
         @test x .+ y == y .+ x == Vector(x) .+ Vector(y)
-        @test x .+ y isa CachedVector{Float64,Vector{Float64},<:Vcat}
-        @test y .+ x isa CachedVector{Float64,Vector{Float64},<:Vcat}
+        @test x .+ y isa Vcat
+        @test y .+ x isa Vcat
     end
 
     @testset "vcat and Zeros" begin
