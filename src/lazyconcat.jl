@@ -644,8 +644,6 @@ end
 
 copy(M::Mul{ApplyLayout{typeof(vcat)},<:AbstractLazyLayout}) = vcat((arguments(vcat, M.A) .* Ref(M.B))...)
 
-_all_prods(a::Tuple, ::Tuple{}) = ()
-_all_prods(a::Tuple{}, ::Tuple{}) = ()
 _all_prods(a::Tuple{}, ::Tuple) = ()
 _all_prods(a::Tuple, b::Tuple) = tuple((Ref(first(a)) .* b)..., _all_prods(tail(a), b)...)
 function copy(M::Mul{ApplyLayout{typeof(vcat)},ApplyLayout{typeof(hcat)}})
@@ -711,52 +709,6 @@ function rowsupport(lay::ApplyLayout{typeof(hcat)}, M::AbstractArray, k)
 end
 
 include("padded.jl")
-
-######
-# Special Vcat broadcasts
-#
-# We use Vcat for infinite padded vectors, so we need to special case
-# two arrays. This may be generalisable in the future
-######
-
-function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}},
-                                              B::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}})
-    (Ahead, Atail) = A.args
-    (Bhead, Btail) = B.args
-    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
-
-    if length(Ahead) ≥ length(Bhead)
-        M,m = length(Ahead), length(Bhead)
-        Chead = Vector{T}(undef,M)
-        view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
-        view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
-
-        Ctail = op.(Atail, Btail[M-m+1:end])
-    else
-        m,M = length(Ahead), length(Bhead)
-        Chead = Vector{T}(undef,M)
-        view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
-        view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
-
-        Ctail = op.(Atail[M-m+1:end], Btail)
-    end
-
-    Vcat(Chead, Ctail)
-end
-
-function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}},
-                                              B::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
-    (Ahead, Atail) = A.args
-    (Bhead, Btail) = B.args
-    Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-end
-
-function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{SVector{M},AbstractFill}},
-                                              B::Vcat{<:Any,1,<:Tuple{SVector{M},AbstractFill}}) where M
-    (Ahead, Atail) = A.args
-    (Bhead, Btail) = B.args
-    Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-end
 
 
 
