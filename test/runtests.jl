@@ -47,6 +47,7 @@ include("setoptests.jl")
 include("macrotests.jl")
 include("lazymultests.jl")
 include("concattests.jl")
+include("paddedtests.jl")
 include("broadcasttests.jl")
 include("cachetests.jl")
 

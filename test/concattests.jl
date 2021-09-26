@@ -1,15 +1,8 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
-import LazyArrays: MemoryLayout, DenseColumnMajor, PaddedLayout, materialize!, call, paddeddata,
+import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
                     CachedVector, ApplyLayout, arguments
 
-# padded block arrays have padded data that is also padded. This is to test this
-struct PaddedPadded <: LayoutVector{Int} end
-
-MemoryLayout(::Type{PaddedPadded}) = PaddedLayout{UnknownLayout}()
-Base.size(::PaddedPadded) = (10,)
-Base.getindex(::PaddedPadded, k::Int) = k ≤ 5 ? 1 : 0
-paddeddata(a::PaddedPadded) = a
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -128,72 +121,6 @@ paddeddata(a::PaddedPadded) = a
             @test arguments(view(Vcat(1,1:10)',1,:)) == (Fill(1,1),1:10)
         end
 
-        @testset "PaddedLayout" begin
-            A = Vcat([1,2,3], Zeros(7))
-            B = Vcat([1,2], Zeros(8))
-
-            C = @inferred(A+B)
-            @test C isa Vcat{Float64,1}
-            @test C.args[1] isa Vector{Float64}
-            @test C.args[2] isa Zeros{Float64}
-            @test C == Vector(A) + Vector(B)
-
-            @test colsupport(A, 1) == 1:3
-
-            B = Vcat([1,2], Ones(8))
-
-            C = @inferred(A+B)
-            @test C isa Vcat{Float64,1}
-            @test C.args[1] isa Vector{Float64}
-            @test C.args[2] isa Ones{Float64}
-            @test C == Vector(A) + Vector(B)
-
-            B = Vcat([1,2], randn(8))
-
-            C = @inferred(A+B)
-            @test C isa CachedVector{Float64}
-            @test C == Vector(A) + Vector(B)
-
-            B = Vcat(SVector(1,2), Ones(8))
-            C = @inferred(A+B)
-            @test C isa Vcat{Float64,1}
-            @test C.args[1] isa Vector{Float64}
-            @test C.args[2] isa Ones{Float64}
-            @test C == Vector(A) + Vector(B)
-
-
-            A = Vcat(SVector(3,4), Zeros(8))
-            B = Vcat(SVector(1,2), Ones(8))
-            C = @inferred(A+B)
-            @test C isa Vcat{Float64,1}
-            @test C.args[1] isa SVector{2,Int}
-            @test C.args[2] isa Ones{Float64}
-            @test C == Vector(A) + Vector(B)
-
-            @testset "multiple scalar" begin
-                # We only do 1 or 2 for now, this should be redesigned later
-                A = Vcat(1, Zeros(8))
-                @test MemoryLayout(A) isa PaddedLayout{ScalarLayout}
-                @test paddeddata(A) == 1
-                B = Vcat(1, 2, Zeros(8))
-                @test paddeddata(B) == [1,2]
-                @test MemoryLayout(B) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
-                C = Vcat(1, cache(Zeros(8)));
-                @test paddeddata(C) == [1]
-                @test MemoryLayout(C) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
-                D = Vcat(1, 2, cache(Zeros(8)));
-                @test paddeddata(D) == [1,2]
-                @test MemoryLayout(D) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
-            end
-
-            @testset "PaddedPadded" begin
-                @test colsupport(PaddedPadded()) ≡ Base.OneTo(10)
-                @test stringmime("text/plain", PaddedPadded()) == "10-element PaddedPadded:\n 1\n 1\n 1\n 1\n 1\n 0\n 0\n 0\n 0\n 0"
-                @test dot(PaddedPadded(), PaddedPadded()) == 5
-                @test dot(PaddedPadded(), 1:10) == dot(1:10, PaddedPadded()) == 15
-            end
-        end
-
         @testset "Empty Vcat" begin
             @test @inferred(Vcat{Int}([1])) == [1]
             @test @inferred(Vcat{Int}()) == Int[]
@@ -240,55 +167,6 @@ paddeddata(a::PaddedPadded) = a
             @test minimum(x) == 1
         end
 
-        @testset "copyto!" begin
-            a = Vcat(1, Zeros(10));
-            c = cache(Zeros(11));
-            @test MemoryLayout(typeof(a)) isa PaddedLayout
-            @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
-            @test copyto!(c, a) ≡ c;
-            @test c.datasize[1] == 1
-            @test c == a
-
-            a = Vcat(1:3, Zeros(10))
-            c = cache(Zeros(13));
-            @test MemoryLayout(typeof(a)) isa PaddedLayout
-            @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
-            @test copyto!(c, a) ≡ c;
-            @test c.datasize[1] == 3
-            @test c == a
-
-            @test dot(a,a) ≡ dot(a,c) ≡ dot(c,a) ≡ dot(c,c) ≡ 14.0
-
-
-            a = Vcat(1:3, Zeros(5))
-            c = cache(Zeros(13));
-            @test copyto!(c, a) ≡ c;
-            @test c.datasize[1] == 3
-            @test c[1:8] == a
-
-            a = cache(Zeros(13)); b = cache(Zeros(15));
-            @test a ≠ b
-            b = cache(Zeros(13));
-            a[3] = 2; b[3] = 2; b[5]=0;
-            @test a == b
-        end
-
-        @testset "Padded subarrays" begin
-            a = Vcat([1,2,3],[4,5,6])
-            @test sub_materialize(view(a,2:6)) == a[2:6]
-            a = Vcat([1,2,3], Zeros(10))
-            c = cache(Zeros(10)); c[1:3] = 1:3;
-            v = view(a,2:4)
-            w = view(c,2:4);
-            @test MemoryLayout(typeof(a)) isa PaddedLayout{DenseColumnMajor}
-            @test MemoryLayout(typeof(v)) isa PaddedLayout{DenseColumnMajor}
-            @test sub_materialize(v) == a[2:4] == sub_materialize(w)
-            @test sub_materialize(v) isa Vcat
-            @test sub_materialize(w) isa Vcat
-            A = Vcat(Eye(2), Zeros(10,2))
-            V = view(A, 1:5, 1:2)
-            @test sub_materialize(V) == A[1:5,1:2]
-        end
 
         @testset "searchsorted" begin
             a = Vcat(1:1_000_000, [10_000_000_000,12_000_000_000], 14_000_000_000)
@@ -377,9 +255,9 @@ paddeddata(a::PaddedPadded) = a
             a = Vcat(Ones(5), Zeros(5))
             b = randn(10)
             @test colsupport(a .* b) ≡ Base.OneTo(5)
-            @test a .* b isa CachedVector
-            @test Diagonal(a) * b isa CachedVector
-            @test b .* a isa CachedVector
+            @test a .* b isa Vcat
+            @test Diagonal(a) * b isa Vcat
+            @test b .* a isa Vcat
             @test a .* b == Diagonal(a) * b == b .* a
         end
     end
@@ -409,9 +287,7 @@ paddeddata(a::PaddedPadded) = a
         b = Array{Int}(undef, 10, 2)
         copyto!(b, A)
         @test b == hcat(A.args...)
-        if VERSION ≥ v"1.5"
-            @test @allocated(copyto!(b, A)) == 0
-        end
+        @test @allocated(copyto!(b, A)) == 0
         @test @allocated(copyto!(b, A)) ≤ 100
         @test copy(A) isa Hcat
         @test copy(A) == A
@@ -514,25 +390,6 @@ paddeddata(a::PaddedPadded) = a
         @test_throws BoundsError A[14,2]
         @test copyto!(similar(B), B) == B
 
-        P = ApplyArray(hvcat, 2, randn(4,5), Zeros(4,6), Zeros(6,5), Zeros(6,6))
-        @test eltype(P) == Float64
-        @test MemoryLayout(P) isa PaddedLayout
-        @test P == hvcat(P.args...)
-        @test @inferred(colsupport(P,3)) == Base.OneTo(4)
-        @test @inferred(colsupport(P,7)) == Base.OneTo(0)
-        @test @inferred(rowsupport(P,3)) == Base.OneTo(5)
-        @test @inferred(rowsupport(P,7)) == Base.OneTo(0)
-        @test copyto!(similar(P), P) == P
-
-        @test P[3,:] isa Vcat
-        @test P[3,1:11] == P[3,:]
-        @test P[:,3] isa Vcat
-        @test P[1:10,3] == P[:,3]
-        @test P[6,:] isa Vcat
-        @test P[1:10,6] == P[:,6]
-        @test P[:,6] isa Vcat
-        @test P[6,1:11] == P[6,:]
-
         A = ApplyArray(hvcat, 2, 1, 2, 3, 4)
         @test A == copyto!(similar(A), A) == [1 2; 3 4]
         @test_throws DimensionMismatch copyto!(zeros(Int,1,1), A)
@@ -608,6 +465,12 @@ paddeddata(a::PaddedPadded) = a
         @test A*B == Matrix(A)*Vector(B) == mul!(Vector{Float64}(undef,1),A,B) == (Vector{Float64}(undef,1) .= @~ A*B)
         @test materialize!(MulAdd(1.1,A,B,2.2,[5.0])) == 1.1*Matrix(A)*Vector(B)+2.2*[5.0]
 
+        @test B * A ≈ Array(B) * Array(A) ≈ Vcat([1 2]', [3 4]') * A
+
+        
+
+        @test B * BroadcastArray(exp, [1 2]) ≈ B * exp.([1 2])
+
         A = Hcat([1.0 2.0; 3 4],[3.0 4.0; 5 6])
         B = Vcat([1.0,2.0],[3.0,4.0])
         @test MemoryLayout(typeof(A)) isa ApplyLayout{typeof(hcat)}
@@ -637,7 +500,7 @@ paddeddata(a::PaddedPadded) = a
         z = Vcat(1:2, [1,1,1,1,1], 3)
         @test (x .+ z) isa BroadcastArray
         @test (x + z) isa BroadcastArray
-        @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z)
+        @test Vector( x .+ z) == Vector( x + z) == Vector(x) + Vector(z) == z .+ x
 
         @testset "Lazy mixed with Static treats as Lazy" begin
             s = SVector(1,2,3,4,5,6,7,8)
@@ -647,9 +510,14 @@ paddeddata(a::PaddedPadded) = a
 
         @testset "special cased" begin
             @test Vcat(1, Ones(5))  + Vcat(2, Fill(2.0,5)) ≡ Vcat(3, Fill(3.0,5))
-            @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡
-                Vcat(SVector(5,7,9), Fill(3.0,5))
+            @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡ Vcat(SVector(5,7,9), Fill(3.0,5))
             @test Vcat([1,2,3],Fill(1,7)) .* Zeros(10) ≡ Zeros(10) .* Vcat([1,2,3],Fill(1,7)) ≡ Zeros(10)
+        end
+        
+        @testset "2-arg" begin
+            a = Vcat([1,2], 1:3)
+            b = Vcat([1], 1:4)
+            @test a+b == b+a
         end
 
         H = Hcat(1, zeros(1,10))
@@ -658,34 +526,6 @@ paddeddata(a::PaddedPadded) = a
         @test H./Ref(2) isa Hcat
         @test Ref(2).\H isa Hcat
         @test H/2  == H./Ref(2) == 2\H == Ref(2) .\ H == [1/2 zeros(1,10)]
-
-        @testset "vcat and padded" begin
-            x,y = Vcat([1,2,3],Zeros(5)), Vcat(5, 1:7)
-            @test MemoryLayout(x) isa PaddedLayout
-            @test MemoryLayout(y) isa ApplyLayout{typeof(vcat)}
-            @test x .+ y == y .+ x == Vector(x) .+ Vector(y)
-            @test x .+ y isa CachedVector{Float64,Vector{Float64},<:Vcat}
-            @test y .+ x isa CachedVector{Float64,Vector{Float64},<:Vcat}
-        end
-
-        @testset "vcat and Zeros" begin
-            x,y = Vcat([1,2,3],Zeros(5)), Vcat(5, 1:7)
-            @test x .+ Zeros(8) == Zeros(8) .+ x == x
-            @test y .+ Zeros(8) == Zeros(8) .+ y == y
-            @test x .* Zeros(8) ≡ Zeros(8) .* x ≡ Zeros(8)
-            @test y .* Zeros(8) ≡ Zeros(8) .* y ≡ Zeros(8)
-            @test x .\ Zeros(8) ≡ Zeros(8) ./ x ≡ Zeros(8)
-            @test y .\ Zeros(8) ≡ Zeros(8) ./ y ≡ Zeros(8)
-        end
-
-        @testset "vcat and BroadcastArray" begin
-            x,y,z = Vcat([1,2,3],Zeros(5)), Vcat(5, 1:7), BroadcastArray(exp,1:8)
-            @test x .+ z == z .+ x == Array(x) .+ Array(z)
-            @test y .+ z == z .+ y == Array(y) .+ Array(z)
-
-            @test x .+ z isa CachedVector
-            @test y .+ z isa BroadcastVector
-        end
     end
 
     @testset "norm" begin
@@ -698,33 +538,18 @@ paddeddata(a::PaddedPadded) = a
     @testset "SubV/Hcat" begin
         A = Vcat(1,[2,3], Fill(5,10))
         V = view(A,3:5)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
+        @test MemoryLayout(V) isa ApplyLayout{typeof(vcat)}
         @inferred(arguments(V))
         @test arguments(V)[1] ≡ Fill(1,0)
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
 
         A = Vcat((1:100)', Zeros(1,100),Fill(1,2,100))
         V = view(A,:,3:5)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
+        @test MemoryLayout(V) isa ApplyLayout{typeof(vcat)}
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
         V = view(A,2:3,3:5)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(vcat)}
+        @test MemoryLayout(V) isa ApplyLayout{typeof(vcat)}
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
-
-        A = Hcat(1:10, Zeros(10,10))
-        V = view(A,3:5,:)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(hcat)}
-        @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
-        V = view(A,3:5,1:4)
-        @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(hcat)}
-        @inferred(arguments(V))
-        @test arguments(V)[1] == reshape(3:5,3,1)
-
-        v = view(A,2,1:5)
-        @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(vcat)}
-        @test arguments(v) == ([2], zeros(4))
-        @test @inferred(call(v)) == vcat
-        @test A[2,1:5] == copy(v) == sub_materialize(v)
     end
 
     @testset "col/rowsupport" begin
@@ -740,58 +565,16 @@ paddeddata(a::PaddedPadded) = a
         @test rowsupport(H,2:3) == colsupport(V,2:3) == 2:9
     end
 
-    if VERSION ≥ v"1.5"
-        @testset "print" begin
-            H = Hcat(Diagonal([1,2,3]), Zeros(3,3))
-            V = Vcat(Diagonal([1,2,3]), Zeros(3,3))
-            if VERSION < v"1.6-"
-				@test stringmime("text/plain", H) == "hcat(3×3 Diagonal{$Int,Array{$Int,1}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅    ⋅    ⋅    ⋅ \n  ⋅   2.0   ⋅    ⋅    ⋅    ⋅ \n  ⋅    ⋅   3.0   ⋅    ⋅    ⋅ "
-				@test stringmime("text/plain", V) == "vcat(3×3 Diagonal{$Int,Array{$Int,1}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅ \n  ⋅   2.0   ⋅ \n  ⋅    ⋅   3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
-			else
-				@test stringmime("text/plain", H) == "hcat(3×3 Diagonal{$Int, Vector{$Int}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅    ⋅    ⋅    ⋅ \n  ⋅   2.0   ⋅    ⋅    ⋅    ⋅ \n  ⋅    ⋅   3.0   ⋅    ⋅    ⋅ "
-				@test stringmime("text/plain", V) == "vcat(3×3 Diagonal{$Int, Vector{$Int}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅ \n  ⋅   2.0   ⋅ \n  ⋅    ⋅   3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
-			end
-            v = Vcat(1, Zeros(3))
-            @test colsupport(v,1) == 1:1
-            @test stringmime("text/plain", v) == "vcat($Int, 3-element Zeros{Float64}):\n 1.0\n  ⋅ \n  ⋅ \n  ⋅ "
-            A = Vcat(Ones{Int}(1,3), Diagonal(1:3))
-            if VERSION < v"1.6-"
-	            @test stringmime("text/plain", A) == "vcat(1×3 Ones{$Int}, 3×3 Diagonal{$Int,UnitRange{$Int}}):\n 1  1  1\n 1  ⋅  ⋅\n ⋅  2  ⋅\n ⋅  ⋅  3"
-	        else
-	            @test stringmime("text/plain", A) == "vcat(1×3 Ones{$Int}, 3×3 Diagonal{$Int, UnitRange{$Int}}):\n 1  1  1\n 1  ⋅  ⋅\n ⋅  2  ⋅\n ⋅  ⋅  3"
-	        end
-        end
-    end
-
-    @testset "setindex" begin
-        a = ApplyArray(setindex, 1:6, 5, 2)
-        @test a == [1; 5; 3:6]
-        @test_throws BoundsError a[7]
-        a = ApplyArray(setindex, 1:6, [9,8,7], 1:3)
-        @test a == [9; 8; 7; 4:6]
-        @test_throws BoundsError a[7]
-
-        a = ApplyArray(setindex, Zeros(5,5), 2, 2, 3)
-        @test a[2,3] === 2.0
-        @test a == setindex!(zeros(5,5),2,2,3)
-
-        a = ApplyArray(setindex, Zeros(5,5), [4,5], 2:3, 3)
-        @test a == setindex!(zeros(5,5),[4,5], 2:3, 3)
-
-        a = ApplyArray(setindex, Zeros(5,5), [1 2 3; 4 5 6], 2:3, 3:5)
-        @test a == setindex!(zeros(5,5),[1 2 3; 4 5 6], 2:3, 3:5)
-
-
-        a = ApplyArray(setindex, Zeros(5), [1,2], Base.OneTo(2))
-        @test MemoryLayout(a) isa PaddedLayout{DenseColumnMajor}
-        @test paddeddata(a) == 1:2
-
-        a = ApplyArray(setindex, Zeros(5,5), [1 2 3; 4 5 6], Base.OneTo(2), Base.OneTo(3))
-        @test a == setindex!(zeros(5,5),[1 2 3; 4 5 6], 1:2, 1:3)
-        @test MemoryLayout(a) isa PaddedLayout{DenseColumnMajor}
-        @test paddeddata(a) == [1 2 3; 4 5 6]
-
-        # need to add bounds checking
-        @test_broken ApplyArray(setindex, Zeros(5,5), [1 2; 4 5], 2:3, 3:5)
+    
+    @testset "print" begin
+        H = Hcat(Diagonal([1,2,3]), Zeros(3,3))
+        V = Vcat(Diagonal([1,2,3]), Zeros(3,3))
+        @test stringmime("text/plain", H) == "hcat(3×3 Diagonal{$Int, Vector{$Int}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅    ⋅    ⋅    ⋅ \n  ⋅   2.0   ⋅    ⋅    ⋅    ⋅ \n  ⋅    ⋅   3.0   ⋅    ⋅    ⋅ "
+        @test stringmime("text/plain", V) == "vcat(3×3 Diagonal{$Int, Vector{$Int}}, 3×3 Zeros{Float64}):\n 1.0   ⋅    ⋅ \n  ⋅   2.0   ⋅ \n  ⋅    ⋅   3.0\n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ \n  ⋅    ⋅    ⋅ "
+        v = Vcat(1, Zeros(3))
+        @test colsupport(v,1) == 1:1
+        @test stringmime("text/plain", v) == "vcat($Int, 3-element Zeros{Float64}):\n 1.0\n  ⋅ \n  ⋅ \n  ⋅ "
+        A = Vcat(Ones{Int}(1,3), Diagonal(1:3))
+        @test stringmime("text/plain", A) == "vcat(1×3 Ones{$Int}, 3×3 Diagonal{$Int, UnitRange{$Int}}):\n 1  1  1\n 1  ⋅  ⋅\n ⋅  2  ⋅\n ⋅  ⋅  3"
     end
 end

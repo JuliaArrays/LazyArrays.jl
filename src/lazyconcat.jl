@@ -518,6 +518,9 @@ layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::AbstractLazyLayout, op, A::Abs
 layout_broadcasted(::AbstractLazyLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
     Broadcasted{LazyArrayStyle{1}}(op, (A, B))
 
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::CachedLayout, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(UnknownLayout(), lay, op, A, B)
+layout_broadcasted(lay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(lay, UnknownLayout(), op, A, B)
+
 function layout_broadcasted(::ApplyLayout{typeof(vcat)}, _, op, A::AbstractVector, B::AbstractVector)
     kr = _vcat_axes(map(axes,A.args)...)  # determine how to break up B
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
@@ -531,12 +534,69 @@ function layout_broadcasted(_, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVecto
 end
 
 layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
-    Broadcasted{LazyArrayStyle{1}}(op, (A, B))
+    
 
 layout_broadcasted(::ApplyLayout{typeof(vcat)}, Blay::CachedLayout, op, A::AbstractVector, B::AbstractVector) =
     layout_broadcasted(UnknownLayout(), Blay, op, A, B)
 layout_broadcasted(Alay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
     layout_broadcasted(Alay, UnknownLayout(), op, A, B)
+
+######
+# Special Vcat broadcasts
+#
+# We use Vcat for infinite padded vectors, so we need to special case
+# two arrays. This may be generalisable in the future
+######
+
+layout_broadcasted(lay::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
+    _vcat_layout_broadcasted(arguments(lay, A), arguments(lay, B), op, A, B)
+
+_vcat_layout_broadcasted(Aargs, Bargs, op, A, B) = Broadcasted{LazyArrayStyle{1}}(op, (A,B))
+
+function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{AbstractVector,Any}, (Bhead,Btail)::Tuple{AbstractVector,Any}, op, A, B)
+    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
+
+    if length(Ahead) ≥ length(Bhead)
+        M,m = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
+        view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
+
+        Ctail = op.(Atail, Btail[M-m+1:end])
+    else
+        m,M = length(Ahead), length(Bhead)
+        Chead = Vector{T}(undef,M)
+        view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
+        view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
+
+        Ctail = op.(Atail[M-m+1:end], Btail)
+    end
+
+    Vcat(Chead, Ctail)
+end
+
+function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{AbstractVector,Any}, (Bhead,Btail)::Tuple{Number,Any}, op, A, B)
+    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
+    M = length(Ahead)
+    Chead = Vector{T}(undef,max(1,M))
+    Chead[1] = op(A[1], Bhead)
+    view(Chead,2:M) .= op.(view(Ahead,2:M),Btail[1:M-1])
+    Ctail = op.(Atail, Btail[M:end])
+    Vcat(Chead, Ctail)
+end
+
+function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail)::Tuple{AbstractVector,Any}, op, A, B)
+    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
+    M = length(Bhead)
+    Chead = Vector{T}(undef,max(1,M))
+    Chead[1] = op(Ahead, B[1])
+    view(Chead,2:M) .= op.(Atail[1:M-1],view(Bhead,2:M))
+    Ctail = op.(Atail[M:end],Btail)
+    Vcat(Chead, Ctail)
+end
+
+_vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail)::Tuple{Number,Any}, op, A, B) = Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
+_vcat_layout_broadcasted((Ahead,Atail)::Tuple{SVector{M},Any}, (Bhead,Btail)::Tuple{SVector{M},Any}, op, A, B) where M = Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
 
 
 broadcasted(::LazyArrayStyle, op, a::Vcat{<:Any,1}, b::AbstractVector) = layout_broadcasted(op, a, b)
@@ -612,6 +672,8 @@ _vcat_diff(a, b, c...) = (diff(a), first(b)-last(a), _vcat_diff(b,c...)...)
 # maximum/minimum
 ####
 
+sum(v::Vcat{<:Any,1}) = sum(map(sum,v.args))
+
 for op in (:maximum, :minimum)
     @eval $op(V::Vcat) = $op($op.(V.args))
 end
@@ -640,6 +702,16 @@ end
 # *
 ###
 
+copy(M::Mul{ApplyLayout{typeof(vcat)},<:AbstractLazyLayout}) = vcat((arguments(vcat, M.A) .* Ref(M.B))...)
+
+_all_prods(a::Tuple{}, ::Tuple) = ()
+_all_prods(a::Tuple, b::Tuple) = tuple((Ref(first(a)) .* b)..., _all_prods(tail(a), b)...)
+function copy(M::Mul{ApplyLayout{typeof(vcat)},ApplyLayout{typeof(hcat)}})
+    b = arguments(hcat,M.B)
+    ApplyArray(hvcat, length(b), _all_prods(arguments(vcat, M.A), b)...)
+end
+
+
 function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{typeof(vcat)}})
     α,A,B,β,C =  M.α,M.A,M.B,M.β,M.C
     T = eltype(C)
@@ -666,11 +738,14 @@ function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{type
 
 
 most(a) = reverse(tail(reverse(a)))
-colsupport(M::Vcat, j) = first(colsupport(first(M.args),j)):(size(Vcat(most(M.args)...),1)+last(colsupport(last(M.args),j)))
+function colsupport(lay::ApplyLayout{typeof(vcat)}, M::AbstractArray, j)
+    args = arguments(lay, M)
+    first(colsupport(first(args),j)):(size(Vcat(most(args)...),1)+last(colsupport(last(args),j)))
+end
 
-function rowsupport(V::Vcat, k::Integer)
+function rowsupport(lay::ApplyLayout{typeof(vcat)}, V::AbstractArray, k::Integer)
     ξ = k
-    for A in arguments(V)
+    for A in arguments(lay, V)
         n = size(A,1)
         ξ ≤ n && return rowsupport(A, ξ)
         ξ -= n
@@ -678,9 +753,9 @@ function rowsupport(V::Vcat, k::Integer)
     return 1:0
 end
 
-function colsupport(H::Hcat, j::Integer)
+function colsupport(lay::ApplyLayout{typeof(hcat)}, H::AbstractArray, j::Integer)
     ξ = j
-    for A in arguments(H)
+    for A in arguments(lay,H)
         n = size(A,2)
         ξ ≤ n && return colsupport(A, ξ)
         ξ -= n
@@ -688,224 +763,14 @@ function colsupport(H::Hcat, j::Integer)
     return 1:0
 end
 
-rowsupport(M::Hcat, k) = first(rowsupport(first(M.args),k)):(size(Hcat(most(M.args)...),2)+last(rowsupport(last(M.args),k)))
-
-
-###
-# padded
-####
-
-struct PaddedLayout{L} <: MemoryLayout end
-applylayout(::Type{typeof(vcat)}, ::A, ::ZerosLayout) where A = PaddedLayout{A}()
-applylayout(::Type{typeof(vcat)}, ::ScalarLayout, ::ScalarLayout, ::ZerosLayout) = PaddedLayout{ApplyLayout{typeof(vcat)}}()
-applylayout(::Type{typeof(vcat)}, ::A, ::PaddedLayout) where A = PaddedLayout{ApplyLayout{typeof(vcat)}}()
-applylayout(::Type{typeof(vcat)}, ::ScalarLayout, ::ScalarLayout, ::PaddedLayout) = PaddedLayout{ApplyLayout{typeof(vcat)}}()
-applylayout(::Type{typeof(hvcat)}, _, ::A, ::ZerosLayout...) where A = PaddedLayout{A}()
-cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
-sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Slice,Integer}}) where Lay =
-    PaddedLayout{typeof(sublayout(Lay(), sl))}()
-sublayout(::PaddedLayout{Lay}, sl::Type{<:Tuple{Integer,Slice}}) where Lay =
-    PaddedLayout{typeof(sublayout(Lay(), sl))}()
-
-paddeddata(A::CachedArray{<:Any,N,<:Any,<:Zeros}) where N = cacheddata(A)
-_vcat_paddeddata(A, B::Zeros) = A
-_vcat_paddeddata(A, B) = Vcat(A, paddeddata(B))
-_vcat_paddeddata(A, B, C...) = Vcat(A, _vcat_paddeddata(B, C...))
-paddeddata(A::Vcat) = _vcat_paddeddata(A.args...)
-
-_hvcat_paddeddata(N, A, B::Zeros...) = A
-paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
-
-function colsupport(lay::PaddedLayout{Lay}, A, j) where Lay
-    P = paddeddata(A)
-    MemoryLayout(P) isa PaddedLayout{Lay} && return colsupport(UnknownLayout, A, j)
-    j̃ = j ∩ axes(P,2)
-    cs = colsupport(P,j̃)
-    isempty(j̃) ? convert(typeof(cs), Base.OneTo(0)) : cs
-end
-function rowsupport(::PaddedLayout{Lay}, A, k) where Lay
-    P = paddeddata(A)
-    MemoryLayout(P) isa PaddedLayout{Lay} && return rowsupport(UnknownLayout, A, j)
-    k̃ = k ∩ axes(P,1)
-    rs = rowsupport(P,k̃)
-    isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
+function rowsupport(lay::ApplyLayout{typeof(hcat)}, M::AbstractArray, k)
+    args = arguments(lay, M)
+    first(rowsupport(first(args),k)):(size(Hcat(most(args)...),2)+last(rowsupport(last(args),k)))
 end
 
-function _vcat_resizedata!(::PaddedLayout, B, m...)
-    Base.checkbounds(paddeddata(B), m...)
-    B
-end
-
-resizedata!(B::Vcat, m...) = _vcat_resizedata!(MemoryLayout(B), B, m...)
-
-function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
-    length(A) == length(B) || return false
-    n = max(A.datasize[1], B.datasize[1])
-    resizedata!(A,n); resizedata!(B,n)
-    view(A.data,OneTo(n)) == view(B.data,OneTo(n))
-end
-
-function _copyto!(::PaddedLayout, ::PaddedLayout, dest::AbstractVector, src::AbstractVector)
-    length(src) ≤ length(dest)  || throw(BoundsError())
-    src_data = paddeddata(src)
-    n = length(src_data)
-    resizedata!(dest, n) # if resizeable, otherwise this is a no-op
-    dest_data = paddeddata(dest)
-    copyto!(view(dest_data,OneTo(n)), src_data)
-    zero!(view(dest_data,n+1:length(dest_data)))
-    dest
-end
-
-function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::AbstractVector)
-    zero!(paddeddata(dest))
-    dest
-end
-
-function zero!(::PaddedLayout, A)
-    zero!(paddeddata(A))
-    A
-end
-
-ArrayLayouts._norm(::PaddedLayout, A, p) = norm(paddeddata(A), p)
-
-######
-# Special Vcat broadcasts
-#
-# We use Vcat for infinite padded vectors, so we need to special case
-# two arrays. This may be generalisable in the future
-######
-
-function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}},
-                                              B::Vcat{<:Any,1,<:Tuple{AbstractVector,AbstractFill}})
-    (Ahead, Atail) = A.args
-    (Bhead, Btail) = B.args
-    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
-
-    if length(Ahead) ≥ length(Bhead)
-        M,m = length(Ahead), length(Bhead)
-        Chead = Vector{T}(undef,M)
-        view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
-        view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
-
-        Ctail = op.(Atail, Btail[M-m+1:end])
-    else
-        m,M = length(Ahead), length(Bhead)
-        Chead = Vector{T}(undef,M)
-        view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
-        view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
-
-        Ctail = op.(Atail[M-m+1:end], Btail)
-    end
-
-    Vcat(Chead, Ctail)
-end
-
-function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}},
-                                              B::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
-    (Ahead, Atail) = A.args
-    (Bhead, Btail) = B.args
-    Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-end
-
-function broadcasted(::LazyArrayStyle{1}, op, A::Vcat{<:Any,1,<:Tuple{SVector{M},AbstractFill}},
-                                              B::Vcat{<:Any,1,<:Tuple{SVector{M},AbstractFill}}) where M
-    (Ahead, Atail) = A.args
-    (Bhead, Btail) = B.args
-    Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-end
-
-# special case handle broadcasting with padded and cached arrays
-function layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector)
-    a,b = paddeddata(A),paddeddata(B)
-    n,m = length(a),length(b)
-    dat = if n ≤ m
-        [broadcast(op, a, view(b,1:n)); broadcast(op, zero(eltype(A)), @view(b[n+1:end]))]
-    else
-        [broadcast(op, view(a,1:m), b); broadcast(op, @view(a[m+1:end]), zero(eltype(B)))]
-    end
-    CachedArray(dat, broadcast(op, Zeros{eltype(A)}(length(A)), Zeros{eltype(B)}(length(B))))
-end
-
-function layout_broadcasted(_, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector)
-    b = paddeddata(B)
-    m = length(b)
-    zB = Zeros{eltype(B)}(size(B)...)
-    CachedArray(convert(Array,broadcast(op, view(A,1:m), b)), broadcast(op, A, zB))
-end
-
-function layout_broadcasted(::PaddedLayout, _, op, A::AbstractVector, B::AbstractVector)
-    a = paddeddata(A)
-    n = length(a)
-    zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray(convert(Array,broadcast(op, a, view(B,1:n))), broadcast(op, zA, B))
-end
-
-function layout_broadcasted(::PaddedLayout, ::CachedLayout, op, A::AbstractVector, B::AbstractVector)
-    a = paddeddata(A)
-    n = length(a)
-    resizedata!(B,n)
-    Bdata = cacheddata(B)
-    b = view(Bdata,1:n)
-    zA1 = Zeros{eltype(A)}(size(Bdata,1)-n)
-    zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray([broadcast(op, a, b); broadcast(op, zA1, @view(Bdata[n+1:end]))], broadcast(op, zA, B.array))
-end
-
-function layout_broadcasted(::CachedLayout, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector)
-    b = paddeddata(B)
-    n = length(b)
-    resizedata!(A,n)
-    Adata = cacheddata(A)
-    a = view(Adata,1:n)
-    zB1 = Zeros{eltype(B)}(size(Adata,1)-n)
-    zB = Zeros{eltype(B)}(size(B)...)
-    CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB1)], broadcast(op, A.array, zB))
-end
-
-layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::PaddedLayout, op, A::AbstractVector, B::AbstractVector) =
-    layout_broadcasted(UnknownLayout(), lay, op, A, B)
-layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
-    layout_broadcasted(lay, UnknownLayout(), op, A, B)
+include("padded.jl")
 
 
-###
-# Dot/Axpy
-###
-
-
-struct Axpy{StyleX,StyleY,T,XTyp,YTyp}
-    α::T
-    X::XTyp
-    Y::YTyp
-end
-
-Axpy(α::T, X::XTyp, Y::YTyp) where {T,XTyp,YTyp} = Axpy{typeof(MemoryLayout(XTyp)), typeof(MemoryLayout(YTyp)), T, XTyp, YTyp}(α, X, Y)
-materialize!(d::Axpy{<:Any,<:Any,<:Number,<:AbstractArray,<:AbstractArray}) = Base.invoke(BLAS.axpy!, Tuple{Number,AbstractArray,AbstractArray}, d.α, d.X, d.Y)
-function materialize!(d::Axpy{<:PaddedLayout,<:PaddedLayout,U,<:AbstractVector{T},<:AbstractVector{V}}) where {U,T,V}
-    x = paddeddata(d.X)
-    resizedata!(d.Y, length(x))
-    y = paddeddata(d.Y)
-    BLAS.axpy!(d.α, x, view(y,1:length(x)))
-    y
-end
-axpy!(α, X, Y) = materialize!(Axpy(α,X,Y))
-BLAS.axpy!(α, X::LazyArray, Y::AbstractArray) = axpy!(α, X, Y)
-BLAS.axpy!(α, X::SubArray{<:Any,N,<:LazyArray}, Y::AbstractArray) where N = axpy!(α, X, Y)
-
-
-###
-# l/rmul!
-###
-
-function materialize!(M::Lmul{ScalarLayout,<:PaddedLayout})
-    lmul!(M.A, paddeddata(M.B))
-    M.B
-end
-
-function materialize!(M::Rmul{<:PaddedLayout,ScalarLayout})
-    rmul!(paddeddata(M.A), M.B)
-    M.A
-end
 
 ###
 # norm
@@ -917,49 +782,6 @@ for Cat in (:Vcat, :Hcat)
     end
     @eval normp(a::$Cat, p) = norm(norm.(a.args, p), p)
 end
-
-_norm2(::PaddedLayout, a) = norm(paddeddata(a),2)
-_norm1(::PaddedLayout, a) = norm(paddeddata(a),1)
-_normInf(::PaddedLayout, a) = norm(paddeddata(a),Inf)
-_normp(::PaddedLayout, a, p) = norm(paddeddata(a),p)
-
-
-function copy(D::Dot{<:PaddedLayout, <:PaddedLayout})
-    a = paddeddata(D.A)
-    b = paddeddata(D.B)
-    m = min(length(a), length(b))
-    v, w = view(a, 1:m), view(b, 1:m)
-    if MemoryLayout(v) isa PaddedLayout && MemoryLayout(w) isa PaddedLayout
-        convert(eltype(D), dot(Array(v),Array(w)))
-    else
-        convert(eltype(D), dot(v,w))
-    end
-end
-
-function copy(D::Dot{<:PaddedLayout})
-    a = paddeddata(D.A)
-    m = length(a)
-    v = view(D.B, 1:m)
-    if MemoryLayout(a) isa PaddedLayout
-        convert(eltype(D), dot(Array(a), v))
-    else
-        convert(eltype(D), dot(a, v))
-    end
-        
-end
-
-function copy(D::Dot{<:Any, <:PaddedLayout})
-    b = paddeddata(D.B)
-    m = length(b)
-    v = view(D.A, 1:m)
-    if MemoryLayout(b) isa PaddedLayout
-        convert(eltype(D), dot(v, Array(b)))
-    else
-        convert(eltype(D), dot(v, b))
-    end
-end
-
-
 
 ###
 # subarrays
@@ -1006,7 +828,6 @@ function _vcat_sub_arguments(L::ApplyLayout{typeof(hcat)}, A, V)
     _view_hcat.(args, k, sjr2)
 end
 
-_vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
 _vcat_sub_arguments(::DualLayout{ML}, A, V) where ML = _vcat_sub_arguments(ML(), A, V)
 _vcat_sub_arguments(A, V) = _vcat_sub_arguments(MemoryLayout(typeof(A)), A, V)
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1}) = _vcat_sub_arguments(parent(V), V)
@@ -1079,70 +900,6 @@ materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}})
 materialize!(M::MatMulVecAdd{<:AbstractColumnMajor,<:ApplyLayout{typeof(vcat)}}) =
     materialize!(MulAdd(M.α,M.A,Array(M.B),M.β,M.C))
 
-sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange}} =
-    PaddedLayout{typeof(sublayout(L(), I))}()
-sublayout(::PaddedLayout{L}, ::Type{I}) where {L,I<:Tuple{AbstractUnitRange,AbstractUnitRange}} =
-    PaddedLayout{typeof(sublayout(L(), I))}()
-
-_lazy_getindex(dat, kr...) = view(dat, kr...)
-_lazy_getindex(dat::Number, _) = dat
-
-function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractVector})
-    dat = paddeddata(parent(S))
-    (kr,) = parentindices(S)
-    kr2 = kr ∩ axes(dat,1)
-    _lazy_getindex(dat, kr2)
-end
-
-
-
-function sub_paddeddata(_, S::SubArray{<:Any,1,<:Any,<:Tuple{Integer,Any}})
-    P = parent(S)
-    (k,jr) = parentindices(S)
-    # need to resize in case dat is empty... not clear how to take a vector view of a 0-dimensional matrix in a type-stable way
-    resizedata!(P, k, 1); dat = paddeddata(P)
-    if k in axes(dat,1)
-        _lazy_getindex(dat, k, jr ∩ axes(dat,2))
-    else
-        _lazy_getindex(dat, first(axes(dat,1)), jr ∩ Base.OneTo(0))
-    end
-end
-function sub_paddeddata(_, S::SubArray{<:Any,1,<:Any,<:Tuple{Any,Integer}})
-    P = parent(S)
-    (kr,j) = parentindices(S)
-    # need to resize in case dat is empty... not clear how to take a vector view of a 0-dimensional matrix in a type-stable way
-    resizedata!(P, 1, j); dat = paddeddata(P)
-    if j in axes(dat,2)
-        _lazy_getindex(dat, kr ∩ axes(dat,1), j)
-    else
-        _lazy_getindex(dat, kr ∩ Base.OneTo(0), first(axes(dat,2)))
-    end
-end
-
-function sub_paddeddata(_, S::SubArray{<:Any,2})
-    P = parent(S)
-    (kr,jr) = parentindices(S)
-    dat = paddeddata(P)
-    kr2 = kr ∩ axes(dat,1)
-    jr2 = jr ∩ axes(dat,2)
-    _lazy_getindex(dat, kr2, jr2)
-end
-
-paddeddata(S::SubArray) = sub_paddeddata(MemoryLayout(parent(S)), S)
-
-function _padded_sub_materialize(v::AbstractVector{T}) where T
-    dat = paddeddata(v)
-    Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat)))
-end
-
-sub_materialize(::PaddedLayout, v::AbstractVector{T}, _) where T =
-    _padded_sub_materialize(v)
-
-function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}, _) where T
-    dat = paddeddata(v)
-    PaddedArray(sub_materialize(dat), size(v)...)
-end
-
 ## print
 
 _replace_in_print_matrix(A::AbstractArray, k, j, s) = replace_in_print_matrix(A, k, j, s)
@@ -1156,15 +913,6 @@ function layout_replace_in_print_matrix(LAY::ApplyLayout{typeof(vcat)}, f::Abstr
         κ -= n
     end
     throw(BoundsError(f, (k,j)))
-end
-
-function layout_replace_in_print_matrix(::PaddedLayout{Lay}, f::AbstractVecOrMat, k, j, s) where Lay
-    # avoid infinite-loop
-    f isa SubArray && return Base.replace_in_print_matrix(parent(f), Base.reindex(f.indices, (k,j))..., s)
-    data = paddeddata(f)
-    MemoryLayout(data) isa PaddedLayout{Lay} && return layout_replace_in_print_matrix(UnknownLayout(), f, k, j, s)
-    k in axes(data,1) && j in axes(data,2) && return _replace_in_print_matrix(data, k, j, s)
-    Base.replace_with_centered_mark(s)
 end
 
 # searchsorted
@@ -1200,57 +948,3 @@ end
 
 searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x)
 
-# avoid ambiguity in LazyBandedMatrices
-copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))
-
-
-# Triangular columns
-
-sublayout(::TriangularLayout{'U','N', ML}, INDS::Type{<:Tuple{KR,Integer}}) where {KR,ML} =
-    sublayout(PaddedLayout{typeof(sublayout(ML(), INDS))}(), Tuple{KR})
-
-sublayout(::TriangularLayout{'L','N', ML}, INDS::Type{<:Tuple{Integer,JR}}) where {JR,ML} =
-    sublayout(PaddedLayout{typeof(sublayout(ML(), INDS))}(), Tuple{JR})
-
-resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
-resizedata!(A::LowerTriangular, k::Integer, j::Integer) = resizedata!(parent(A), k, min(k,j))
-
-function sub_paddeddata(::TriangularLayout{'U','N'}, S::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{Any,Integer}})
-    P = parent(S)
-    (kr,j) = parentindices(S)
-    view(triangulardata(P), kr ∩ (1:j), j)
-end
-
-function sub_paddeddata(::TriangularLayout{'L','N'}, S::SubArray{<:Any,1,<:AbstractMatrix,<:Tuple{Integer,Any}})
-    P = parent(S)
-    (k,jr) = parentindices(S)
-    view(triangulardata(P), k, jr ∩ (1:k))
-end
-
-
-###
-# setindex
-###
-
-@inline ndims(A::Applied{<:Any,typeof(setindex)}) = ndims(A.args[1])
-@inline eltype(A::Applied{<:Any,typeof(setindex)}) = eltype(A.args[1])
-axes(A::ApplyArray{<:Any,N,typeof(setindex)}) where N = axes(A.args[1])
-
-function getindex(A::ApplyVector{T,typeof(setindex)}, k::Integer) where T
-    P,v,kr = A.args
-    convert(T, k in kr ? v[something(findlast(isequal(k),kr))] : P[k])::T
-end
-
-function getindex(A::ApplyMatrix{T,typeof(setindex)}, k::Integer, j::Integer) where T
-    P,v,kr,jr = A.args
-    convert(T, k in kr && j in jr ? v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] : P[k,j])::T
-end
-
-const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{OneTo{Int},N}}}
-const PaddedVector{T,M} = PaddedArray{T,1,M}
-const PaddedMatrix{T,M} = PaddedArray{T,2,M}
-
-MemoryLayout(::Type{<:PaddedArray{T,N,M}}) where {T,N,M} = PaddedLayout{typeof(MemoryLayout(M))}()
-paddeddata(A::PaddedArray) = A.args[2]
-
-PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, axes(A)...)

@@ -55,18 +55,13 @@ import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot, 
                         _fill_lmul!, scalarone, scalarzero, fillzeros, zero!, layout_getindex, _copyto!,
                         AbstractQLayout, StridedLayout, layout_replace_in_print_matrix
 
-import Base: require_one_based_indexing
+import Base: require_one_based_indexing, oneto
 
 export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum, Accumulate,
-        applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, @~, LazyArray
+        applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, @~, LazyArray,
+        PaddedArray, PaddedVector, PaddedMatrix
 
-
-if VERSION < v"1.6-"
-	oneto(n) = OneTo(n)
-else
-	import Base: oneto
-end
 
 include("lazyapplying.jl")
 include("lazybroadcasting.jl")

@@ -238,17 +238,10 @@ import Base: broadcasted
         @test stringmime("text/plain", BroadcastArray(@~ x .^ 2)') == "((3-element UnitRange{$Int}) .^ 2)':\n 1  4  9"
         @test stringmime("text/plain", transpose(BroadcastArray(@~ x .^ 2))) == "transpose((3-element UnitRange{$Int}) .^ 2):\n 1  4  9"
 
-        if VERSION < v"1.6-"
-            @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
-            @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Array{$Int,1}):\n 1\n 2"
-            @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Array{$Int,1}) .+ ($Int):\n 3\n 4"
-            @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Array{$Int,1}, $Int):\n 1\n 0"
-        else
-            @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Vector{$Int}) .+ ($Int):\n 3\n 4"
-            @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Vector{$Int}):\n 1\n 2"
-            @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Vector{$Int}) .+ ($Int):\n 3\n 4"
-            @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Vector{$Int}, $Int):\n 1\n 0"
-        end
+        @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Vector{$Int}) .+ ($Int):\n 3\n 4"
+        @test stringmime("text/plain", BroadcastArray(+, [1,2])) == "(+).(2-element Vector{$Int}):\n 1\n 2"
+        @test stringmime("text/plain", BroadcastArray(+, [1,2], 2)) == "(2-element Vector{$Int}) .+ ($Int):\n 3\n 4"
+        @test stringmime("text/plain", BroadcastArray(mod, [1,2], 2)) == "mod.(2-element Vector{$Int}, $Int):\n 1\n 0"
     end
 
     @testset "offset indexing" begin
