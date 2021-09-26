@@ -584,9 +584,7 @@ end
         @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
         Ac = A'
         blasnoalloc(c, 2.0, Ac, x, 3.0, y)
-        if VERSION ≥ v"1.5"
-            @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
-        end
+        @test @allocated(blasnoalloc(c, 2.0, Ac, x, 3.0, y)) == 0
         Aa = ApplyArray(+, A, Ac)
         blasnoalloc(c, 2.0, Aa, x, 3.0, y)
         @test_broken @allocated(blasnoalloc(c, 2.0, Aa, x, 3.0, y)) == 0
@@ -1140,11 +1138,7 @@ end
 
     @testset "show" begin
         A = ApplyArray(*, [1 2; 3 4], 1:2)
-        if VERSION < v"1.6-"
-	        @test stringmime("text/plain", A) == "(2×2 Array{Int64,2}) * (2-element UnitRange{Int64}):\n  5\n 11"
-	    else
-	        @test stringmime("text/plain", A) == "(2×2 Matrix{Int64}) * (2-element UnitRange{Int64}):\n  5\n 11"
-		end
+        @test stringmime("text/plain", A) == "(2×2 Matrix{Int64}) * (2-element UnitRange{Int64}):\n  5\n 11"
     end
 
     @testset "mat-mul-vec matrix indexing" begin
