@@ -559,16 +559,36 @@ function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{AbstractVector,Any}, (Bhe
         view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
         view(Chead,m+1:M) .= op.(view(Ahead,m+1:M),Btail[1:M-m])
 
-        Ctail = op.(Atail[M-m+1:end], Btail[M-m+1:end])
+        Ctail = op.(Atail, Btail[M-m+1:end])
     else
         m,M = length(Ahead), length(Bhead)
         Chead = Vector{T}(undef,M)
         view(Chead,1:m) .= op.(Ahead, view(Bhead,1:m))
         view(Chead,m+1:M) .= op.(Atail[1:M-m],view(Bhead,m+1:M))
 
-        Ctail = op.(Atail[M-m+1:end], Btail[M-m+1:end])
+        Ctail = op.(Atail[M-m+1:end], Btail)
     end
 
+    Vcat(Chead, Ctail)
+end
+
+function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{AbstractVector,Any}, (Bhead,Btail)::Tuple{Number,Any}, op, A, B)
+    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
+    M = length(Ahead)
+    Chead = Vector{T}(undef,max(1,M))
+    Chead[1] = op(A[1], Bhead)
+    view(Chead,2:M) .= op.(view(Ahead,2:M),Btail[1:M-1])
+    Ctail = op.(Atail, Btail[M:end])
+    Vcat(Chead, Ctail)
+end
+
+function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail)::Tuple{AbstractVector,Any}, op, A, B)
+    T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
+    M = length(Bhead)
+    Chead = Vector{T}(undef,max(1,M))
+    Chead[1] = op(Ahead, B[1])
+    view(Chead,2:M) .= op.(Atail[1:M-1],view(Bhead,2:M))
+    Ctail = op.(Atail[M:end],Btail)
     Vcat(Chead, Ctail)
 end
 

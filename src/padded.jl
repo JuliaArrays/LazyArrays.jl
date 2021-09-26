@@ -144,16 +144,16 @@ function layout_broadcasted(::CachedLayout, ::PaddedLayout, op, A::AbstractVecto
     CachedArray([broadcast(op, a, b); broadcast(op, @view(Adata[n+1:end]), zB1)], broadcast(op, A.array, zB))
 end
 
-layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::PaddedLayout, op, A::AbstractVector, B::AbstractVector) =
-    layout_broadcasted(UnknownLayout(), lay, op, A, B)
-layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
-    layout_broadcasted(lay, UnknownLayout(), op, A, B)
+layout_broadcasted(lay::ApplyLayout{typeof(vcat)}, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(lay, lay, op, A, B)
+layout_broadcasted(::PaddedLayout, lay::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(lay, lay, op, A, B)
 
 
 # special case for * to preserve Vcat Structure
 
 for op in (:+, :-)
-    @eval function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof($op), A::Vcat{<:Any,1}, B::Vcat{<:Any,1})
+    @eval function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof($op), A::Vcat{T,1}, B::Vcat{V,1}) where {T,V}
         a,b = paddeddata(A),paddeddata(B)
         n,m = length(a),length(b)
         dat = if n > m
@@ -161,30 +161,30 @@ for op in (:+, :-)
         else # n ≤ m
             [broadcast($op, a, view(b,1:n)); broadcast($op,view(b,n+1:m))]
         end
-        Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-length(dat)))
+        Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-length(dat)))
     end
 end
 
-function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::Vcat{<:Any,1}, B::Vcat{<:Any,1})
+function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::Vcat{T,1}, B::Vcat{V,1}) where {T,V}
     a,b = paddeddata(A),paddeddata(B)
     n = min(length(a),length(b))
     dat = broadcast(*, view(a,1:n), view(b,1:n))
-    Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-n))
+    Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-n))
 end
 
-function layout_broadcasted(_, ::PaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1})
+function layout_broadcasted(_, ::PaddedLayout, ::typeof(*), A::AbstractVector{T}, B::Vcat{V,1}) where {T,V}
     b = paddeddata(B)
     m = length(b)
     dat = broadcast(*, view(A,1:m), b)
-    Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-m))
+    Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-m))
 end
 
 
-function layout_broadcasted(::PaddedLayout, _, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector)
+function layout_broadcasted(::PaddedLayout, _, ::typeof(*), A::Vcat{T,1}, B::AbstractVector{V}) where {T,V}
     a = paddeddata(A)
     n = length(a)
     dat = broadcast(*, a, view(B,1:n))
-    Vcat(convert(Array,dat), Zeros{eltype(dat)}(max(length(A),length(B))-n))
+    Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-n))
 end
 
 layout_broadcasted(::PaddedLayout, lay::ApplyLayout{typeof(vcat)}, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcasted(lay, lay, *, A, B)

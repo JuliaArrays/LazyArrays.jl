@@ -17,7 +17,7 @@ paddeddata(a::PaddedPadded) = a
 
         C = @inferred(A+B)
         @test C isa Vcat{Float64,1}
-        @test C.args[1] isa Vector{Float64}
+        @test C.args[1] isa Vector
         @test C.args[2] isa Zeros{Float64}
         @test C == Vector(A) + Vector(B)
 
@@ -34,7 +34,7 @@ paddeddata(a::PaddedPadded) = a
         B = Vcat([1,2], randn(8))
 
         C = @inferred(A+B)
-        @test C isa CachedVector{Float64}
+        @test C isa Vcat
         @test C == Vector(A) + Vector(B)
 
         B = Vcat(SVector(1,2), Ones(8))
