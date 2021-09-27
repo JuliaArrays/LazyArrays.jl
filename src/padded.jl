@@ -152,16 +152,35 @@ layout_broadcasted(::PaddedLayout, lay::ApplyLayout{typeof(vcat)}, op, A::Abstra
 
 # special case for * to preserve Vcat Structure
 
+layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::PaddedLayout, ::typeof(*), A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(UnknownLayout(), lay, *, A, B)
+layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, ::typeof(*), A::AbstractVector, B::AbstractVector) =
+    layout_broadcasted(lay, UnknownLayout(), *, A, B)
+
 for op in (:+, :-)
     @eval function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof($op), A::Vcat{T,1}, B::Vcat{V,1}) where {T,V}
         a,b = paddeddata(A),paddeddata(B)
-        n,m = length(a),length(b)
-        dat = if n > m
-            [broadcast($op, view(a,1:m), b); view(a,m+1:n)]
-        else # n ≤ m
-            [broadcast($op, a, view(b,1:n)); broadcast($op,view(b,n+1:m))]
+        if a isa Number && b isa Nimber
+            Vcat($op(a, b), Zeros{promote_type(T,V)}(max(length(A),length(B))-1))
+        elseif a isa Number
+            m = length(b)
+            dat = isempty(b) ? promote_type(eltype(a),eltype(b))[] : [broadcast($op, a, b[1]); broadcast($op,view(b,2:m))]
+            Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-length(dat)))
+        elseif b isa Number
+            n = length(a)
+            dat = isempty(a) ? promote_type(eltype(a),eltype(b))[] : [broadcast($op, a[1], b); view(a,2:n)]
+            Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-length(dat)))
+        else
+            n,m = length(a),length(b)
+            dat = if n == m
+                broadcast($op, a, b)
+            elseif n > m
+                [broadcast($op, view(a,1:m), b); view(a,m+1:n)]
+            else # n < m
+                [broadcast($op, a, view(b,1:n)); broadcast($op,view(b,n+1:m))]
+            end
+            Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-length(dat)))
         end
-        Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-length(dat)))
     end
 end
 

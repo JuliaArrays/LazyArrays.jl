@@ -539,13 +539,7 @@ function layout_broadcasted(_, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVecto
     Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.args)...)
 end
 
-layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
-    
 
-layout_broadcasted(::ApplyLayout{typeof(vcat)}, Blay::CachedLayout, op, A::AbstractVector, B::AbstractVector) =
-    layout_broadcasted(UnknownLayout(), Blay, op, A, B)
-layout_broadcasted(Alay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
-    layout_broadcasted(Alay, UnknownLayout(), op, A, B)
 
 ######
 # Special Vcat broadcasts
