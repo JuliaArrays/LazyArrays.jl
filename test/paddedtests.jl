@@ -186,11 +186,27 @@ paddeddata(a::PaddedPadded) = a
         a = Vcat([1], Zeros(3))
         b = Vcat([1,2],Zeros(2))
         v = Vcat(1, 1:3)
-        @test a + b isa Vcat
-        @test a .* b isa Vcat
+        n = Vcat(1, Zeros{Int}(3))
+        c = cache(Zeros(4));
+        @test @inferred(a + b) isa Vcat
+        @test @inferred(a .* b) isa Vcat
         @test paddeddata(a .* b) == [1]
         @test a + v == v + a
         @test a .* v == v .* a
+
+        @test n .+ n ≡ Vcat(2,Zeros{Int}(3))
+        @test n .+ v ≡ v .+ n ≡ Vcat(2,1:3)
+        @test n .+ b == b .+ n
+        @test n .+ a == a .+ n
+        @test n .+ c == c .+ n
+        @test c.datasize == (0,)
+
+        @test @inferred(n .* n) ≡ @inferred(n .* n) ≡ n
+        @test @inferred(n .* a) ≡ @inferred(a .* n) ≡ Vcat(1,Zeros{Float64}(3))
+        @test @inferred(n .* v) ≡ @inferred(v .* n) ≡ Vcat(1,Zeros{Int}(3))
+        @test n .* c == c .* n
+
+        @test view(a, 1:4) .* v == v .* view(a, 1:4)
     end
 
     @testset "hvcat" begin
