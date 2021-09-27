@@ -37,8 +37,8 @@ Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
 function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
-    a_args = arguments(a)
-    b_args = arguments(b)
+    a_args = arguments(vcat, a)
+    b_args = arguments(vcat, b)
     if length(a_args) ≠ length(b_args) || any(map(size,a_args) .≠ map(size,b_args))
         return Base.invoke(==, NTuple{2,AbstractArray}, a, b)
     end
@@ -475,6 +475,12 @@ arguments(::ApplyLayout{typeof(hcat)}, A::Adjoint) = map(adjoint, arguments(Appl
 arguments(::ApplyLayout{typeof(vcat)}, A::Transpose) = map(transpose, arguments(ApplyLayout{typeof(hcat)}(), parent(A)))
 arguments(::ApplyLayout{typeof(hcat)}, A::Transpose) = map(transpose, arguments(ApplyLayout{typeof(vcat)}(), parent(A)))
 
+function arguments(::ApplyLayout{typeof(vcat)}, C::CachedVector)
+    data = cacheddata(C)
+    Vcat(data, C.array[length(data)+1:end])
+end
+
+
 #####
 # broadcasting
 #
@@ -533,13 +539,7 @@ function layout_broadcasted(_, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVecto
     Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.args)...)
 end
 
-layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
-    
 
-layout_broadcasted(::ApplyLayout{typeof(vcat)}, Blay::CachedLayout, op, A::AbstractVector, B::AbstractVector) =
-    layout_broadcasted(UnknownLayout(), Blay, op, A, B)
-layout_broadcasted(Alay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) =
-    layout_broadcasted(Alay, UnknownLayout(), op, A, B)
 
 ######
 # Special Vcat broadcasts
