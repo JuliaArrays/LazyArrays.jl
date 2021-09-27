@@ -37,8 +37,8 @@ Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
 function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
-    a_args = arguments(a)
-    b_args = arguments(b)
+    a_args = arguments(vcat, a)
+    b_args = arguments(vcat, b)
     if length(a_args) ≠ length(b_args) || any(map(size,a_args) .≠ map(size,b_args))
         return Base.invoke(==, NTuple{2,AbstractArray}, a, b)
     end
@@ -474,6 +474,12 @@ arguments(::ApplyLayout{typeof(vcat)}, A::Adjoint) = map(adjoint, arguments(Appl
 arguments(::ApplyLayout{typeof(hcat)}, A::Adjoint) = map(adjoint, arguments(ApplyLayout{typeof(vcat)}(), parent(A)))
 arguments(::ApplyLayout{typeof(vcat)}, A::Transpose) = map(transpose, arguments(ApplyLayout{typeof(hcat)}(), parent(A)))
 arguments(::ApplyLayout{typeof(hcat)}, A::Transpose) = map(transpose, arguments(ApplyLayout{typeof(vcat)}(), parent(A)))
+
+function arguments(::ApplyLayout{typeof(vcat)}, C::CachedVector)
+    data = cacheddata(C)
+    Vcat(data, C.array[length(data)+1:end])
+end
+
 
 #####
 # broadcasting

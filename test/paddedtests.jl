@@ -117,6 +117,10 @@ paddeddata(a::PaddedPadded) = a
         @test x .+ y == y .+ x == Vector(x) .+ Vector(y)
         @test x .+ y isa Vcat
         @test y .+ x isa Vcat
+
+        c = cache(Zeros(8));
+        @test c + x == x + c
+        @test c + y == y + c
     end
 
     @testset "vcat and Zeros" begin
