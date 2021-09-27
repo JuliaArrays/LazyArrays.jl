@@ -160,7 +160,7 @@ layout_broadcasted(lay::PaddedLayout, ::ApplyLayout{typeof(vcat)}, ::typeof(*), 
 for op in (:+, :-)
     @eval function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof($op), A::Vcat{T,1}, B::Vcat{V,1}) where {T,V}
         a,b = paddeddata(A),paddeddata(B)
-        if a isa Number && b isa Nimber
+        if a isa Number && b isa Number
             Vcat($op(a, b), Zeros{promote_type(T,V)}(max(length(A),length(B))-1))
         elseif a isa Number
             m = length(b)
