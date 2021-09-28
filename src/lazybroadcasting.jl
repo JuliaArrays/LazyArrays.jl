@@ -87,8 +87,9 @@ size(A::BroadcastArray) = map(length, axes(A))
 
 @propagate_inbounds getindex(A::BroadcastArray{T,N}, kj::Vararg{Int,N}) where {T,N} = convert(T,broadcasted(A)[kj...])::T
 
-
-sub_materialize(::BroadcastLayout, A) = materialize(_broadcasted(A))
+converteltype(::Type{T}, A::AbstractArray) where T = convert(AbstractArray{T}, A)
+converteltype(::Type{T}, A) where T = A
+sub_materialize(::BroadcastLayout, A) = converteltype(eltype(A), materialize(_broadcasted(A)))
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
