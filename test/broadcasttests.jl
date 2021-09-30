@@ -1,5 +1,5 @@
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Tracker, Base64, Test
-import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle
+import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize
 import Base: broadcasted
 
 @testset "Broadcasting" begin
@@ -288,5 +288,13 @@ import Base: broadcasted
         @test map(length, BroadcastArray(Fill,Base.OneTo(5))) == ones(5)
 
         @test broadcast(length, n) ≡ broadcast(length, k) ≡ Base.OneTo(5)
+    end
+
+    @testset "sub_materialize of row slice" begin
+        x = [0.1,0.2]
+        B = BroadcastArray(*, x, (1:10)')
+        @test sub_materialize(view(B,2,2:3)) == B[2,2:3] == 0.2 * (2:3)
+        @test sub_materialize(view(B,[1,2],2)) == B[[1,2],2] == x * 2
+        @test sub_materialize(view(B,[1,2],2:3)) == B[[1,2],2:3] == x * (2:3)'
     end
 end
