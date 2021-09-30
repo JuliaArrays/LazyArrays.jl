@@ -208,7 +208,7 @@ end
 
 sublayout(b::BroadcastLayout, _) = b
 
-@inline _convertifvector(::Type{R}, b) where R<:AbstractVector = convert(R, b)
+@inline _convertifvector(::Type{R}, b) where R<:AbstractVector{Int} = convert(R, b)
 @inline _convertifvector(_, b) = b # not type stable
 
 @inline _broadcastviewinds(::Tuple{}, inds) = ()
