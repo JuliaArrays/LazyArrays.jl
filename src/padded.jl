@@ -189,6 +189,19 @@ for op in (:+, :-)
             Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-length(dat)))
         end
     end
+
+    @eval function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof($op), A::Vcat{T,2}, B::Vcat{V,2}) where {T,V}
+        a,b = paddeddata(A),paddeddata(B)
+        n,m = size(a,1),size(b,1)
+        dat = if n == m
+            broadcast($op, a, b)
+        elseif n > m
+            [broadcast($op, view(a,1:m,:), b); view(a,m+1:n,:)]
+        else # n < m
+            [broadcast($op, a, view(b,1:n,:)); broadcast($op,view(b,n+1:m,:))]
+        end
+        Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(size(A,1),size(B,1))-size(dat,1),size(a,2)))
+    end
 end
 
 function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::Vcat{T,1}, B::Vcat{V,1}) where {T,V}
@@ -219,6 +232,9 @@ end
 
 layout_broadcasted(::PaddedLayout, lay::ApplyLayout{typeof(vcat)}, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcasted(lay, lay, *, A, B)
 layout_broadcasted(lay::ApplyLayout{typeof(vcat)}, ::PaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcasted(lay, lay, *, A, B)
+
+
+layout_broadcasted(_, _, op, A, B) = Base.Broadcast.Broadcasted{typeof(Base.BroadcastStyle(Base.BroadcastStyle(typeof(A)),Base.BroadcastStyle(typeof(B))))}(op, (A, B))
 
 ###
 # Dot/Axpy

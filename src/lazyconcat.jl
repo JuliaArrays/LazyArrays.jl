@@ -599,8 +599,8 @@ _vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail)::Tuple{
 _vcat_layout_broadcasted((Ahead,Atail)::Tuple{SVector{M},Any}, (Bhead,Btail)::Tuple{SVector{M},Any}, op, A, B) where M = Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
 
 
-broadcasted(::LazyArrayStyle, op, a::Vcat{<:Any,1}, b::AbstractVector) = layout_broadcasted(op, a, b)
-broadcasted(::LazyArrayStyle, op, a::AbstractVector, b::Vcat{<:Any,1}) = layout_broadcasted(op, a, b)
+broadcasted(::LazyArrayStyle, op, a::Vcat, b::AbstractArray) = layout_broadcasted(op, a, b)
+broadcasted(::LazyArrayStyle, op, a::AbstractArray, b::Vcat) = layout_broadcasted(op, a, b)
 broadcasted(::LazyArrayStyle{1}, op, a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), op, a, b)
 broadcasted(::LazyArrayStyle{1}, op, a::Zeros{<:Any,1}, b::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), op, a, b)
 broadcasted(::LazyArrayStyle{1}, ::typeof(\), a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), \, a, b)
@@ -610,7 +610,7 @@ broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::Vcat{<:Any,1
 
 
 # Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
-broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::Vcat{<:Any,1}) = layout_broadcasted(op, A, B)
+broadcasted(::LazyArrayStyle, op, A::Vcat, B::Vcat) = layout_broadcasted(op, A, B)
 
 # ambiguities
 broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = layout_broadcasted(op, A, B)

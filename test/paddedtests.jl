@@ -75,6 +75,13 @@ paddeddata(a::PaddedPadded) = a
             @test dot(PaddedPadded(), PaddedPadded()) == 5
             @test dot(PaddedPadded(), 1:10) == dot(1:10, PaddedPadded()) == 15
         end
+
+        @testset "Matrix padded" begin
+            a = Vcat(randn(2,3), Zeros(3,3))
+            b = Vcat(randn(3,3), Zeros(2,3))
+            @test a + b isa Vcat
+            @test a + b == Matrix(a) + Matrix(b)
+        end
     end
 
     @testset "copyto!" begin
