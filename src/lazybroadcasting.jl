@@ -208,23 +208,27 @@ end
 
 sublayout(b::BroadcastLayout, _) = b
 
-@inline _convertifvector(::R, b) where R<:AbstractVector{Int} = convert(R, Base.OneTo(b))
-@inline _convertifvector(_, b) = b # not type stable
+# try to preserve type stability
+@inline _onetooftype(::R) where R<:AbstractVector{Int} = convert(R, Base.OneTo(1))
+@inline _onetooftype(::R) where R<:Number = one(R) # not type stable
 
 @inline _broadcastviewinds(::Tuple{}, inds) = ()
-@inline _broadcastviewinds(sz, inds) =
-    tuple(isone(sz[1]) ? _convertifvector(inds[1], sz[1]) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
+@inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds) =
+    tuple(isone(length(ax[1])) ? _onetooftype(inds[1]) : inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
+@inline _broadcastviewinds(ax, inds) = # don't support special broacasting
+    tuple(inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
 
 _viewifmutable(a, inds::Number...) = a[inds...]
 @inline _viewifmutable(a, inds...) = view(a, inds...)
 @inline _viewifmutable(a::AbstractFill, inds...) = a[inds...]
 @inline _viewifmutable(a::AbstractRange, inds...) = a[inds...]
 # _viewifmutable(a::BroadcastArray, inds...) = a[inds...]
+_viewifmutable(a::AdjOrTrans{<:Any,<:AbstractVector}, k::Integer, j::Integer) = a[k,j]
 function _viewifmutable(a::AdjOrTrans{<:Any,<:AbstractVector}, k::Integer, j)
     @assert k == 1
     _viewifmutable(parent(a), j)
 end
-@inline _broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(size(a), inds)...)
+@inline _broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(axes(a), inds)...)
 @inline _broadcastview(a::Number, inds) = a
 @inline _broadcastview(a::Base.RefValue, inds) = a
 
