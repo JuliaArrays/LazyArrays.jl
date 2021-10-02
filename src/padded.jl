@@ -45,14 +45,14 @@ const DualOrPaddedLayout{Lay} = Union{PaddedLayout{Lay},DualLayout{PaddedLayout{
 
 function colsupport(lay::DualOrPaddedLayout{Lay}, A, j) where Lay
     P = paddeddata(A)
-    MemoryLayout(P) == lay && return colsupport(UnknownLayout, A, j)
+    MemoryLayout(P) == lay && return colsupport(UnknownLayout, P, j)
     j̃ = j ∩ axes(P,2)
     cs = colsupport(P,j̃)
     isempty(j̃) ? convert(typeof(cs), Base.OneTo(0)) : cs
 end
 function rowsupport(lay::DualOrPaddedLayout{Lay}, A, k) where Lay
     P = paddeddata(A)
-    MemoryLayout(P) == lay && return rowsupport(UnknownLayout, A, j)
+    MemoryLayout(P) == lay && return rowsupport(UnknownLayout, P, k)
     k̃ = k ∩ axes(P,1)
     rs = rowsupport(P,k̃)
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
@@ -370,15 +370,18 @@ paddeddata(S::SubArray) = sub_paddeddata(MemoryLayout(parent(S)), S)
 
 function _padded_sub_materialize(v::AbstractVector{T}) where T
     dat = paddeddata(v)
-    Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat)))
+    if MemoryLayout(dat) isa PaddedLayout
+        Vcat(dat, Zeros{T}(length(v) - length(dat)))
+    else
+        Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat)))
+    end
 end
 
-sub_materialize(::PaddedLayout, v::AbstractVector{T}, _) where T =
-    _padded_sub_materialize(v)
+sub_materialize(::PaddedLayout, v::AbstractVector, _) = _padded_sub_materialize(v)
 
-function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}, _) where T
+function sub_materialize(l::PaddedLayout, v::AbstractMatrix, _)
     dat = paddeddata(v)
-    PaddedArray(sub_materialize(dat), size(v)...)
+    PaddedArray(MemoryLayout(dat) isa PaddedLayout ? dat : sub_materialize(dat), size(v)...)
 end
 
 function layout_replace_in_print_matrix(::PaddedLayout{Lay}, f::AbstractVecOrMat, k, j, s) where Lay

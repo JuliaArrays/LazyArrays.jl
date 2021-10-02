@@ -88,7 +88,7 @@ size(A::BroadcastArray) = map(length, axes(A))
 @propagate_inbounds getindex(A::BroadcastArray{T,N}, kj::Vararg{Int,N}) where {T,N} = convert(T,broadcasted(A)[kj...])::T
 
 converteltype(::Type{T}, A::AbstractArray) where T = convert(AbstractArray{T}, A)
-converteltype(::Type{T}, A) where T = A
+converteltype(::Type{T}, A) where T = convert(T, A)
 sub_materialize(::BroadcastLayout, A) = converteltype(eltype(A), materialize(_broadcasted(A)))
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
@@ -208,13 +208,16 @@ end
 
 sublayout(b::BroadcastLayout, _) = b
 
-# try to preserve type stability
-@inline _onetooftype(::R) where R<:AbstractVector{Int} = convert(R, Base.OneTo(1))
-@inline _onetooftype(::R) where R<:Number = one(R) # not type stable
-
 @inline _broadcastviewinds(::Tuple{}, inds) = ()
-@inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds) =
-    tuple(isone(length(ax[1])) ? _onetooftype(inds[1]) : inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
+@inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{Number,Vararg{Any}}) =
+    tuple(isone(length(ax[1])) ? 1 : convert(Int,inds[1]), _broadcastviewinds(tail(ax), tail(inds))...)
+@inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{AbstractVector{<:Integer},Vararg{Any}}) =
+    tuple(isone(length(ax[1])) ? convert(typeof(inds[1]),Base.OneTo(1)) : inds[1], _broadcastviewinds(tail(ax), tail(inds))...)    
+@inline function _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{AbstractVector,Vararg{Any}})
+    @assert isone(length(ax[1]))
+    tuple(Base.OneTo(1), _broadcastviewinds(tail(ax), tail(inds))...)    
+end
+
 @inline _broadcastviewinds(ax, inds) = # don't support special broacasting
     tuple(inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
 
