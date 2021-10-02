@@ -225,6 +225,7 @@ _viewifmutable(a, inds::Number...) = a[inds...]
 @inline _viewifmutable(a, inds...) = view(a, inds...)
 @inline _viewifmutable(a::AbstractFill, inds...) = a[inds...]
 @inline _viewifmutable(a::AbstractRange, inds...) = a[inds...]
+@inline _viewifmutable(a::AbstractRange, inds::Number...) = a[inds...]
 # _viewifmutable(a::BroadcastArray, inds...) = a[inds...]
 _viewifmutable(a::AdjOrTrans{<:Any,<:AbstractVector}, k::Integer, j::Integer) = a[k,j]
 function _viewifmutable(a::AdjOrTrans{<:Any,<:AbstractVector}, k::Integer, j)
