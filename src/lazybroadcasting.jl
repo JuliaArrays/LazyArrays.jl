@@ -213,7 +213,7 @@ sublayout(b::BroadcastLayout, _) = b
     tuple(isone(length(ax[1])) ? 1 : convert(Int,inds[1]), _broadcastviewinds(tail(ax), tail(inds))...)
 @inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{AbstractVector{<:Integer},Vararg{Any}}) =
     tuple(isone(length(ax[1])) ? convert(typeof(inds[1]),Base.OneTo(1)) : inds[1], _broadcastviewinds(tail(ax), tail(inds))...)    
-@inline function _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{AbstractVector,Vararg{Any}})
+@inline function _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{Any,Vararg{Any}})
     @assert isone(length(ax[1]))
     tuple(Base.OneTo(1), _broadcastviewinds(tail(ax), tail(inds))...)    
 end
