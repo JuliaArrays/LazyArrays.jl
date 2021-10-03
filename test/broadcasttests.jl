@@ -310,7 +310,11 @@ import Base: broadcasted
         struct Inclusion end
         Base.axes(x::Inclusion) = (x,)
         Base.getindex(::Inclusion, y) = y
+        Base.view(::Inclusion, y) = y
 
         @test LazyArrays.__broadcastview((0.1,2:3), Inclusion(),(1:5)') == (0.1, 2:3)
+        @test LazyArrays.__broadcastview(([0.1,0.2],2:3), Inclusion(),(1:5)') == ([0.1,0.2], [2 3])
+        # TODO: special case adjtrans so it becomes `2` instead of `[2]`
+        @test LazyArrays.__broadcastview(([0.1,0.2],2), Inclusion(),(1:5)') == ([0.1,0.2], [2])
     end
 end

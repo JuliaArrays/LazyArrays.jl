@@ -206,6 +206,9 @@ end
 # SubArray
 ###
 
+# TODO: special case adjtrans to skip the `isone` check and return numbers instead of 1-vectors.
+# 
+
 sublayout(b::BroadcastLayout, _) = b
 
 @inline _broadcastviewinds(::Tuple{}, inds) = ()
