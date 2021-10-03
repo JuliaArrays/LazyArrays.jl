@@ -45,14 +45,14 @@ const DualOrPaddedLayout{Lay} = Union{PaddedLayout{Lay},DualLayout{PaddedLayout{
 
 function colsupport(lay::DualOrPaddedLayout{Lay}, A, j) where Lay
     P = paddeddata(A)
-    MemoryLayout(P) == lay && return colsupport(UnknownLayout, A, j)
+    MemoryLayout(P) == lay && return colsupport(UnknownLayout, P, j)
     j̃ = j ∩ axes(P,2)
     cs = colsupport(P,j̃)
     isempty(j̃) ? convert(typeof(cs), Base.OneTo(0)) : cs
 end
 function rowsupport(lay::DualOrPaddedLayout{Lay}, A, k) where Lay
     P = paddeddata(A)
-    MemoryLayout(P) == lay && return rowsupport(UnknownLayout, A, j)
+    MemoryLayout(P) == lay && return rowsupport(UnknownLayout, P, k)
     k̃ = k ∩ axes(P,1)
     rs = rowsupport(P,k̃)
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
@@ -189,6 +189,19 @@ for op in (:+, :-)
             Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(length(A),length(B))-length(dat)))
         end
     end
+
+    @eval function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof($op), A::Vcat{T,2}, B::Vcat{V,2}) where {T,V}
+        a,b = paddeddata(A),paddeddata(B)
+        n,m = size(a,1),size(b,1)
+        dat = if n == m
+            broadcast($op, a, b)
+        elseif n > m
+            [broadcast($op, view(a,1:m,:), b); view(a,m+1:n,:)]
+        else # n < m
+            [broadcast($op, a, view(b,1:n,:)); broadcast($op,view(b,n+1:m,:))]
+        end
+        Vcat(convert(Array,dat), Zeros{promote_type(T,V)}(max(size(A,1),size(B,1))-size(dat,1),size(a,2)))
+    end
 end
 
 function layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::Vcat{T,1}, B::Vcat{V,1}) where {T,V}
@@ -219,6 +232,9 @@ end
 
 layout_broadcasted(::PaddedLayout, lay::ApplyLayout{typeof(vcat)}, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector) = layout_broadcasted(lay, lay, *, A, B)
 layout_broadcasted(lay::ApplyLayout{typeof(vcat)}, ::PaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcasted(lay, lay, *, A, B)
+
+
+layout_broadcasted(_, _, op, A, B) = Base.Broadcast.Broadcasted{typeof(Base.BroadcastStyle(Base.BroadcastStyle(typeof(A)),Base.BroadcastStyle(typeof(B))))}(op, (A, B))
 
 ###
 # Dot/Axpy
@@ -354,15 +370,18 @@ paddeddata(S::SubArray) = sub_paddeddata(MemoryLayout(parent(S)), S)
 
 function _padded_sub_materialize(v::AbstractVector{T}) where T
     dat = paddeddata(v)
-    Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat)))
+    if MemoryLayout(dat) isa PaddedLayout
+        Vcat(dat, Zeros{T}(length(v) - length(dat)))
+    else
+        Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat)))
+    end
 end
 
-sub_materialize(::PaddedLayout, v::AbstractVector{T}, _) where T =
-    _padded_sub_materialize(v)
+sub_materialize(::PaddedLayout, v::AbstractVector, _) = _padded_sub_materialize(v)
 
-function sub_materialize(::PaddedLayout, v::AbstractMatrix{T}, _) where T
+function sub_materialize(l::PaddedLayout, v::AbstractMatrix, _)
     dat = paddeddata(v)
-    PaddedArray(sub_materialize(dat), size(v)...)
+    PaddedArray(MemoryLayout(dat) isa PaddedLayout ? dat : sub_materialize(dat), size(v)...)
 end
 
 function layout_replace_in_print_matrix(::PaddedLayout{Lay}, f::AbstractVecOrMat, k, j, s) where Lay

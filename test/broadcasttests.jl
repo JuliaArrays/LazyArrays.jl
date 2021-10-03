@@ -1,5 +1,5 @@
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Tracker, Base64, Test
-import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle
+import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize
 import Base: broadcasted
 
 @testset "Broadcasting" begin
@@ -288,5 +288,33 @@ import Base: broadcasted
         @test map(length, BroadcastArray(Fill,Base.OneTo(5))) == ones(5)
 
         @test broadcast(length, n) ≡ broadcast(length, k) ≡ Base.OneTo(5)
+    end
+
+    @testset "sub_materialize of row slice" begin
+        x = [0.1,0.2]
+        B = BroadcastArray(*, x, (1:10)')
+        @test sub_materialize(view(B,2,2:3)) == B[2,2:3] == 0.2 * (2:3)
+        @test sub_materialize(view(B,[1,2],2)) == B[[1,2],2] == x * 2
+        @test sub_materialize(view(B,[1,2],2:3)) == B[[1,2],2:3] == x * (2:3)'
+        @test arguments(view(B, 2,3)) == (0.2,3)
+        
+        C = BroadcastArray(*, 1:10, x')
+        @test sub_materialize(view(C,2,1:2)) == C[2,1:2] == 2 * x
+        @test sub_materialize(view(C,[1,2],2)) == C[[1,2],2] == x[2] * (1:2)
+        @test sub_materialize(view(C,[1,2],1:2)) == C[[1,2],1:2] == x' .* (1:2)
+        @test arguments(view(C, 3,2)) == (3,0.2)
+    end
+
+    @testset "quasi-broadcasting" begin
+        # test support needed in QuasiArrays.jl
+        struct Inclusion end
+        Base.axes(x::Inclusion) = (x,)
+        Base.getindex(::Inclusion, y) = y
+        Base.view(::Inclusion, y) = y
+
+        @test LazyArrays.__broadcastview((0.1,2:3), Inclusion(),(1:5)') == (0.1, 2:3)
+        @test LazyArrays.__broadcastview(([0.1,0.2],2:3), Inclusion(),(1:5)') == ([0.1,0.2], [2 3])
+        # TODO: special case adjtrans so it becomes `2` instead of `[2]`
+        @test LazyArrays.__broadcastview(([0.1,0.2],2), Inclusion(),(1:5)') == ([0.1,0.2], [2])
     end
 end

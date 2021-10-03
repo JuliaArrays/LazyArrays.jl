@@ -278,8 +278,8 @@ function layout_broadcasted(::CachedLayout, ::CachedLayout, op, A::AbstractVecto
 end
 
 function layout_broadcasted(op, A, B)
-    if length(A) ≠ length(B)
-        (length(A) == 1 || length(B) == 1) && error("Internal error: Scalar-like broadcasting not yet supported.")
+    if axes(A) ≠ axes(B)
+        (size(A,1) == 1 || size(B,1) == 1) && error("Internal error: Scalar-like broadcasting not yet supported.")
         throw(DimensionMismatch("arrays could not be broadcast to a common size; got a dimension with lengths $(length(A)) and $(length(B))"))
     end
     layout_broadcasted(MemoryLayout(A), MemoryLayout(B), op, A, B)

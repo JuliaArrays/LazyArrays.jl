@@ -87,8 +87,9 @@ size(A::BroadcastArray) = map(length, axes(A))
 
 @propagate_inbounds getindex(A::BroadcastArray{T,N}, kj::Vararg{Int,N}) where {T,N} = convert(T,broadcasted(A)[kj...])::T
 
-
-sub_materialize(::BroadcastLayout, A) = materialize(_broadcasted(A))
+converteltype(::Type{T}, A::AbstractArray) where T = convert(AbstractArray{T}, A)
+converteltype(::Type{T}, A) where T = convert(T, A)
+sub_materialize(::BroadcastLayout, A) = converteltype(eltype(A), materialize(_broadcasted(A)))
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
@@ -205,24 +206,36 @@ end
 # SubArray
 ###
 
+# TODO: special case adjtrans to skip the `isone` check and return numbers instead of 1-vectors.
+# 
+
 sublayout(b::BroadcastLayout, _) = b
 
-@inline _convertifvector(::Type{R}, b) where R<:AbstractVector = convert(R, b)
-@inline _convertifvector(_, b) = b # not type stable
-
 @inline _broadcastviewinds(::Tuple{}, inds) = ()
-@inline _broadcastviewinds(sz, inds) =
-    tuple(isone(sz[1]) ? _convertifvector(typeof(inds[1]), OneTo(sz[1])) : inds[1], _broadcastviewinds(tail(sz), tail(inds))...)
+@inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{Number,Vararg{Any}}) =
+    tuple(isone(length(ax[1])) ? 1 : convert(Int,inds[1]), _broadcastviewinds(tail(ax), tail(inds))...)
+@inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{AbstractVector{<:Integer},Vararg{Any}}) =
+    tuple(isone(length(ax[1])) ? convert(typeof(inds[1]),Base.OneTo(1)) : inds[1], _broadcastviewinds(tail(ax), tail(inds))...)    
+@inline function _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{Any,Vararg{Any}})
+    @assert isone(length(ax[1]))
+    tuple(Base.OneTo(1), _broadcastviewinds(tail(ax), tail(inds))...)    
+end
 
+@inline _broadcastviewinds(ax, inds) = # don't support special broacasting
+    tuple(inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
+
+_viewifmutable(a, inds::Number...) = a[inds...]
 @inline _viewifmutable(a, inds...) = view(a, inds...)
 @inline _viewifmutable(a::AbstractFill, inds...) = a[inds...]
 @inline _viewifmutable(a::AbstractRange, inds...) = a[inds...]
+@inline _viewifmutable(a::AbstractRange, inds::Number...) = a[inds...]
 # _viewifmutable(a::BroadcastArray, inds...) = a[inds...]
+_viewifmutable(a::AdjOrTrans{<:Any,<:AbstractVector}, k::Integer, j::Integer) = a[k,j]
 function _viewifmutable(a::AdjOrTrans{<:Any,<:AbstractVector}, k::Integer, j)
     @assert k == 1
     _viewifmutable(parent(a), j)
 end
-@inline _broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(size(a), inds)...)
+@inline _broadcastview(a, inds) = _viewifmutable(a, _broadcastviewinds(axes(a), inds)...)
 @inline _broadcastview(a::Number, inds) = a
 @inline _broadcastview(a::Base.RefValue, inds) = a
 
