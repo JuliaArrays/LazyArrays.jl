@@ -304,4 +304,13 @@ import Base: broadcasted
         @test sub_materialize(view(C,[1,2],1:2)) == C[[1,2],1:2] == x' .* (1:2)
         @test arguments(view(C, 3,2)) == (3,0.2)
     end
+
+    @testset "quasi-broadcasting" begin
+        # test support needed in QuasiArrays.jl
+        struct Inclusion end
+        Base.axes(x::Inclusion) = (x,)
+        Base.getindex(::Inclusion, y) = y
+
+        @test LazyArrays.__broadcastview((0.1,2:3), Inclusion(),(1:5)') == (0.1, 2:3)
+    end
 end
