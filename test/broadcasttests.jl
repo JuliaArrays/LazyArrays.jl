@@ -296,5 +296,12 @@ import Base: broadcasted
         @test sub_materialize(view(B,2,2:3)) == B[2,2:3] == 0.2 * (2:3)
         @test sub_materialize(view(B,[1,2],2)) == B[[1,2],2] == x * 2
         @test sub_materialize(view(B,[1,2],2:3)) == B[[1,2],2:3] == x * (2:3)'
+        @test arguments(view(B, 2,3)) == (0.2,3)
+        
+        C = BroadcastArray(*, 1:10, x')
+        @test sub_materialize(view(C,2,1:2)) == C[2,1:2] == 2 * x
+        @test sub_materialize(view(C,[1,2],2)) == C[[1,2],2] == x[2] * (1:2)
+        @test sub_materialize(view(C,[1,2],1:2)) == C[[1,2],1:2] == x' .* (1:2)
+        @test arguments(view(C, 3,2)) == (3,0.2)
     end
 end
