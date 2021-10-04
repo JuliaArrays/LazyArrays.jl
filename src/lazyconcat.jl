@@ -947,4 +947,3 @@ end
 end
 
 searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x)
-
