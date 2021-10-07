@@ -12,7 +12,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-ArrayLayouts = "0.7.4"
+ArrayLayouts = "0.7.7"
 FillArrays = "0.12"
 MacroTools = "0.5"
 MatrixFactorizations = "0.8.2"

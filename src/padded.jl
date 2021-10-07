@@ -444,6 +444,7 @@ const PaddedMatrix{T,M} = PaddedArray{T,2,M}
 MemoryLayout(::Type{<:PaddedArray{T,N,M}}) where {T,N,M} = PaddedLayout{typeof(MemoryLayout(M))}()
 paddeddata(A::PaddedArray) = A.args[2]
 
-PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, axes(A)...)
+PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = PaddedArray(A, map(oneto,n))
+PaddedArray(A::AbstractArray{T,N}, ax::NTuple{N,Any}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(ax), A, axes(A)...)
 PaddedArray(A::T, n::Vararg{Integer,N}) where {T<:Number,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, ntuple(_ -> OneTo(1),N)...)
 (PaddedArray{T,N} where T)(A, n::Vararg{Integer,N}) where N = PaddedArray(A, n...)
