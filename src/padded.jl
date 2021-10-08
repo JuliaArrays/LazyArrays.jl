@@ -129,7 +129,9 @@ function _paddedpadded_broadcasted(op, A::AbstractMatrix{T}, B::AbstractMatrix{V
     PaddedArray(dat, max.(size(A), size(B))...)
 end
 
-layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A, B) =
+layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector) =
+    _paddedpadded_broadcasted(op, A, B)
+layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A::AbstractMatrix, B::AbstractMatrix) =
     _paddedpadded_broadcasted(op, A, B)
 layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector) =
     _paddedpadded_broadcasted(*, A, B)    
@@ -458,7 +460,7 @@ function getindex(A::ApplyMatrix{T,typeof(setindex)}, k::Integer, j::Integer) wh
     convert(T, k in kr && j in jr ? v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] : P[k,j])::T
 end
 
-const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{OneTo{Int},N}}}
+const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{Any,N}}}
 const PaddedVector{T,M} = PaddedArray{T,1,M}
 const PaddedMatrix{T,M} = PaddedArray{T,2,M}
 
