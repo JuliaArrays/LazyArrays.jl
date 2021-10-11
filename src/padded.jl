@@ -120,7 +120,7 @@ function _paddedpadded_broadcasted(op, A::AbstractMatrix{T}, B::AbstractMatrix{V
         [broadcast(op, _view_vcat(a,1:a_m,1:b_n), _view_vcat(b,1:a_m,1:b_n)) broadcast(op, _view_vcat(a,1:a_m,b_n+1:a_n), zero(V));
          broadcast(op, zero(T), _view_vcat(b,a_m+1:b_m,1:b_n)) broadcast(op, Zeros{T}(b_m-a_m, a_n-b_n), Zeros{V}(b_m-a_m, a_n-b_n))]
     elseif b_n ≤ a_n # && b_m < a_m
-        [broadcast(op, a, _view_vcat(b,1:b_m,1:b_n)) broadcast(op, _view_vcat(a,1:b_m,b_n+1:a_n), zero(V));
+        [broadcast(op, view(a,1:b_m,1:b_n), _view_vcat(b,1:b_m,1:b_n)) broadcast(op, _view_vcat(a,1:b_m,b_n+1:a_n), zero(V));
          broadcast(op, _view_vcat(a,b_m+1:a_m,1:a_n), zero(V))]
     else  # b_m < a_m && a_n < b_n 
         [broadcast(op, _view_vcat(a,1:b_m,1:a_n), _view_vcat(b,1:b_m,1:a_n)) broadcast(op, zero(T),  _view_vcat(b,1:b_m,a_n+1:b_n));

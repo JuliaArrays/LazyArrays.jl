@@ -222,8 +222,23 @@ paddeddata(a::PaddedPadded) = a
             a = Vcat([1 2], Zeros(3,2))
             b = Vcat([1 2; 3 4], Zeros(2,2))
             @test MemoryLayout(a + a) isa PaddedLayout
+            @test a + a isa Vcat
             @test a + a == 2a
             @test a + b == b + a
+
+            c = PaddedArray(randn(2,2), 4, 2)
+            d = PaddedArray(randn(1,2), 4, 2)
+            e = PaddedArray(randn(3,1), 4, 2)
+            @test c + c == 2c
+            @test c + a == a + c
+            @test c + b == b + c
+            @test c + d == d + c
+            @test d + a == a + d
+            @test d + b == b + d
+            @test e + a == a + e
+            @test e + b == b + e
+            @test e + c == c + e
+            @test e + d == d + e
         end
     end
 
