@@ -317,4 +317,9 @@ import Base: broadcasted
         # TODO: special case adjtrans so it becomes `2` instead of `[2]`
         @test LazyArrays.__broadcastview(([0.1,0.2],2), Inclusion(),(1:5)') == ([0.1,0.2], [2])
     end
+
+    @testset "UniformScaling arthmetic" begin
+        A = BroadcastArray(*,randn(5),randn(5,5))
+        @test A + I == I + A
+    end
 end

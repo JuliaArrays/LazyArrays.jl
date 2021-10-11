@@ -108,7 +108,30 @@ function _paddedpadded_broadcasted(op, A::AbstractVector, B::AbstractVector)
     CachedArray(dat, broadcast(op, Zeros{eltype(A)}(length(A)), Zeros{eltype(B)}(length(B))))
 end
 
+function _paddedpadded_broadcasted(op, A::AbstractMatrix{T}, B::AbstractMatrix{V}) where {T,V}
+    a,b = paddeddata(A),paddeddata(B)
+    (a_m,a_n) = size(a)
+    (b_m,b_n) = size(b)
+    m,n = min(a_m,b_m),min(a_n,b_n)
+    dat = if a_m ≤ b_m && a_n ≤ b_n
+        [broadcast(op, a, _view_vcat(b,1:a_m,1:a_n)) broadcast(op, zero(T), _view_vcat(b,1:a_m,a_n+1:b_n));
+         broadcast(op, zero(T), _view_vcat(b,a_m+1:b_m,1:b_n))]
+    elseif a_m ≤ b_m
+        [broadcast(op, _view_vcat(a,1:a_m,1:b_n), _view_vcat(b,1:a_m,1:b_n)) broadcast(op, _view_vcat(a,1:a_m,b_n+1:a_n), zero(V));
+         broadcast(op, zero(T), _view_vcat(b,a_m+1:b_m,1:b_n)) broadcast(op, Zeros{T}(b_m-a_m, a_n-b_n), Zeros{V}(b_m-a_m, a_n-b_n))]
+    elseif b_n ≤ a_n # && b_m < a_m
+        [broadcast(op, view(a,1:b_m,1:b_n), _view_vcat(b,1:b_m,1:b_n)) broadcast(op, _view_vcat(a,1:b_m,b_n+1:a_n), zero(V));
+         broadcast(op, _view_vcat(a,b_m+1:a_m,1:a_n), zero(V))]
+    else  # b_m < a_m && a_n < b_n 
+        [broadcast(op, _view_vcat(a,1:b_m,1:a_n), _view_vcat(b,1:b_m,1:a_n)) broadcast(op, zero(T),  _view_vcat(b,1:b_m,a_n+1:b_n));
+         broadcast(op, _view_vcat(a,b_m+1:a_m,1:a_n), zero(V)) broadcast(op, Zeros{T}(a_m-b_m, b_n-a_n), Zeros{V}(a_m-b_m, b_n-a_n))]
+    end
+    PaddedArray(dat, max.(size(A), size(B))...)
+end
+
 layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector) =
+    _paddedpadded_broadcasted(op, A, B)
+layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A::AbstractMatrix, B::AbstractMatrix) =
     _paddedpadded_broadcasted(op, A, B)
 layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector) =
     _paddedpadded_broadcasted(*, A, B)    
@@ -437,13 +460,17 @@ function getindex(A::ApplyMatrix{T,typeof(setindex)}, k::Integer, j::Integer) wh
     convert(T, k in kr && j in jr ? v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] : P[k,j])::T
 end
 
-const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{OneTo{Int},N}}}
+const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{Any,N}}}
 const PaddedVector{T,M} = PaddedArray{T,1,M}
 const PaddedMatrix{T,M} = PaddedArray{T,2,M}
 
 MemoryLayout(::Type{<:PaddedArray{T,N,M}}) where {T,N,M} = PaddedLayout{typeof(MemoryLayout(M))}()
 paddeddata(A::PaddedArray) = A.args[2]
 
-PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, axes(A)...)
+PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = PaddedArray(A, map(oneto,n))
+PaddedArray(A::AbstractArray{T,N}, ax::NTuple{N,Any}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(ax), A, axes(A)...)
 PaddedArray(A::T, n::Vararg{Integer,N}) where {T<:Number,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, ntuple(_ -> OneTo(1),N)...)
 (PaddedArray{T,N} where T)(A, n::Vararg{Integer,N}) where N = PaddedArray(A, n...)
+
+
+BroadcastStyle(::Type{<:PaddedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
