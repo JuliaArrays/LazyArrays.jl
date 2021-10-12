@@ -76,6 +76,8 @@ paddeddata(a::PaddedPadded) = a
             @test dot(PaddedPadded(), 1:10) == dot(1:10, PaddedPadded()) == 15
 
             @test PaddedPadded()[1:7] isa Vcat
+
+            @test norm(PaddedPadded()) ≈ sqrt(5)
         end
 
         @testset "Matrix padded" begin
