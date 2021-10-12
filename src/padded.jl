@@ -93,7 +93,14 @@ function zero!(::PaddedLayout, A)
     A
 end
 
-ArrayLayouts._norm(::PaddedLayout, A, p) = norm(paddeddata(A), p)
+function ArrayLayouts._norm(::PaddedLayout, A, p)
+    dat = paddeddata(A)
+    if MemoryLayout(dat) isa PaddedLayout
+        Base.invoke(norm, Tuple{Any,Real}, dat, p)
+    else
+        norm(dat, p)
+    end
+end
 
 
 # special case handle broadcasting with padded and cached arrays
