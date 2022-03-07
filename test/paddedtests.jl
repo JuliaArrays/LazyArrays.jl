@@ -207,7 +207,8 @@ paddeddata(a::PaddedPadded) = a
             @test a .* v == v .* a
 
             @test n .+ n ≡ Vcat(2,Zeros{Int}(3))
-            @test n .+ v == v .+ n == Vcat(2,1:3)
+            @test n .+ v ≡ n .+ v
+            @test n .+ v ≡ v .+ n ≡ Vcat(2,1:3)
             @test n .+ b == b .+ n
             @test n .+ a == a .+ n
             @test n .+ c == c .+ n
