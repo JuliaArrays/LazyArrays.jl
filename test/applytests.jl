@@ -58,7 +58,11 @@ import ArrayLayouts: StridedLayout
         @test copyto!(b, a) == a == b
         @test copyto!(c, a) == a == c
         @test copyto!(similar(a), a) == a
-        @test_throws ErrorException copyto!(c, Array(a))
+        if VERSION < v"1.8.0-"
+            @test_throws ErrorException copyto!(c, Array(a))
+        else
+            @test_throws Base.CanonicalIndexError copyto!(c, Array(a))
+        end
     end
 
     @testset "view" begin
