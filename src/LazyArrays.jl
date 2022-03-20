@@ -25,7 +25,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
          AbstractMatrix, AbstractArray, checkindex, unsafe_length, OneTo, one, zero,
         to_shape, _sub2ind, print_matrix, print_matrix_row, print_matrix_vdots,
       checkindex, Slice, @propagate_inbounds, @_propagate_inbounds_meta,
-      _in_range, _range, _rangestyle, Ordered,
+      _in_range, _range, Ordered,
       ArithmeticWraps, floatrange, reverse, unitrange_last,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
       similar, @_gc_preserve_end, @_gc_preserve_begin,
@@ -37,7 +37,7 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!, eltypes
 
-import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, Abuf, Bbuf, Cbuf, dot, factorize, qr, lu, cholesky,
+import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, dot, factorize, qr, lu, cholesky,
                         norm2, norm1, normInf, normp, normMinusInf, diag, det, logabsdet, tr, AdjOrTrans, triu, tril,
                         lmul!, rmul!
 
