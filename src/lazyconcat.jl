@@ -494,18 +494,22 @@ BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
 broadcasted(::LazyArrayStyle, op, A::Vcat) =
     Vcat(broadcast(x -> broadcast(op, x), A.args)...)
 
-for Cat in (:Vcat, :Hcat)
-    @eval begin
-        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Number) =
-            $Cat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
-        broadcasted(::LazyArrayStyle, op, c::Number, A::$Cat) =
-            $Cat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
-        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Ref) =
-            $Cat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
-        broadcasted(::LazyArrayStyle, op, c::Ref, A::$Cat) =
-            $Cat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)
-    end
-end
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,N,<:Tuple{Vararg{AbstractArray}}}, c::Number) where N =
+    Vcat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
+broadcasted(::LazyArrayStyle, op, c::Number, A::Vcat{<:Any,N,<:Tuple{Vararg{AbstractArray}}}) where N =
+    Vcat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
+broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,N,<:Tuple{Vararg{AbstractArray}}}, c::Ref) where N =
+    Vcat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
+broadcasted(::LazyArrayStyle, op, c::Ref, A::Vcat{<:Any,N,<:Tuple{Vararg{AbstractArray}}}) where N =
+    Vcat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)
+broadcasted(::LazyArrayStyle, op, A::Hcat{<:Any,<:Tuple{Vararg{AbstractArray}}}, c::Number) where N =
+    Hcat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
+broadcasted(::LazyArrayStyle, op, c::Number, A::Hcat{<:Any,<:Tuple{Vararg{AbstractArray}}}) =
+    Hcat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
+broadcasted(::LazyArrayStyle, op, A::Hcat{<:Any,<:Tuple{Vararg{AbstractArray}}}, c::Ref) =
+    Hcat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
+broadcasted(::LazyArrayStyle, op, c::Ref, A::Hcat{<:Any,<:Tuple{Vararg{AbstractArray}}}) =
+    Hcat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)
 
 
 # determine indices of components of a vcat

@@ -1,7 +1,7 @@
 using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
 import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
-                    CachedVector, ApplyLayout, arguments
+                    CachedVector, ApplyLayout, arguments, BroadcastVector
 
 
 @testset "concat" begin
@@ -576,5 +576,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test stringmime("text/plain", v) == "vcat($Int, 3-element Zeros{Float64}):\n 1.0\n  ⋅ \n  ⋅ \n  ⋅ "
         A = Vcat(Ones{Int}(1,3), Diagonal(1:3))
         @test stringmime("text/plain", A) == "vcat(1×3 Ones{$Int}, 3×3 Diagonal{$Int, UnitRange{$Int}}):\n 1  1  1\n 1  ⋅  ⋅\n ⋅  2  ⋅\n ⋅  ⋅  3"
+    end
+
+    @testset "number-vec-vcat-broadcast" begin
+        v = Vcat(1, 1:3)
+        @test Fill.(v, 3) isa BroadcastVector
+        @test Fill.(v, 3) == Fill.(Vcat([1], 1:3), 3)
     end
 end
