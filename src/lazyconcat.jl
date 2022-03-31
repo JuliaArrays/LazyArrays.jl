@@ -491,26 +491,28 @@ end
 BroadcastStyle(::Type{<:Vcat{<:Any,N}}) where N = LazyArrayStyle{N}()
 BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
 
-broadcasted(::LazyArrayStyle, op, A::Vcat) =
-    Vcat(broadcast(x -> broadcast(op, x), A.args)...)
+broadcasted(::LazyArrayStyle, op, A::Vcat) = Vcat(broadcast(x -> broadcast(op, x), A.args)...)
 
-broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,N,<:Tuple{Vararg{AbstractArray}}}, c::Number) where N =
-    Vcat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
-broadcasted(::LazyArrayStyle, op, c::Number, A::Vcat{<:Any,N,<:Tuple{Vararg{AbstractArray}}}) where N =
-    Vcat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
-broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,N,<:Tuple{Vararg{AbstractArray}}}, c::Ref) where N =
-    Vcat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
-broadcasted(::LazyArrayStyle, op, c::Ref, A::Vcat{<:Any,N,<:Tuple{Vararg{AbstractArray}}}) where N =
-    Vcat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)
-broadcasted(::LazyArrayStyle, op, A::Hcat{<:Any,<:Tuple{Vararg{AbstractArray}}}, c::Number) where N =
-    Hcat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
-broadcasted(::LazyArrayStyle, op, c::Number, A::Hcat{<:Any,<:Tuple{Vararg{AbstractArray}}}) =
-    Hcat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
-broadcasted(::LazyArrayStyle, op, A::Hcat{<:Any,<:Tuple{Vararg{AbstractArray}}}, c::Ref) =
-    Hcat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
-broadcasted(::LazyArrayStyle, op, c::Ref, A::Hcat{<:Any,<:Tuple{Vararg{AbstractArray}}}) =
-    Hcat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)
+_mapsnumberstonumbers(_) = Val(false)
+_mapsnumberstonumbers(::typeof(+)) = Val(true)
+_mapsnumberstonumbers(::typeof(-)) = Val(true)
+_mapsnumberstonumbers(::typeof(*)) = Val(true)
+_mapsnumberstonumbers(::typeof(/)) = Val(true)
+_mapsnumberstonumbers(::typeof(\)) = Val(true)
 
+broadcasted(::LazyArrayStyle, op, A::Union{Vcat,Hcat}, c::Union{Number,Ref}) = _cat_broadcasted(_mapsnumberstonumbers(op), op, A, c)
+broadcasted(::LazyArrayStyle, op, c::Union{Number,Ref}, A::Union{Vcat,Hcat}) = _cat_broadcasted(_mapsnumberstonumbers(op), op, c, A)
+
+_cat_broadcasted(::Val{false}, op, A::Vcat{<:Any,1}, B) = BroadcastVector(op, A, B)
+
+for Cat in (:Vcat, :Hcat)
+     @eval begin
+        _cat_broadcasted(::Val{true}, op, A::$Cat, c::Number) = $Cat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
+         _cat_broadcasted(::Val{true}, op, c::Number, A::$Cat) = $Cat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
+         _cat_broadcasted(::Val{true}, op, A::$Cat, c::Ref) = $Cat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
+         _cat_broadcasted(::Val{true}, op, c::Ref, A::$Cat) = $Cat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)
+     end
+ end
 
 # determine indices of components of a vcat
 _vcat_axes(::Tuple{}) = (1,)
