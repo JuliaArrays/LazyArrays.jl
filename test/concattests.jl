@@ -580,7 +580,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
 
     @testset "number-vec-vcat-broadcast" begin
         v = Vcat(1, 1:3)
-        @test Fill.(v, 3) isa BroadcastVector
+        @test Fill.(v, 3) isa Vcat
         @test Fill.(v, 3) == Fill.(Vcat([1], 1:3), 3)
     end
 end

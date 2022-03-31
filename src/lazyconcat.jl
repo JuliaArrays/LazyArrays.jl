@@ -491,26 +491,23 @@ end
 BroadcastStyle(::Type{<:Vcat{<:Any,N}}) where N = LazyArrayStyle{N}()
 BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
 
-broadcasted(::LazyArrayStyle, op, A::Vcat) = Vcat(broadcast(x -> broadcast(op, x), A.args)...)
+# This is if we broadcast a function on a mixed concat f.([1; [2,3]]) 
+# such that f returns a vector, e.g., f(1) == [1,2], we don't want
+# to have the concat return [f(1); [f(2),f(3)]] but rather [[f(1)]; [f(2),f(3)]]
 
-_mapsnumberstonumbers(_) = Val(false)
-_mapsnumberstonumbers(::typeof(+)) = Val(true)
-_mapsnumberstonumbers(::typeof(-)) = Val(true)
-_mapsnumberstonumbers(::typeof(*)) = Val(true)
-_mapsnumberstonumbers(::typeof(/)) = Val(true)
-_mapsnumberstonumbers(::typeof(\)) = Val(true)
+_flatten_nums(args::Tuple{}, bc::Tuple{}) = ()
+_flatten_nums(args::Tuple, bc::Tuple) = (bc[1], _flatten_nums(tail(args), tail(bc))...)
+_flatten_nums(args::Tuple{Number, Vararg{Any}}, bc::Tuple{AbstractArray, Vararg{Any}}) = (Fill(bc[1],1), _flatten_nums(tail(args), tail(bc))...)
 
-broadcasted(::LazyArrayStyle, op, A::Union{Vcat,Hcat}, c::Union{Number,Ref}) = _cat_broadcasted(_mapsnumberstonumbers(op), op, A, c)
-broadcasted(::LazyArrayStyle, op, c::Union{Number,Ref}, A::Union{Vcat,Hcat}) = _cat_broadcasted(_mapsnumberstonumbers(op), op, c, A)
+broadcasted(::LazyArrayStyle, op, A::Vcat) = Vcat(_flatten_nums(A.args, broadcast(x -> broadcast(op, x), A.args))...)
 
-_cat_broadcasted(::Val{false}, op, A::Vcat{<:Any,1}, B) = BroadcastVector(op, A, B)
 
 for Cat in (:Vcat, :Hcat)
      @eval begin
-        _cat_broadcasted(::Val{true}, op, A::$Cat, c::Number) = $Cat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
-         _cat_broadcasted(::Val{true}, op, c::Number, A::$Cat) = $Cat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
-         _cat_broadcasted(::Val{true}, op, A::$Cat, c::Ref) = $Cat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
-         _cat_broadcasted(::Val{true}, op, c::Ref, A::$Cat) = $Cat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)
+        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Number) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, x, y), A.args, c))...)
+        broadcasted(::LazyArrayStyle, op, c::Number, A::$Cat) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, x, y), c, A.args))...)
+        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Ref) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c))...)
+        broadcasted(::LazyArrayStyle, op, c::Ref, A::$Cat) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args))...)
      end
  end
 
