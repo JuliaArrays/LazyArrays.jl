@@ -288,6 +288,9 @@ import Base: broadcasted
         @test map(length, BroadcastArray(Fill,Base.OneTo(5))) == ones(5)
 
         @test broadcast(length, n) ≡ broadcast(length, k) ≡ Base.OneTo(5)
+
+        @test map(length, BroadcastArray(Fill, Base.OneTo(5), 2)) ≡ Fill(2, 5)
+        @test map(length, BroadcastArray(Fill, 2, Base.OneTo(5))) == length.(Fill.(2, Base.OneTo(5)))
     end
 
     @testset "sub_materialize of row slice" begin
