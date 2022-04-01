@@ -491,22 +491,25 @@ end
 BroadcastStyle(::Type{<:Vcat{<:Any,N}}) where N = LazyArrayStyle{N}()
 BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
 
-broadcasted(::LazyArrayStyle, op, A::Vcat) =
-    Vcat(broadcast(x -> broadcast(op, x), A.args)...)
+# This is if we broadcast a function on a mixed concat f.([1; [2,3]]) 
+# such that f returns a vector, e.g., f(1) == [1,2], we don't want
+# to have the concat return [f(1); [f(2),f(3)]] but rather [[f(1)]; [f(2),f(3)]]
+
+_flatten_nums(args::Tuple{}, bc::Tuple{}) = ()
+_flatten_nums(args::Tuple, bc::Tuple) = (bc[1], _flatten_nums(tail(args), tail(bc))...)
+_flatten_nums(args::Tuple{Number, Vararg{Any}}, bc::Tuple{AbstractArray, Vararg{Any}}) = (Fill(bc[1],1), _flatten_nums(tail(args), tail(bc))...)
+
+broadcasted(::LazyArrayStyle, op, A::Vcat) = Vcat(_flatten_nums(A.args, broadcast(x -> broadcast(op, x), A.args))...)
+
 
 for Cat in (:Vcat, :Hcat)
-    @eval begin
-        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Number) =
-            $Cat(broadcast((x,y) -> broadcast(op, x, y), A.args, c)...)
-        broadcasted(::LazyArrayStyle, op, c::Number, A::$Cat) =
-            $Cat(broadcast((x,y) -> broadcast(op, x, y), c, A.args)...)
-        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Ref) =
-            $Cat(broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c)...)
-        broadcasted(::LazyArrayStyle, op, c::Ref, A::$Cat) =
-            $Cat(broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args)...)
-    end
-end
-
+     @eval begin
+        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Number) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, x, y), A.args, c))...)
+        broadcasted(::LazyArrayStyle, op, c::Number, A::$Cat) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, x, y), c, A.args))...)
+        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Ref) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c))...)
+        broadcasted(::LazyArrayStyle, op, c::Ref, A::$Cat) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args))...)
+     end
+ end
 
 # determine indices of components of a vcat
 _vcat_axes(::Tuple{}) = (1,)
