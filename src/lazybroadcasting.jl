@@ -130,7 +130,8 @@ BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArray
 BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyMatrix,<:Tuple{Slice,Any}}}) = LazyArrayStyle{1}()
 BroadcastStyle(L::LazyArrayStyle{N}, ::StaticArrayStyle{N}) where N = L
-BroadcastStyle(::StaticArrayStyle{N}, L::LazyArrayStyle{N})  where N = L
+BroadcastStyle(L::LazyArrayStyle{N}, ::StructuredMatrixStyle)  where N = L
+
 
 
 ## scalar-range broadcast operations ##
