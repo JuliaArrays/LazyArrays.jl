@@ -296,5 +296,6 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         A = MyLazyArray(randn(5,5))
         x = MyLazyArray(randn(5))
         @test x'A*x ≈ x.data'A.data*x.data
+        @test x'A'*x ≈ x.data'A.data'*x.data
     end
 end
