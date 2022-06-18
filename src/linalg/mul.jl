@@ -100,7 +100,7 @@ ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = MulS
 @inline _mul_arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
 @inline _mul_arguments(::DualLayout{ApplyLayout{typeof(*)}}, A) = arguments(A)
 @inline _mul_arguments(_, A) = (A,)
-@inline _mul_arguments(A) = _mul_arguments(MemoryLayout(typeof(A)), A)
+@inline _mul_arguments(A) = _mul_arguments(MemoryLayout(A), A)
 
 @inline __flatten(A::Tuple{<:Any}, B::Tuple) = (A..., _flatten(B...)...)
 @inline __flatten(A::Tuple, B::Tuple) = _flatten(A..., B...)

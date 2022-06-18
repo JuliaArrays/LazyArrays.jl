@@ -297,5 +297,9 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         x = MyLazyArray(randn(5))
         @test x'A*x ≈ x.data'A.data*x.data
         @test x'A'*x ≈ x.data'A.data'*x.data
+        @test x'A*A ≈ x.data'A.data*A.data
+        @test x'A*A*x ≈ x.data'A.data*A.data*x.data
+
+        @test simplifiable(*, x'A, x) == Val(true)
     end
 end
