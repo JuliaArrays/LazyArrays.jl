@@ -98,6 +98,7 @@ ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = MulS
 
 # arguments for something that is a *
 @inline _mul_arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
+@inline _mul_arguments(::DualLayout{ApplyLayout{typeof(*)}}, A) = arguments(A)
 @inline _mul_arguments(_, A) = (A,)
 @inline _mul_arguments(A) = _mul_arguments(MemoryLayout(typeof(A)), A)
 
@@ -305,10 +306,13 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = simplify(M)
 @inline copy(M::Mul{<:AbstractLazyLayout}) = simplify(M)
 @inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = simplify(M)
-@inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
 @inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = simplify(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = simplify(M)
 
+@inline simplifiable(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = Val(true)
+@inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
+
+applylayout(::Type{typeof(*)}, ::DualLayout{Lay}, args...) where Lay = DualLayout{typeof(applylayout(typeof(*), Lay(), args...))}()
 
 #TODO: Why not all DiagonalLayout?
 @inline simplifiable(M::Mul{<:DiagonalLayout{<:AbstractFillLayout}}) = Val(true)

@@ -194,7 +194,7 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test @inferred(ArrayLayouts.ldiv(MyMatrix(A), M)) ≈ A\ B * b
     end
 
-    @testset "Tri/Diagonal" begin 
+    @testset "Tri/Diagonal" begin
         b = MyLazyArray(randn(5))
         c = MyLazyArray(randn(4))
         d = MyLazyArray(randn(3))
@@ -246,7 +246,7 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         B = randn(5,5)
         @test Eye(5) * MyLazyArray(b) == b
         @test MyLazyArray(B) * Eye(5) == B
-        
+
         @test simplifiable(*, Eye(5), MyLazyArray(B)) isa Val{true}
         @test simplifiable(*, Eye(5), Eye(5)) isa Val{true}
         @test simplifiable(*, MyLazyArray(B), Eye(5)) isa Val{true}
@@ -290,5 +290,11 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         C = randn(5,5)
         L = ApplyArray(\,A,B)
         @test L*C ≈ L*MyMatrix(C) ≈ A \ (B*C)
+    end
+
+    @testset "Dual" begin
+        A = MyLazyArray(randn(5,5))
+        x = MyLazyArray(randn(5))
+        @test x'A*x ≈ x.data'A.data*x.data
     end
 end
