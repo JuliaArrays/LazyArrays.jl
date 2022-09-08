@@ -124,10 +124,10 @@ end
 
 
 BroadcastStyle(::Type{<:LazyArray{<:Any,N}}) where N = LazyArrayStyle{N}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyVector{<:Any}}}) where N = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector{<:Any}}}) where N = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix{<:Any}}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyVector{<:Any}}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector{<:Any}}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix{<:Any}}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix{<:Any}}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyMatrix,<:Tuple{Slice,Any}}}) = LazyArrayStyle{1}()
 BroadcastStyle(L::LazyArrayStyle{N}, ::StaticArrayStyle{N}) where N = L
 BroadcastStyle(L::LazyArrayStyle{N}, ::StructuredMatrixStyle)  where N = L
@@ -310,7 +310,7 @@ for op in (:+, :-, :*, :\, :/)
     end
 end
 
-function _broadcastarray_summary(io::IO, ::typeof(Base.literal_pow), ::Base.RefValue{typeof(^)}, x, ::Base.RefValue{Val{K}}) where {N,K}
+function _broadcastarray_summary(io::IO, ::typeof(Base.literal_pow), ::Base.RefValue{typeof(^)}, x, ::Base.RefValue{Val{K}}) where {K}
     print(io, "(")
     summary(io, x)
     print(io, ") .^ $K")
