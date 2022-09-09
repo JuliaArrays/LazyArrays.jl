@@ -162,8 +162,8 @@ getindex(Ai::SubArray{<:Any,2,<:InvMatrix}, ::Colon, j::Integer) = parent(Ai)[:,
 @propagate_inbounds getindex(A::PInvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
 @propagate_inbounds getindex(A::InvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
 
-getindex(L::ApplyMatrix{<:Any,typeof(\)}, ::Colon, j::Integer) where T = L.args[1] \ L.args[2][:,j]
-getindex(L::ApplyMatrix{<:Any,typeof(\)}, k::Integer, j::Integer) where T = L[:,j][k]
+getindex(L::ApplyMatrix{<:Any,typeof(\)}, ::Colon, j::Integer) = L.args[1] \ L.args[2][:,j]
+getindex(L::ApplyMatrix{<:Any,typeof(\)}, k::Integer, j::Integer) = L[:,j][k]
 
-getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, ::Colon) where T = permutedims(L.args[2]) \ L.args[1][k,:]
-getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, j::Integer) where T = L[k,:][j]
+getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, ::Colon) = permutedims(L.args[2]) \ L.args[1][k,:]
+getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, j::Integer) = L[k,:][j]

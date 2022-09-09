@@ -138,7 +138,7 @@ end
 @inline eltype(A::Applied{<:Any,typeof(hcat)}) = promote_type(map(eltype,A.args)...)
 ndims(::Applied{<:Any,typeof(hcat)}) = 2
 size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
-Base.IndexStyle(::Type{<:Hcat}) where T = Base.IndexCartesian()
+Base.IndexStyle(::Type{<:Hcat}) = Base.IndexCartesian()
 
 @inline hcat_getindex(f, k, j::Integer) = hcat_getindex_recursive(f, (k, j), f.args...)
 
@@ -489,7 +489,7 @@ end
 ######
 
 BroadcastStyle(::Type{<:Vcat{<:Any,N}}) where N = LazyArrayStyle{N}()
-BroadcastStyle(::Type{<:Hcat{<:Any}}) where N = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Hcat{<:Any}}) = LazyArrayStyle{2}()
 
 # This is if we broadcast a function on a mixed concat f.([1; [2,3]]) 
 # such that f returns a vector, e.g., f(1) == [1,2], we don't want

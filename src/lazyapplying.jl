@@ -96,7 +96,7 @@ end
 
 
 
-similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}, axes) where {T,N} = Array{T}(undef, length.(axes))
+similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}, axes) where {T} = Array{T}(undef, length.(axes))
 similar(M::Applied{<:AbstractArrayApplyStyle}, ::Type{T}) where T = similar(M, T, axes(M))
 similar(M::Applied) = similar(M, eltype(M))
 
