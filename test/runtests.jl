@@ -3,6 +3,11 @@ import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcas
             PaddedLayout, ApplyLayout, BroadcastLayout, AddArray, LazyLayout
 import ArrayLayouts: OnesLayout
 
+using Aqua
+@testset "Project quality" begin
+    Aqua.test_all(LazyArrays, ambiguities=false)
+end
+
 @testset "Lazy MemoryLayout" begin
     @testset "ApplyArray" begin
         A = [1.0 2; 3 4]
