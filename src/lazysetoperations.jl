@@ -33,7 +33,7 @@ result_set_style(::VectorSetStyle, ::SetStyle) = SetStyle()
 result_set_style(::SetStyle, ::VectorSetStyle) = SetStyle()
 
 
-emptymutable(::Applied{SetStyle}, ::Type{T}) where T = Set{T}() 
+emptymutable(::Applied{SetStyle}, ::Type{T}) where T = Set{T}()
 emptymutable(::Applied{VectorSetStyle}, ::Type{T}) where T = Vector{T}()
 emptymutable(A::Applied) = emptymutable(A, eltype(A))
 

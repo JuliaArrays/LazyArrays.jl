@@ -58,7 +58,7 @@ cacheddata(A::AbstractCachedArray) = view(A.data,OneTo.(A.datasize)...)
 convert(::Type{AbstractArray{T}}, S::CachedArray{T}) where T = S
 convert(::Type{AbstractArray{T,N}}, S::CachedArray{T,N}) where {T,N} = S
 convert(::Type{AbstractArray{T}}, S::CachedArray{<:Any,N}) where {T,N} = convert(AbstractArray{T,N}, S)
-convert(::Type{AbstractArray{T,N}}, S::CachedArray{<:Any,N}) where {T,N} = 
+convert(::Type{AbstractArray{T,N}}, S::CachedArray{<:Any,N}) where {T,N} =
     CachedArray(convert(AbstractArray{T}, S.data), convert(AbstractArray{T}, S.array), S.datasize)
 
 axes(A::CachedArray) = axes(A.array)
@@ -115,7 +115,7 @@ function cache_getindex(_, A::AbstractVector, I, J...)
     isempty(I) || resizedata!(A, n)
     A.data[I]
 end
-# allow dispatch on resize length for infinite arrays
+# allow dispatch on resize length for infinite arrays
 cache_getindex(A::AbstractVector, I, J...) = cache_getindex(length(I), A, I, J...)
 
 getindex(A::AbstractCachedVector, I, J...) = cache_getindex(A, I, J...)
@@ -138,12 +138,12 @@ resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(B.data), MemoryLay
 resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(B.data), UnknownLayout(), B, mn...)
 resizedata!(A::AbstractArray, mn...) = A # don't do anything
 
-function cache_filldata!(B, inds...) 
+function cache_filldata!(B, inds...)
     B.data[inds...] .= view(B.array,inds...)
 end
 
 function _vec_resizedata!(B::AbstractVector, n)
-    n ≤ 0 && return B
+    n ≤ 0 && return B
     @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
 
     # increase size of array if necessary
@@ -210,13 +210,13 @@ _tounitrange(a) = first(a):last(a)
 
 function colsupport(A::CachedMatrix, i)
     isempty(i) && return 1:0
-    _tounitrange(minimum(i) ≤ A.datasize[2] ? convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1])) : colsupport(A.array, i))
+    _tounitrange(minimum(i) ≤ A.datasize[2] ? convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1])) : colsupport(A.array, i))
 end
 colsupport(A::CachedVector, i) =
     convexunion(colsupport(A.array, i),colsupport(A.data,i) ∩ Base.OneTo(A.datasize[1]))
 function rowsupport(A::CachedMatrix, i)
     isempty(i) && return 1:0
-    minimum(i) ≤ A.datasize[1] ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i) ∩ Base.OneTo(A.datasize[2])) : rowsupport(A.array, i)
+    minimum(i) ≤ A.datasize[1] ? convexunion(rowsupport(A.array, i),rowsupport(A.data,i) ∩ Base.OneTo(A.datasize[2])) : rowsupport(A.array, i)
 end
 
 
@@ -279,7 +279,7 @@ end
 
 function layout_broadcasted(op, A, B)
     if axes(A) ≠ axes(B)
-        (size(A,1) == 1 || size(B,1) == 1) && error("Internal error: Scalar-like broadcasting not yet supported.")
+        (size(A,1) == 1 || size(B,1) == 1) && error("Internal error: Scalar-like broadcasting not yet supported.")
         throw(DimensionMismatch("arrays could not be broadcast to a common size; got a dimension with lengths $(length(A)) and $(length(B))"))
     end
     layout_broadcasted(MemoryLayout(A), MemoryLayout(B), op, A, B)
@@ -347,7 +347,7 @@ rmul!(a::SubArray{<:Any,N,<:CachedArray}, x::Number) where N = ArrayLayouts.rmul
 # copy
 ###
 
-# need to copy data to prevent mutation. `a.array` is never changed so does not need to be 
+# need to copy data to prevent mutation. `a.array` is never changed so does not need to be
 # copied
 copy(a::CachedArray) = CachedArray(copy(a.data), a.array, a.datasize)
 copy(a::Adjoint{<:Any,<:CachedArray}) = copy(parent(a))'
@@ -433,7 +433,7 @@ end
 # SubArray
 ###
 
-sublayout(::CachedLayout{MLAY,ALAY}, ::Type{I}) where {MLAY,ALAY,I} = 
+sublayout(::CachedLayout{MLAY,ALAY}, ::Type{I}) where {MLAY,ALAY,I} =
     cachedlayout(sublayout(MLAY(),I), sublayout(ALAY,I))
 
 function resizedata!(V::SubArray, n::Integer...)

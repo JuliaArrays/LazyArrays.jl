@@ -18,7 +18,7 @@ import Base: broadcasted
 
         A = randn(6,6)
         B = BroadcastArray(exp, A)
-        
+
         @test Matrix(B) == exp.(A)
         @test B[1] == exp(A[1,1])
         @test B[7] == exp(A[1,2])
@@ -139,8 +139,8 @@ import Base: broadcasted
 
         B = BroadcastArray(-, randn(5,5), randn(5))
         @test MemoryLayout(typeof(transpose(B))) isa BroadcastLayout{typeof(-)}
-        @test MemoryLayout(typeof(B')) isa BroadcastLayout{typeof(-)}  
-        @test BroadcastArray(B') == BroadcastArray(transpose(B)) == B' == Array(B)'      
+        @test MemoryLayout(typeof(B')) isa BroadcastLayout{typeof(-)}
+        @test BroadcastArray(B') == BroadcastArray(transpose(B)) == B' == Array(B)'
 
         Vc = view(B', 1:2,1:3)
         Vt = view(transpose(B), 1:2,1:3)
@@ -149,14 +149,14 @@ import Base: broadcasted
         @test arguments(Vc) == (B.args[1][1:3,1:2]', permutedims(B.args[2][1:3]))
         @test arguments(Vt) == (transpose(B.args[1][1:3,1:2]), permutedims(B.args[2][1:3]))
         @test BroadcastArray(Vc) == BroadcastArray(Vt) == Vc == Vt == (Array(B)')[1:2,1:3]
-        
+
         Vc = view(B,1:3,1:2)'
         Vt = transpose(view(B,1:3,1:2))
         @test MemoryLayout(typeof(Vc)) isa BroadcastLayout{typeof(-)}
         @test MemoryLayout(typeof(Vt)) isa BroadcastLayout{typeof(-)}
         @test arguments(Vc) == (B.args[1][1:3,1:2]', permutedims(B.args[2][1:3]))
         @test arguments(Vt) == (transpose(B.args[1][1:3,1:2]), permutedims(B.args[2][1:3]))
-        @test BroadcastArray(Vc) == BroadcastArray(Vt) == Vc == (Array(B)')[1:2,1:3]      
+        @test BroadcastArray(Vc) == BroadcastArray(Vt) == Vc == (Array(B)')[1:2,1:3]
     end
 
     @testset "copy" begin
@@ -209,7 +209,7 @@ import Base: broadcasted
         a = BroadcastArray(*, 1:3, [[1,2],[3,4],[5,6]])
         @test a == broadcast(*, 1:3, [[1,2],[3,4],[5,6]])
         @test a[2] == [6,8]
-        @test a[1:2] == [[1,2], [6,8]]     
+        @test a[1:2] == [[1,2], [6,8]]
     end
 
     @testset "submaterialize" begin
@@ -231,7 +231,7 @@ import Base: broadcasted
     end
 
     @testset "show" begin
-        x = 1:3    
+        x = 1:3
         @test stringmime("text/plain", BroadcastArray(factorial, 1:3)) == "factorial.(3-element UnitRange{$Int}):\n 1\n 2\n 6"
         @test stringmime("text/plain", BroadcastArray(^, 1:3, 2)) == "(3-element UnitRange{$Int}) .^ $Int:\n 1\n 4\n 9"
         @test stringmime("text/plain", BroadcastArray(@~ x .^ 2)) == "(3-element UnitRange{$Int}) .^ 2:\n 1\n 4\n 9"
@@ -264,7 +264,7 @@ import Base: broadcasted
         @test A == [norm([1,2],1), norm([1,2],2)]
         Ac = BroadcastArray(A')
         At = BroadcastArray(transpose(A))
-        @test Ac == At == [norm([1,2],1) norm([1,2],2)] 
+        @test Ac == At == [norm([1,2],1) norm([1,2],2)]
     end
 
     @testset "large args tuple_type_memorylayouts" begin
@@ -300,7 +300,7 @@ import Base: broadcasted
         @test sub_materialize(view(B,[1,2],2)) == B[[1,2],2] == x * 2
         @test sub_materialize(view(B,[1,2],2:3)) == B[[1,2],2:3] == x * (2:3)'
         @test arguments(view(B, 2,3)) == (0.2,3)
-        
+
         C = BroadcastArray(*, 1:10, x')
         @test sub_materialize(view(C,2,1:2)) == C[2,1:2] == 2 * x
         @test sub_materialize(view(C,[1,2],2)) == C[[1,2],2] == x[2] * (1:2)

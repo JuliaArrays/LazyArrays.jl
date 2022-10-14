@@ -58,7 +58,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             @test_throws DimensionMismatch copyto!(b, A)
             b = Array{Float64}(undef, 6,10)
             @test_broken @allocated(copyto!(b, A)) == 0
-            @test @allocated(copyto!(b, A)) ≤ 200
+            @test @allocated(copyto!(b, A)) ≤ 200
             @test b == vcat(A.args...)
             @test copy(A) isa Vcat
             @test copy(A) == A
@@ -467,7 +467,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
 
         @test B * A ≈ Array(B) * Array(A) ≈ Vcat([1 2]', [3 4]') * A
 
-        
+
 
         @test B * BroadcastArray(exp, [1 2]) ≈ B * exp.([1 2])
 
@@ -513,7 +513,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             @test Vcat(SVector(1,2,3), Ones(5))  + Vcat(SVector(4,5,6), Fill(2.0,5)) ≡ Vcat(SVector(5,7,9), Fill(3.0,5))
             @test Vcat([1,2,3],Fill(1,7)) .* Zeros(10) ≡ Zeros(10) .* Vcat([1,2,3],Fill(1,7)) ≡ Zeros(10)
         end
-        
+
         @testset "2-arg" begin
             a = Vcat([1,2], 1:3)
             b = Vcat([1], 1:4)
@@ -565,7 +565,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test rowsupport(H,2:3) == colsupport(V,2:3) == 2:9
     end
 
-    
+
     @testset "print" begin
         H = Hcat(Diagonal([1,2,3]), Zeros(3,3))
         V = Vcat(Diagonal([1,2,3]), Zeros(3,3))

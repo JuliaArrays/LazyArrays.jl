@@ -11,7 +11,7 @@ import Base.Broadcast: materialize
 
         @test applied(\,A,b) isa Applied{LdivStyle}
         @test applied(\,A,b)[1] ≈ (A\b)[1]
-        
+
         @test parent(InvMatrix(A)) === inv(InvMatrix(A)) === pinv(InvMatrix(A)) === A
         @test parent(PInvMatrix(A)) === pinv(InvMatrix(A)) === A
 
@@ -79,7 +79,7 @@ import Base.Broadcast: materialize
 
     @testset "Int" begin
         A = [1 2 ; 3 4]; b = [5,6];
-        @test eltype(applied(inv, A)) == eltype(applied(pinv, A)) == eltype(applied(\, A, b)) == eltype(Ldiv(A, b)) == 
+        @test eltype(applied(inv, A)) == eltype(applied(pinv, A)) == eltype(applied(\, A, b)) == eltype(Ldiv(A, b)) ==
             eltype(ApplyArray(\, A, b)) == eltype(InvMatrix(A)) == eltype(PInvMatrix(A)) == Float64
         @test apply(\,A,b) == A\b
     end
@@ -89,7 +89,7 @@ import Base.Broadcast: materialize
         b = randn(5)
         B = randn(5,5)
         Q,R = qr(A)
-        @test Q\b ≈ apply(\,Q,b) 
+        @test Q\b ≈ apply(\,Q,b)
         @test Q\B ≈ apply(\,Q,B)
         @test_throws DimensionMismatch apply(\, Q, randn(4))
         @test_throws DimensionMismatch apply(\, Q, randn(4,3))
@@ -149,5 +149,5 @@ end
     A = randn(5,5)
     R = ApplyArray(/, A, A)
     @test axes(R) == (axes(R,1),axes(R,2)) == axes(A)
-    @test R ≈ apply(/, A, A) ≈ Eye(5) 
+    @test R ≈ apply(/, A, A) ≈ Eye(5)
 end

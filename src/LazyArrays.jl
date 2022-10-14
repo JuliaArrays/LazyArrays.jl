@@ -72,7 +72,7 @@ include("lazysetoperations.jl")
 include("lazyoperations.jl")
 include("lazymacro.jl")
 
-# support x^2
+# support x^2
 Base.to_power_type(x::LazyArray) = x
 
 # Special broadcasting for BlockArrays.jl

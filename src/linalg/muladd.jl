@@ -26,7 +26,7 @@ _αABβC(M::Applied{<:Any,typeof(*)}, ::Type{T}) where T = tuple(_αAB(M, T)...,
 _βC(M::Applied{<:Any,typeof(*)}, ::Type{T}) where T = M.args
 _βC(M::AbstractArray, ::Type{T}) where T = (scalarone(T), M)
 
-_αABβC(M::Applied{MulAddStyle,typeof(+)}, ::Type{T}) where T = 
+_αABβC(M::Applied{MulAddStyle,typeof(+)}, ::Type{T}) where T =
     tuple(_αAB(M.args[1], T)..., _βC(M.args[2], T)...)
 
 MulAdd(M::Applied) = MulAdd(_αABβC(M, eltype(M))...)

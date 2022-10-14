@@ -69,7 +69,7 @@ function _applyarray_summary(io::IO, ::typeof(*), args)
         print(io, ")")
     end
 end
-    
+
 
 ####
 # Matrix * Array
@@ -148,7 +148,7 @@ end
 
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
 flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
- 
+
 adjoint(A::MulMatrix) = ApplyArray(*, reverse(map(adjoint,A.args))...)
 transpose(A::MulMatrix) = ApplyArray(*, reverse(map(transpose,A.args))...)
 
@@ -160,11 +160,11 @@ transpose(A::MulMatrix) = ApplyArray(*, reverse(map(transpose,A.args))...)
 _mul_args_rowsupport(a,kr) = rowsupport(a,kr)
 _mul_args_colsupport(a,kr) = colsupport(a,kr)
 __mul_args_rows(kr, a) = (kr,)
-__mul_args_rows(kr, a, b...) = 
+__mul_args_rows(kr, a, b...) =
     (kr, __mul_args_rows(_mul_args_rowsupport(a,kr), b...)...)
 _mul_args_rows(kr, a, b...) = __mul_args_rows(_mul_args_rowsupport(a,kr), b...)
 __mul_args_cols(jr, z) = (jr,)
-__mul_args_cols(jr, z, y...) = 
+__mul_args_cols(jr, z, y...) =
     (__mul_args_cols(_mul_args_colsupport(z,jr), y...)..., jr)
 _mul_args_cols(jr, z, y...) = __mul_args_cols(_mul_args_colsupport(z,jr), y...)
 
@@ -258,7 +258,7 @@ lazymaterialize(F::Function, args::AbstractArray...) = copy(ApplyArray(F, args..
 lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 
 
-### 
+###
 # Simplify
 # Here we implement a simple routine for simplifying multiplication by expanding what can be expanded
 

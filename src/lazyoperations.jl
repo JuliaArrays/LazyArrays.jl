@@ -412,7 +412,7 @@ function Accumulate(op, v::AbstractVector, d::Int)
 end
 
 function Accumulate(op, v::AbstractMatrix, d::Int)
-    @assert 1 ≤ d ≤ 2
+    @assert 1 ≤ d ≤ 2
     data = d == 1 ? v[1:1,:] : v[:,1:1]
     Accumulate(op, data, v, d)
 end
@@ -459,7 +459,7 @@ function cache_filldata!(K::Accumulate{<:Any,2}, kr, jr)
 end
 
 
-# keep lazy
+# keep lazy
 cumsum(a::LazyArray; kwds...) = Cumsum(a; kwds...)
 accumulate(op, a::LazyArray; kwds...) = Accumulate(op, a; kwds...)
 

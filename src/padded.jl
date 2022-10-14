@@ -120,7 +120,7 @@ function _paddedpadded_broadcasted(op, A::AbstractMatrix{T}, B::AbstractMatrix{V
     (a_m,a_n) = size(a)
     (b_m,b_n) = size(b)
     m,n = min(a_m,b_m),min(a_n,b_n)
-    dat = if a_m ≤ b_m && a_n ≤ b_n
+    dat = if a_m ≤ b_m && a_n ≤ b_n
         [broadcast(op, a, _view_vcat(b,1:a_m,1:a_n)) broadcast(op, zero(T), _view_vcat(b,1:a_m,a_n+1:b_n));
          broadcast(op, zero(T), _view_vcat(b,a_m+1:b_m,1:b_n))]
     elseif a_m ≤ b_m
@@ -129,7 +129,7 @@ function _paddedpadded_broadcasted(op, A::AbstractMatrix{T}, B::AbstractMatrix{V
     elseif b_n ≤ a_n # && b_m < a_m
         [broadcast(op, view(a,1:b_m,1:b_n), _view_vcat(b,1:b_m,1:b_n)) broadcast(op, _view_vcat(a,1:b_m,b_n+1:a_n), zero(V));
          broadcast(op, _view_vcat(a,b_m+1:a_m,1:a_n), zero(V))]
-    else  # b_m < a_m && a_n < b_n 
+    else  # b_m < a_m && a_n < b_n
         [broadcast(op, _view_vcat(a,1:b_m,1:a_n), _view_vcat(b,1:b_m,1:a_n)) broadcast(op, zero(T),  _view_vcat(b,1:b_m,a_n+1:b_n));
          broadcast(op, _view_vcat(a,b_m+1:a_m,1:a_n), zero(V)) broadcast(op, Zeros{T}(a_m-b_m, b_n-a_n), Zeros{V}(a_m-b_m, b_n-a_n))]
     end
@@ -141,9 +141,9 @@ layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A::AbstractVector, B::Abs
 layout_broadcasted(::PaddedLayout, ::PaddedLayout, op, A::AbstractMatrix, B::AbstractMatrix) =
     _paddedpadded_broadcasted(op, A, B)
 layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::Vcat{<:Any,1}, B::AbstractVector) =
-    _paddedpadded_broadcasted(*, A, B)    
+    _paddedpadded_broadcasted(*, A, B)
 layout_broadcasted(::PaddedLayout, ::PaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1}) =
-    _paddedpadded_broadcasted(*, A, B)    
+    _paddedpadded_broadcasted(*, A, B)
 
 function layout_broadcasted(_, ::PaddedLayout, op, A::AbstractVector, B::AbstractVector)
     b = paddeddata(B)
