@@ -327,4 +327,16 @@ import Base: broadcasted
         @test A + I isa BroadcastArray
         @test I + A isa BroadcastArray
     end
+
+    @testset "/ and \\" begin
+        for A in (BroadcastArray(\, ones(5,5), UpperTriangular(randn(5,5))),
+                    BroadcastArray(\, ones(5), UpperTriangular(randn(5,5))),
+                    BroadcastArray(\, 6, UpperTriangular(randn(5,5))),
+                    BroadcastArray(/, UpperTriangular(randn(5,5)), ones(5,5)),
+                    BroadcastArray(/, UpperTriangular(randn(5,5)), ones(5)),
+                    BroadcastArray(/, UpperTriangular(randn(5,5)), 5))
+            @test colsupport(A, 3) == 1:3
+            @test rowsupport(A, 3) == 3:5
+        end
+    end
 end

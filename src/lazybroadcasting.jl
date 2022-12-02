@@ -200,6 +200,21 @@ function colsupport(lay::BroadcastLayout{typeof(\)}, A, j)
     _broadcast_colsupport(axes(A), axes(b), b, j)
 end
 
+function rowsupport(lay::BroadcastLayout{typeof(\)}, A, j)
+    _,b = arguments(lay,A)
+    _broadcast_rowsupport(axes(A), axes(b), b, j)
+end
+
+function colsupport(lay::BroadcastLayout{typeof(/)}, A, j)
+    b,_ = arguments(lay,A)
+    _broadcast_colsupport(axes(A), axes(b), b, j)
+end
+
+function rowsupport(lay::BroadcastLayout{typeof(/)}, A, j)
+    b,_ = arguments(lay,A)
+    _broadcast_rowsupport(axes(A), axes(b), b, j)
+end
+
 for op in (:+, :-)
     @eval begin
         rowsupport(lay::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
