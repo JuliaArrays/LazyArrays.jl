@@ -163,6 +163,7 @@ sublayout(::AbstractInvLayout, I::Type{<:Tuple{Slice, Int}}) = InvColumnLayout()
 function sub_materialize(::InvColumnLayout, v::AbstractVector, _)
     _,j = parentindices(v)
     Ai = parent(v)
+    T = eltype(v)
     parent(Ai) \ [Zeros{T}(j-1); one(T); Zeros{T}(size(parent(Ai),1)-j)]
 end
 
