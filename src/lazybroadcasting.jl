@@ -386,5 +386,9 @@ _broadcast_mul_mul((A,b)::Tuple{AbstractMatrix,AbstractVector}, C) = b .* (A*C)
 @inline copy(M::Mul{BroadcastLayout{typeof(*)},<:AbstractLazyLayout}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
 @inline copy(M::Mul{BroadcastLayout{typeof(*)},ApplyLayout{typeof(*)}}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
 
-getindex(A::BroadcastMatrix{<:Any,typeof(*),<:Tuple{AbstractVector,AbstractMatrix}}, ::Colon, j::Integer) = A.args[1] .* A.args[2][:,j]
-getindex(A::BroadcastMatrix{<:Any,typeof(*),<:Tuple{AbstractMatrix,AbstractVector}}, ::Colon, j::Integer) = A.args[1][:,j] .* A.args[2]
+for op in (:*, :\, :/)
+    @eval begin
+        getindex(A::BroadcastMatrix{<:Any,typeof($op),<:Tuple{AbstractVector,AbstractMatrix}}, ::Colon, j::Integer) = broadcast($op, A.args[1], A.args[2][:,j])
+        getindex(A::BroadcastMatrix{<:Any,typeof($op),<:Tuple{AbstractMatrix,AbstractVector}}, ::Colon, j::Integer) = broadcast($op, A.args[1][:,j], A.args[2])
+    end
+end
