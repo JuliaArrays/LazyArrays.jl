@@ -195,6 +195,11 @@ _broadcast_rowsupport(ax, ::Tuple{<:Any,<:Any}, A, j) = rowsupport(A,j)
 colsupport(lay::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
 rowsupport(lay::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
 
+function colsupport(lay::BroadcastLayout{typeof(\)}, A, j)
+    _,b = arguments(lay,A)
+    _broadcast_colsupport(axes(A), axes(b), b, j)
+end
+
 for op in (:+, :-)
     @eval begin
         rowsupport(lay::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)

@@ -155,9 +155,16 @@ inv(D::Diagonal{T,<:LazyVector}) where T = Diagonal(inv.(D.diag))
 ###
 
 # \ is likely to be specialised
-@propagate_inbounds getindex(Ai::InvMatrix{T}, ::Colon, j::Integer) where T = parent(Ai) \ [Zeros{T}(j-1); one(T); Zeros{T}(size(parent(Ai),1)-j)]
-@propagate_inbounds getindex(Ai::PInvMatrix{T}, ::Colon, j::Integer) where T = parent(Ai) \ [Zeros{T}(j-1); one(T); Zeros{T}(size(parent(Ai),1)-j)]
-getindex(Ai::SubArray{<:Any,2,<:InvMatrix}, ::Colon, j::Integer) = parent(Ai)[:, parentindices(Ai)[2][j]]
+struct InvColumnLayout <: AbstractLazyLayout end
+
+
+sublayout(::AbstractInvLayout, I::Type{<:Tuple{Slice, Int}}) = InvColumnLayout()
+
+function sub_materialize(::InvColumnLayout, v::AbstractVector, _)
+    _,j = parentindices(v)
+    Ai = parent(v)
+    parent(Ai) \ [Zeros{T}(j-1); one(T); Zeros{T}(size(parent(Ai),1)-j)]
+end
 
 @propagate_inbounds getindex(A::PInvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
 @propagate_inbounds getindex(A::InvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
