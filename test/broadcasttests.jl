@@ -339,4 +339,13 @@ import Base: broadcasted
             @test rowsupport(A, 3) == 3:5
         end
     end
+
+    @testset "permutedims" begin
+        A = BroadcastArray(exp, randn(5,5) .+ im)
+        @test permutedims(A) ≈ transpose(A)
+        B = BroadcastArray(+, randn(5,5) .+ im, 1)
+        @test permutedims(B) ≈ transpose(B)
+        C = BroadcastArray(+, randn(5,5) .+ im, randn(5))
+        @test permutedims(C) ≈ transpose(C)
+    end
 end
