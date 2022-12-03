@@ -392,3 +392,5 @@ for op in (:*, :\, :/)
         getindex(A::BroadcastMatrix{<:Any,typeof($op),<:Tuple{AbstractMatrix,AbstractVector}}, ::Colon, j::Integer) = broadcast($op, A.args[1][:,j], A.args[2])
     end
 end
+
+permutedims(A::BroadcastArray{T}) where T = BroadcastArray{T}(A.f, map(_permutedims,A.args)...)
