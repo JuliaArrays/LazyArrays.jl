@@ -467,6 +467,28 @@ function getindex(A::ApplyMatrix{T,typeof(setindex)}, k::Integer, j::Integer) wh
     convert(T, k in kr && j in jr ? v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] : P[k,j])::T
 end
 
+function setindex!(A::ApplyVector{T,typeof(setindex)}, c, k::Integer) where T
+    P,v,kr = A.args
+    if k in kr 
+        v[something(findlast(isequal(k),kr))] = c
+    else
+        P[k] = c
+    end
+    A
+end
+
+function setindex!(A::ApplyMatrix{T,typeof(setindex)}, c, k::Integer) where T
+    P,v,kr,jr = A.args
+    if k in kr && j in jr
+        v[something(findlast(isequal(k),kr)), something(findlast(isequal(j),jr))] = c
+    else
+        P[k, j] = c
+    end
+    A
+end
+
+
+
 const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{Any,N}}}
 const PaddedVector{T,M} = PaddedArray{T,1,M}
 const PaddedMatrix{T,M} = PaddedArray{T,2,M}
