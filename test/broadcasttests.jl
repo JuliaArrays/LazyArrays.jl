@@ -348,4 +348,8 @@ import Base: broadcasted
         C = BroadcastArray(+, randn(5,5) .+ im, randn(5))
         @test permutedims(C) ≈ transpose(C)
     end
+
+    @testset "zero-sized views" begin
+        @test size(copy(view(BroadcastArray(+, 1, randn(1,3)), 1:0, 2:3))) == (0,2)
+    end
 end
