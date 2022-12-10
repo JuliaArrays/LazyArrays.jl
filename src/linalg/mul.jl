@@ -87,13 +87,23 @@ combine_mul_styles(a, b, c...) = combine_mul_styles(combine_mul_styles(a, b), c.
 # We need to combine all branches to determine whether it can be  simplified
 ApplyStyle(::typeof(*), a) = DefaultApplyStyle()
 ApplyStyle(::typeof(*), a::AbstractArray) = DefaultArrayApplyStyle()
-_mul_ApplyStyle(a, b...) = combine_mul_styles(ApplyStyle(*, a, most(b)...),  ApplyStyle(*, b...))
+_mul_ApplyStyle(a, b...) = combine_mul_styles(ApplyStyle(*, a, Base.front(b)...),  ApplyStyle(*, b...))
 ApplyStyle(::typeof(*), a, b...) = _mul_ApplyStyle(a, b...)
-ApplyStyle(::typeof(*), a::Type{<:AbstractArray}, b::Type{<:AbstractArray}...) = _mul_ApplyStyle(a, b...)
+if !(AbstractQ  <: AbstractMatrix) # VERSION >= v"1.10-"
+    ApplyStyle(::typeof(*), a::Type{<:Union{AbstractArray,AbstractQ}}, b::Type{<:Union{AbstractArray,AbstractQ}}...) = _mul_ApplyStyle(a, b...)
+else
+    ApplyStyle(::typeof(*), a::Type{<:AbstractArray}, b::Type{<:AbstractArray}...) = _mul_ApplyStyle(a, b...)
+end
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:Number}) = DefaultArrayApplyStyle()
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractArray}) = MulStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractQ}) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), ::Type{<:Number}, ::Type{<:AbstractQ}) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractQ}, ::Type{<:Number}) = DefaultArrayApplyStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractQ}, ::Type{<:AbstractQ}) = MulStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractQ}, ::Type{<:AbstractArray}) = MulStyle()
+ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractQ}) = MulStyle()
 
 
 # arguments for something that is a *
@@ -232,7 +242,7 @@ for op in (:*, :\)
 end
 
 broadcasted(::LazyArrayStyle{N}, ::typeof(/), b::ApplyArray{<:Number,N,typeof(*)}, a::Number) where N =
-        ApplyArray(*, most(b.args)..., broadcast(/,last(b.args),a))
+        ApplyArray(*, Base.front(b.args)..., broadcast(/,last(b.args),a))
 
 for Typ in (:Lmul, :Rmul)
     @eval $Typ(M::Applied{<:Any,typeof(*)}) = $Typ(M.args...)
@@ -254,7 +264,8 @@ end
 # Support QuasiArrays
 
 lazymaterialize(::typeof(*), a::AbstractArray) = a
-lazymaterialize(F::Function, args::AbstractArray...) = copy(ApplyArray(F, args...))
+lazymaterialize(::typeof(*), a::AbstractQ) = a*I # or just `a` as formerly?
+lazymaterialize(F::Function, args::Union{AbstractArray,AbstractQ}...) = copy(ApplyArray(F, args...))
 lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 
 
@@ -284,7 +295,7 @@ lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 
 @inline simplifiable(::typeof(*), a) = Val(false)
 @inline simplifiable(::typeof(*), a, b) = simplifiable(Mul(a,b))
-@inline simplifiable(::typeof(*), a...) = _most_simplifiable(*, simplifiable(*, most(a)...), a)
+@inline simplifiable(::typeof(*), a...) = _most_simplifiable(*, simplifiable(*, Base.front(a)...), a)
 @inline _most_simplifiable(::typeof(*), ::Val{true}, a) = Val(true)
 @inline _most_simplifiable(::typeof(*), ::Val{false}, a) = simplifiable(*, tail(a)...)
 
@@ -293,8 +304,8 @@ lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 @inline _simplify(::typeof(*), a, b) = _twoarg_simplify(*, simplifiable(*, a, b), a, b)
 @inline _twoarg_simplify(::typeof(*), ::Val{false}, a, b) = lazymaterialize(*, a, b)
 @inline _twoarg_simplify(::typeof(*), ::Val{true}, a, b) = mul(a,b)
-@inline _simplify(::typeof(*), args...) = _most_simplify(simplifiable(*, most(args)...), args)
-@inline _most_simplify(::Val{true}, args) = *(_mul_arguments(_simplify(*, most(args)...))..., last(args))
+@inline _simplify(::typeof(*), args...) = _most_simplify(simplifiable(*, Base.front(args)...), args)
+@inline _most_simplify(::Val{true}, args) = *(_mul_arguments(_simplify(*, Base.front(args)...))..., last(args))
 @inline _most_simplify(::Val{false}, args) = _tail_simplify(simplifiable(*, tail(args)...), args)
 @inline _tail_simplify(::Val{true}, args) = *(first(args), _mul_arguments(_simplify(*, tail(args)...))...)
 @inline _tail_simplify(::Val{false}, args) = lazymaterialize(*, args...)

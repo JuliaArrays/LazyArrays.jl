@@ -14,7 +14,7 @@ is materialized, where the result is an `AbstractArray`.
 """
 abstract type AbstractArrayApplyStyle <: ApplyStyle end
 """
-DefaultApplyStyle
+    DefaultApplyStyle
 
 indicate that a lazy function application `applied(f, A...)`
 is materialized as `f(A...)`.

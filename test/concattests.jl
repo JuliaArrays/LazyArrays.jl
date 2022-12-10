@@ -206,9 +206,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @testset "Axpy" begin
             a = Vcat([1.,2],Zeros(1_000_000))
             b = Vcat([1.,2],Zeros(1_000_000))
-            BLAS.axpy!(2.0, a, b)
+            axpy!(2.0, a, b)
             @test b[1:10] == [3; 6; zeros(8)]
-            BLAS.axpy!(2.0, view(a,:), b)
+            axpy!(2.0, view(a,:), b)
             @test b[1:10] == [5; 10; zeros(8)]
         end
 

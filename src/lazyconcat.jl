@@ -196,7 +196,7 @@ end
 function size(f::Applied{<:Any,typeof(hvcat),<:Tuple{NTuple{N,Int},Vararg{Any}}}) where N
     n = f.args[1]
 
-    as = tuple(2, (2 .+ cumsum(most(n)))...)
+    as = tuple(2, (2 .+ cumsum(Base.front(n)))...)
     sum(size.(getindex.(Ref(f.args), as),1)),sum(size.(f.args[2:1+n[1]],2))
 end
 
@@ -657,7 +657,7 @@ _tuple_cumsum(a) = (a,)
 _tuple_cumsum(a, b...) = (a, broadcast(+,a,_tuple_cumsum(b...))...)
 function _vcat_cumsum(x...)
     cs = map(_cumsum,x)
-    cslasts = tuple(0,_tuple_cumsum(map(_cumsum_last,most(cs))...)...)
+    cslasts = tuple(0,_tuple_cumsum(map(_cumsum_last,Base.front(cs))...)...)
     map((a,b) -> broadcast(+,a,b), cslasts, cs)
 end
 
@@ -739,11 +739,9 @@ function materialize!(M::MatMulVecAdd{ApplyLayout{typeof(hcat)},ApplyLayout{type
  # col/rowsupport
  ####
 
-
-most(a) = reverse(tail(reverse(a)))
 function colsupport(lay::ApplyLayout{typeof(vcat)}, M::AbstractArray, j)
     args = arguments(lay, M)
-    first(colsupport(first(args),j)):(size(Vcat(most(args)...),1)+last(colsupport(last(args),j)))
+    first(colsupport(first(args),j)):(size(Vcat(Base.front(args)...),1)+last(colsupport(last(args),j)))
 end
 
 function rowsupport(lay::ApplyLayout{typeof(vcat)}, V::AbstractArray, k::Integer)
@@ -768,7 +766,7 @@ end
 
 function rowsupport(lay::ApplyLayout{typeof(hcat)}, M::AbstractArray, k)
     args = arguments(lay, M)
-    first(rowsupport(first(args),k)):(size(Hcat(most(args)...),2)+last(rowsupport(last(args),k)))
+    first(rowsupport(first(args),k)):(size(Hcat(Base.front(args)...),2)+last(rowsupport(last(args),k)))
 end
 
 include("padded.jl")
@@ -796,7 +794,7 @@ sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
 sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Number,AbstractVector}}) = ApplyLayout{typeof(vcat)}()
 
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
-_vcat_firstinds(sz) = (1, (1 .+ most(_vcat_lastinds(sz)))...)
+_vcat_firstinds(sz) = (1, (1 .+ Base.front(_vcat_lastinds(sz)))...)
 
 _argsindices(sz) = broadcast(:, _vcat_firstinds(sz), _vcat_lastinds(sz))
 
