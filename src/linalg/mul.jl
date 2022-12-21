@@ -264,7 +264,7 @@ end
 # Support QuasiArrays
 
 lazymaterialize(::typeof(*), a::AbstractArray) = a
-lazymaterialize(::typeof(*), a::AbstractQ) = a*I # or just `a` as formerly?
+lazymaterialize(::typeof(*), a::AbstractQ) = a
 lazymaterialize(F::Function, args::Union{AbstractArray,AbstractQ}...) = copy(ApplyArray(F, args...))
 lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 
