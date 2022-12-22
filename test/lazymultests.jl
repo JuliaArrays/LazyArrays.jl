@@ -171,7 +171,30 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
     @testset "QR" begin
         B = MyMatrix(randn(3,3))
         Q = qr(randn(3,3)).Q
+        @test Q * B ≈ Q * B.A
+        @test B * Q ≈ B.A * Q
+        @test apply(*, B) ≈ B
+        @test Matrix(apply(*, Q)) ≈ Matrix(Q)
+        @test apply(*, 1, Q) ≈ apply(*, Q, 1) ≈ Matrix(Q)
+        @test apply(*, Q, Q') ≈ apply(*, Q', Q) ≈ Matrix(I, 3, 3)
+        @test apply(*, Q, Q', B) ≈ apply(*, B, Q, Q') ≈ B.A
+
+        Q = qr(randn(5,3)).Q
         @test Q * B ≈ Q*B.A
+        @test B * Q' ≈ B.A * Q'
+        @test apply(*, B) ≈ B
+        @test Matrix(apply(*, Q)) ≈ Matrix(Q)
+        @test apply(*, 1, Q) ≈ apply(*, Q, 1) ≈ Q * 1
+        @test apply(*, Q, Q') ≈ apply(*, Q', Q) ≈ Matrix(I, 5, 5)
+        
+        B = MyMatrix(randn(5,5))
+        @test Q * B ≈ Q * B.A
+        @test B * Q ≈ B.A * Q
+        @test apply(*, B) ≈ B
+        @test Matrix(apply(*, Q)) ≈ Matrix(Q)
+        @test apply(*, 1, Q) ≈ apply(*, Q, 1) ≈ 1*Q
+        @test apply(*, Q, Q') ≈ apply(*, Q', Q) ≈ Matrix(I, 5, 5)
+        @test apply(*, Q, Q', B) ≈ apply(*, B, Q, Q') ≈ B.A
     end
 
     @testset "ambiguities" begin
