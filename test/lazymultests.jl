@@ -99,7 +99,11 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test MyMatrix(A) \ B == apply(\, MyMatrix(A), B)
         @test ldiv!(MyMatrix(A), copy(B)) == materialize!(Ldiv(MyMatrix(A), copy(B)))
         @test MyMatrix(A) \ B ≈ MyMatrix(A) \ MyMatrix(B) ≈ ldiv!(MyMatrix(A), copy(B)) ≈  A\B
-        @test_broken ldiv!(MyMatrix(A), MyMatrix(copy(B))) ≈ A\B
+        if VERSION < v"1.9-"
+            @test_broken ldiv!(MyMatrix(A), MyMatrix(copy(B))) ≈ A\B
+        else
+            @test ldiv!(MyMatrix(A), MyMatrix(copy(B))) ≈ A\B
+        end
 
         C = randn(5,3)
         @test all(MyMatrix(C)\x .=== apply(\,MyMatrix(C),x))
@@ -167,7 +171,30 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
     @testset "QR" begin
         B = MyMatrix(randn(3,3))
         Q = qr(randn(3,3)).Q
+        @test Q * B ≈ Q * B.A
+        @test B * Q ≈ B.A * Q
+        @test apply(*, B) ≈ B
+        @test Matrix(apply(*, Q)) ≈ Matrix(Q)
+        @test apply(*, 1, Q) ≈ apply(*, Q, 1) ≈ Matrix(Q)
+        @test apply(*, Q, Q') ≈ apply(*, Q', Q) ≈ Matrix(I, 3, 3)
+        @test apply(*, Q, Q', B) ≈ apply(*, B, Q, Q') ≈ B.A
+
+        Q = qr(randn(5,3)).Q
         @test Q * B ≈ Q*B.A
+        @test B * Q' ≈ B.A * Q'
+        @test apply(*, B) ≈ B
+        @test Matrix(apply(*, Q)) ≈ Matrix(Q)
+        @test apply(*, 1, Q) ≈ apply(*, Q, 1) ≈ Q * 1
+        @test apply(*, Q, Q') ≈ apply(*, Q', Q) ≈ Matrix(I, 5, 5)
+        
+        B = MyMatrix(randn(5,5))
+        @test Q * B ≈ Q * B.A
+        @test B * Q ≈ B.A * Q
+        @test apply(*, B) ≈ B
+        @test Matrix(apply(*, Q)) ≈ Matrix(Q)
+        @test apply(*, 1, Q) ≈ apply(*, Q, 1) ≈ 1*Q
+        @test apply(*, Q, Q') ≈ apply(*, Q', Q) ≈ Matrix(I, 5, 5)
+        @test apply(*, Q, Q', B) ≈ apply(*, B, Q, Q') ≈ B.A
     end
 
     @testset "ambiguities" begin
