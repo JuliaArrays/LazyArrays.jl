@@ -278,7 +278,7 @@ struct Axpy{StyleX,StyleY,T,XTyp,YTyp}
 end
 
 Axpy(α::T, X::XTyp, Y::YTyp) where {T,XTyp,YTyp} = Axpy{typeof(MemoryLayout(XTyp)), typeof(MemoryLayout(YTyp)), T, XTyp, YTyp}(α, X, Y)
-materialize!(d::Axpy{<:Any,<:Any,<:Number,<:AbstractArray,<:AbstractArray}) = Base.invoke(axpy!, Tuple{Number,AbstractArray,AbstractArray}, d.α, d.X, d.Y)
+materialize!(d::Axpy{<:Any,<:Any,<:Number,<:AbstractArray,<:AbstractArray}) = Base.invoke(LinearAlgebra.axpy!, Tuple{Number,AbstractArray,AbstractArray}, d.α, d.X, d.Y)
 function materialize!(d::Axpy{<:PaddedLayout,<:PaddedLayout,U,<:AbstractVector{T},<:AbstractVector{V}}) where {U,T,V}
     x = paddeddata(d.X)
     resizedata!(d.Y, length(x))
@@ -286,8 +286,9 @@ function materialize!(d::Axpy{<:PaddedLayout,<:PaddedLayout,U,<:AbstractVector{T
     axpy!(d.α, x, view(y,1:length(x)))
     y
 end
-axpy!(α, X::LazyArray, Y::AbstractArray) = materialize!(Axpy(α, X, Y))
-axpy!(α, X::SubArray{<:Any,N,<:LazyArray}, Y::AbstractArray) where {N} = materialize!(Axpy(α, X, Y))
+axpy!(α, X, Y) = materialize!(Axpy(α,X,Y))
+LinearAlgebra.axpy!(α, X::LazyArray, Y::AbstractArray) = materialize!(Axpy(α, X, Y))
+LinearAlgebra.axpy!(α, X::SubArray{<:Any,N,<:LazyArray}, Y::AbstractArray) where {N} = materialize!(Axpy(α, X, Y))
 
 
 ###
