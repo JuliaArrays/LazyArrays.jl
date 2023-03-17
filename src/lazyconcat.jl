@@ -625,13 +625,18 @@ function +(A::Vcat, B::Vcat)
     size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
     A .+ B
 end
-function +(A::Vcat, B::AbstractArray)
-    size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
-    A .+ B
-end
-function +(A::AbstractArray, B::Vcat)
-    size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
-    A .+ B
+# Disambiguate with AbstractFill
+for T in (:AbstractArray, :AbstractFill, :Zeros)
+    @eval begin
+        function +(A::Vcat, B::$T)
+            size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
+            A .+ B
+        end
+        function +(A::$T, B::Vcat)
+            size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
+            A .+ B
+        end
+    end
 end
 
 
