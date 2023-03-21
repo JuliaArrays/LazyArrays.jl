@@ -1107,7 +1107,7 @@ end
         @test ApplyArray(V) == Array(V) == A[1:2,2] == Array(A)[1:2,2]
     end
 
-    @testset "argument type inferrence" begin
+    @testset "argument type inference" begin
         n = 10
         L = ApplyArray(*,fill(3.0,n), ones(1,n))
         A,B = @inferred(arguments(L))

@@ -325,7 +325,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             @test H[1,1] == applied(hcat,A,A)[1,1] == A[1,1]
         end
 
-        @testset "adjoint vec / permutediims" begin
+        @testset "adjoint vec / permutedims" begin
             @test vec(Hcat([1,2]', 3)) == 1:3
             @test permutedims(Hcat([1,2]', 3)) == reshape(1:3,3,1)
         end

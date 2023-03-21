@@ -484,7 +484,7 @@ end
 #####
 # broadcasting
 #
-# We want broadcasting for numbers with concaenations to pass through
+# We want broadcasting for numbers with concatenations to pass through
 # to take advantage of special implementations of the sub-components
 ######
 
