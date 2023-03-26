@@ -144,7 +144,7 @@ end
 
 function _vec_resizedata!(B::AbstractVector, n)
     n ≤ 0 && return B
-    @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyound size of operator"))
+    @boundscheck checkbounds(Bool, B, n) || throw(ArgumentError("Cannot resize beyond size of operator"))
 
     # increase size of array if necessary
     olddata = cacheddata(B)
@@ -166,7 +166,7 @@ resizedata!(_, _, B::AbstractVector, n) = _vec_resizedata!(B, n)
 resizedata!(_, _, B::AbstractVector, n::Integer) = _vec_resizedata!(B, n)
 
 function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) where N
-    @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyound size of operator"))
+    @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyond size of operator"))
 
     # increase size of array if necessary
     olddata = cacheddata(B)
@@ -241,7 +241,7 @@ MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayo
 #####
 # broadcasting
 #
-# We want broadcasting for numbers with concaenations to pass through
+# We want broadcasting for numbers with concatenations to pass through
 # to take advantage of special implementations of the sub-components
 ######
 

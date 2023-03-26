@@ -242,7 +242,7 @@ sublayout(b::BroadcastLayout, _) = b
     tuple(Base.OneTo(1), _broadcastviewinds(tail(ax), tail(inds))...)    
 end
 
-@inline _broadcastviewinds(ax, inds) = # don't support special broacasting
+@inline _broadcastviewinds(ax, inds) = # don't support special broadcasting
     tuple(inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
 
 _viewifmutable(a, inds::Number...) = a[inds...]
