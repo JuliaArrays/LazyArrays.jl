@@ -22,7 +22,7 @@ const MulMatrix{T, Args} = MulArray{T, 2, Args}
 _drop_scalars(a::Number, b...) = _drop_scalars(b...)
 _drop_scalars(a, b...) = (a, _drop_scalars(b...)...)
 _drop_scalars() = ()
-check_applied_axes(A::Applied{<:Any,typeof(*)}) = check_mul_axes(_drop_scalars(A.args)...)
+check_applied_axes(A::Applied{<:Any,typeof(*)}) = check_mul_axes(_drop_scalars(A.args...)...)
 
 size(M::Applied{<:Any,typeof(*)}, p::Int) = size(M)[p]
 axes(M::Applied{<:Any,typeof(*)}, p::Int) = axes(M)[p]
