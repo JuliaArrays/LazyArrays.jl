@@ -14,7 +14,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 [compat]
 Aqua = "0.5"
 ArrayLayouts = "0.8.8"
-FillArrays = "0.13"
+FillArrays = "0.13, 1"
 MacroTools = "0.5"
 MatrixFactorizations = "0.8.2, 0.9"
 StaticArrays = "1.0"
