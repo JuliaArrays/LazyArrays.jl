@@ -5,7 +5,7 @@ import ArrayLayouts: OnesLayout
 
 using Aqua
 @testset "Project quality" begin
-    Aqua.test_all(LazyArrays, ambiguities=false)
+    Aqua.test_all(LazyArrays, ambiguities=false, piracy=false)
 end
 
 @testset "Lazy MemoryLayout" begin

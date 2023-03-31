@@ -19,7 +19,12 @@ const MulVector{T, Args} = MulArray{T, 1, Args}
 const MulMatrix{T, Args} = MulArray{T, 2, Args}
 
 
-check_applied_axes(A::Applied{<:Any,typeof(*)}) = check_mul_axes(A.args...)
+_drop_scalars(a::Number, b...) = _drop_scalars(b...)
+_drop_scalars(a, b...) = (a, _drop_scalars(b...)...)
+_drop_scalars() = ()
+_check_mul_axes() = nothing
+_check_mul_axes(a...) = check_mul_axes(a...)
+check_applied_axes(A::Applied{<:Any,typeof(*)}) = _check_mul_axes(_drop_scalars(A.args...)...)
 
 size(M::Applied{<:Any,typeof(*)}, p::Int) = size(M)[p]
 axes(M::Applied{<:Any,typeof(*)}, p::Int) = axes(M)[p]
