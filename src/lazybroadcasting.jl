@@ -195,6 +195,26 @@ _broadcast_rowsupport(ax, ::Tuple{<:Any,<:Any}, A, j) = rowsupport(A,j)
 colsupport(lay::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_colsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
 rowsupport(lay::BroadcastLayout{typeof(*)}, A, j) = intersect(_broadcast_rowsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
 
+function colsupport(lay::BroadcastLayout{typeof(\)}, A, j)
+    _,b = arguments(lay,A)
+    _broadcast_colsupport(axes(A), axes(b), b, j)
+end
+
+function rowsupport(lay::BroadcastLayout{typeof(\)}, A, j)
+    _,b = arguments(lay,A)
+    _broadcast_rowsupport(axes(A), axes(b), b, j)
+end
+
+function colsupport(lay::BroadcastLayout{typeof(/)}, A, j)
+    b,_ = arguments(lay,A)
+    _broadcast_colsupport(axes(A), axes(b), b, j)
+end
+
+function rowsupport(lay::BroadcastLayout{typeof(/)}, A, j)
+    b,_ = arguments(lay,A)
+    _broadcast_rowsupport(axes(A), axes(b), b, j)
+end
+
 for op in (:+, :-)
     @eval begin
         rowsupport(lay::BroadcastLayout{typeof($op)}, A, j) = convexunion(_broadcast_rowsupport.(Ref(axes(A)), axes.(arguments(lay,A)), arguments(lay,A), Ref(j))...)
@@ -216,13 +236,13 @@ sublayout(b::BroadcastLayout, _) = b
 @inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{Number,Vararg{Any}}) =
     tuple(isone(length(ax[1])) ? 1 : convert(Int,inds[1]), _broadcastviewinds(tail(ax), tail(inds))...)
 @inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{AbstractVector{<:Integer},Vararg{Any}}) =
-    tuple(isone(length(ax[1])) ? convert(typeof(inds[1]),Base.OneTo(1)) : inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
+    tuple(isone(length(ax[1])) ? convert(typeof(inds[1]),Base.OneTo(min(1,length(inds[1])))) : inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
 @inline function _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{Any,Vararg{Any}})
     @assert isone(length(ax[1]))
     tuple(Base.OneTo(1), _broadcastviewinds(tail(ax), tail(inds))...)
 end
 
-@inline _broadcastviewinds(ax, inds) = # don't support special broacasting
+@inline _broadcastviewinds(ax, inds) = # don't support special broadcasting
     tuple(inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
 
 _viewifmutable(a, inds::Number...) = a[inds...]
@@ -366,5 +386,11 @@ _broadcast_mul_mul((A,b)::Tuple{AbstractMatrix,AbstractVector}, C) = b .* (A*C)
 @inline copy(M::Mul{BroadcastLayout{typeof(*)},<:AbstractLazyLayout}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
 @inline copy(M::Mul{BroadcastLayout{typeof(*)},ApplyLayout{typeof(*)}}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
 
-getindex(A::BroadcastMatrix{<:Any,typeof(*),<:Tuple{AbstractVector,AbstractMatrix}}, ::Colon, j::Integer) = A.args[1] .* A.args[2][:,j]
-getindex(A::BroadcastMatrix{<:Any,typeof(*),<:Tuple{AbstractMatrix,AbstractVector}}, ::Colon, j::Integer) = A.args[1][:,j] .* A.args[2]
+for op in (:*, :\, :/)
+    @eval begin
+        getindex(A::BroadcastMatrix{<:Any,typeof($op),<:Tuple{AbstractVector,AbstractMatrix}}, ::Colon, j::Integer) = broadcast($op, A.args[1], A.args[2][:,j])
+        getindex(A::BroadcastMatrix{<:Any,typeof($op),<:Tuple{AbstractMatrix,AbstractVector}}, ::Colon, j::Integer) = broadcast($op, A.args[1][:,j], A.args[2])
+    end
+end
+
+permutedims(A::BroadcastArray{T}) where T = BroadcastArray{T}(A.f, map(_permutedims,A.args)...)

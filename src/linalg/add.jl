@@ -87,7 +87,7 @@ end
 
 
 ###
-# suport BroadcastLayout
+# support BroadcastLayout
 ###
 
 _broadcasted_mul(::Tuple{}, _) = ()

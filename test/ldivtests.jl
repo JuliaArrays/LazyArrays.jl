@@ -75,6 +75,9 @@ import Base.Broadcast: materialize
         @test Ai ≈ pinv(A)
         @test_throws DimensionMismatch inv(PInv(A))
         @test_throws DimensionMismatch InvMatrix(A)
+
+        A = UpperTriangular(Ones(20,20))
+        @test ApplyArray(inv,A)[1:10,1:10] ≈ diagm(0 => ones(10), 1 => -ones(9))
     end
 
     @testset "Int" begin

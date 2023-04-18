@@ -321,10 +321,35 @@ import Base: broadcasted
         @test LazyArrays.__broadcastview(([0.1,0.2],2), Inclusion(),(1:5)') == ([0.1,0.2], [2])
     end
 
-    @testset "UniformScaling arthmetic" begin
+    @testset "UniformScaling arithmetic" begin
         A = BroadcastArray(*,randn(5),randn(5,5))
         @test A + I == I + A
         @test A + I isa BroadcastArray
         @test I + A isa BroadcastArray
+    end
+
+    @testset "/ and \\" begin
+        for A in (BroadcastArray(\, ones(5,5), UpperTriangular(randn(5,5))),
+                    BroadcastArray(\, ones(5), UpperTriangular(randn(5,5))),
+                    BroadcastArray(\, 6, UpperTriangular(randn(5,5))),
+                    BroadcastArray(/, UpperTriangular(randn(5,5)), ones(5,5)),
+                    BroadcastArray(/, UpperTriangular(randn(5,5)), ones(5)),
+                    BroadcastArray(/, UpperTriangular(randn(5,5)), 5))
+            @test colsupport(A, 3) == 1:3
+            @test rowsupport(A, 3) == 3:5
+        end
+    end
+
+    @testset "permutedims" begin
+        A = BroadcastArray(exp, randn(5,5) .+ im)
+        @test permutedims(A) ≈ transpose(A)
+        B = BroadcastArray(+, randn(5,5) .+ im, 1)
+        @test permutedims(B) ≈ transpose(B)
+        C = BroadcastArray(+, randn(5,5) .+ im, randn(5))
+        @test permutedims(C) ≈ transpose(C)
+    end
+
+    @testset "zero-sized views" begin
+        @test size(copy(view(BroadcastArray(+, 1, randn(1,3)), 1:0, 2:3))) == (0,2)
     end
 end
