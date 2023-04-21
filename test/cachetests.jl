@@ -1,6 +1,6 @@
-using LazyArrays, FillArrays, ArrayLayouts, StaticArrays, Test
+using LazyArrays, FillArrays, ArrayLayouts, StaticArrays, SparseArrays, Test
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
-                    CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix
+                    CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix
 
 @testset "Cache" begin
     @testset "basics" begin
@@ -367,4 +367,18 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test CachedAbstractVector(1:5) isa CachedAbstractVector
         @test CachedAbstractMatrix(reshape(1:6,2,3)) isa CachedAbstractMatrix
     end
+end
+
+@testset "getindex respects data structure" begin
+    A = sparse(1.0I[1:10,1:10])
+    A[2,1] = 3. 
+    Ac = cache(A)
+    @test Ac isa AbstractCachedArray
+    @test Ac isa AbstractCachedMatrix
+    @test issparse(Ac[1:10,1:10])
+    @test issparse(Ac[1:3,1:5])
+    @test issparse(A[1:4,:])
+    @test issparse(A[1,:])
+    @test issparse(A[:,:])
+    @test issparse(A[:,3])
 end

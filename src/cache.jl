@@ -97,27 +97,27 @@ getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, 
 
 @inline function getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractUnitRange)
     resizedata!(A, k, maximum(jr))
-    layout_getindex(A.data, k, jr)
+    getindex(A.data, k, jr)
 end
 @inline function getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, j::Integer)
     resizedata!(A, maximum(kr), j)
-    layout_getindex(A.data, kr, j)
+    getindex(A.data, kr, j)
 end
 @inline function getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange)
     resizedata!(A, maximum(kr), maximum(jr))
-    layout_getindex(A.data, kr, jr)
+    getindex(A.data, kr, jr)
 end
 @inline function getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector)
     resizedata!(A, maximum(kr), maximum(jr))
-    layout_getindex(A.data, kr, jr)
+    getindex(A.data, kr, jr)
 end
 @inline function getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractVector)
     resizedata!(A, k, maximum(jr))
-    layout_getindex(A.data, k, jr)
+    getindex(A.data, k, jr)
 end
 @inline function getindex(A::AbstractCachedMatrix, kr::AbstractVector, j::Integer)
     resizedata!(A, maximum(kr), j)
-    layout_getindex(A.data, k, jr)
+    getindex(A.data, k, jr)
 end
 @inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = layout_getindex(A, k, :)
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, ::Colon) = layout_getindex(A, kr, :)
