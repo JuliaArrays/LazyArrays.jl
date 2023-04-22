@@ -128,52 +128,64 @@ end
 @inline getindex(A::AbstractCachedMatrix, ::Colon, ::Colon) = layout_getindex(A, :, :)
 # Ensure correct behavior for Triangular of cached arrays 
 @inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractUnitRange) where T
-    resizedata!(A, k, maximum(jr))
-    getindex(LowerTriangular(A.data), k, jr)
+    n = max(k, maximum(jr))
+    resizedata!(A, n, n)
+    getindex(LowerTriangular(A.data.data), k, jr)
 end
 @inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, j::Integer) where T
-    resizedata!(A, maximum(kr), j)
-    getindex(LowerTriangular(A.data), kr, j)
+    n = max(maximum(kr), j)
+    resizedata!(A, n, n)
+    getindex(LowerTriangular(A.data.data), kr, j)
 end
 @inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, jr::AbstractUnitRange) where T
-    resizedata!(A, maximum(kr), maximum(jr))
-    getindex(LowerTriangular(A.data), kr, jr)
+    n = max(maximum(kr), maximum(jr))
+    resizedata!(A, n, n)
+    getindex(LowerTriangular(A.data.data), kr, jr)
 end
 @inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, jr::AbstractVector) where T
-    resizedata!(A, maximum(kr), maximum(jr))
-    getindex(LowerTriangular(A.data), kr, jr)
+    n = max(maximum(kr), maximum(jr))
+    resizedata!(A, n, n)
+    getindex(LowerTriangular(A.data.data), kr, jr)
 end
 @inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractVector) where T
-    resizedata!(A, k, maximum(jr))
-    getindex(LowerTriangular(A.data), k, jr)
+    n = max(k, maximum(jr))
+    resizedata!(A, n, n)
+    getindex(LowerTriangular(A.data.data), k, jr)
 end
 @inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, j::Integer) where T
-    resizedata!(A, maximum(kr), j)
-    getindex(LowerTriangular(A.data), kr, j)
+    n = max(maximum(kr), j)
+    resizedata!(A, n, n)
+    getindex(LowerTriangular(A.data.data), kr, j)
 end
 @inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractUnitRange) where T
-    resizedata!(A, k, maximum(jr))
-    getindex(UpperTriangular(A.data), k, jr)
+    n = max(k, mmaximum(jr))
+    resizedata!(A, n, n)
+    getindex(UpperTriangular(A.data.data), k, jr)
 end
 @inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, j::Integer) where T
-    resizedata!(A, maximum(kr), j)
-    getindex(UpperTriangular(A.data), kr, j)
+    n = max(maximum(kr), j)
+    resizedata!(A, n, n)
+    getindex(UpperTriangular(A.data.data), kr, j)
 end
 @inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, jr::AbstractUnitRange) where T
-    resizedata!(A, maximum(kr), maximum(jr))
-    getindex(UpperTriangular(A.data), kr, jr)
+    n = max(maximum(kr), maximum(jr))
+    resizedata!(A, n, n)
+    getindex(UpperTriangular(A.data.data), kr, jr)
 end
 @inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, jr::AbstractVector) where T
-    resizedata!(A, maximum(kr), maximum(jr))
-    getindex(UpperTriangular(A.data), kr, jr)
+    n = max(maximum(kr), maximum(jr))
+    resizedata!(A, n, n)
+    getindex(UpperTriangular(A.data.data), kr, jr)
 end
 @inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractVector) where T
-    resizedata!(A, k, maximum(jr))
-    getindex(UpperTriangular(A.data), k, jr)
+    n = max(k, maximum(jr))
+    resizedata!(A, n, n)
+    getindex(UpperTriangular(A.data.data), k, jr)
 end
 @inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, j::Integer) where T
-    resizedata!(A, maximum(kr), j)
-    getindex(UpperTriangular(A.data), kr, j)
+    n = max(maximum(kr), j)
+    resizedata!(A, n, n)
+    getindex(UpperTriangular(A.data.data), kr, j)
 end
 
 getindex(A::AbstractCachedVector, ::Colon) = copy(A)
