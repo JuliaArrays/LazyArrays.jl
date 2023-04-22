@@ -379,6 +379,7 @@ end
     @test issparse(Ac[1:3,1:5])
     @test issparse(A[1:4,:])
     @test issparse(A[1,:])
+    @test issparse(A[1,1:end])
     @test issparse(A[:,:])
     @test issparse(A[:,3])
 end

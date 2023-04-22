@@ -117,7 +117,7 @@ end
 end
 @inline function getindex(A::AbstractCachedMatrix, kr::AbstractVector, j::Integer)
     resizedata!(A, maximum(kr), j)
-    getindex(A.data, k, jr)
+    getindex(A.data, kr, j)
 end
 @inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = layout_getindex(A, k, :)
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, ::Colon) = layout_getindex(A, kr, :)
