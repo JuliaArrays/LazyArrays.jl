@@ -95,11 +95,11 @@ end
 
 getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, I)...]
 
-@inline function _isfinite_getindex(A, kr, jr, maxkr::Int, maxjr::Int)
-     resizedata!(A, maxkr, maxjr)
-A.data[kr, jr]
+@inline function _isfinite_getindex(A::AbstractCachedMatrix, kr, jr, maxkr::Int, maxjr::Int)
+    resizedata!(A, maxkr, maxjr)
+    A.data[kr, jr]
 end
-@inline _isfinite_getindex(A::AbstractCachedArray, kr, jr, _, _) = layout_getindex(A, kr, jr)
+@inline _isfinite_getindex(A::AbstractCachedMatrix, kr, jr, _, _) = layout_getindex(A, kr, jr)
 
 @inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractUnitRange) = _isfinite_getindex(A, k, jr, k, maximum(jr))
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, j::Integer) = _isfinite_getindex(A, kr, j, maximum(kr), j)
@@ -107,29 +107,41 @@ end
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector) = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
 @inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractVector) = _isfinite_getindex(A, k, jr, k, maximum(jr))
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, j::Integer) =  _isfinite_getindex(A, kr, j, maximum(kr), j)
-inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = _isfinite_getindex(A, k, :, k, size(A,2))
-@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, ::Colon) = layout_getindex(A, kr, :)
-@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, ::Colon) = layout_getindex(A, kr, :)
-@inline getindex(A::AbstractCachedMatrix, ::Colon, j::Integer) = layout_getindex(A, :, j)
-@inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractVector) = layout_getindex(A, :, jr)
-@inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractUnitRange) = layout_getindex(A, :, jr)
-@inline getindex(A::AbstractCachedMatrix, ::Colon, ::Colon) = layout_getindex(A, :, :)
+@inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = _isfinite_getindex(A, k, :, k, size(A,2))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, ::Colon) = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, ::Colon) = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+@inline getindex(A::AbstractCachedMatrix, ::Colon, j::Integer) = _isfinite_getindex(A, :, j, size(A,1), j)
+@inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractVector) = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractUnitRange) = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, ::Colon, ::Colon) = _isfinite_getindex(A, :, :, size(A,1), size(A,2))
 
 # Triangular case
-@inline function _isfinite_getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, nmax::Int, _) where T
+@inline function _isfinite_getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, maxkr::Int, maxjr::Int) where T
+    nmax = max(maxkr,maxjr)
     resizedata!(A.data, nmax, nmax)
     getindex(UpperTriangular(A.data.data[1:nmax,1:nmax]), kr, jr)
 end
-@inline function _isfinite_getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, nmax::Int, _) where T
+@inline function _isfinite_getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, maxkr::Int, maxjr::Int) where T
+    nmax = max(maxkr,maxjr)
     resizedata!(A.data, nmax, nmax)
     getindex(LowerTriangular(A.data.data[1:nmax,1:nmax]), kr, jr)
 end
+@inline _isfinite_getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, _, _) where T = layout_getindex(A, kr, jr)
+@inline _isfinite_getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, _, _) where T = layout_getindex(A, kr, jr)
+
 @inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractUnitRange) where T = _isfinite_getindex(A, k, jr, k, maximum(jr))
 @inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, j::Integer) where T = _isfinite_getindex(A, kr, j, maximum(kr), j)
 @inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, jr::AbstractUnitRange) where T = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
 @inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, jr::AbstractVector) where T = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
 @inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractVector) where T = _isfinite_getindex(A, k, jr, k, maximum(jr))
 @inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, j::Integer) where T =  _isfinite_getindex(A, kr, j, maximum(kr), j)
+@inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, ::Colon) where T = _isfinite_getindex(A, k, :, k, size(A,2))
+@inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, ::Colon) where T = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+@inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, ::Colon) where T = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+@inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, ::Colon, j::Integer) where T = _isfinite_getindex(A, :, j, size(A,1), j)
+@inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, ::Colon, jr::AbstractVector) where T = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+@inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, ::Colon, jr::AbstractUnitRange) where T = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+@inline getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, ::Colon, ::Colon) where T = _isfinite_getindex(A, :, :, size(A,1), size(A,2))
 
 @inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractUnitRange) where T = _isfinite_getindex(A, k, jr, k, maximum(jr))
 @inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, j::Integer) where T = _isfinite_getindex(A, kr, j, maximum(kr), j)
@@ -137,7 +149,13 @@ end
 @inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, jr::AbstractVector) where T = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
 @inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractVector) where T = _isfinite_getindex(A, k, jr, k, maximum(jr))
 @inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, j::Integer) where T =  _isfinite_getindex(A, kr, j, maximum(kr), j)
-
+@inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, ::Colon) where T = _isfinite_getindex(A, k, :, k, size(A,2))
+@inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, ::Colon) where T = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+@inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, ::Colon) where T = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+@inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, ::Colon, j::Integer) where T = _isfinite_getindex(A, :, j, size(A,1), j)
+@inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, ::Colon, jr::AbstractVector) where T = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+@inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, ::Colon, jr::AbstractUnitRange) where T = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+@inline getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, ::Colon, ::Colon) where T = _isfinite_getindex(A, :, :, size(A,1), size(A,2))
 
 getindex(A::AbstractCachedVector, ::Colon) = copy(A)
 getindex(A::AbstractCachedVector, ::Slice) = copy(A)
