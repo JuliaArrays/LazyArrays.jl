@@ -369,7 +369,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
     end
 end
 
-@testset "getindex respects data structure" begin
+@testset "getindex and data structure" begin
     # Sparse
     A = Matrix(1.0I[1:100,1:100])
     A[2,1] = 3. 
@@ -386,4 +386,20 @@ end
     @test issparse(Ac[1:3,1:5])
     @test issparse(Ac[1:10,end])
     @test Ac[1,1] == 1.0
+    # Lower Triangular
+    Ac = cache(A) # reset cache
+    L = LowerTriangular(Ac);
+    @test istril(L[1:10,1:20])
+    @test istril(L[1:100,1:100])
+    @test istril(L[1:10,1:end])
+    @test L[1,1:end] isa Vector{eltype(L)}
+    @test L[1:5,1] isa Vector{eltype(L)}
+    # Upper Triangular
+    Ac = cache(A) # reset cache
+    U = UpperTriangular(Ac);
+    @test istriu(U[1:10,1:20])
+    @test istriu(U[1:100,1:100])
+    @test istriu(U[1:10,1:end])
+    @test U[1,1:end] isa Vector{eltype(U)}
+    @test U[1:5,1] isa Vector{eltype(U)}
 end
