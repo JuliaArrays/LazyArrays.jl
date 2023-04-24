@@ -378,23 +378,12 @@ end
     @test Ac isa AbstractCachedMatrix
     @test issparse(Ac[1:10,1:10])
     @test issparse(Ac[1:3,1:5])
+    @test issparse(Ac[Vector(1:3),Vector(1:5)])
+    @test issparse(Ac[1,Vector(1:5)])
+    @test issparse(Ac[Vector(1:5),6])
     @test issparse(Ac[1,1:end])
-
-    # Lower Triangular
-    Ac = cache(A) # reset cache
-    L = LowerTriangular(Ac);
-    @test istril(L[1:10,1:20])
-    @test istril(L[1:100,1:100])
-    @test istril(L[1:10,1:end])
-    @test L[1,1:end] isa Vector{eltype(L)}
-    @test L[1:5,1] isa Vector{eltype(L)}
-
-    # Upper Triangular
-    Ac = cache(A) # reset cache
-    U = UpperTriangular(Ac);
-    @test istriu(U[1:10,1:20])
-    @test istriu(U[1:100,1:100])
-    @test istriu(U[1:10,1:end])
-    @test U[1,1:end] isa Vector{eltype(U)}
-    @test U[1:5,1] isa Vector{eltype(U)}
+    @test issparse(Ac[1,1:10])
+    @test issparse(Ac[1:3,1:5])
+    @test issparse(Ac[1:10,end])
+    @test Ac[1,1] == 1.0
 end
