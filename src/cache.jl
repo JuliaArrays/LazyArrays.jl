@@ -101,31 +101,12 @@ getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, 
 end
 @inline _isfinite_getindex(A, kr, jr, _, _) = layout_getindex(A, kr, jr)
 
-@inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractUnitRange) = _isfinite_getindex(A::AbstractCachedMatrix, k, jr, maximum(k), maximum(jr))
-# TODO other getindex
-    resizedata!(A, k, maximum(jr))
-    getindex(A.data, k, jr)
-end
-@inline function getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, j::Integer)
-    resizedata!(A, maximum(kr), j)
-    getindex(A.data, kr, j)
-end
-@inline function getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange)
-    resizedata!(A, maximum(kr), maximum(jr))
-    getindex(A.data, kr, jr)
-end
-@inline function getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector)
-    resizedata!(A, maximum(kr), maximum(jr))
-    getindex(A.data, kr, jr)
-end
-@inline function getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractVector)
-    resizedata!(A, k, maximum(jr))
-    getindex(A.data, k, jr)
-end
-@inline function getindex(A::AbstractCachedMatrix, kr::AbstractVector, j::Integer)
-    resizedata!(A, maximum(kr), j)
-    getindex(A.data, kr, j)
-end
+@inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractUnitRange) = _isfinite_getindex(A, k, jr, k, maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, j::Integer) = _isfinite_getindex(A, kr, j, maximum(kr), j)
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector) = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractVector) = _isfinite_getindex(A, k, jr, k, maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, j::Integer) =  _isfinite_getindex(A, kr, j, maximum(kr), j)
 @inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = layout_getindex(A, k, :)
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, ::Colon) = layout_getindex(A, kr, :)
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, ::Colon) = layout_getindex(A, kr, :)
