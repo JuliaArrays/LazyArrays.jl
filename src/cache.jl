@@ -107,7 +107,7 @@ end
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector) = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
 @inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractVector) = _isfinite_getindex(A, k, jr, k, maximum(jr))
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, j::Integer) =  _isfinite_getindex(A, kr, j, maximum(kr), j)
-@inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = layout_getindex(A, k, :)
+inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = _isfinite_getindex(A, k, :, k, size(A,2))
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, ::Colon) = layout_getindex(A, kr, :)
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, ::Colon) = layout_getindex(A, kr, :)
 @inline getindex(A::AbstractCachedMatrix, ::Colon, j::Integer) = layout_getindex(A, :, j)
