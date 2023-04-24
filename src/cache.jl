@@ -99,16 +99,6 @@ getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, 
      resizedata!(A, maxkr, maxjr)
      getindex(A.data, kr, jr)
 end
-@inline function _isfinite_getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, maxkr::Int, maxjr::Int) where T
-    nmax = max(maxkr, maxjr)
-    resizedata!(A, nmax, nmax)
-    getindex(UpperTriangular(A.data), kr, jr)
-end
-@inline function _isfinite_getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, maxkr::Int, maxjr::Int) where T
-    nmax = max(maxkr, maxjr)
-    resizedata!(A, nmax, nmax)
-    getindex(LowerTriangular(A.data), kr, jr)
-end
 @inline _isfinite_getindex(A, kr, jr, _, _) = layout_getindex(A, kr, jr)
 
 @inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractUnitRange) = _isfinite_getindex(A, k, jr, k, maximum(jr))
@@ -477,7 +467,3 @@ function cacheddata(V::SubArray)
     data = cacheddata(P)
     view(data, intersect.(axes(data), parentindices(V))...)
 end
-
-# Triangular
-resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
-resizedata!(A::LowerTriangular, k::Integer, j::Integer) = resizedata!(parent(A), k, min(k,j))
