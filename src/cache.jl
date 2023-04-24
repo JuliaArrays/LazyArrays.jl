@@ -99,6 +99,16 @@ getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, 
      resizedata!(A, maxkr, maxjr)
      getindex(A.data, kr, jr)
 end
+@inline function _isfinite_getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, maxkr::Int, maxjr::Int) where T
+    nmax = max(maxkr, maxjr)
+    resizedata!(A, nmax, nmax)
+    getindex(UpperTriangular(A.data), kr, jr)
+end
+@inline function _isfinite_getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr, jr, maxkr::Int, maxjr::Int) where T
+    nmax = max(maxkr, maxjr)
+    resizedata!(A, nmax, nmax)
+    getindex(LowerTriangular(A.data), kr, jr)
+end
 @inline _isfinite_getindex(A, kr, jr, _, _) = layout_getindex(A, kr, jr)
 
 @inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractUnitRange) = _isfinite_getindex(A, k, jr, k, maximum(jr))
@@ -114,67 +124,6 @@ end
 @inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractVector) = layout_getindex(A, :, jr)
 @inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractUnitRange) = layout_getindex(A, :, jr)
 @inline getindex(A::AbstractCachedMatrix, ::Colon, ::Colon) = layout_getindex(A, :, :)
-# Ensure correct behavior for Triangular of cached arrays 
-@inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractUnitRange) where T
-    n = max(k, maximum(jr))
-    resizedata!(A, n, n)
-    getindex(LowerTriangular(A.data.data), k, jr)
-end
-@inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, j::Integer) where T
-    n = max(maximum(kr), j)
-    resizedata!(A, n, n)
-    getindex(LowerTriangular(A.data.data), kr, j)
-end
-@inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, jr::AbstractUnitRange) where T
-    n = max(maximum(kr), maximum(jr))
-    resizedata!(A, n, n)
-    getindex(LowerTriangular(A.data.data), kr, jr)
-end
-@inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, jr::AbstractVector) where T
-    n = max(maximum(kr), maximum(jr))
-    resizedata!(A, n, n)
-    getindex(LowerTriangular(A.data.data), kr, jr)
-end
-@inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractVector) where T
-    n = max(k, maximum(jr))
-    resizedata!(A, n, n)
-    getindex(LowerTriangular(A.data.data), k, jr)
-end
-@inline function getindex(A::LowerTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, j::Integer) where T
-    n = max(maximum(kr), j)
-    resizedata!(A, n, n)
-    getindex(LowerTriangular(A.data.data), kr, j)
-end
-@inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractUnitRange) where T
-    n = max(k, mmaximum(jr))
-    resizedata!(A, n, n)
-    getindex(UpperTriangular(A.data.data), k, jr)
-end
-@inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, j::Integer) where T
-    n = max(maximum(kr), j)
-    resizedata!(A, n, n)
-    getindex(UpperTriangular(A.data.data), kr, j)
-end
-@inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractUnitRange, jr::AbstractUnitRange) where T
-    n = max(maximum(kr), maximum(jr))
-    resizedata!(A, n, n)
-    getindex(UpperTriangular(A.data.data), kr, jr)
-end
-@inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, jr::AbstractVector) where T
-    n = max(maximum(kr), maximum(jr))
-    resizedata!(A, n, n)
-    getindex(UpperTriangular(A.data.data), kr, jr)
-end
-@inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, k::Integer, jr::AbstractVector) where T
-    n = max(k, maximum(jr))
-    resizedata!(A, n, n)
-    getindex(UpperTriangular(A.data.data), k, jr)
-end
-@inline function getindex(A::UpperTriangular{T, <:AbstractCachedMatrix{T}}, kr::AbstractVector, j::Integer) where T
-    n = max(maximum(kr), j)
-    resizedata!(A, n, n)
-    getindex(UpperTriangular(A.data.data), kr, j)
-end
 
 getindex(A::AbstractCachedVector, ::Colon) = copy(A)
 getindex(A::AbstractCachedVector, ::Slice) = copy(A)
