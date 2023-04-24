@@ -95,7 +95,14 @@ end
 
 getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, I)...]
 
-@inline function getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractUnitRange)
+@inline function _isfinite_getindex(A, kr, jr, maxkr::Int, maxjr::Int)
+     resizedata!(A, maxkr, maxjr)
+     getindex(A.data, kr, jr)
+end
+@inline _isfinite_getindex(A, kr, jr, _, _) = layout_getindex(A, kr, jr)
+
+@inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractUnitRange) = _isfinite_getindex(A::AbstractCachedMatrix, k, jr, maximum(k), maximum(jr))
+# TODO other getindex
     resizedata!(A, k, maximum(jr))
     getindex(A.data, k, jr)
 end
