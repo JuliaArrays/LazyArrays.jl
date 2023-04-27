@@ -30,7 +30,6 @@ jobs:
         julia-version: ['1']
         os: [ubuntu-latest]
         package:
-          - {repo: BandedMatrices.jl, group: JuliaLinearAlgebra}
           - {repo: LazyBandedMatrices.jl, group: JuliaLinearAlgebra}
 
     steps:
