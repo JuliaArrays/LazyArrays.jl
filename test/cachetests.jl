@@ -386,20 +386,21 @@ end
     @test issparse(Ac[1:3,1:5])
     @test issparse(Ac[1:10,end])
     @test Ac[1,1] == 1.0
-    # Lower Triangular
-    Ac = cache(A) # reset cache
-    L = LowerTriangular(Ac);
-    @test istril(L[1:10,1:20])
-    @test istril(L[1:100,1:100])
-    @test istril(L[1:10,1:end])
-    @test L[1,1:end] isa Vector{eltype(L)}
-    @test L[1:5,1] isa Vector{eltype(L)}
-    # Upper Triangular
-    Ac = cache(A) # reset cache
-    U = UpperTriangular(Ac);
-    @test istriu(U[1:10,1:20])
-    @test istriu(U[1:100,1:100])
-    @test istriu(U[1:10,1:end])
-    @test U[1,1:end] isa Vector{eltype(U)}
-    @test U[1:5,1] isa Vector{eltype(U)}
+end
+
+@testset "Cached triangular getindex" begin
+    for Tri in (:UnitUpperTriangular, :UpperTriangular, :UnitLowerTriangular, :LowerTriangular)
+        @eval begin
+            A = Matrix(1.0I[1:100,1:100])
+            A[2,1] = 1.1873
+            A[4,3] = 8.1230
+            Ac = cache(A)
+            T = $Tri(Ac);
+            @test T[1:10,1:20] == $Tri(A)[1:10,1:20]
+            @test T[1:100,1:100] == $Tri(A)[1:100,1:100]
+            @test T[1:10,1:end] == $Tri(A)[1:10,1:end]
+            @test T[1,1:end] isa Vector{eltype(T)}
+            @test T[1:5,1] isa Vector{eltype(T)}
+        end
+    end
 end
