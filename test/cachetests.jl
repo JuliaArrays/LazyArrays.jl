@@ -398,9 +398,18 @@ end
             T = $Tri(Ac);
             @test T[1:10,1:20] == $Tri(A)[1:10,1:20]
             @test T[1:100,1:100] == $Tri(A)[1:100,1:100]
+            @test T[Vector(1:10),Vector(1:10)] == $Tri(A)[1:10,1:10]
             @test T[1:10,1:end] == $Tri(A)[1:10,1:end]
             @test T[1,1:end] isa Vector{eltype(T)}
+            @test T[1,Vector(1:7)] isa Vector{eltype(T)}
             @test T[1:5,1] isa Vector{eltype(T)}
+            @test T[Vector(1:5),1] isa Vector{eltype(T)}
+            @test T[:,1] == $Tri(A)[:,1]
+            @test T[5,:] == $Tri(A)[5,:]
+            @test T[5:10,:] == $Tri(A)[5:10,:]
+            @test T[:,1:3] == $Tri(A)[:,1:3]
+            @test T[Vector(5:10),:] == $Tri(A)[Vector(5:10),:]
+            @test T[:,Vector(1:3)] == $Tri(A)[:,Vector(1:3)]
         end
     end
 end
