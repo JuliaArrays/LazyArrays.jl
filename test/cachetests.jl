@@ -408,6 +408,7 @@ end
             @test T[5,:] == $Tri(A)[5,:]
             @test T[5:10,:] == $Tri(A)[5:10,:]
             @test T[:,1:3] == $Tri(A)[:,1:3]
+            @test T[:,:] == $Tri(A)[:,:]
             @test T[Vector(5:10),:] == $Tri(A)[Vector(5:10),:]
             @test T[:,Vector(1:3)] == $Tri(A)[:,Vector(1:3)]
         end
