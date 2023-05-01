@@ -20,7 +20,7 @@ struct BroadcastLayout{F} <: AbstractLazyLayout end
 
 
 function _copyto!(_, ::BroadcastLayout, dest::AbstractArray{<:Any,N}, bc::AbstractArray{<:Any,N}) where N
-    materialize!(dest, _broadcastarray2broadcasted(bc))
+    materialize!(dest, _broadcastarray2broadcasted(MemoryLayout(bc), bc))
     dest
 end
 
@@ -66,14 +66,13 @@ BroadcastVector(A::BroadcastVector) = A
 BroadcastMatrix(A::BroadcastMatrix) = A
 
 @inline __broadcastarray2broadcasted() = ()
-@inline __broadcastarray2broadcasted(a, b...) = tuple(_broadcastarray2broadcasted(a), __broadcastarray2broadcasted(b...)...)
+@inline __broadcastarray2broadcasted(a, b...) = tuple(_broadcastarray2broadcasted(MemoryLayout(a), a), __broadcastarray2broadcasted(b...)...)
 @inline _broadcastarray2broadcasted(lay::BroadcastLayout, a) = broadcasted(call(lay, a), __broadcastarray2broadcasted(arguments(lay, a)...)...)
 @inline _broadcastarray2broadcasted(lay::BroadcastLayout, a::BroadcastArray) = broadcasted(call(lay, a), __broadcastarray2broadcasted(arguments(lay, a)...)...)
 @inline _broadcastarray2broadcasted(_, a) = a
 @inline _broadcastarray2broadcasted(lay, a::BroadcastArray) = error("Overload LazyArrays._broadcastarray2broadcasted(::$(lay), _)")
 @inline _broadcastarray2broadcasted(::DualLayout{ML}, a) where ML = _broadcastarray2broadcasted(ML(), a)
-@inline _broadcastarray2broadcasted(a) = _broadcastarray2broadcasted(MemoryLayout(a), a)
-@inline _broadcasted(A) = instantiate(_broadcastarray2broadcasted(A))
+@inline _broadcasted(A) = instantiate(_broadcastarray2broadcasted(MemoryLayout(A), A))
 broadcasted(A::BroadcastArray) = _broadcasted(A)
 broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = _broadcasted(A)
 Broadcasted(A::BroadcastArray) = broadcasted(A)::Broadcasted

@@ -424,7 +424,15 @@ function layout_replace_in_print_matrix(::PaddedLayout{Lay}, f::AbstractVecOrMat
 end
 
 # avoid ambiguity in LazyBandedMatrices
-copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))
+function copy(M::Mul{<:DiagonalLayout,<:PaddedLayout})
+    d,P = diagonaldata(M.A), paddeddata(M.B)
+    PaddedArray(Diagonal(d[axes(P,1)]) * P, size(M.B)...)
+end
+
+function copy(M::Mul{<:PaddedLayout,<:DiagonalLayout})
+    P,d = paddeddata(M.A),diagonaldata(M.B)
+    PaddedArray(P * Diagonal(d[axes(P,1)]), size(M.A)...)
+end
 
 
 
