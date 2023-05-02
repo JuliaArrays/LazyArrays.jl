@@ -53,7 +53,7 @@ import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot, 
                         adjointlayout, sub_materialize, mulreduce,
                         check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport,
                         _fill_lmul!, scalarone, scalarzero, fillzeros, zero!, layout_getindex, _copyto!,
-                        AbstractQLayout, StridedLayout, layout_replace_in_print_matrix
+                        AbstractQLayout, StridedLayout, layout_replace_in_print_matrix, diagonaldata
 
 import Base: require_one_based_indexing, oneto
 
