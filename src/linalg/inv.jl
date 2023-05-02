@@ -115,6 +115,7 @@ end
 @inline copy(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 @inline copy(L::Ldiv{<:AbstractLazyLayout,ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 @inline copy(L::Ldiv{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
+@inline copy(L::Ldiv{ApplyLayout{typeof(/)},ApplyLayout{typeof(*)}}) = _copy_ldiv_mul(L.A, arguments(ApplyLayout{typeof(*)}(), L.B)...)
 
 @inline _copy_ldiv_ldiv(B, A₀) = A₀ \ B
 @inline _copy_ldiv_ldiv(B, A₀, A₁...) = _copy_ldiv_ldiv(A₀ \ B, A₁...)
