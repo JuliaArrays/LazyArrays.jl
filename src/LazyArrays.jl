@@ -76,12 +76,14 @@ include("lazymacro.jl")
 Base.to_power_type(x::LazyArray) = x
 
 # Special broadcasting for BlockArrays.jl
-map(::typeof(length), A::BroadcastArray{OneTo{Int},1,Type{OneTo}}) = A.args[1]
-map(::typeof(length), A::BroadcastArray{<:Fill,1,Type{Fill},<:Tuple{Any,AbstractVector}}) = A.args[2]
-map(::typeof(length), A::BroadcastArray{<:Fill,1,Type{Fill},<:Tuple{AbstractVector,Number}}) = Fill(A.args[2],length(A.args[1]))
-map(::typeof(length), A::BroadcastArray{<:Zeros,1,Type{Zeros}}) = A.args[1]
-map(::typeof(length), A::BroadcastArray{<:Vcat,1,Type{Vcat}}) = broadcast(+,map.(length,A.args)...)
-broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastArray{OneTo{Int},1,Type{OneTo}}) = A.args[1]
-broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastArray{<:Fill,1,Type{Fill},<:NTuple{2,Any}}) = A.args[2]
+map(::typeof(length), A::BroadcastVector{OneTo{Int},Type{OneTo}}) = A.args[1]
+map(::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:Tuple{Any,AbstractVector}}) = A.args[2]
+map(::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:Tuple{AbstractVector,Number}}) = Fill(A.args[2],length(A.args[1]))
+map(::typeof(length), A::BroadcastVector{<:OneElement,Type{OneElement},<:Tuple{Any,AbstractVector}}) = A.args[2]
+map(::typeof(length), A::BroadcastVector{<:OneElement,Type{OneElement},<:Tuple{AbstractVector,Number}}) = Fill(A.args[2],length(A.args[1]))
+map(::typeof(length), A::BroadcastVector{<:Zeros,Type{Zeros}}) = A.args[1]
+map(::typeof(length), A::BroadcastVector{<:Vcat,Type{Vcat}}) = broadcast(+,map.(length,A.args)...)
+broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{OneTo{Int},Type{OneTo}}) = A.args[1]
+broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:NTuple{2,Any}}) = A.args[2]
 
 end # module
