@@ -103,9 +103,9 @@ end
 @inline function _isfinite_getindex(A::AbstractCachedMatrix, kr, maxkr::Int)
     m,n = size(A)
     if maxkr < m
-        resizedata(A, maxkr, 1)
+        resizedata!(A, maxkr, 1)
     else
-        resizedata(A, m, div(maxkr-1, m)+1)
+        resizedata!(A, m, div(maxkr-1, m)+1)
     end
     A.data[kr]
 end
@@ -150,9 +150,9 @@ for Adj in (:Adjoint, :Transpose)
         @inline function _isfinite_getindex(A::$Adj{T, <:AbstractCachedMatrix{T}}, kr, maxkr::Int) where T
             m,n = size(A)
             if maxkr < m
-                resizedata(parent(A), 1, maxkr)
+                resizedata!(parent(A), 1, maxkr)
             else
-                resizedata(parent(A), div(maxkr-1, m)+1, m)
+                resizedata!(parent(A), div(maxkr-1, m)+1, m)
             end
             $Adj(parent(A).data)[kr]
         end
