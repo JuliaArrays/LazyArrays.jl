@@ -367,50 +367,59 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test CachedAbstractVector(1:5) isa CachedAbstractVector
         @test CachedAbstractMatrix(reshape(1:6,2,3)) isa CachedAbstractMatrix
     end
-end
 
-@testset "getindex and data structure" begin
-    # Sparse
-    A = Matrix(1.0I[1:100,1:100])
-    A[2,1] = 3. 
-    Ac = cache(sparse(A))
-    @test Ac isa AbstractCachedArray
-    @test Ac isa AbstractCachedMatrix
-    @test issparse(Ac[1:10,1:10])
-    @test issparse(Ac[1:3,1:5])
-    @test issparse(Ac[Vector(1:3),Vector(1:5)])
-    @test issparse(Ac[1,Vector(1:5)])
-    @test issparse(Ac[Vector(1:5),6])
-    @test issparse(Ac[1,1:end])
-    @test issparse(Ac[1,1:10])
-    @test issparse(Ac[1:3,1:5])
-    @test issparse(Ac[1:10,end])
-    @test Ac[1,1] == 1.0
-end
+    @testset "getindex and data structure" begin
+        A = Matrix(1.0I[1:100,1:100])
+        A[2,1] = 3. 
+        Ac = cache(sparse(A))
+        @test Ac isa AbstractCachedArray
+        @test Ac isa AbstractCachedMatrix
+        @test issparse(Ac[1:10,1:10])
+        @test issparse(Ac[1:3,1:5])
+        @test issparse(Ac[Vector(1:3),Vector(1:5)])
+        @test issparse(Ac[1,Vector(1:5)])
+        @test issparse(Ac[Vector(1:5),6])
+        @test issparse(Ac[1,1:end])
+        @test issparse(Ac[1,1:10])
+        @test issparse(Ac[1:3,1:5])
+        @test issparse(Ac[1:10,end])
+        @test Ac[1,1] == 1.0
+    end
 
-@testset "Cached triangular getindex" begin
-    for Tri in (:UnitUpperTriangular, :UpperTriangular, :UnitLowerTriangular, :LowerTriangular)
-        @eval begin
-            A = Matrix(1.0I[1:100,1:100])
-            A[2,1] = 1.1873
-            A[4,3] = 8.1230
-            Ac = cache($Tri(A))
-            T = $Tri(Ac);
-            @test T[1:10,1:20] == $Tri(A)[1:10,1:20]
-            @test T[1:100,1:100] == $Tri(A)[1:100,1:100]
-            @test T[Vector(1:10),Vector(1:10)] == $Tri(A)[1:10,1:10]
-            @test T[1:10,1:end] == $Tri(A)[1:10,1:end]
-            @test T[1,1:end] isa Vector{eltype(T)}
-            @test T[1,Vector(1:7)] isa Vector{eltype(T)}
-            @test T[1:5,1] isa Vector{eltype(T)}
-            @test T[Vector(1:5),1] isa Vector{eltype(T)}
-            @test T[:,1] == $Tri(A)[:,1]
-            @test T[5,:] == $Tri(A)[5,:]
-            @test T[5:10,:] == $Tri(A)[5:10,:]
-            @test T[:,1:3] == $Tri(A)[:,1:3]
-            @test T[:,:] == $Tri(A)[:,:]
-            @test T[Vector(5:10),:] == $Tri(A)[Vector(5:10),:]
-            @test T[:,Vector(1:3)] == $Tri(A)[:,Vector(1:3)]
+    @testset "Cached triangular getindex" begin
+        for Tri in (:UnitUpperTriangular, :UpperTriangular, :UnitLowerTriangular, :LowerTriangular)
+            @eval begin
+                A = Matrix(1.0I[1:100,1:100])
+                A[2,1] = 1.1873
+                A[4,3] = 8.1230
+                Ac = cache($Tri(A))
+                T = $Tri(Ac);
+                @test T[1:10,1:20] == $Tri(A)[1:10,1:20]
+                @test T[1:100,1:100] == $Tri(A)[1:100,1:100]
+                @test T[Vector(1:10),Vector(1:10)] == $Tri(A)[1:10,1:10]
+                @test T[1:10,1:end] == $Tri(A)[1:10,1:end]
+                @test T[1,1:end] isa Vector{eltype(T)}
+                @test T[1,Vector(1:7)] isa Vector{eltype(T)}
+                @test T[1:5,1] isa Vector{eltype(T)}
+                @test T[Vector(1:5),1] isa Vector{eltype(T)}
+                @test T[:,1] == $Tri(A)[:,1]
+                @test T[5,:] == $Tri(A)[5,:]
+                @test T[5:10,:] == $Tri(A)[5:10,:]
+                @test T[:,1:3] == $Tri(A)[:,1:3]
+                @test T[:,:] == $Tri(A)[:,:]
+                @test T[Vector(5:10),:] == $Tri(A)[Vector(5:10),:]
+                @test T[:,Vector(1:3)] == $Tri(A)[:,Vector(1:3)]
+            end
         end
+    end
+
+    @testset "Adj/Trans" begin
+        v = cache(1:100)
+        @test v'[1:5] == transpose(v)[1:5] == v'[1,1:5] == transpose(v)[1,1:5] == v[1:5]
+
+        A = cache(reshape(1:110, 10, 11));
+        @test A'[1,1:5] == transpose(A)[1,1:5] == A[1:5,1]
+        @test  A'[1:3] == A.array'[1:3]
+        @test  A'[1:11] == A.array'[1:11]
     end
 end
