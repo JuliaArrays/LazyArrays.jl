@@ -127,7 +127,7 @@ end
 @inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractVector) = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
 @inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractUnitRange) = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
 @inline getindex(A::AbstractCachedMatrix, ::Colon, ::Colon) = _isfinite_getindex(A, :, :, size(A,1), size(A,2))
-@inline getindex(A::AbstractCachedMatrix, ::AbstractVector) = _isfinite_getindex(A, kr, maximum(kr))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector) = _isfinite_getindex(A, kr, maximum(kr))
 
 # Structured Caching cases
 for Tri in (:UnitUpperTriangular, :UpperTriangular, :UnitLowerTriangular, :LowerTriangular)

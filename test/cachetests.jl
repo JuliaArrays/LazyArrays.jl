@@ -33,6 +33,9 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test C[1:10,1:10] == C[collect(1:10),collect(1:10)] == C[:,:] == C[1:10,:] ==
                 C[collect(1:10),:] == C[:,1:10] == C[:,collect(1:10)] == A
 
+        @test C[1:5] == C[1:5,1]
+        @test C[1:11] == [C[:,1]; C[1,2]]
+
         A = reshape(1:10^3, 10,10,10)
         C = cache(A)
         @test size(C) == (10,10,10)
