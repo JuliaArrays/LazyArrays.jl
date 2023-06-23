@@ -663,6 +663,26 @@ end
 
 @inline cumsum(V::Vcat{<:Any,1}) = ApplyVector(vcat,_vcat_cumsum(V.args...)...)
 
+###
+# cumsum(Vcat(::Number, ::Fill))
+# special override. Used with BlockArrays
+###
+
+function cumsum(v::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
+    a,b = arguments(v)
+    FillArrays.steprangelen(a, getindex_value(b), length(b)+1)
+end
+
+function cumsum(v::Vcat{T,1,<:Tuple{Number,Zeros}}) where T
+    a,b = arguments(v)
+    Fill(convert(T,a), length(b)+1)
+end
+
+function cumsum(v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
+    a,b = arguments(v)
+    convert(T,a) .+ (0:length(b))
+end
+
 
 _vcat_diff(x::Number) = ()
 _vcat_diff(x) = (diff(x),)
@@ -948,3 +968,5 @@ end
 end
 
 searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x)
+
+
