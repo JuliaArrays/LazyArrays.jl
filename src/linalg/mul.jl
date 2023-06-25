@@ -325,6 +325,7 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 @inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = simplify(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = simplify(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,ZerosLayout}) = FillArrays.mult_zeros(M.A, M.B)
+@inline copy(M::Mul{DualLayout{ZerosLayout},<:AbstractLazyLayout}) = copy(Mul{DualLayout{ZerosLayout},UnknownLayout}(M.A, M.B))
 
 @inline simplifiable(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = Val(true)
 @inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
