@@ -332,8 +332,8 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
 
     @testset "Zeros" begin
         A = MyLazyArray(randn(5,5))
-        @test A * Zeros(5) ≡ Zeros(5)
-        @test A * Zeros(5,2) ≡ Zeros(5,2)
+        @test A * Zeros(5) ≡ mul(A, Zeros(5)) ≡ Zeros(5)
+        @test A * Zeros(5,2) ≡ mul(A, Zeros(5,2)) ≡ Zeros(5,2)
 
         @test Zeros(5)' * A ≡ Zeros(5)'
         @test transpose(Zeros(5)) * A ≡ transpose(Zeros(5))
