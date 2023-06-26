@@ -149,7 +149,7 @@ colsupport(B::MulArray, j) = _mul_colsupport(j, reverse(B.args)...)
 
 _mul_rowsupport(j, A) = rowsupport(A,j)
 _mul_rowsupport(j, A::AbstractArray) = rowsupport(A,j)
-_mul_rowsupport(j, A, B...) = axes(A,1) # default is return all
+_mul_rowsupport(j, A, B...) = axes(A,2) # default is return all
 _mul_rowsupport(j, A::AbstractArray, B...) = _mul_rowsupport(rowsupport(A,j), B...)
 
 rowsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_rowsupport(j, B.args...)
