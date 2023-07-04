@@ -149,7 +149,7 @@ colsupport(B::MulArray, j) = _mul_colsupport(j, reverse(B.args)...)
 
 _mul_rowsupport(j, A) = rowsupport(A,j)
 _mul_rowsupport(j, A::AbstractArray) = rowsupport(A,j)
-_mul_rowsupport(j, A, B...) = axes(A,1) # default is return all
+_mul_rowsupport(j, A, B...) = axes(A,2) # default is return all
 _mul_rowsupport(j, A::AbstractArray, B...) = _mul_rowsupport(rowsupport(A,j), B...)
 
 rowsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_rowsupport(j, B.args...)
@@ -324,6 +324,8 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 @inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = simplify(M)
 @inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = simplify(M)
 @inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = simplify(M)
+@inline copy(M::Mul{<:AbstractLazyLayout,ZerosLayout}) = FillArrays.mult_zeros(M.A, M.B)
+@inline copy(M::Mul{DualLayout{ZerosLayout},<:AbstractLazyLayout}) = copy(Mul{DualLayout{ZerosLayout},UnknownLayout}(M.A, M.B))
 
 @inline simplifiable(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = Val(true)
 @inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
