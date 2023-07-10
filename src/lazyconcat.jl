@@ -34,7 +34,6 @@ end
 @inline axes(f::Vcat{<:Any,1}) = tuple(oneto(+(map(length,f.args)...)))
 @inline axes(f::Vcat{<:Any,2}) = (oneto(+(map(a -> size(a,1), f.args)...)), axes(f.args[1],2))
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
-Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
 function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
     a_args = arguments(vcat, a)
@@ -138,7 +137,6 @@ end
 @inline eltype(A::Applied{<:Any,typeof(hcat)}) = promote_type(map(eltype,A.args)...)
 ndims(::Applied{<:Any,typeof(hcat)}) = 2
 size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
-Base.IndexStyle(::Type{<:Hcat}) = Base.IndexCartesian()
 
 @inline hcat_getindex(f, k, j::Integer) = hcat_getindex_recursive(f, (k, j), f.args...)
 
