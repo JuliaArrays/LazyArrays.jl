@@ -300,20 +300,20 @@ lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 
 @inline simplifiable(::typeof(*), a) = Val(false)
 @inline simplifiable(::typeof(*), a, b) = simplifiable(Mul(a,b))
-@inline simplifiable(::typeof(*), a...) = _most_simplifiable(*, simplifiable(*, Base.front(a)...), a)
-@inline _most_simplifiable(::typeof(*), ::Val{true}, a) = Val(true)
-@inline _most_simplifiable(::typeof(*), ::Val{false}, a) = simplifiable(*, tail(a)...)
+# check 2-at-a-time
+@inline simplifiable_pairs(::typeof(*), a) = (simplifiable(*, a, b), )
+@inline simplifiable_pairs(::typeof(*), a, b, c...) = (simplifiable(*, a, b), simplifiable_pairs(*, a, b)...)
+
+@inline simplifiable(::typeof(*), a...) = _any(simplifiable_pairs(::typeof(*), a...)...)
+
+
 
 # Flatten first
 @inline simplify(::typeof(*), args...) = _simplify(*, _flatten(args...)...)
-@inline _simplify(::typeof(*), a, b) = _twoarg_simplify(*, simplifiable(*, a, b), a, b)
-@inline _twoarg_simplify(::typeof(*), ::Val{false}, a, b) = lazymaterialize(*, a, b)
-@inline _twoarg_simplify(::typeof(*), ::Val{true}, a, b) = mul(a,b)
-@inline _simplify(::typeof(*), args...) = _most_simplify(simplifiable(*, Base.front(args)...), args)
-@inline _most_simplify(::Val{true}, args) = *(_mul_arguments(_simplify(*, Base.front(args)...))..., last(args))
-@inline _most_simplify(::Val{false}, args) = _tail_simplify(simplifiable(*, tail(args)...), args)
-@inline _tail_simplify(::Val{true}, args) = *(first(args), _mul_arguments(_simplify(*, tail(args)...))...)
-@inline _tail_simplify(::Val{false}, args) = lazymaterialize(*, args...)
+@inline _simplify(::typeof(*), args...) = _simplify_by_pairs(*, simplifiable_pairs(*, args...), args...)
+_simplify_by_pairs(::typeof(*), ::Tuple{Val{true}, Vararg{Any}}, frnt::Tuple, a, b, c...) = *(frnt..., mul(a, b), c...)
+_simplify_by_pairs(::typeof(*), ::Tuple{Val{false}, Vararg{Any}}, frnt::Tuple, a, b, c...) = _simplify_by_pairs(*, tuple(frnt..., a), b, c...)
+_simplify_by_pairs(::typeof(*), ::Tuple{Val{false}, Vararg{Any}}, frnt::Tuple, a) = lazymaterialize(*, frnt..., a)
 
 simplify(M::Mul) = simplify(*, M.A, M.B)
 simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
