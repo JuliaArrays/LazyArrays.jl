@@ -168,7 +168,7 @@ end
 @inline _isfinite_getindex(A::Adjoint{T, <:AbstractCachedVector{T}}, kr, maxkr::Int) where T = conj(parent(A)[kr])
 
 
-for Wrap in (:AbstractTriangular, :AdjOrTrans)
+for Wrap in (:UpperOrLowerTriangular, :AdjOrTrans)
     @eval begin
         @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, k::Integer, jr::AbstractUnitRange) where T = _isfinite_getindex(A, k, jr, k, maximum(jr))
         @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, kr::AbstractUnitRange, j::Integer) where T = _isfinite_getindex(A, kr, j, maximum(kr), j)
