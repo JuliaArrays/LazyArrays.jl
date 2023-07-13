@@ -37,9 +37,18 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!, eltypes
 
-import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, dot, factorize, qr, lu, cholesky,
+import LinearAlgebra: AbstractQ, checksquare, pinv, fill!, tilebufsize, dot, factorize, qr, lu, cholesky,
                         norm2, norm1, normInf, normp, normMinusInf, diag, det, logabsdet, tr, AdjOrTrans, triu, tril,
                         lmul!, rmul!, StructuredMatrixStyle
+
+if VERSION ≥ v"1.11.0-DEV.21"
+    using LinearAlgebra: UpperOrLowerTriangular
+else
+    const UpperOrLowerTriangular{T,S} = Union{LinearAlgebra.UpperTriangular{T,S},
+                                              LinearAlgebra.UnitUpperTriangular{T,S},
+                                              LinearAlgebra.LowerTriangular{T,S},
+                                              LinearAlgebra.UnitLowerTriangular{T,S}}
+end
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
