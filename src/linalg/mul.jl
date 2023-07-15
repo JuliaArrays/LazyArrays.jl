@@ -92,10 +92,9 @@ combine_mul_styles(a, b, c...) = combine_mul_styles(combine_mul_styles(a, b), c.
 # We need to combine all branches to determine whether it can be  simplified
 ApplyStyle(::typeof(*), a) = DefaultApplyStyle()
 ApplyStyle(::typeof(*), a::AbstractArray) = DefaultArrayApplyStyle()
-# naive recursion results in O(2^n) complexity, where `Base.front` is the bottleneck.
-# _mul_ApplyStyle(a, b...) = combine_mul_styles(_mul_ApplyStyle(a, Base.front(b)...), _mul_ApplyStyle(b...))
-# the below approach doesn't benefit from compilation but has O(n^2) complexity.
-function _mul_ApplyStyle(a...)
+# naive recursion is more comprehensive but is slower than the implemented algorithm as of Julia 1.9.2.
+# @generated _mul_ApplyStyle(a...) = combine_mul_styles(_mul_ApplyStyle(Base.front(a)...), _mul_ApplyStyle(Base.tail(a)...))
+@generated function _mul_ApplyStyle(a...)
     list = ApplyStyle[_mul_ApplyStyle(x) for x in a]
     for countdown in length(list)-1:-1:1
         for k in 1:countdown
@@ -103,10 +102,6 @@ function _mul_ApplyStyle(a...)
         end
     end
 end
-# backup methods that benefit from compilation
-_mul_ApplyStyle(a, b, c, d) = combine_mul_styles(_mul_ApplyStyle(a,b,c), _mul_ApplyStyle(b,c,d))
-_mul_ApplyStyle(a, b, c) = combine_mul_styles(_mul_ApplyStyle(a,b), _mul_ApplyStyle(b,c))
-_mul_ApplyStyle(a, b) = combine_mul_styles(_mul_ApplyStyle(a), _mul_ApplyStyle(b))
 _mul_ApplyStyle(a) = MulStyle()
 ApplyStyle(::typeof(*), a, b...) = _mul_ApplyStyle(a, b...)
 if !(AbstractQ  <: AbstractMatrix) # VERSION >= v"1.10-"
