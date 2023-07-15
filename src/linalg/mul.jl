@@ -92,7 +92,9 @@ combine_mul_styles(a, b, c...) = combine_mul_styles(combine_mul_styles(a, b), c.
 # We need to combine all branches to determine whether it can be  simplified
 ApplyStyle(::typeof(*), a) = DefaultApplyStyle()
 ApplyStyle(::typeof(*), a::AbstractArray) = DefaultArrayApplyStyle()
-_mul_ApplyStyle(a, b...) = combine_mul_styles(ApplyStyle(*, a, Base.front(b)...),  ApplyStyle(*, b...))
+_mul_ApplyStyle(a, b...) = combine_mul_styles(_mul_ApplyStyle(a, Base.front(b)...),  _mul_ApplyStyle(b...))
+_mul_ApplyStyle(a, b) = MulStyle()
+_mul_ApplyStyle(a) = MulStyle()
 ApplyStyle(::typeof(*), a, b...) = _mul_ApplyStyle(a, b...)
 if !(AbstractQ  <: AbstractMatrix) # VERSION >= v"1.10-"
     ApplyStyle(::typeof(*), a::Type{<:Union{AbstractArray,AbstractQ}}, b::Type{<:Union{AbstractArray,AbstractQ}}...) = _mul_ApplyStyle(a, b...)
