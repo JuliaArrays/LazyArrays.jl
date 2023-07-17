@@ -281,9 +281,9 @@ hermitianlayout(::Type{<:Complex}, ::AbstractLazyLayout) = HermitianLayout{LazyL
 hermitianlayout(::Type{<:Real}, ::AbstractLazyLayout) = SymmetricLayout{LazyLayout}()
 triangularlayout(::Type{Tri}, ::AbstractLazyLayout) where Tri = Tri{LazyLayout}()
 
-LazyLayouts = Union{AbstractLazyLayout, SymmetricLayout{LazyLayout}, HermitianLayout{LazyLayout},
-                    TriangularLayout{'L', 'N', LazyLayout}, TriangularLayout{'U', 'N', LazyLayout},
-                    TriangularLayout{'L', 'U', LazyLayout}, TriangularLayout{'U', 'U', LazyLayout}}
+LazyLayouts = Union{AbstractLazyLayout, SymmetricLayout{<:AbstractLazyLayout}, HermitianLayout{<:AbstractLazyLayout},
+                    TriangularLayout{'L', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'N', <:AbstractLazyLayout},
+                    TriangularLayout{'L', 'U', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}
 
 @inline _islazy(::LazyLayouts) = Val(true)
 @inline _islazy(_) = Val(false)
