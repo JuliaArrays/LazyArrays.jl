@@ -597,7 +597,6 @@ function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail
 end
 
 _vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail)::Tuple{Number,Any}, op, A, B) = Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-_vcat_layout_broadcasted((Ahead,Atail)::Tuple{SVector{M},Any}, (Bhead,Btail)::Tuple{SVector{M},Any}, op, A, B) where M = Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
 
 
 broadcasted(::LazyArrayStyle, op, a::Vcat{<:Any,N}, b::AbstractArray{<:Any,N}) where N = layout_broadcasted(op, a, b)
