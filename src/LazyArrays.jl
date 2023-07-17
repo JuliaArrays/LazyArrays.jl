@@ -37,7 +37,7 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!, eltypes
 
-import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, dot, factorize, qr, lu, cholesky,
+import LinearAlgebra: AbstractQ, checksquare, pinv, fill!, tilebufsize, dot, factorize, qr, lu, cholesky,
                         norm2, norm1, normInf, normp, normMinusInf, diag, det, logabsdet, tr, AdjOrTrans, triu, tril,
                         lmul!, rmul!, StructuredMatrixStyle
 
@@ -53,7 +53,7 @@ import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot, 
                         adjointlayout, sub_materialize, mulreduce,
                         check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport,
                         _fill_lmul!, scalarone, scalarzero, fillzeros, zero!, layout_getindex, _copyto!,
-                        AbstractQLayout, StridedLayout, layout_replace_in_print_matrix
+                        AbstractQLayout, StridedLayout, layout_replace_in_print_matrix, UpperOrLowerTriangular
 
 import Base: require_one_based_indexing, oneto
 

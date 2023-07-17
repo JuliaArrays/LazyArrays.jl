@@ -1165,4 +1165,10 @@ end
         A = ApplyArray(*, [1 2; 3 4], [1 2; 3 4], [1 2; 3 4])
         @test A[:,1] == Matrix(A)[:,1]
     end
+
+    @testset "* sym and tri" begin
+        A = ApplyArray(+, randn(2,2), randn(2,2))
+        @test UpperTriangular(A) * Symmetric(A) isa MulArray
+        @test UpperTriangular(A) * Eye(2) isa UpperTriangular
+    end
 end
