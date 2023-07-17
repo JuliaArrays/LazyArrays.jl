@@ -1171,4 +1171,9 @@ end
         @test UpperTriangular(A) * Symmetric(A) isa MulArray
         @test UpperTriangular(A) * Eye(2) isa UpperTriangular
     end
+
+    @testset "simplifiable tests" begin
+        A = randn(5,5)
+        @test LazyArrays.simplifiable(*, A) == Val(false)
+        @test LazyArrays.simplify(Applied(*, A, A)) == A*A
 end
