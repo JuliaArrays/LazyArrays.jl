@@ -199,8 +199,8 @@ ApplyArray(M::Applied) = ApplyArray{eltype(M)}(M)
 ApplyVector(M::Applied) = ApplyVector{eltype(M)}(M)
 ApplyMatrix(M::Applied) = ApplyMatrix{eltype(M)}(M)
 
-ApplyArray(f, factors...) = ApplyArray(applied(f, factors...))
-ApplyArray{T}(f, factors...) where T = ApplyArray{T}(applied(f, factors...))
+ApplyArray(f, factors...) = ApplyArray{_mul_eltype(_eltypes(factors...)...)}(f, factors...)
+ApplyArray{T}(f, factors...) where T = ApplyArray{T, _applied_ndims(f, factors...)}(f, factors...)
 ApplyArray{T,N}(f, factors...) where {T,N} = ApplyArray{T,N}(applied(f, factors...))
 
 ApplyVector(f, factors...) = ApplyVector(applied(f, factors...))

@@ -18,6 +18,12 @@ const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
 const MulVector{T, Args} = MulArray{T, 1, Args}
 const MulMatrix{T, Args} = MulArray{T, 2, Args}
 
+function ApplyArray{T,N}(::typeof(*), factors...) where {T,N}
+    _check_mul_axes(_drop_scalars(factors...)...)
+    ApplyArray{T,N,typeof(*),typeof(factors)}(*, factors)
+end
+
+
 
 _drop_scalars(a::Number, b...) = _drop_scalars(b...)
 _drop_scalars(a, b...) = (a, _drop_scalars(b...)...)
@@ -28,7 +34,9 @@ check_applied_axes(A::Applied{<:Any,typeof(*)}) = _check_mul_axes(_drop_scalars(
 
 size(M::Applied{<:Any,typeof(*)}, p::Int) = size(M)[p]
 axes(M::Applied{<:Any,typeof(*)}, p::Int) = axes(M)[p]
-ndims(M::Applied{<:Any,typeof(*)}) = ndims(last(M.args))
+
+_applied_ndims(::typeof(*), args...) = ndims(last(args))
+
 
 _mul_ndims(::Type{Tuple{A}}) where A = ndims(A)
 _mul_ndims(::Type{Tuple{A,B}}) where {A,B} = ndims(B)
@@ -59,6 +67,7 @@ size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
 
 @inline axes(M::Applied{<:Any,typeof(*)}) = mulaxes(map(axes,M.args)...)
 @inline axes(M::Applied{<:Any, typeof(*), Tuple{}}) = ()
+axes(M::ApplyArray{T,N,typeof(*)}) where {T,N} = mulaxes(map(axes,M.args)...)
 
 ###
 # show
@@ -155,11 +164,14 @@ _mul_rowsupport(j, A::AbstractArray, B...) = _mul_rowsupport(rowsupport(A,j), B.
 rowsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_rowsupport(j, B.args...)
 rowsupport(B::MulArray, j) = _mul_rowsupport(j, B.args...)
 
-function getindex(M::Applied{<:Any,typeof(*)}, k...)
-    A,Bs = first(M.args), tail(M.args)
+function _mul_getindex(args::Tuple, k...)
+    A,Bs = first(args), tail(args)
     B = _mul(Bs...)
     Mul(A, B)[k...]
 end
+
+getindex(M::Applied{<:Any,typeof(*)}, k...) = _mul_getindex(M.args, k...)
+@propagate_inbounds getindex(M::ApplyArray{T,N,typeof(*)}, kj::Vararg{Integer,N}) where {T,N} = convert(T, _mul_getindex(M.args, kj...))::T
 
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
 flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
@@ -218,7 +230,7 @@ _vec_mul_arguments(V) = _vec_mul_arguments(arguments(parent(V)), parentindices(V
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V)
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
 
-@inline sub_materialize(lay::ApplyLayout{typeof(*)}, V) = apply(*, map(sub_materialize, arguments(lay, V))...)
+@inline sub_materialize(lay::ApplyLayout{typeof(*)}, V) = *(map(sub_materialize, arguments(lay, V))...)
 
 
 ##
