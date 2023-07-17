@@ -293,9 +293,6 @@ lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 @inline _not(::Val{true}) = Val(false)
 @inline _not(::Val{false}) = Val(true)
 
-@inline _islazy(::AbstractLazyLayout) = Val(true)
-@inline _islazy(_) = Val(false)
-@inline islazy(A) = _islazy(MemoryLayout(A))
 @inline simplifiable(M::Mul) = _not(_or(islazy(M.A), islazy(M.B)))
 
 @inline simplifiable(::typeof(*), a) = Val(false)
@@ -319,16 +316,16 @@ simplify(M::Mul) = simplify(*, M.A, M.B)
 simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 
 
-@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = simplify(M)
-@inline copy(M::Mul{<:AbstractLazyLayout}) = simplify(M)
-@inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = simplify(M)
-@inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = simplify(M)
-@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = simplify(M)
-@inline copy(M::Mul{<:AbstractLazyLayout,ZerosLayout}) = FillArrays.mult_zeros(M.A, M.B)
-@inline copy(M::Mul{DualLayout{ZerosLayout},<:AbstractLazyLayout}) = copy(Mul{DualLayout{ZerosLayout},UnknownLayout}(M.A, M.B))
+@inline copy(M::Mul{<:LazyLayouts,<:LazyLayouts}) = simplify(M)
+@inline copy(M::Mul{<:LazyLayouts}) = simplify(M)
+@inline copy(M::Mul{<:Any,<:LazyLayouts}) = simplify(M)
+@inline copy(M::Mul{<:AbstractQLayout,<:LazyLayouts}) = simplify(M)
+@inline copy(M::Mul{<:LazyLayouts,<:AbstractQLayout}) = simplify(M)
+@inline copy(M::Mul{<:LazyLayouts,ZerosLayout}) = FillArrays.mult_zeros(M.A, M.B)
+@inline copy(M::Mul{DualLayout{ZerosLayout},<:LazyLayouts}) = copy(Mul{DualLayout{ZerosLayout},UnknownLayout}(M.A, M.B))
 
-@inline simplifiable(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = Val(true)
-@inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
+@inline simplifiable(M::Mul{<:DualLayout,<:LazyLayouts,<:AbstractMatrix,<:AbstractVector}) = Val(true)
+@inline copy(M::Mul{<:DualLayout,<:LazyLayouts,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
 
 applylayout(::Type{typeof(*)}, ::DualLayout{Lay}, args...) where Lay = DualLayout{typeof(applylayout(typeof(*), Lay(), args...))}()
 
