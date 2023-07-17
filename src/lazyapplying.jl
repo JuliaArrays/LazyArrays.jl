@@ -279,7 +279,16 @@ reshapedlayout(::AbstractLazyLayout, _) = LazyLayout()
 symmetriclayout(::AbstractLazyLayout) = SymmetricLayout{LazyLayout}()
 hermitianlayout(::Type{<:Complex}, ::AbstractLazyLayout) = HermitianLayout{LazyLayout}()
 hermitianlayout(::Type{<:Real}, ::AbstractLazyLayout) = SymmetricLayout{LazyLayout}()
+triangularlayout(::Type{Tri}, ::AbstractLazyLayout) where Tri = Tri{LazyLayout}()
 
+LazyLayouts = Union{AbstractLazyLayout, SymmetricLayout{<:AbstractLazyLayout}, HermitianLayout{<:AbstractLazyLayout},
+                    TriangularLayout{'L', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'N', <:AbstractLazyLayout},
+                    TriangularLayout{'L', 'U', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}
+
+@inline _islazy(::LazyLayouts) = Val(true)
+@inline _islazy(_) = Val(false)
+@inline islazy(A) = _islazy(MemoryLayout(A))
+                    
 
 struct ApplyLayout{F} <: AbstractLazyLayout end
 
