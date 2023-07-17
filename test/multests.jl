@@ -1176,4 +1176,5 @@ end
         A = randn(5,5)
         @test LazyArrays.simplifiable(*, A) == Val(false)
         @test LazyArrays.simplify(Applied(*, A, A)) == A*A
+    end
 end
