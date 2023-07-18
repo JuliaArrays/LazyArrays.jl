@@ -35,7 +35,7 @@ end
         @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
     end
 
-    @testset "adjtrans/symherm" begin
+    @testset "adjtrans/symherm/triangular" begin
         A = ApplyArray(+, randn(2,2), randn(2,2))
         B = ApplyArray(+, randn(2,2), im*randn(2,2))
         @test MemoryLayout(Symmetric(A)) isa SymmetricLayout{LazyLayout}
@@ -46,6 +46,10 @@ end
         @test MemoryLayout(B') isa LazyLayout
         @test MemoryLayout(transpose(A)) isa LazyLayout
         @test MemoryLayout(transpose(B)) isa LazyLayout
+        @test MemoryLayout(UpperTriangular(A)) isa TriangularLayout{'U', 'N', LazyLayout}
+        @test MemoryLayout(UpperTriangular(A)') isa TriangularLayout{'L', 'N', LazyLayout}
+        @test MemoryLayout(UpperTriangular(B)) isa TriangularLayout{'U', 'N', LazyLayout}
+        @test MemoryLayout(UpperTriangular(B)') isa TriangularLayout{'L', 'N', LazyLayout}
     end
 end
 
