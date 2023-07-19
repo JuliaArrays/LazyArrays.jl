@@ -3,7 +3,7 @@ module LazyArrays
 # Use README as the docstring of the module:
 @doc read(joinpath(dirname(@__DIR__), "README.md"), String) LazyArrays
 
-using Base, Base.Broadcast, LinearAlgebra, FillArrays, StaticArrays, ArrayLayouts, MatrixFactorizations, SparseArrays
+using Base, Base.Broadcast, LinearAlgebra, FillArrays, ArrayLayouts, MatrixFactorizations, SparseArrays
 import LinearAlgebra.BLAS
 
 import Base: AbstractArray, AbstractMatrix, AbstractVector,
@@ -54,8 +54,6 @@ import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
 import FillArrays: AbstractFill, getindex_value
 
-import StaticArrays: StaticArrayStyle
-
 import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot, Mul, _inv,
                         transposelayout, conjlayout, sublayout, triangularlayout, triangulardata,
                         reshapedlayout, diagonallayout, tridiagonallayout, symtridiagonallayout, bidiagonallayout, symmetriclayout, hermitianlayout,
@@ -94,5 +92,9 @@ map(::typeof(length), A::BroadcastVector{<:Zeros,Type{Zeros}}) = A.args[1]
 map(::typeof(length), A::BroadcastVector{<:Vcat,Type{Vcat}}) = broadcast(+,map.(length,A.args)...)
 broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{OneTo{Int},Type{OneTo}}) = A.args[1]
 broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:NTuple{2,Any}}) = A.args[2]
+
+if !isdefined(Base, :get_extension)
+    include("../ext/LazyArraysStaticArraysExt.jl")
+end
 
 end # module
