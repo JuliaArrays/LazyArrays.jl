@@ -83,9 +83,24 @@ function _copyto!(::PaddedLayout, ::PaddedLayout, dest::AbstractVector, src::Abs
     dest
 end
 
-function _copyto!(::PaddedLayout, ::ZerosLayout, dest::AbstractVector, src::AbstractVector)
-    zero!(paddeddata(dest))
+function _copyto!(::PaddedLayout, ::PaddedLayout, dest::AbstractMatrix, src::AbstractMatrix)
+    (size(src,1) ≤ size(dest,1) && size(src,2) ≤ size(dest,2))  || throw(BoundsError())
+    src_data = paddeddata(src)
+    m,n = size(src_data)
+    resizedata!(dest, m, n) # if resizeable, otherwise this is a no-op
+    dest_data = paddeddata(dest)
+    copyto!(view(dest_data,OneTo(m),OneTo(n)), src_data)
+    zero!(view(dest_data,m+1:size(dest_data,1),:))
+    zero!(view(dest_data,1:m,n+1:size(dest_data,2)))
     dest
+end
+
+for AbsMatOrVec in (:AbstractVector, :AbstractMatrix)
+    @eval function _copyto!(::PaddedLayout, ::ZerosLayout, dest::$AbsMatOrVec, src::$AbsMatOrVec)
+        axes(dest) == axes(src) || error("copyto! with padded/zeros only supported with equal axes")
+        zero!(paddeddata(dest))
+        dest
+    end
 end
 
 function zero!(::PaddedLayout, A)

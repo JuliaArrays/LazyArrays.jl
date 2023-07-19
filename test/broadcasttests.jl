@@ -283,6 +283,10 @@ import Base: broadcasted
         k = BroadcastArray(Base.OneTo,Base.OneTo(5))
         z = BroadcastArray(Zeros, Base.OneTo(5))
         v = BroadcastArray(Vcat, n, k)
+        e1 = BroadcastArray(OneElement, 1, Base.OneTo(5))
+        en = BroadcastArray(OneElement, Base.OneTo(5), Base.OneTo(5))
+        e = BroadcastArray(OneElement, Base.OneTo(5), 5)
+
         @test map(length, n) ≡ map(length, k) ≡ map(length, z) ≡ Base.OneTo(5)
         @test map(length, v) ≡ 2 * (1:5)
         @test map(length, BroadcastArray(Fill,Base.OneTo(5))) == ones(5)
@@ -291,6 +295,9 @@ import Base: broadcasted
 
         @test map(length, BroadcastArray(Fill, Base.OneTo(5), 2)) ≡ Fill(2, 5)
         @test map(length, BroadcastArray(Fill, 2, Base.OneTo(5))) == length.(Fill.(2, Base.OneTo(5)))
+
+        @test map(length, e1) ≡ map(length, en) ≡ Base.OneTo(5)
+        @test map(length, e) ≡ Fill(5,5)
     end
 
     @testset "sub_materialize of row slice" begin

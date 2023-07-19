@@ -37,9 +37,18 @@ import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcas
                         combine_eltypes, DefaultArrayStyle, instantiate, materialize,
                         materialize!, eltypes
 
-import LinearAlgebra: AbstractTriangular, AbstractQ, checksquare, pinv, fill!, tilebufsize, dot, factorize, qr, lu, cholesky,
+import LinearAlgebra: AbstractQ, checksquare, pinv, fill!, tilebufsize, dot, factorize, qr, lu, cholesky,
                         norm2, norm1, normInf, normp, normMinusInf, diag, det, logabsdet, tr, AdjOrTrans, triu, tril,
                         lmul!, rmul!, StructuredMatrixStyle
+
+if VERSION ≥ v"1.11.0-DEV.21"
+    using LinearAlgebra: UpperOrLowerTriangular
+else
+    const UpperOrLowerTriangular{T,S} = Union{LinearAlgebra.UpperTriangular{T,S},
+                                              LinearAlgebra.UnitUpperTriangular{T,S},
+                                              LinearAlgebra.LowerTriangular{T,S},
+                                              LinearAlgebra.UnitLowerTriangular{T,S}}
+end
 
 import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
 
@@ -76,12 +85,14 @@ include("lazymacro.jl")
 Base.to_power_type(x::LazyArray) = x
 
 # Special broadcasting for BlockArrays.jl
-map(::typeof(length), A::BroadcastArray{OneTo{Int},1,Type{OneTo}}) = A.args[1]
-map(::typeof(length), A::BroadcastArray{<:Fill,1,Type{Fill},<:Tuple{Any,AbstractVector}}) = A.args[2]
-map(::typeof(length), A::BroadcastArray{<:Fill,1,Type{Fill},<:Tuple{AbstractVector,Number}}) = Fill(A.args[2],length(A.args[1]))
-map(::typeof(length), A::BroadcastArray{<:Zeros,1,Type{Zeros}}) = A.args[1]
-map(::typeof(length), A::BroadcastArray{<:Vcat,1,Type{Vcat}}) = broadcast(+,map.(length,A.args)...)
-broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastArray{OneTo{Int},1,Type{OneTo}}) = A.args[1]
-broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastArray{<:Fill,1,Type{Fill},<:NTuple{2,Any}}) = A.args[2]
+map(::typeof(length), A::BroadcastVector{OneTo{Int},Type{OneTo}}) = A.args[1]
+map(::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:Tuple{Any,AbstractVector}}) = A.args[2]
+map(::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:Tuple{AbstractVector,Number}}) = Fill(A.args[2],length(A.args[1]))
+map(::typeof(length), A::BroadcastVector{<:OneElement,Type{OneElement},<:Tuple{Any,AbstractVector}}) = A.args[2]
+map(::typeof(length), A::BroadcastVector{<:OneElement,Type{OneElement},<:Tuple{AbstractVector,Number}}) = Fill(A.args[2],length(A.args[1]))
+map(::typeof(length), A::BroadcastVector{<:Zeros,Type{Zeros}}) = A.args[1]
+map(::typeof(length), A::BroadcastVector{<:Vcat,Type{Vcat}}) = broadcast(+,map.(length,A.args)...)
+broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{OneTo{Int},Type{OneTo}}) = A.args[1]
+broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:NTuple{2,Any}}) = A.args[2]
 
 end # module

@@ -329,4 +329,28 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
 
         @test simplifiable(*, x'A, x) == Val(true)
     end
+
+    @testset "Zeros" begin
+        A = MyLazyArray(randn(5,5))
+        @test A * Zeros(5) ≡ mul(A, Zeros(5)) ≡ Zeros(5)
+        @test A * Zeros(5,2) ≡ mul(A, Zeros(5,2)) ≡ Zeros(5,2)
+
+        @test Zeros(5)' * A ≡ Zeros(5)'
+        @test transpose(Zeros(5)) * A ≡ transpose(Zeros(5))
+
+        D = Diagonal(1:5)
+        y = MyLazyArray(randn(5))
+
+        @test Zeros(5)' * D * y == transpose(Zeros(5)) * D * y == 0.0
+        @test y' * D * Zeros(5) == transpose(y) * D * Zeros(5) == 0.0
+        @test Zeros(5)' * Diagonal(y) ≡ Zeros(5)'
+        @test transpose(Zeros(5)) * Diagonal(y) ≡ transpose(Zeros(5))
+        @test Zeros(5)' * Diagonal(y) * y == 0.0
+        @test transpose(Zeros(5)) * Diagonal(y) * y == 0.0
+        @test y' * Diagonal(y) * Zeros(5) == 0.0
+        @test transpose(y) * Diagonal(y) * Zeros(5) == 0.0
+        @test Zeros(5)' * Diagonal(y) * Zeros(5) == 0.0
+        @test transpose(Zeros(5)) * Diagonal(y) * Zeros(5) == 0.0
+    end
 end
+

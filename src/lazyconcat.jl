@@ -34,7 +34,6 @@ end
 @inline axes(f::Vcat{<:Any,1}) = tuple(oneto(+(map(length,f.args)...)))
 @inline axes(f::Vcat{<:Any,2}) = (oneto(+(map(a -> size(a,1), f.args)...)), axes(f.args[1],2))
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
-Base.IndexStyle(::Type{<:Vcat{T,2}}) where T = Base.IndexCartesian()
 
 function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
     a_args = arguments(vcat, a)
@@ -138,7 +137,6 @@ end
 @inline eltype(A::Applied{<:Any,typeof(hcat)}) = promote_type(map(eltype,A.args)...)
 ndims(::Applied{<:Any,typeof(hcat)}) = 2
 size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
-Base.IndexStyle(::Type{<:Hcat}) = Base.IndexCartesian()
 
 @inline hcat_getindex(f, k, j::Integer) = hcat_getindex_recursive(f, (k, j), f.args...)
 
@@ -663,6 +661,26 @@ end
 
 @inline cumsum(V::Vcat{<:Any,1}) = ApplyVector(vcat,_vcat_cumsum(V.args...)...)
 
+###
+# cumsum(Vcat(::Number, ::Fill))
+# special override. Used with BlockArrays
+###
+
+function cumsum(v::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
+    a,b = arguments(v)
+    FillArrays.steprangelen(a, getindex_value(b), length(b)+1)
+end
+
+function cumsum(v::Vcat{T,1,<:Tuple{Number,Zeros}}) where T
+    a,b = arguments(v)
+    Fill(convert(T,a), length(b)+1)
+end
+
+function cumsum(v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
+    a,b = arguments(v)
+    convert(T,a) .+ (0:length(b))
+end
+
 
 _vcat_diff(x::Number) = ()
 _vcat_diff(x) = (diff(x),)
@@ -948,3 +966,5 @@ end
 end
 
 searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x)
+
+

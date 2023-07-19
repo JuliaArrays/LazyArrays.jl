@@ -95,16 +95,97 @@ end
 
 getindex(A::AbstractCachedMatrix, I::Integer) = A[Base._to_subscript_indices(A, I)...]
 
-@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = layout_getindex(A, kr, jr)
-@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector) = layout_getindex(A, kr, jr)
-@inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractVector) = layout_getindex(A, k, jr)
-@inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = layout_getindex(A, k, :)
-@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, ::Colon) = layout_getindex(A, kr, :)
-@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, ::Colon) = layout_getindex(A, kr, :)
-@inline getindex(A::AbstractCachedMatrix, ::Colon, j::Integer) = layout_getindex(A, :, j)
-@inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractVector) = layout_getindex(A, :, jr)
-@inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractUnitRange) = layout_getindex(A, :, jr)
-@inline getindex(A::AbstractCachedMatrix, ::Colon, ::Colon) = layout_getindex(A, :, :)
+@inline function _isfinite_getindex(A::AbstractCachedMatrix, kr, jr, maxkr::Int, maxjr::Int)
+    resizedata!(A, maxkr, maxjr)
+    A.data[kr, jr]
+end
+
+@inline function _isfinite_getindex(A::AbstractCachedMatrix, kr, maxkr::Int)
+    m,n = size(A)
+    if maxkr < m
+        resizedata!(A, maxkr, 1)
+    else
+        resizedata!(A, m, div(maxkr-1, m)+1)
+    end
+    A.data[kr]
+end
+
+# default is to do lazy
+@inline _isfinite_getindex(A, kr, jr, _, _) = layout_getindex(A, kr, jr)
+@inline _isfinite_getindex(A, kr, _) = layout_getindex(A, kr)
+
+@inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractUnitRange) = _isfinite_getindex(A, k, jr, k, maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, j::Integer) = _isfinite_getindex(A, kr, j, maximum(kr), j)
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, jr::AbstractUnitRange) = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::AbstractVector) = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, k::Integer, jr::AbstractVector) = _isfinite_getindex(A, k, jr, k, maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, j::Integer) =  _isfinite_getindex(A, kr, j, maximum(kr), j)
+@inline getindex(A::AbstractCachedMatrix, k::Integer, ::Colon) = _isfinite_getindex(A, k, :, k, size(A,2))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, ::Colon) = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractUnitRange, ::Colon) = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+@inline getindex(A::AbstractCachedMatrix, ::Colon, j::Integer) = _isfinite_getindex(A, :, j, size(A,1), j)
+@inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractVector) = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, ::Colon, jr::AbstractUnitRange) = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+@inline getindex(A::AbstractCachedMatrix, ::Colon, ::Colon) = _isfinite_getindex(A, :, :, size(A,1), size(A,2))
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector) = _isfinite_getindex(A, kr, maximum(kr))
+
+# Structured Caching cases
+for Tri in (:UnitUpperTriangular, :UpperTriangular, :UnitLowerTriangular, :LowerTriangular)
+    @eval begin
+        @inline function _isfinite_getindex(A::$Tri{T, <:AbstractCachedMatrix{T}}, kr, jr, maxkr::Int, maxjr::Int) where T
+            nmax = max(maxkr,maxjr)
+            resizedata!(A.data, nmax, nmax)
+            getindex($Tri(A.data.data[1:nmax,1:nmax]), kr, jr)
+        end
+    end
+end
+
+for Adj in (:Adjoint, :Transpose)
+    @eval begin
+        @inline function _isfinite_getindex(A::$Adj{T, <:AbstractCachedMatrix{T}}, kr, jr, maxkr::Int, maxjr::Int) where T
+            resizedata!(parent(A), maxjr, maxkr)
+            $Adj(parent(A).data)[kr,jr]
+        end
+
+        @inline function _isfinite_getindex(A::$Adj{T, <:AbstractCachedMatrix{T}}, kr, maxkr::Int) where T
+            m,n = size(A)
+            if maxkr < m
+                resizedata!(parent(A), 1, maxkr)
+            else
+                resizedata!(parent(A), div(maxkr-1, m)+1, m)
+            end
+            $Adj(parent(A).data)[kr]
+        end
+
+        @inline function _isfinite_getindex(A::$Adj{T, <:AbstractCachedVector{T}}, kr, jr, maxkr::Int, maxjr::Int) where T
+            resizedata!(parent(A), maxjr)
+            $Adj(parent(A).data)[kr,jr]
+        end
+    end
+end
+
+@inline _isfinite_getindex(A::Transpose{T, <:AbstractCachedVector{T}}, kr, maxkr::Int) where T = parent(A)[kr]
+@inline _isfinite_getindex(A::Adjoint{T, <:AbstractCachedVector{T}}, kr, maxkr::Int) where T = conj(parent(A)[kr])
+
+
+for Wrap in (:UpperOrLowerTriangular, :AdjOrTrans)
+    @eval begin
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, k::Integer, jr::AbstractUnitRange) where T = _isfinite_getindex(A, k, jr, k, maximum(jr))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, kr::AbstractUnitRange, j::Integer) where T = _isfinite_getindex(A, kr, j, maximum(kr), j)
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, kr::AbstractUnitRange, jr::AbstractUnitRange) where T = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, kr::AbstractVector, jr::AbstractVector) where T = _isfinite_getindex(A, kr, jr, maximum(kr), maximum(jr))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, k::Integer, jr::AbstractVector) where T = _isfinite_getindex(A, k, jr, k, maximum(jr))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, kr::AbstractVector, j::Integer) where T =  _isfinite_getindex(A, kr, j, maximum(kr), j)
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, k::Integer, ::Colon) where T = _isfinite_getindex(A, k, :, k, size(A,2))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, kr::AbstractVector, ::Colon) where T = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, kr::AbstractUnitRange, ::Colon) where T = _isfinite_getindex(A, kr, :, maximum(kr), size(A,2))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, ::Colon, j::Integer) where T = _isfinite_getindex(A, :, j, size(A,1), j)
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, ::Colon, jr::AbstractVector) where T = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, ::Colon, jr::AbstractUnitRange) where T = _isfinite_getindex(A, :, jr, size(A,1), maximum(jr))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, ::Colon, ::Colon) where T = _isfinite_getindex(A, :, :, size(A,1), size(A,2))
+        @inline getindex(A::$Wrap{T, <:AbstractCachedArray{T}}, kr::AbstractVector) where T = _isfinite_getindex(A, kr, maximum(kr))
+    end
+end
 
 getindex(A::AbstractCachedVector, ::Colon) = copy(A)
 getindex(A::AbstractCachedVector, ::Slice) = copy(A)
@@ -458,7 +539,3 @@ function cacheddata(V::SubArray)
     data = cacheddata(P)
     view(data, intersect.(axes(data), parentindices(V))...)
 end
-
-# Triangular
-resizedata!(A::UpperTriangular, k::Integer, j::Integer) = resizedata!(parent(A), min(k,j), j)
-resizedata!(A::LowerTriangular, k::Integer, j::Integer) = resizedata!(parent(A), k, min(k,j))

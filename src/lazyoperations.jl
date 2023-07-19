@@ -377,7 +377,6 @@ function Diff(A::AbstractMatrix{T}; dims::Integer) where T
 end
 
 IndexStyle(::Type{<:Diff{<:Any,1}}) = IndexLinear()
-IndexStyle(::Type{<:Diff{<:Any,2}}) = IndexCartesian()
 
 size(D::Diff{<:Any,1}) = (length(D.v)-1,)
 function size(D::Diff{<:Any,2})
@@ -427,7 +426,6 @@ const Cumsum{T,N,Arr} = Accumulate{T,N,typeof(+),Array{T,N},Arr}
 Cumsum(v::AbstractArray; dims::Integer=1) = Accumulate(+, v; dims=dims)
 
 IndexStyle(::Type{<:Accumulate{<:Any,1}}) = IndexLinear()
-IndexStyle(::Type{<:Accumulate{<:Any,2}}) = IndexCartesian()
 
 size(Q::Accumulate) = size(Q.v)
 

@@ -119,6 +119,14 @@ paddeddata(a::PaddedPadded) = a
         b = cache(Zeros(13));
         a[3] = 2; b[3] = 2; b[5]=0;
         @test a == b
+
+        a = Vcat([1 2; 3 4], Zeros(10,2))
+        c = cache(Zeros(12, 2));
+        @test copyto!(c, a) == c == a
+        @test copyto!(c, Zeros(12,2)) == c == Zeros(12,2)
+
+        # following not yet supported
+        @test_throws ErrorException copyto!(c, Zeros(10,2))
     end
 
     @testset "vcat and padded" begin
