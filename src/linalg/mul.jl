@@ -101,6 +101,7 @@ ApplyStyle(::typeof(*), a::AbstractArray) = DefaultArrayApplyStyle()
             list[k] = combine_mul_styles(list[k], list[k+1])
         end
     end
+    list[1]
 end
 _mul_ApplyStyle(a) = MulStyle()
 ApplyStyle(::typeof(*), a, b...) = _mul_ApplyStyle(a, b...)
