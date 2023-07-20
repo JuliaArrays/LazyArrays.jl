@@ -662,7 +662,7 @@ end
             @test applied(*, UpperTriangular(A), x) isa Applied{MulStyle}
             @test similar(applied(*, UpperTriangular(A), x), Float64) isa Vector{Float64}
 
-            @test ApplyStyle(*, typeof(UpperTriangular(A)), typeof(x)) isa MulStyle
+            @test @inferred(ApplyStyle(*, typeof(UpperTriangular(A)), typeof(x))) isa MulStyle
 
             @test all((y = copy(x); y .= applied(*, UpperTriangular(A),y) ) .===
                         (similar(x) .= applied(*, UpperTriangular(A),x)) .===
@@ -883,13 +883,13 @@ end
         A = randn(5,5)
         B = Diagonal(randn(5))
         @test MemoryLayout(typeof(B)) == DiagonalLayout{DenseColumnMajor}()
-        @test ApplyStyle(*, typeof(A), typeof(B)) == MulStyle()
+        @test @inferred(ApplyStyle(*, typeof(A), typeof(B))) == MulStyle()
         @test apply(*,A,B) == A*B == materialize!(Rmul(copy(A),B))
 
-        @test ApplyStyle(*, typeof(B), typeof(A)) == MulStyle()
+        @test @inferred(ApplyStyle(*, typeof(B), typeof(A))) == MulStyle()
         @test apply(*,B,A) == B*A
 
-        @test ApplyStyle(*, typeof(B), typeof(B)) == MulStyle()
+        @test @inferred(ApplyStyle(*, typeof(B), typeof(B))) == MulStyle()
         @test apply(*,B,B) == B*B
         @test apply(*,B,B) isa Diagonal
 
@@ -961,7 +961,7 @@ end
 
     @testset "ApplyArray MulTest" begin
         A = ApplyArray(*,randn(2,2), randn(2,2))
-        @test ApplyStyle(*,typeof(A),typeof(randn(2,2))) isa MulStyle
+        @test @inferred(ApplyStyle(*,typeof(A),typeof(randn(2,2)))) isa MulStyle
         @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*Fill(3,10) ≡ Fill(180,10)
         @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10)) == Fill(360,10,10)
         @test A' isa ApplyArray
