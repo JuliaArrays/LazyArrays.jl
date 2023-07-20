@@ -74,7 +74,7 @@ function _applyarray_summary(io::IO, ::typeof(*), args)
         print(io, ")")
     end
 end
-    
+
 
 ####
 # Matrix * Array
@@ -174,7 +174,7 @@ end
 
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
 flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
- 
+
 adjoint(A::MulMatrix) = ApplyArray(*, reverse(map(adjoint,A.args))...)
 transpose(A::MulMatrix) = ApplyArray(*, reverse(map(transpose,A.args))...)
 
@@ -186,11 +186,11 @@ transpose(A::MulMatrix) = ApplyArray(*, reverse(map(transpose,A.args))...)
 _mul_args_rowsupport(a,kr) = rowsupport(a,kr)
 _mul_args_colsupport(a,kr) = colsupport(a,kr)
 __mul_args_rows(kr, a) = (kr,)
-__mul_args_rows(kr, a, b...) = 
+__mul_args_rows(kr, a, b...) =
     (kr, __mul_args_rows(_mul_args_rowsupport(a,kr), b...)...)
 _mul_args_rows(kr, a, b...) = __mul_args_rows(_mul_args_rowsupport(a,kr), b...)
 __mul_args_cols(jr, z) = (jr,)
-__mul_args_cols(jr, z, y...) = 
+__mul_args_cols(jr, z, y...) =
     (__mul_args_cols(_mul_args_colsupport(z,jr), y...)..., jr)
 _mul_args_cols(jr, z, y...) = __mul_args_cols(_mul_args_colsupport(z,jr), y...)
 
@@ -285,7 +285,7 @@ lazymaterialize(F::Function, args::Union{AbstractArray,AbstractQ}...) = copy(App
 lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 
 
-### 
+###
 # Simplify
 # Here we implement a simple routine for simplifying multiplication by expanding what can be expanded
 
@@ -304,9 +304,6 @@ lazymaterialize(M::Mul) = lazymaterialize(*, M.A, M.B)
 @inline _not(::Val{true}) = Val(false)
 @inline _not(::Val{false}) = Val(true)
 
-@inline _islazy(::AbstractLazyLayout) = Val(true)
-@inline _islazy(_) = Val(false)
-@inline islazy(A) = _islazy(MemoryLayout(A))
 @inline simplifiable(M::Mul) = _not(_or(islazy(M.A), islazy(M.B)))
 
 @inline simplifiable(::typeof(*), a) = Val(false)
@@ -330,16 +327,16 @@ simplify(M::Mul) = simplify(*, M.A, M.B)
 simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 
 
-@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractLazyLayout}) = simplify(M)
-@inline copy(M::Mul{<:AbstractLazyLayout}) = simplify(M)
-@inline copy(M::Mul{<:Any,<:AbstractLazyLayout}) = simplify(M)
-@inline copy(M::Mul{<:AbstractQLayout,<:AbstractLazyLayout}) = simplify(M)
-@inline copy(M::Mul{<:AbstractLazyLayout,<:AbstractQLayout}) = simplify(M)
-@inline copy(M::Mul{<:AbstractLazyLayout,ZerosLayout}) = FillArrays.mult_zeros(M.A, M.B)
-@inline copy(M::Mul{DualLayout{ZerosLayout},<:AbstractLazyLayout}) = copy(Mul{DualLayout{ZerosLayout},UnknownLayout}(M.A, M.B))
+@inline copy(M::Mul{<:LazyLayouts,<:LazyLayouts}) = simplify(M)
+@inline copy(M::Mul{<:LazyLayouts}) = simplify(M)
+@inline copy(M::Mul{<:Any,<:LazyLayouts}) = simplify(M)
+@inline copy(M::Mul{<:AbstractQLayout,<:LazyLayouts}) = simplify(M)
+@inline copy(M::Mul{<:LazyLayouts,<:AbstractQLayout}) = simplify(M)
+@inline copy(M::Mul{<:LazyLayouts,ZerosLayout}) = FillArrays.mult_zeros(M.A, M.B)
+@inline copy(M::Mul{DualLayout{ZerosLayout},<:LazyLayouts}) = copy(Mul{DualLayout{ZerosLayout},UnknownLayout}(M.A, M.B))
 
-@inline simplifiable(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = Val(true)
-@inline copy(M::Mul{<:DualLayout,<:AbstractLazyLayout,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
+@inline simplifiable(M::Mul{<:DualLayout,<:LazyLayouts,<:AbstractMatrix,<:AbstractVector}) = Val(true)
+@inline copy(M::Mul{<:DualLayout,<:LazyLayouts,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
 
 applylayout(::Type{typeof(*)}, ::DualLayout{Lay}, args...) where Lay = DualLayout{typeof(applylayout(typeof(*), Lay(), args...))}()
 

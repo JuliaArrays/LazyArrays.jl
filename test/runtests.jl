@@ -5,7 +5,12 @@ import ArrayLayouts: OnesLayout
 
 using Aqua
 @testset "Project quality" begin
-    Aqua.test_all(LazyArrays, ambiguities=false, piracy=false)
+    Aqua.test_all(LazyArrays, ambiguities=false, piracy=false,
+        # Project.toml formatting issue on v1.6
+        # Pkg issue: https://github.com/JuliaLang/Pkg.jl/issues/3481
+        # Aqua workaround: https://github.com/JuliaTesting/Aqua.jl/issues/105#issuecomment-1551405866
+        # we only check the formatting on more recent versions
+        project_toml_formatting = VERSION>=v"1.7")
 end
 
 @testset "Lazy MemoryLayout" begin
@@ -30,7 +35,7 @@ end
         @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
     end
 
-    @testset "adjtrans/symherm" begin
+    @testset "adjtrans/symherm/triangular" begin
         A = ApplyArray(+, randn(2,2), randn(2,2))
         B = ApplyArray(+, randn(2,2), im*randn(2,2))
         @test MemoryLayout(Symmetric(A)) isa SymmetricLayout{LazyLayout}
@@ -41,6 +46,10 @@ end
         @test MemoryLayout(B') isa LazyLayout
         @test MemoryLayout(transpose(A)) isa LazyLayout
         @test MemoryLayout(transpose(B)) isa LazyLayout
+        @test MemoryLayout(UpperTriangular(A)) isa TriangularLayout{'U', 'N', LazyLayout}
+        @test MemoryLayout(UpperTriangular(A)') isa TriangularLayout{'L', 'N', LazyLayout}
+        @test MemoryLayout(UpperTriangular(B)) isa TriangularLayout{'U', 'N', LazyLayout}
+        @test MemoryLayout(UpperTriangular(B)') isa TriangularLayout{'L', 'N', LazyLayout}
     end
 end
 
