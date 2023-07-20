@@ -38,7 +38,7 @@ Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
     a_args = arguments(vcat, a)
     b_args = arguments(vcat, b)
-    if length(a_args) ≠ length(b_args) || any(map(size,a_args) .≠ map(size,b_args))
+    if length(a_args) ≠ length(b_args) || any(map(size,a_args) .≠ map(size,b_args))
         return Base.invoke(==, NTuple{2,AbstractArray}, a, b)
     end
     all(a_args .== b_args)
@@ -209,15 +209,15 @@ _hvcat_size(A::AbstractVector) = (size(A,1),1)
     T = eltype(f)
     m,n = _hvcat_size(A)
     N ≤ 0 && throw(BoundsError(f, (k,j))) # ran out of arrays
-    k ≤ m && j ≤ n && return convert(T, A[k, j])::T
-    k ≤ m && return hvcat_getindex_recursive(f, (k, j - n), N-1, args...)
+    k ≤ m && j ≤ n && return convert(T, A[k, j])::T
+    k ≤ m && return hvcat_getindex_recursive(f, (k, j - n), N-1, args...)
     hvcat_getindex_recursive(f, (k - m, j), N, args[N:end]...)
 end
 
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::NTuple{M,Int}, A, args...) where M
     T = eltype(f)
     m,n = _hvcat_size(A)
-    k ≤ m && return hvcat_getindex_recursive(f, (k, j), N[1], A, args...)
+    k ≤ m && return hvcat_getindex_recursive(f, (k, j), N[1], A, args...)
     hvcat_getindex_recursive(f, (k - m, j), tail(N), args[N[1]:end]...)
 end
 
@@ -379,7 +379,7 @@ function hvcat_copyto!(a::AbstractMatrix{T}, rows::Tuple{Vararg{Int}}, xs::T...)
     nc = rows[1]
 
     size(a) == (nc,nr) || throw(DimensionMismatch())
-    
+
     if length(a) != length(xs)
         throw(ArgumentError("argument count does not match specified shape (expected $(length(a)), got $(length(xs)))"))
     end
@@ -489,7 +489,7 @@ end
 BroadcastStyle(::Type{<:Vcat{<:Any,N}}) where N = LazyArrayStyle{N}()
 BroadcastStyle(::Type{<:Hcat{<:Any}}) = LazyArrayStyle{2}()
 
-# This is if we broadcast a function on a mixed concat f.([1; [2,3]]) 
+# This is if we broadcast a function on a mixed concat f.([1; [2,3]])
 # such that f returns a vector, e.g., f(1) == [1,2], we don't want
 # to have the concat return [f(1); [f(2),f(3)]] but rather [[f(1)]; [f(2),f(3)]]
 
@@ -557,7 +557,7 @@ _vcat_layout_broadcasted(Aargs, Bargs, op, A, B) = Broadcasted{LazyArrayStyle{1}
 function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{AbstractVector,Any}, (Bhead,Btail)::Tuple{AbstractVector,Any}, op, A, B)
     T = Broadcast.combine_eltypes(op, (eltype(A), eltype(B)))
 
-    if length(Ahead) ≥ length(Bhead)
+    if length(Ahead) ≥ length(Bhead)
         M,m = length(Ahead), length(Bhead)
         Chead = Vector{T}(undef,M)
         view(Chead,1:m) .= op.(view(Ahead,1:m), Bhead)
@@ -765,7 +765,7 @@ function rowsupport(lay::ApplyLayout{typeof(vcat)}, V::AbstractArray, k::Integer
     ξ = k
     for A in arguments(lay, V)
         n = size(A,1)
-        ξ ≤ n && return rowsupport(A, ξ)
+        ξ ≤ n && return rowsupport(A, ξ)
         ξ -= n
     end
     return 1:0
@@ -775,7 +775,7 @@ function colsupport(lay::ApplyLayout{typeof(hcat)}, H::AbstractArray, j::Integer
     ξ = j
     for A in arguments(lay,H)
         n = size(A,2)
-        ξ ≤ n && return colsupport(A, ξ)
+        ξ ≤ n && return colsupport(A, ξ)
         ξ -= n
     end
     return 1:0
@@ -927,7 +927,7 @@ function layout_replace_in_print_matrix(LAY::ApplyLayout{typeof(vcat)}, f::Abstr
     κ = k
     for A in arguments(LAY, f)
         n = size(A,1)
-        κ ≤ n && return _replace_in_print_matrix(A, κ, j, s)
+        κ ≤ n && return _replace_in_print_matrix(A, κ, j, s)
         κ -= n
     end
     throw(BoundsError(f, (k,j)))

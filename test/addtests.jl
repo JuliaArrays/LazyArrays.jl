@@ -282,7 +282,7 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
                 @testset "constvec .$op mat" begin
                     B = BroadcastArray(op, c, A)
                     B̃ = BroadcastArray(op, c[1], A)
-                    @test B * b ≈ B̃ * b ≈ op.(c, A) * b 
+                    @test B * b ≈ B̃ * b ≈ op.(c, A) * b
                     @test B * A ≈ B̃ * A ≈ op.(c, A) * A
                     @test A * B ≈ A * B̃ ≈ A * op.(c, A)
                 end
@@ -297,7 +297,7 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             B = BroadcastArray(+, A, 2A)
             C = BroadcastArray(-, A, 2A)
             @test B*C ≈ 3A * (-A)
-            @test C*B ≈ (-A) * 3A 
+            @test C*B ≈ (-A) * 3A
         end
     end
 end

@@ -353,3 +353,4 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test transpose(Zeros(5)) * Diagonal(y) * Zeros(5) == 0.0
     end
 end
+

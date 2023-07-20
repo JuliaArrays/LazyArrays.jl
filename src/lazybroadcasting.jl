@@ -227,7 +227,7 @@ end
 ###
 
 # TODO: special case adjtrans to skip the `isone` check and return numbers instead of 1-vectors.
-# 
+#
 
 sublayout(b::BroadcastLayout, _) = b
 
@@ -235,10 +235,10 @@ sublayout(b::BroadcastLayout, _) = b
 @inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{Number,Vararg{Any}}) =
     tuple(isone(length(ax[1])) ? 1 : convert(Int,inds[1]), _broadcastviewinds(tail(ax), tail(inds))...)
 @inline _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{AbstractVector{<:Integer},Vararg{Any}}) =
-    tuple(isone(length(ax[1])) ? convert(typeof(inds[1]),Base.OneTo(min(1,length(inds[1])))) : inds[1], _broadcastviewinds(tail(ax), tail(inds))...)    
+    tuple(isone(length(ax[1])) ? convert(typeof(inds[1]),Base.OneTo(min(1,length(inds[1])))) : inds[1], _broadcastviewinds(tail(ax), tail(inds))...)
 @inline function _broadcastviewinds(ax::Tuple{OneTo{Int},Vararg{Any}}, inds::Tuple{Any,Vararg{Any}})
     @assert isone(length(ax[1]))
-    tuple(Base.OneTo(1), _broadcastviewinds(tail(ax), tail(inds))...)    
+    tuple(Base.OneTo(1), _broadcastviewinds(tail(ax), tail(inds))...)
 end
 
 @inline _broadcastviewinds(ax, inds) = # don't support special broadcasting

@@ -83,7 +83,7 @@ end
 @inline materializeargs(A::Applied) = applied(A.f, materialize.(A.args)...)
 
 # the following materialzes the args and calls materialize again, unless it hasn't
-# changed in which case it falls back to the default
+# changed in which case it falls back to the default
 @inline _default_materialize(A::App, ::App) where App = A.f(A.args...)
 @inline _default_materialize(A, _) = materialize(A)
 # copy(A::Applied{DefaultApplyStyle}) = A.f(A.args...)
@@ -369,16 +369,16 @@ for tri in (:tril, :triu)
 end
 
 getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix}}, k::Integer, j::Integer) where T =
-    j ≥ k ? A.args[1][k,j] : zero(T)
+    j ≥ k ? A.args[1][k,j] : zero(T)
 
 getindex(A::ApplyMatrix{T,typeof(triu),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T =
-    j ≥ k+A.args[2] ? A.args[1][k,j] : zero(T)
+    j ≥ k+A.args[2] ? A.args[1][k,j] : zero(T)
 
 getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix}}, k::Integer, j::Integer) where T =
-    j ≤ k ? A.args[1][k,j] : zero(T)
+    j ≤ k ? A.args[1][k,j] : zero(T)
 
 getindex(A::ApplyMatrix{T,typeof(tril),<:Tuple{<:AbstractMatrix,<:Integer}}, k::Integer, j::Integer) where T =
-    j ≤ k+A.args[2] ? A.args[1][k,j] : zero(T)
+    j ≤ k+A.args[2] ? A.args[1][k,j] : zero(T)
 
 
 ###
