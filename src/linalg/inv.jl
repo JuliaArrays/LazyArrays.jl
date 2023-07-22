@@ -22,32 +22,33 @@ ndims(A::InvOrPInv) = ndims(parent(A))
 
 
 
-size(A::InvOrPInv) = reverse(size(parent(A)))
-axes(A::InvOrPInv) = reverse(axes(parent(A)))
-size(A::InvOrPInv, k) = size(A)[k]
-axes(A::InvOrPInv, k) = axes(A)[k]
-eltype(A::InvOrPInv) = Base.promote_op(inv, eltype(parent(A)))
+for op in (:inv, :pinv)
+    @eval begin
+        @inline applied_size(::typeof($op), a) = reverse(size(a))
+        @inline applied_axes(::typeof($op), a) = reverse(axes(a))
+        @inline applied_eltype(::typeof($op), a) = Base.promote_op(inv, eltype(a))
+        @inline applied_ndims(::typeof($op), a) = 2
+    end
+end
 
 # Use ArrayLayouts.ldiv instead of \
 struct LdivStyle <: ApplyStyle end
 struct RdivStyle <: ApplyStyle end
 
-ApplyStyle(::typeof(\), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = LdivStyle()
-ApplyStyle(::typeof(/), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = RdivStyle()
+@inline ApplyStyle(::typeof(\), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = LdivStyle()
+@inline ApplyStyle(::typeof(/), ::Type{A}, ::Type{B}) where {A<:AbstractArray,B<:AbstractArray} = RdivStyle()
 
 
-axes(M::Applied{Style,typeof(\)}) where Style = ldivaxes(M.args...)
-axes(M::Applied{Style,typeof(\)}, p::Int)  where Style = axes(M)[p]
-size(M::Applied{Style,typeof(\)}) where Style = length.(axes(M))
-@inline eltype(M::Applied{Style,typeof(\)}) where Style = eltype(Ldiv(M.args...))
-@inline ndims(M::Applied{Style,typeof(\)}) where Style = ndims(last(M.args))
+@inline applied_axes(::typeof(\), args...) = ldivaxes(args...)
+@inline applied_size(::typeof(\), args...) = length.(applied_axes(\, args...))
+@inline applied_eltype(::typeof(\), args...) = eltype(Ldiv(args...))
+@inline applied_ndims(::typeof(\), args...) = ndims(last(args))
 
 
-axes(M::Applied{Style,typeof(/)}) where Style = axes(Rdiv(M.args...))
-axes(M::Applied{Style,typeof(/)}, p::Int)  where Style = axes(M)[p]
-size(M::Applied{Style,typeof(/)}) where Style = length.(axes(M))
-@inline eltype(M::Applied{Style,typeof(/)}) where Style = eltype(Rdiv(M.args...))
-@inline ndims(M::Applied{Style,typeof(/)}) where Style = ndims(first(M.args))
+@inline applied_axes(::typeof(/), args...) where Style = axes(Rdiv(args...))
+@inline applied_size(::typeof(/), args...) where Style = length.(applied_axes(/, args...))
+@inline applied_eltype(::typeof(/), args...) where Style = eltype(Rdiv(args...))
+@inline applied_ndims(::typeof(/), args...) where Style = ndims(first(args))
 
 
 check_applied_axes(::typeof(\), args...) = check_ldiv_axes(args...)
