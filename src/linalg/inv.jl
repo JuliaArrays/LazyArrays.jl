@@ -45,10 +45,10 @@ struct RdivStyle <: ApplyStyle end
 @inline applied_ndims(::typeof(\), args...) = ndims(last(args))
 
 
-@inline applied_axes(::typeof(/), args...) where Style = axes(Rdiv(args...))
-@inline applied_size(::typeof(/), args...) where Style = length.(applied_axes(/, args...))
-@inline applied_eltype(::typeof(/), args...) where Style = eltype(Rdiv(args...))
-@inline applied_ndims(::typeof(/), args...) where Style = ndims(first(args))
+@inline applied_axes(::typeof(/), args...) = axes(Rdiv(args...))
+@inline applied_size(::typeof(/), args...) = length.(applied_axes(/, args...))
+@inline applied_eltype(::typeof(/), args...) = eltype(Rdiv(args...))
+@inline applied_ndims(::typeof(/), args...) = ndims(first(args))
 
 
 check_applied_axes(::typeof(\), args...) = check_ldiv_axes(args...)
