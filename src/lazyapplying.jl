@@ -232,7 +232,11 @@ AbstractArray{T,N}(A::ApplyArray{T,N}) where {T,N} = copy(A)
 AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, map(copy,A.args)...)
 
 @inline axes(A::ApplyArray) = applied_axes(A.f, A.args...)
-@inline size(A::ApplyArray) = map(length, axes(A))
+@inline size(A::ApplyArray) = applied_size(A.f, A.args...)
+
+@inline applied_axes(f, args...) = map(oneto, applied_size(f, args...))
+
+
 
 # immutable arrays don't need to copy.
 # Some special cases like vcat overload setindex! and therefore

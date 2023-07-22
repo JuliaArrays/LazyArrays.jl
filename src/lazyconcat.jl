@@ -32,6 +32,9 @@ end
 @inline axes(f::Vcat{<:Any,1,Tuple{}}) = (OneTo(0),)
 @inline axes(f::Vcat{<:Any,1}) = tuple(oneto(+(map(length,f.args)...)))
 @inline axes(f::Vcat{<:Any,2}) = (oneto(+(map(a -> size(a,1), f.args)...)), axes(f.args[1],2))
+@inline size(f::Vcat) = map(length, axes(f))
+
+
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 
 function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
