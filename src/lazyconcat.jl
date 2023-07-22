@@ -133,9 +133,9 @@ function instantiate(A::Applied{DefaultApplyStyle,typeof(hcat)})
     Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
 end
 
-@inline eltype(A::Applied{<:Any,typeof(hcat)}) = promote_type(map(eltype,A.args)...)
-ndims(::Applied{<:Any,typeof(hcat)}) = 2
-size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
+@inline applied_eltype(::typeof(hcat), args...) = promote_type(map(eltype,args)...)
+@inline applied_ndims(::typeof(hcat), args...) = 2
+@inline applied_size(::typeof(hcat), args...) = (size(args[1],1), +(map(a -> size(a,2), args)...))
 
 @inline hcat_getindex(f, k, j::Integer) = hcat_getindex_recursive(f, (k, j), f.args...)
 
@@ -200,9 +200,9 @@ end
 
 @inline hvcat_getindex(f, k, j::Integer) = hvcat_getindex_recursive(f, (k, j), f.args...)
 
-_hvcat_size(A) = size(A)
-_hvcat_size(A::Number) = (1,1)
-_hvcat_size(A::AbstractVector) = (size(A,1),1)
+@inline _hvcat_size(A) = size(A)
+@inline _hvcat_size(A::Number) = (1,1)
+@inline _hvcat_size(A::AbstractVector) = (size(A,1),1)
 
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::Int, A, args...)
     T = eltype(f)
