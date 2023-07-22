@@ -45,6 +45,10 @@ end
 @inline Applied{Style}(f::F, args::Args) where {Style,F,Args<:Tuple} = Applied{Style,F,Args}(f, args)
 @inline Applied{Style}(A::Applied) where Style = Applied{Style}(A.f, A.args)
 
+ndims(a::Applied) = applied_ndims(a.f, a.args...)
+eltype(a::Applied) = applied_eltype(a.f, a.args...)
+axes(a::Applied) = applied_axes(a.f, a.args...)
+size(a::Applied) = applied_size(a.f, a.args...)
 
 call(a) = a.f
 call(_, a) = a.f
@@ -57,11 +61,18 @@ call(_, a) = a.f
 @inline arguments(::DualLayout{ML}, a) where ML = arguments(ML(), a)
 @inline arguments(a::AbstractArray) = arguments(MemoryLayout(a), a)
 
-@inline check_applied_axes(A::Applied) = nothing
+@inline check_applied_axes(_...) = nothing
+
+@inline check_applied_axes(A::Applied) = check_applied_axes(A.f, A.args...)
 
 @inline function instantiate(A::Applied{Style}) where Style
-    check_applied_axes(A)
+    check_applied_axes(A.f, A.args...)
     Applied{Style}(A.f, map(instantiate, A.args))
+end
+
+@inline function applied_instantiate(f, args...)
+    check_applied_axes(f, args...)
+    f, map(instantiate, args)
 end
 
 @inline _typesof() = ()
@@ -192,19 +203,23 @@ const ApplyMatrix{T, F, Args<:Tuple} = ApplyArray{T, 2, F, Args}
 
 LazyArray(A::Applied) = ApplyArray(A)
 
-ApplyArray{T,N,F,Args}(M::Applied) where {T,N,F,Args} = ApplyArray{T,N,F,Args}(M.f, M.args)
-ApplyArray{T,N}(M::Applied{Style,F,Args}) where {T,N,Style,F,Args} = ApplyArray{T,N,F,Args}(instantiate(M))
-ApplyArray{T}(M::Applied) where {T} = ApplyArray{T,ndims(M)}(M)
-ApplyArray(M::Applied) = ApplyArray{eltype(M)}(M)
-ApplyVector(M::Applied) = ApplyVector{eltype(M)}(M)
-ApplyMatrix(M::Applied) = ApplyMatrix{eltype(M)}(M)
+@inline ApplyArray{T,N,F,Args}(M::Applied) where {T,N,F,Args} = ApplyArray{T,N,F,Args}(M.f, M.args)
+@inline ApplyArray{T,N}(M::Applied{Style,F,Args}) where {T,N,Style,F,Args} = ApplyArray{T,N,F,Args}(instantiate(M))
+@inline ApplyArray{T}(M::Applied) where {T} = ApplyArray{T,ndims(M)}(M)
+@inline ApplyArray(M::Applied) = ApplyArray{eltype(M)}(M)
+@inline ApplyVector(M::Applied) = ApplyVector{eltype(M)}(M)
+@inline ApplyMatrix(M::Applied) = ApplyMatrix{eltype(M)}(M)
 
-ApplyArray(f, factors...) = ApplyArray{_mul_eltype(_eltypes(factors...)...)}(f, factors...)
-ApplyArray{T}(f, factors...) where T = ApplyArray{T, _applied_ndims(f, factors...)}(f, factors...)
-ApplyArray{T,N}(f, factors...) where {T,N} = ApplyArray{T,N}(applied(f, factors...))
 
-ApplyVector(f, factors...) = ApplyVector(applied(f, factors...))
-ApplyMatrix(f, factors...) = ApplyMatrix(applied(f, factors...))
+@inline ApplyArray(f, factors...) = ApplyArray{applied_eltype(f, factors...)}(f, factors...)
+@inline ApplyArray{T}(f, factors...) where T = ApplyArray{T, applied_ndims(f, factors...)}(f, factors...)
+@inline function ApplyArray{T,N}(f, factors...) where {T,N}
+    f̃, args = applied_instantiate(f, factors...)
+    ApplyArray{T,N,typeof(f̃),typeof(args)}(f̃, args)
+end
+
+@inline ApplyVector(f, factors...) = ApplyVector{applied_eltype(f, factors...)}(f, factors...)
+@inline ApplyMatrix(f, factors...) = ApplyMatrix{applied_eltype(f, factors...)}(f, factors...)
 
 convert(::Type{AbstractArray{T}}, A::ApplyArray{T}) where T = A
 convert(::Type{AbstractArray{T}}, A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, A.args...)
@@ -216,7 +231,7 @@ AbstractArray{T}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, map(
 AbstractArray{T,N}(A::ApplyArray{T,N}) where {T,N} = copy(A)
 AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, map(copy,A.args)...)
 
-@inline axes(A::ApplyArray) = axes(Applied(A))
+@inline axes(A::ApplyArray) = applied_axes(A.f, A.args...)
 @inline size(A::ApplyArray) = map(length, axes(A))
 
 # immutable arrays don't need to copy.
@@ -236,12 +251,14 @@ for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
             :acosh, :asinh, :atanh, :acsch, :asech, :acoth,
             :acos, :asin, :atan, :acsc, :asec, :acot)
     @eval begin
-        ndims(M::Applied{LazyArrayApplyStyle,typeof($F)}) = ndims(first(M.args))
-        axes(M::Applied{LazyArrayApplyStyle,typeof($F)}) = axes(first(M.args))
-        size(M::Applied{LazyArrayApplyStyle,typeof($F)}) = size(first(M.args))
-        eltype(M::Applied{LazyArrayApplyStyle,typeof($F)}) = eltype(first(M.args))
+        @inline applied_ndims(M::typeof($F), a) = ndims(a)
+        @inline applied_axes(::typeof($F), a) = axes(a)
+        @inline applied_size(::typeof($F), a) = size(a)
+        @inline applied_eltype(::typeof($F), a) = eltype(a)
     end
 end
+
+
 
 ###
 # show

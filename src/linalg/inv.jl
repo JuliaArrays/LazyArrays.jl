@@ -50,7 +50,7 @@ size(M::Applied{Style,typeof(/)}) where Style = length.(axes(M))
 @inline ndims(M::Applied{Style,typeof(/)}) where Style = ndims(first(M.args))
 
 
-check_applied_axes(A::Applied{<:Any,typeof(\)}) = check_ldiv_axes(A.args...)
+check_applied_axes(::typeof(\), args...) = check_ldiv_axes(args...)
 
 ######
 # PInv/Inv

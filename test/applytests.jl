@@ -40,8 +40,6 @@ import ArrayLayouts: StridedLayout
     end
 
     @testset "copy (#85)" begin
-        Base.size(A::Applied) = (length(A.args[1]),)
-        Base.eltype(A::Applied)  = eltype(A.args[1])
         v = ApplyVector(vec, ones(Int, 2, 2))
         vc = copy(float.(v))
         ve = convert(Vector, vc)

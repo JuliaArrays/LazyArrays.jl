@@ -25,17 +25,15 @@ end
 
 
 
-_drop_scalars(a::Number, b...) = _drop_scalars(b...)
-_drop_scalars(a, b...) = (a, _drop_scalars(b...)...)
-_drop_scalars() = ()
-_check_mul_axes() = nothing
-_check_mul_axes(a...) = check_mul_axes(a...)
-check_applied_axes(A::Applied{<:Any,typeof(*)}) = _check_mul_axes(_drop_scalars(A.args...)...)
+@inline _drop_scalars(a::Number, b...) = _drop_scalars(b...)
+@inline _drop_scalars(a, b...) = (a, _drop_scalars(b...)...)
+@inline _drop_scalars() = ()
+@inline _check_mul_axes() = nothing
+@inline _check_mul_axes(a...) = check_mul_axes(a...)
+@inline check_applied_axes(::typeof(*), args...) = _check_mul_axes(_drop_scalars(args...)...)
 
 size(M::Applied{<:Any,typeof(*)}, p::Int) = size(M)[p]
 axes(M::Applied{<:Any,typeof(*)}, p::Int) = axes(M)[p]
-
-_applied_ndims(::typeof(*), args...) = ndims(last(args))
 
 
 _mul_ndims(::Type{Tuple{A}}) where A = ndims(A)
@@ -44,13 +42,19 @@ ndims(::Type{<:Applied{<:Any,typeof(*),Args}}) where Args = _mul_ndims(Args)
 
 
 length(M::Applied{<:Any,typeof(*)}) = prod(size(M))
-size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
+applied_size(::typeof(*), args...) = length.(applied_axes(*, args...))
 
 
 @inline _eltypes() = tuple()
 @inline _eltypes(A, B...) = tuple(eltype(A), _eltypes(B...)...)
 
-@inline eltype(M::Applied{<:Any,typeof(*)}) = _mul_eltype(_eltypes(M.args...)...)
+for op in (:*, :+, :-)
+    @eval begin
+        @inline applied_eltype(::typeof($op), factors...) = _mul_eltype(_eltypes(factors...)...)
+        @inline applied_ndims(M::typeof($op), args...) = ndims(last(args))
+    end
+end
+
 
 @inline mulaxes1(::Tuple{}) = ()
 @inline mulaxes1(::Tuple{}, B, C...) = mulaxes1(B, C...)
@@ -65,9 +69,7 @@ size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
 @inline _combine_axes(a, b) = (a,b)
 @inline mulaxes(ax...) = _combine_axes(mulaxes1(ax...), mulaxes2(reverse(ax)...))
 
-@inline axes(M::Applied{<:Any,typeof(*)}) = mulaxes(map(axes,M.args)...)
-@inline axes(M::Applied{<:Any, typeof(*), Tuple{}}) = ()
-axes(M::ApplyArray{T,N,typeof(*)}) where {T,N} = mulaxes(map(axes,M.args)...)
+@inline applied_axes(::typeof(*), args...) = mulaxes(map(axes, args)...)
 
 ###
 # show

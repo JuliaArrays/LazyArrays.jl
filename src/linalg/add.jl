@@ -25,13 +25,10 @@ for op in (:+, :-)
     @eval begin
         size(M::Applied{<:Any, typeof($op)}, p::Int) = size(M)[p]
         axes(M::Applied{<:Any, typeof($op)}, p::Int) = axes(M)[p]
-        ndims(M::Applied{<:Any, typeof($op)}) = ndims(first(M.args))
 
         length(M::Applied{<:Any, typeof($op)}) = prod(size(M))
-        size(M::Applied{<:Any, typeof($op)}) = length.(axes(M))
-        axes(M::Applied{<:Any, typeof($op)}) = axes(first(M.args))
-
-        eltype(M::Applied{<:Any, typeof($op)}) = promote_type(map(eltype,M.args)...)
+        applied_size(::typeof($op), args...) = size(first(args))
+        applied_axes(::typeof($op), args...) = axes(first(args))
     end
 end
 

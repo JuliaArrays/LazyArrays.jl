@@ -26,10 +26,9 @@ function instantiate(A::Applied{DefaultApplyStyle,typeof(vcat)})
     Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
 end
 
-@inline eltype(A::Applied{<:Any,typeof(vcat)}) = promote_type(map(eltype,A.args)...)
-@inline eltype(A::Applied{<:Any,typeof(vcat),Tuple{}}) = Any
-@inline ndims(A::Applied{<:Any,typeof(vcat),I}) where I = max(1,maximum(map(ndims,A.args)))
-@inline ndims(A::Applied{<:Any,typeof(vcat),Tuple{}}) = 1
+@inline applied_eltype(::typeof(vcat), args...) = promote_type(map(eltype, args)...)
+@inline applied_ndims(::typeof(vcat), args...) = max(1,maximum(map(ndims,args)))
+@inline applied_ndims(::typeof(vcat)) = 1
 @inline axes(f::Vcat{<:Any,1,Tuple{}}) = (OneTo(0),)
 @inline axes(f::Vcat{<:Any,1}) = tuple(oneto(+(map(length,f.args)...)))
 @inline axes(f::Vcat{<:Any,2}) = (oneto(+(map(a -> size(a,1), f.args)...)), axes(f.args[1],2))
@@ -966,4 +965,9 @@ end
 
 searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x)
 
+###
+# vec
+###
 
+@inline applied_eltype(::typeof(vec), a) = eltype(a)
+@inline applied_axes(::typeof(vec), a) = (oneto(length(a)),)
