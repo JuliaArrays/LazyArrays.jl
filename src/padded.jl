@@ -468,9 +468,10 @@ end
 # setindex
 ###
 
-@inline ndims(A::Applied{<:Any,typeof(setindex)}) = ndims(A.args[1])
-@inline eltype(A::Applied{<:Any,typeof(setindex)}) = eltype(A.args[1])
-axes(A::ApplyArray{<:Any,N,typeof(setindex)}) where N = axes(A.args[1])
+@inline applied_ndims(::typeof(setindex), a, b...) = ndims(a)
+@inline applied_eltype(::typeof(setindex), a, b...) = eltype(a)
+@inline applied_axes(::typeof(setindex), a, b...) = axes(a)
+@inline applied_size(::typeof(setindex), a, b...) = size(a)
 
 function getindex(A::ApplyVector{T,typeof(setindex)}, k::Integer) where T
     P,v,kr = A.args

@@ -1,4 +1,5 @@
-using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
+using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, Test, Base64
+using StaticArrays
 import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
                     CachedVector, ApplyLayout, arguments, BroadcastVector
@@ -466,8 +467,6 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test materialize!(MulAdd(1.1,A,B,2.2,[5.0])) == 1.1*Matrix(A)*Vector(B)+2.2*[5.0]
 
         @test B * A ≈ Array(B) * Array(A) ≈ Vcat([1 2]', [3 4]') * A
-
-
 
         @test B * BroadcastArray(exp, [1 2]) ≈ B * exp.([1 2])
 

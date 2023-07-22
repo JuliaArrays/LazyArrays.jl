@@ -221,6 +221,12 @@ end
 @inline ApplyVector(f, factors...) = ApplyVector{applied_eltype(f, factors...)}(f, factors...)
 @inline ApplyMatrix(f, factors...) = ApplyMatrix{applied_eltype(f, factors...)}(f, factors...)
 
+ApplyArray(A::AbstractArray{T,N}) where {T,N} = ApplyArray{T,N}(call(A), arguments(A)...)
+ApplyArray{T}(A::AbstractArray{V,N}) where {T,V,N} = ApplyArray{T,N}(call(A), arguments(A)...)
+ApplyArray{T,N}(A::AbstractArray{V,N}) where {T,V,N} = ApplyArray{T,N}(call(A), arguments(A)...)
+ApplyMatrix(A::AbstractMatrix{T}) where T = ApplyMatrix{T}(call(A), arguments(A)...)
+ApplyVector(A::AbstractVector{T}) where T = ApplyVector{T}(call(A), arguments(A)...)
+
 convert(::Type{AbstractArray{T}}, A::ApplyArray{T}) where T = A
 convert(::Type{AbstractArray{T}}, A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, A.args...)
 convert(::Type{AbstractArray{T,N}}, A::ApplyArray{T,N}) where {T,N} = A
@@ -258,7 +264,7 @@ for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
         @inline applied_ndims(M::typeof($F), a) = ndims(a)
         @inline applied_axes(::typeof($F), a) = axes(a)
         @inline applied_size(::typeof($F), a) = size(a)
-        @inline applied_eltype(::typeof($F), a) = eltype(a)
+        @inline applied_eltype(::typeof($F), a) = float(eltype(a))
     end
 end
 
@@ -323,7 +329,6 @@ MemoryLayout(::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} =
     applylayout(F, tuple_type_memorylayouts(Args)...)
 
 @inline Applied(A::AbstractArray) = Applied(call(A), arguments(A)...)
-@inline ApplyArray(A::AbstractArray) = ApplyArray(call(A), arguments(A)...)
 
 function show(io::IO, A::Applied)
     print(io, "Applied(", A.f)
@@ -375,15 +380,11 @@ _base_copyto!(dest::AbstractArray, src::AbstractArray) = Base.invoke(copyto!, NT
 # triu/tril
 ##
 for tri in (:tril, :triu)
-    for op in (:axes, :size)
-        @eval begin
-            $op(A::Applied{<:Any,typeof($tri)}) = $op(first(A.args))
-            $op(A::Applied{<:Any,typeof($tri)}, j) = $op(first(A.args), j)
-        end
-    end
     @eval begin
-        ndims(::Applied{<:Any,typeof($tri)}) = 2
-        eltype(A::Applied{<:Any,typeof($tri)}) = eltype(first(A.args))
+        applied_axes(::typeof($tri), a, k...) = axes(a)
+        applied_size(::typeof($tri), a, k...) = size(a)
+        applied_ndims(::typeof($tri), a, k...) = 2
+        applied_eltype(::typeof($tri), a, k...) = eltype(a)
         $tri(A::LazyMatrix) = ApplyMatrix($tri, A)
         $tri(A::LazyMatrix, k::Integer) = ApplyMatrix($tri, A, k)
     end
