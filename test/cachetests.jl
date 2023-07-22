@@ -65,16 +65,16 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         C = cache(A)
         @test C isa Vector{Int}
         C[1] = 2
-        @test A[1] ≠ 2
+        @test A[1] ≠ 2
         @test resizedata!(C,6) === C
 
         A = cache(Matrix(reshape(1:6,2,3)));
         C = cache(A);
         @test C isa Matrix{Int}
         C[1,1] = 2
-        @test A[1,1] ≠ 2
+        @test A[1,1] ≠ 2
         C[1] = 3
-        @test A[1,1] ≠ 3
+        @test A[1,1] ≠ 3
         @test resizedata!(C,2,3) === C
     end
 
@@ -87,10 +87,10 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         A = cache(reshape(1:6,2,3))
         C = cache(A)
         C[1,1] = 2
-        @test A[1,1] ≠ 2
+        @test A[1,1] ≠ 2
         @test C[1,1] == 2
         C[1] = 3
-        @test C[1,1] == 3
+        @test C[1,1] == 3
 
         @test_throws BoundsError C[3,1]
         @test_throws BoundsError C[7]
@@ -426,3 +426,4 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         @test  A'[1:11] == A.array'[1:11]
     end
 end
+

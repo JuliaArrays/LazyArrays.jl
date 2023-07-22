@@ -72,7 +72,7 @@ for MulAdd_ in [MatMulMatAdd, MatMulVecAdd]
 end
 
 
-### 
+###
 # views
 ####
 _view_tuple(a, b::Tuple) = view(a, b...)
@@ -81,7 +81,7 @@ for op in (:+, :-)
         sublayout(a::ApplyLayout{typeof($op)}, _) = a
         arguments(::ApplyLayout{typeof($op)}, a::SubArray) =
             _view_tuple.(arguments(parent(a)), Ref(parentindices(a)))
-        call(::ApplyLayout{typeof($op)}, a::SubArray) = $op            
+        call(::ApplyLayout{typeof($op)}, a::SubArray) = $op
     end
 end
 

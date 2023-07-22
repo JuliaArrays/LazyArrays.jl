@@ -1,5 +1,5 @@
 using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, Base64
-import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray, 
+import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray,
                     MulStyle, MulAddStyle, Applied, ApplyStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
                     Rmul, ApplyLayout, arguments, colsupport, rowsupport, lazymaterialize
 import Base.Broadcast: materialize, materialize!, broadcasted
@@ -576,9 +576,9 @@ end
             c .= @~ A*x + β * y
             c .= @~ α * A*x + β * y
         end
-        
+
         A = randn(5,5); x = randn(5); y = randn(5); c = similar(y);
-        
+
         @inferred(MulAdd(@~ A*x + y))
         @test blasnoalloc(c, 2.0, A, x, 3.0, y) === c
         @test @allocated(blasnoalloc(c, 2.0, A, x, 3.0, y)) == 0
@@ -633,7 +633,7 @@ end
     @testset "Scalar * Vector" begin
         A, x =  [1 2; 3 4] , [[1,2],[3,4]]
         @test apply(*,A,x) == A*x
-    end 
+    end
 
     @testset "Complex broadcast" begin
         A = randn(5,5) .+ im*randn(5,5)
@@ -658,11 +658,11 @@ end
 
             @test similar(L) isa Vector{Float64}
             @test similar(L,Int) isa Vector{Int}
-            
+
             @test applied(*, UpperTriangular(A), x) isa Applied{MulStyle}
             @test similar(applied(*, UpperTriangular(A), x), Float64) isa Vector{Float64}
 
-            @test ApplyStyle(*, typeof(UpperTriangular(A)), typeof(x)) isa MulStyle
+            @test @inferred(ApplyStyle(*, typeof(UpperTriangular(A)), typeof(x))) isa MulStyle
 
             @test all((y = copy(x); y .= applied(*, UpperTriangular(A),y) ) .===
                         (similar(x) .= applied(*, UpperTriangular(A),x)) .===
@@ -804,7 +804,7 @@ end
                 @test all(apply(*, transpose(UpperTriangular(A)), B) .=== transpose(UpperTriangular(A))B)
                 @test all(apply(*, transpose(UnitUpperTriangular(A)), B) .=== transpose(UnitUpperTriangular(A))B)
                 @test all(apply(*, transpose(LowerTriangular(A)), B) .=== transpose(LowerTriangular(A))B)
-                @test all(apply(*, transpose(UnitLowerTriangular(A)), B) .=== transpose(UnitLowerTriangular(A))B)                
+                @test all(apply(*, transpose(UnitLowerTriangular(A)), B) .=== transpose(UnitLowerTriangular(A))B)
             end
 
             for T in (Float64, ComplexF64)
@@ -822,7 +822,7 @@ end
                 @test all(apply(*, transpose(UnitLowerTriangular(A)), b) ≈ transpose(UnitLowerTriangular(A))b)
 
                 B = big.(randn(T,100,100))
-                
+
                 @test all(apply(*, UpperTriangular(A)', B) ≈ UpperTriangular(A)'B)
                 @test all(apply(*, UnitUpperTriangular(A)', B) ≈ UnitUpperTriangular(A)'B)
                 @test all(apply(*, LowerTriangular(A)', B) ≈ LowerTriangular(A)'B)
@@ -831,7 +831,7 @@ end
                 @test all(apply(*, transpose(UpperTriangular(A)), B) ≈ transpose(UpperTriangular(A))B)
                 @test all(apply(*, transpose(UnitUpperTriangular(A)), B) ≈ transpose(UnitUpperTriangular(A))B)
                 @test all(apply(*, transpose(LowerTriangular(A)), B) ≈ transpose(LowerTriangular(A))B)
-                @test all(apply(*, transpose(UnitLowerTriangular(A)), B) ≈ transpose(UnitLowerTriangular(A))B)                
+                @test all(apply(*, transpose(UnitLowerTriangular(A)), B) ≈ transpose(UnitLowerTriangular(A))B)
             end
         end
     end
@@ -848,13 +848,13 @@ end
 
             @test similar(R) isa Matrix{T}
             @test similar(R,Int) isa Matrix{Int}
-            
+
             @test applied(*, A, UpperTriangular(B)) isa Applied{MulStyle}
             @test similar(applied(*, A, UpperTriangular(B)), Float64) isa Matrix{Float64}
 
             R2 = deepcopy(R)
             Ap = applied(*, copy(A), UpperTriangular(B))
-            @test all(BLAS.trmm('R', 'U', 'N', 'N', one(T), B, A) .=== apply(*, A, UpperTriangular(B)) .=== 
+            @test all(BLAS.trmm('R', 'U', 'N', 'N', one(T), B, A) .=== apply(*, A, UpperTriangular(B)) .===
                     copyto!(similar(Ap),Ap) .=== copyto!(similar(R2), R2) .=== materialize!(R))
             @test R.A ≠ A
             @test all(BLAS.trmm('R', 'U', 'T', 'N', one(T), B, A) .=== apply(*, A, transpose(UpperTriangular(B))) .=== A*transpose(UpperTriangular(B)))
@@ -883,13 +883,13 @@ end
         A = randn(5,5)
         B = Diagonal(randn(5))
         @test MemoryLayout(typeof(B)) == DiagonalLayout{DenseColumnMajor}()
-        @test ApplyStyle(*, typeof(A), typeof(B)) == MulStyle()
+        @test @inferred(ApplyStyle(*, typeof(A), typeof(B))) == MulStyle()
         @test apply(*,A,B) == A*B == materialize!(Rmul(copy(A),B))
 
-        @test ApplyStyle(*, typeof(B), typeof(A)) == MulStyle()
+        @test @inferred(ApplyStyle(*, typeof(B), typeof(A))) == MulStyle()
         @test apply(*,B,A) == B*A
 
-        @test ApplyStyle(*, typeof(B), typeof(B)) == MulStyle()
+        @test @inferred(ApplyStyle(*, typeof(B), typeof(B))) == MulStyle()
         @test apply(*,B,B) == B*B
         @test apply(*,B,B) isa Diagonal
 
@@ -961,7 +961,7 @@ end
 
     @testset "ApplyArray MulTest" begin
         A = ApplyArray(*,randn(2,2), randn(2,2))
-        @test ApplyStyle(*,typeof(A),typeof(randn(2,2))) isa MulStyle
+        @test @inferred(ApplyStyle(*,typeof(A),typeof(randn(2,2)))) isa MulStyle
         @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*Fill(3,10) ≡ Fill(180,10)
         @test ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10))*ApplyArray(*,Diagonal(Fill(2,10)), Fill(3,10,10)) == Fill(360,10,10)
         @test A' isa ApplyArray
@@ -1009,7 +1009,7 @@ end
 
     B = randn(5,5)
     C = randn(5,5)
-    @test materialize(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(C))) == 
+    @test materialize(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(C))) ==
           materialize!(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(copy(C)))) == 2.0Diagonal(A)*Diagonal(B) + 3.0*Diagonal(C)
     @test_broken materialize(MulAdd(2.0,Diagonal(A),Diagonal(B),3.0,Diagonal(C))) isa Diagonal
 
@@ -1052,13 +1052,15 @@ end
         @test ApplyArray(V) ≈ (A*b)[2:300]
         c = similar(V)
         copyto!(c,Applied(V))
-        @test @allocated(copyto!(c,Applied(V))) ≤ 200
+        @test @allocated(copyto!(c,Applied(V))) ≤ 200
         copyto!(c, V)
+
         if VERSION < v"1.9-"
             @test @allocated(copyto!(c, V)) ≤ 500
         else
             @test_broken @allocated(copyto!(c, V)) ≤ 500
         end
+
         @test all(c .=== apply(*, arguments(V)...))
 
         B = randn(500,500)
@@ -1069,9 +1071,9 @@ end
         @test Applied(V) isa Applied{MulStyle}
         c = similar(V)
         copyto!(c,Applied(V))
-        @test @allocated(copyto!(c,Applied(V))) ≤ 1000
+        @test @allocated(copyto!(c,Applied(V))) ≤ 1000
         copyto!(c, V)
-        @test @allocated(copyto!(c, V)) ≤ 1000
+        @test @allocated(copyto!(c, V)) ≤ 1000
         @test all(c .=== apply(*, arguments(V)...))
     end
 
@@ -1164,5 +1166,17 @@ end
     @testset "Colon indexing" begin
         A = ApplyArray(*, [1 2; 3 4], [1 2; 3 4], [1 2; 3 4])
         @test A[:,1] == Matrix(A)[:,1]
+    end
+
+    @testset "* sym and tri" begin
+        A = ApplyArray(+, randn(2,2), randn(2,2))
+        @test UpperTriangular(A) * Symmetric(A) isa MulArray
+        @test UpperTriangular(A) * Eye(2) isa UpperTriangular
+    end
+
+    @testset "simplifiable tests" begin
+        A = randn(5,5)
+        @test LazyArrays.simplifiable(*, A) == Val(false)
+        @test LazyArrays.simplify(Applied(*, A, A)) == A*A
     end
 end
