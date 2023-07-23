@@ -63,14 +63,17 @@ call(_, a) = a.f
 
 @inline check_applied_axes(_...) = nothing
 
+# following repeated due to unexplained allocations
 @inline function instantiate(A::Applied{Style}) where Style
-    check_applied_axes(A.f, A.args...)
-    Applied{Style}(A.f, map(instantiate, A.args))
+    iargs = map(instantiate, A.args)
+    check_applied_axes(A.f, iargs...)
+    Applied{Style}(A.f, iargs)
 end
 
 @inline function applied_instantiate(f, args...)
-    check_applied_axes(f, args...)
-    f, map(instantiate, args)
+    iargs = map(instantiate, args)
+    check_applied_axes(f, iargs...)
+    f, iargs
 end
 
 @inline _typesof() = ()
@@ -161,10 +164,8 @@ for f in (:exp, :sin, :cos, :sqrt)
     @eval ApplyStyle(::typeof($f), ::Type{<:AbstractMatrix}) = MatrixFunctionStyle{typeof($f)}()
 end
 
-function matrixfunction_check_applied_axes(args...)
-    length(args) == 1 || throw(ArgumentError("MatrixFunctions only defined with 1 arg"))
-    axes(args[1],1) == axes(args[1],2) || throw(DimensionMismatch("matrix is not square: dimensions are $axes(A.args[1])"))
-end
+@inline matrixfunction_check_applied_axes(a::AbstractMatrix) = axes(a,1) == axes(a,2) || throw(DimensionMismatch("matrix is not square: dimensions are $(axes(a))"))
+@inline matrixfunction_check_applied_axes(a...) = nothing
 
 for op in (:axes, :size)
     @eval begin
