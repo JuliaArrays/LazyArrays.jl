@@ -18,17 +18,23 @@ const MulArray{T, N, Args} = ApplyArray{T, N, typeof(*), Args}
 const MulVector{T, Args} = MulArray{T, 1, Args}
 const MulMatrix{T, Args} = MulArray{T, 2, Args}
 
+function ApplyArray{T,N}(::typeof(*), factors...) where {T,N}
+    _check_mul_axes(_drop_scalars(factors...)...)
+    ApplyArray{T,N,typeof(*),typeof(factors)}(*, factors)
+end
 
-_drop_scalars(a::Number, b...) = _drop_scalars(b...)
-_drop_scalars(a, b...) = (a, _drop_scalars(b...)...)
-_drop_scalars() = ()
-_check_mul_axes() = nothing
-_check_mul_axes(a...) = check_mul_axes(a...)
-check_applied_axes(A::Applied{<:Any,typeof(*)}) = _check_mul_axes(_drop_scalars(A.args...)...)
+
+
+@inline _drop_scalars(a::Number, b...) = _drop_scalars(b...)
+@inline _drop_scalars(a, b...) = (a, _drop_scalars(b...)...)
+@inline _drop_scalars() = ()
+@inline _check_mul_axes() = nothing
+@inline _check_mul_axes(a...) = check_mul_axes(a...)
+@inline check_applied_axes(::typeof(*), args...) = _check_mul_axes(_drop_scalars(args...)...)
 
 size(M::Applied{<:Any,typeof(*)}, p::Int) = size(M)[p]
 axes(M::Applied{<:Any,typeof(*)}, p::Int) = axes(M)[p]
-ndims(M::Applied{<:Any,typeof(*)}) = ndims(last(M.args))
+
 
 _mul_ndims(::Type{Tuple{A}}) where A = ndims(A)
 _mul_ndims(::Type{Tuple{A,B}}) where {A,B} = ndims(B)
@@ -36,13 +42,19 @@ ndims(::Type{<:Applied{<:Any,typeof(*),Args}}) where Args = _mul_ndims(Args)
 
 
 length(M::Applied{<:Any,typeof(*)}) = prod(size(M))
-size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
+applied_size(::typeof(*), args...) = length.(applied_axes(*, args...))
 
 
 @inline _eltypes() = tuple()
 @inline _eltypes(A, B...) = tuple(eltype(A), _eltypes(B...)...)
 
-@inline eltype(M::Applied{<:Any,typeof(*)}) = _mul_eltype(_eltypes(M.args...)...)
+for op in (:*, :+, :-)
+    @eval begin
+        @inline applied_eltype(::typeof($op), factors...) = _mul_eltype(_eltypes(factors...)...)
+        @inline applied_ndims(M::typeof($op), args...) = ndims(last(args))
+    end
+end
+
 
 @inline mulaxes1(::Tuple{}) = ()
 @inline mulaxes1(::Tuple{}, B, C...) = mulaxes1(B, C...)
@@ -57,8 +69,7 @@ size(M::Applied{<:Any,typeof(*)}) = length.(axes(M))
 @inline _combine_axes(a, b) = (a,b)
 @inline mulaxes(ax...) = _combine_axes(mulaxes1(ax...), mulaxes2(reverse(ax)...))
 
-@inline axes(M::Applied{<:Any,typeof(*)}) = mulaxes(map(axes,M.args)...)
-@inline axes(M::Applied{<:Any, typeof(*), Tuple{}}) = ()
+@inline applied_axes(::typeof(*), args...) = mulaxes(map(axes, args)...)
 
 ###
 # show
@@ -166,11 +177,14 @@ _mul_rowsupport(j, A::AbstractArray, B...) = _mul_rowsupport(rowsupport(A,j), B.
 rowsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_rowsupport(j, B.args...)
 rowsupport(B::MulArray, j) = _mul_rowsupport(j, B.args...)
 
-function getindex(M::Applied{<:Any,typeof(*)}, k...)
-    A,Bs = first(M.args), tail(M.args)
+function _mul_getindex(args::Tuple, k...)
+    A,Bs = first(args), tail(args)
     B = _mul(Bs...)
     Mul(A, B)[k...]
 end
+
+getindex(M::Applied{<:Any,typeof(*)}, k...) = _mul_getindex(M.args, k...)
+@propagate_inbounds getindex(M::ApplyArray{T,N,typeof(*)}, kj::Vararg{Integer,N}) where {T,N} = convert(T, _mul_getindex(M.args, kj...))::T
 
 _flatten(A::MulArray, B...) = _flatten(Applied(A), B...)
 flatten(A::MulArray) = ApplyArray(flatten(Applied(A)))	
@@ -229,7 +243,7 @@ _vec_mul_arguments(V) = _vec_mul_arguments(arguments(parent(V)), parentindices(V
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V)
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
 
-@inline sub_materialize(lay::ApplyLayout{typeof(*)}, V) = apply(*, map(sub_materialize, arguments(lay, V))...)
+@inline sub_materialize(lay::ApplyLayout{typeof(*)}, V) = *(map(sub_materialize, arguments(lay, V))...)
 
 
 ##

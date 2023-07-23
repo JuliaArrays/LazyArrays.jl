@@ -1,4 +1,5 @@
-using LazyArrays, FillArrays, LinearAlgebra, StaticArrays, ArrayLayouts, Test, Base64
+using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, Test, Base64
+using StaticArrays
 import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
                     CachedVector, ApplyLayout, arguments, BroadcastVector
@@ -9,6 +10,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @testset "Vector" begin
             A = @inferred(Vcat(Vector(1:10), Vector(1:20)))
             @test eltype(A) == Int
+            @test A == ApplyArray(vcat, Vector(1:10), Vector(1:20))
             @test @inferred(axes(A)) == (Base.OneTo(30),)
             @test @inferred(A[5]) == A[15] == 5
             @test_throws BoundsError A[31]
@@ -467,8 +469,6 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
 
         @test B * A ≈ Array(B) * Array(A) ≈ Vcat([1 2]', [3 4]') * A
 
-
-
         @test B * BroadcastArray(exp, [1 2]) ≈ B * exp.([1 2])
 
         A = Hcat([1.0 2.0; 3 4],[3.0 4.0; 5 6])
@@ -604,5 +604,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         v = Vcat(2, Ones(5))
         @test cumsum(v) isa StepRangeLen{Float64}
         @test cumsum(v) == cumsum(collect(v))
+    end
+
+    @testset "empty vcat" begin
+        v = ApplyArray(vcat)
+        @test v isa AbstractVector{Any}
+        @test stringmime("text/plain", v) == "vcat()"
     end
 end

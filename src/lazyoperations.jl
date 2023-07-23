@@ -12,8 +12,8 @@ Kron{T}(A...) where T = ApplyArray{T}(kron, A...)
 _kron_dims() = 0
 _kron_dims(A, B...) = max(ndims(A), _kron_dims(B...))
 
-eltype(A::Applied{<:Any,typeof(kron)}) = promote_type(map(eltype,A.args)...)
-ndims(A::Applied{<:Any,typeof(kron)}) = _kron_dims(A.args...)
+applied_eltype(::typeof(kron), args...) = promote_type(map(eltype,args)...)
+applied_ndims(::typeof(kron), args...) = _kron_dims(args...)
 
 size(K::Kron, j::Int) = prod(size.(K.args, j))
 size(a::Kron{<:Any,1}) = (size(a,1),)
@@ -470,14 +470,18 @@ AccumulateAbstractVector(op, A::AbstractVector{T}) where T = AccumulateAbstractV
 
 for op in (:rot180, :rotl90, :rotr90)
     @eval begin
-        ndims(::Applied{<:Any,typeof($op)}) = 2
-        eltype(A::Applied{<:Any,typeof($op)}) = eltype(A.args...)
+        applied_ndims(::typeof($op), a) = 2
+        applied_eltype(::typeof($op), a) = eltype(a)
     end
 end
-size(A::Applied{<:Any,typeof(rot180)}) = size(A.args...)
-axes(A::Applied{<:Any,typeof(rot180)}) = axes(A.args...)
-size(A::Applied{<:Any,typeof(rotl90)}) = reverse(size(A.args...))
-size(A::Applied{<:Any,typeof(rotr90)}) = reverse(size(A.args...))
+applied_size(::typeof(rot180), a) = size(a)
+applied_axes(::typeof(rot180), a) = axes(a)
+for op in (:rotl90, :rotr90)
+    @eval begin
+        applied_size(::typeof($op), a) = reverse(size(a))
+        applied_axes(::typeof($op), a) = reverse(axes(a))
+    end
+end
 
 getindex(A::Applied{<:Any,typeof(rot180)}, k::Int, j::Int) = A.args[1][end-k+1,end-j+1]
 getindex(A::Applied{<:Any,typeof(rotl90)}, k::Int, j::Int) = A.args[1][j,end-k+1]

@@ -26,13 +26,16 @@ function instantiate(A::Applied{DefaultApplyStyle,typeof(vcat)})
     Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
 end
 
-@inline eltype(A::Applied{<:Any,typeof(vcat)}) = promote_type(map(eltype,A.args)...)
-@inline eltype(A::Applied{<:Any,typeof(vcat),Tuple{}}) = Any
-@inline ndims(A::Applied{<:Any,typeof(vcat),I}) where I = max(1,maximum(map(ndims,A.args)))
-@inline ndims(A::Applied{<:Any,typeof(vcat),Tuple{}}) = 1
+@inline applied_eltype(::typeof(vcat)) = Any
+@inline applied_eltype(::typeof(vcat), args...) = promote_type(map(eltype, args)...)
+@inline applied_ndims(::typeof(vcat), args...) = max(1,maximum(map(ndims,args)))
+@inline applied_ndims(::typeof(vcat)) = 1
 @inline axes(f::Vcat{<:Any,1,Tuple{}}) = (OneTo(0),)
 @inline axes(f::Vcat{<:Any,1}) = tuple(oneto(+(map(length,f.args)...)))
 @inline axes(f::Vcat{<:Any,2}) = (oneto(+(map(a -> size(a,1), f.args)...)), axes(f.args[1],2))
+@inline size(f::Vcat) = map(length, axes(f))
+
+
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 
 function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
@@ -134,9 +137,9 @@ function instantiate(A::Applied{DefaultApplyStyle,typeof(hcat)})
     Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
 end
 
-@inline eltype(A::Applied{<:Any,typeof(hcat)}) = promote_type(map(eltype,A.args)...)
-ndims(::Applied{<:Any,typeof(hcat)}) = 2
-size(f::Applied{<:Any,typeof(hcat)}) = (size(f.args[1],1), +(map(a -> size(a,2), f.args)...))
+@inline applied_eltype(::typeof(hcat), args...) = promote_type(map(eltype,args)...)
+@inline applied_ndims(::typeof(hcat), args...) = 2
+@inline applied_size(::typeof(hcat), args...) = (size(args[1],1), +(map(a -> size(a,2), args)...))
 
 @inline hcat_getindex(f, k, j::Integer) = hcat_getindex_recursive(f, (k, j), f.args...)
 
@@ -184,26 +187,21 @@ end
 # Hvcat
 ####
 
-@inline eltype(A::Applied{<:Any,typeof(hvcat)}) = promote_type(map(eltype,tail(A.args))...)
-ndims(::Applied{<:Any,typeof(hvcat)}) = 2
-function size(f::Applied{<:Any,typeof(hvcat),<:Tuple{Int,Vararg{Any}}})
-    n = f.args[1]
-    sum(size.(f.args[2:n:end],1)),sum(size.(f.args[2:1+n],2))
-end
+@inline applied_eltype(::typeof(hvcat), a, b...) = promote_type(map(eltype, b)...)
+@inline applied_ndims(::typeof(hvcat), args...) = 2
+@inline applied_size(::typeof(hvcat), n::Int, b...) = sum(size.(b[1:n:end],1)),sum(size.(b[1:n],2))
 
-function size(f::Applied{<:Any,typeof(hvcat),<:Tuple{NTuple{N,Int},Vararg{Any}}}) where N
-    n = f.args[1]
-
+@inline function applied_size(::typeof(hvcat), n::NTuple{N,Int}, b...) where N
     as = tuple(2, (2 .+ cumsum(Base.front(n)))...)
-    sum(size.(getindex.(Ref(f.args), as),1)),sum(size.(f.args[2:1+n[1]],2))
+    sum(size.(getindex.(Ref((n, b...)), as),1)),sum(size.(b[1:n[1]],2))
 end
 
 
 @inline hvcat_getindex(f, k, j::Integer) = hvcat_getindex_recursive(f, (k, j), f.args...)
 
-_hvcat_size(A) = size(A)
-_hvcat_size(A::Number) = (1,1)
-_hvcat_size(A::AbstractVector) = (size(A,1),1)
+@inline _hvcat_size(A) = size(A)
+@inline _hvcat_size(A::Number) = (1,1)
+@inline _hvcat_size(A::AbstractVector) = (size(A,1),1)
 
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::Int, A, args...)
     T = eltype(f)
@@ -966,4 +964,9 @@ end
 
 searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x)
 
+###
+# vec
+###
 
+@inline applied_eltype(::typeof(vec), a) = eltype(a)
+@inline applied_axes(::typeof(vec), a) = (oneto(length(a)),)

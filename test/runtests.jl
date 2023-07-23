@@ -420,6 +420,7 @@ end
     @test A[2,1] == 0
     @test A[1,1] == A.args[1][1,1]
     @test A == triu(A.args[1])
+    @test size(A) == (2,2)
     A = ApplyArray(tril,randn(2,2))
     @test A isa ApplyArray{Float64}
     @test A[1,2] == 0
