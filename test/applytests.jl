@@ -69,6 +69,11 @@ import ArrayLayouts: StridedLayout
         @test MemoryLayout(typeof(v)) isa ApplyLayout{typeof(+)}
         @test call(v) == call(a) == +
         @test Array(v) == a[1:2] == Array(a)[1:2]
+        @test v == ApplyArray(v) == ApplyArray{Float64}(v) == ApplyVector(v) == ApplyVector{Float64}(v)
+
+        A = ApplyArray(+,[1 2; 3 4],[3 4; 5 6])
+        V = view(A, 1:2, :)
+        @test V == ApplyArray(V) == ApplyArray{Float64}(V) == ApplyMatrix(V) == ApplyMatrix{Float64}(V)
     end
 
     @testset "rot180" begin
