@@ -10,6 +10,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @testset "Vector" begin
             A = @inferred(Vcat(Vector(1:10), Vector(1:20)))
             @test eltype(A) == Int
+            @test A == ApplyArray(vcat, Vector(1:10), Vector(1:20))
             @test @inferred(axes(A)) == (Base.OneTo(30),)
             @test @inferred(A[5]) == A[15] == 5
             @test_throws BoundsError A[31]

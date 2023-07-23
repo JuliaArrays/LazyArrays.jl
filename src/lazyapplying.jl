@@ -207,8 +207,6 @@ LazyArray(A::Applied) = ApplyArray(A)
 @inline ApplyArray{T,N}(M::Applied{Style,F,Args}) where {T,N,Style,F,Args} = ApplyArray{T,N,F,Args}(instantiate(M))
 @inline ApplyArray{T}(M::Applied) where {T} = ApplyArray{T,ndims(M)}(M)
 @inline ApplyArray(M::Applied) = ApplyArray{eltype(M)}(M)
-@inline ApplyVector(M::Applied) = ApplyVector{eltype(M)}(M)
-@inline ApplyMatrix(M::Applied) = ApplyMatrix{eltype(M)}(M)
 
 
 @inline ApplyArray(f, factors...) = ApplyArray{applied_eltype(f, factors...)}(f, factors...)
