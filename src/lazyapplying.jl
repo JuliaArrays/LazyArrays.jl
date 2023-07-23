@@ -63,8 +63,6 @@ call(_, a) = a.f
 
 @inline check_applied_axes(_...) = nothing
 
-@inline check_applied_axes(A::Applied) = check_applied_axes(A.f, A.args...)
-
 @inline function instantiate(A::Applied{Style}) where Style
     check_applied_axes(A.f, A.args...)
     Applied{Style}(A.f, map(instantiate, A.args))
@@ -163,9 +161,9 @@ for f in (:exp, :sin, :cos, :sqrt)
     @eval ApplyStyle(::typeof($f), ::Type{<:AbstractMatrix}) = MatrixFunctionStyle{typeof($f)}()
 end
 
-function check_applied_axes(A::Applied{<:MatrixFunctionStyle})
-    length(A.args) == 1 || throw(ArgumentError("MatrixFunctions only defined with 1 arg"))
-    axes(A.args[1],1) == axes(A.args[1],2) || throw(DimensionMismatch("matrix is not square: dimensions are $axes(A.args[1])"))
+function matrixfunction_check_applied_axes(args...)
+    length(args) == 1 || throw(ArgumentError("MatrixFunctions only defined with 1 arg"))
+    axes(args[1],1) == axes(args[1],2) || throw(DimensionMismatch("matrix is not square: dimensions are $axes(A.args[1])"))
 end
 
 for op in (:axes, :size)
@@ -263,6 +261,7 @@ for F in (:exp, :log, :sqrt, :cos, :sin, :tan, :csc, :sec, :cot,
         @inline applied_axes(::typeof($F), a) = axes(a)
         @inline applied_size(::typeof($F), a) = size(a)
         @inline applied_eltype(::typeof($F), a) = float(eltype(a))
+        check_applied_axes(::typeof($F), a...) = matrixfunction_check_applied_axes(a...)
     end
 end
 
