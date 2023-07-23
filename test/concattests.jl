@@ -606,7 +606,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test cumsum(v) == cumsum(collect(v))
     end
 
-    @test "empty vcat" begin
+    @testset "empty vcat" begin
         v = ApplyArray(vcat)
         @test v isa AbstractVector{Any}
         @test stringmime("text/plain", v) == "vcat()"
