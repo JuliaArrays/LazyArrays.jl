@@ -605,4 +605,10 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test cumsum(v) isa StepRangeLen{Float64}
         @test cumsum(v) == cumsum(collect(v))
     end
+
+    @test "empty vcat" begin
+        v = ApplyArray(vcat)
+        @test v isa AbstractVector{Any}
+        @test stringmime("text/plain", v) == "vcat()"
+    end
 end

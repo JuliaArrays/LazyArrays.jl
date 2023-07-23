@@ -26,6 +26,7 @@ function instantiate(A::Applied{DefaultApplyStyle,typeof(vcat)})
     Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
 end
 
+@inline applied_eltype(::typeof(vcat)) = Any
 @inline applied_eltype(::typeof(vcat), args...) = promote_type(map(eltype, args)...)
 @inline applied_ndims(::typeof(vcat), args...) = max(1,maximum(map(ndims,args)))
 @inline applied_ndims(::typeof(vcat)) = 1

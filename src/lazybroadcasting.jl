@@ -9,6 +9,7 @@ is returned by `MemoryLayout(A)` if a matrix `A` is a `BroadcastArray`.
 """
 struct BroadcastLayout{F} <: AbstractLazyLayout end
 
+@inline tuple_type_memorylayouts(::Type{Tuple{}}) = ()
 @inline tuple_type_memorylayouts(::Type{I}) where I<:Tuple = tuple(MemoryLayout(Base.tuple_type_head(I)), tuple_type_memorylayouts(Base.tuple_type_tail(I))...)
 @inline tuple_type_memorylayouts(::Type{Tuple{A}}) where {A} = (MemoryLayout(A),)
 @inline tuple_type_memorylayouts(::Type{Tuple{A,B}}) where {A,B} = (MemoryLayout(A),MemoryLayout(B))
