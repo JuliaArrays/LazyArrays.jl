@@ -488,7 +488,8 @@ const PaddedVector{T,M} = PaddedArray{T,1,M}
 const PaddedMatrix{T,M} = PaddedArray{T,2,M}
 
 MemoryLayout(::Type{<:PaddedArray{T,N,M}}) where {T,N,M} = PaddedLayout{typeof(MemoryLayout(M))}()
-paddeddata(A::PaddedArray) = A.args[2]
+paddeddata(A::PaddedArray) = paddeddata_axes(axes(A), A)
+paddeddata_axes(_, A) = A.args[2]
 
 PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = PaddedArray(A, map(oneto,n))
 PaddedArray(A::AbstractArray{T,N}, ax::NTuple{N,Any}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(ax), A, axes(A)...)
