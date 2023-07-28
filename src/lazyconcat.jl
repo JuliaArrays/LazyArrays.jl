@@ -644,8 +644,8 @@ _dotplus(a,b) = broadcast(+, a, b)
 
 @inline _cumsum(x::Number) = x
 @inline _cumsum(x) = cumsum(x)
-_cumsum_last(x::AbstractVector{T}) where T = isempty(x) ? zero(T) : last(x)
-_cumsum_last(x) = last(x)
+@inline _cumsum_last(x::AbstractVector{T}) where T = isempty(x) ? zero(T) : last(x)
+@inline _cumsum_last(x) = last(x)
 
 _tuple_cumsum() = ()
 _tuple_cumsum(a) = (a,)
@@ -663,18 +663,18 @@ end
 # special override. Used with BlockArrays
 ###
 
-function cumsum(v::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
-    a,b = arguments(v)
+@inline function cumsum(v::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
+    a,b = v.args
     FillArrays.steprangelen(a, getindex_value(b), length(b)+1)
 end
 
-function cumsum(v::Vcat{T,1,<:Tuple{Number,Zeros}}) where T
-    a,b = arguments(v)
+@inline function cumsum(v::Vcat{T,1,<:Tuple{Number,Zeros}}) where T
+    a,b = v.args
     Fill(convert(T,a), length(b)+1)
 end
 
-function cumsum(v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
-    a,b = arguments(v)
+@inline function cumsum(v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
+    a,b = v.args
     convert(T,a) .+ (0:length(b))
 end
 
