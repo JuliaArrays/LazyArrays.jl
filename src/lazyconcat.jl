@@ -14,8 +14,9 @@ Vcat(A...) = ApplyArray(vcat, A...)
 Vcat{T}(A...) where T = ApplyArray{T}(vcat, A...)
 Vcat() = Vcat{Any}()
 
-Vcat(A::AbstractVector...) = ApplyVector(vcat, A...)
-Vcat{T}(A::AbstractVector...) where T = ApplyVector{T}(vcat, A...)
+@inline Vcat(A::AbstractVector...) = ApplyVector(vcat, A...)
+@inline Vcat(A::AbstractVector{T}...) where T = ApplyVector{T}(vcat, A...)
+@inline Vcat{T}(A::AbstractVector...) where T = ApplyVector{T}(vcat, A...)
 
 function instantiate(A::Applied{DefaultApplyStyle,typeof(vcat)})
     isempty(A.args) && return A
@@ -459,6 +460,8 @@ copy(f::Transpose{<:Any,<:Union{Vcat,Hcat}}) = transpose(copy(parent(f)))
 
 _permutedims(a) = a
 _permutedims(a::AbstractArray) = permutedims(a)
+_permutedims(a::Transpose{<:Number}) = transpose(a)
+_permutedims(a::Adjoint{<:Real}) = a'
 
 permutedims(A::Hcat{T}) where T = Vcat{T}(map(_permutedims,A.args)...)
 permutedims(A::Vcat{T}) where T = Hcat{T}(map(_permutedims,A.args)...)
