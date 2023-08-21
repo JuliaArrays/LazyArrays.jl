@@ -242,8 +242,12 @@ _vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) =
     _mat_mul_arguments(args, (kr,jr))
 
 # this is a row-vector view
+_permutedims_or_removeadjtrans(a) = permutedims(a)
+_permutedims_or_removeadjtrans(a::Transpose{<:Number}) = transpose(a)
+_permutedims_or_removeadjtrans(a::Adjoint{<:Real}) = a'
+
 _vec_mul_arguments(args, (kr,jr)::Tuple{Number,AbstractVector}) =
-    _vec_mul_arguments(reverse(map(_permutedims, args)), (jr,kr))
+    _vec_mul_arguments(reverse(map(_permutedims_or_removeadjtrans, args)), (jr,kr))
 
 _mat_mul_arguments(V) = _mat_mul_arguments(arguments(parent(V)), parentindices(V))
 _vec_mul_arguments(V) = _vec_mul_arguments(arguments(parent(V)), parentindices(V))

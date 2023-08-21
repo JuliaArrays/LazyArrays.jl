@@ -460,8 +460,6 @@ copy(f::Transpose{<:Any,<:Union{Vcat,Hcat}}) = transpose(copy(parent(f)))
 
 _permutedims(a) = a
 _permutedims(a::AbstractArray) = permutedims(a)
-_permutedims(a::Transpose{<:Number}) = transpose(a)
-_permutedims(a::Adjoint{<:Real}) = a'
 
 permutedims(A::Hcat{T}) where T = Vcat{T}(map(_permutedims,A.args)...)
 permutedims(A::Vcat{T}) where T = Hcat{T}(map(_permutedims,A.args)...)
