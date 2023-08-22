@@ -18,13 +18,14 @@ Vcat() = Vcat{Any}()
 @inline Vcat(A::AbstractVector{T}...) where T = ApplyVector{T}(vcat, A...)
 @inline Vcat{T}(A::AbstractVector...) where T = ApplyVector{T}(vcat, A...)
 
-function instantiate(A::Applied{DefaultApplyStyle,typeof(vcat)})
-    isempty(A.args) && return A
-    m = size(A.args[1],2)
-    for k=2:length(A.args)
-        size(A.args[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), A)))"))
+@inline function applied_instantiate(::typeof(vcat), args...)
+    iargs = map(instantiate, args)
+    isempty(iargs) && return A
+    m = size(iargs[1],2)
+    for k=2:length(iargs)
+        size(iargs[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), args)))"))
     end
-    Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
+    vcat, iargs
 end
 
 @inline applied_eltype(::typeof(vcat)) = Any
