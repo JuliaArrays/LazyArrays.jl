@@ -208,6 +208,14 @@ __mul_args_cols(jr, z, y...) =
     (__mul_args_cols(_mul_args_colsupport(z,jr), y...)..., jr)
 _mul_args_cols(jr, z, y...) = __mul_args_cols(_mul_args_colsupport(z,jr), y...)
 
+_transposefirst(a, b...) = (transpose(a), b...)
+
+function _mul_getindex(args::Tuple, k::Int, j::Int)
+    kjr = intersect.(_mul_args_rows(k, args...), _mul_args_cols(j, reverse(args)...))
+    any(isempty, kjr) && return zero(mapreduce(eltype, promote_type, args))
+    *(_transposefirst(map(getindex, args, (k, kjr...), (kjr..., j))...)...)
+end
+
 sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 # matrix-indexing loses the multiplication structure as we don't support tensor multiplication
 sublayout(::ApplyLayout{typeof(*)}, ::Type{<:Tuple{AbstractMatrix}}) = UnknownLayout()
@@ -235,7 +243,7 @@ _vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) =
 
 # this is a row-vector view
 _vec_mul_arguments(args, (kr,jr)::Tuple{Number,AbstractVector}) =
-    _vec_mul_arguments(reverse(map(permutedims, args)), (jr,kr))
+    _vec_mul_arguments(reverse(map(transpose, args)), (jr,kr))
 
 _mat_mul_arguments(V) = _mat_mul_arguments(arguments(parent(V)), parentindices(V))
 _vec_mul_arguments(V) = _vec_mul_arguments(arguments(parent(V)), parentindices(V))
