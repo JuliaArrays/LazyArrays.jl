@@ -20,10 +20,11 @@ Vcat() = Vcat{Any}()
 
 @inline function applied_instantiate(::typeof(vcat), args...)
     iargs = map(instantiate, args)
-    isempty(iargs) && return A
-    m = size(iargs[1],2)
-    for k=2:length(iargs)
-        size(iargs[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), args)))"))
+    if !isempty(iargs)
+        m = size(iargs[1],2)
+        for k=2:length(iargs)
+            size(iargs[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), args)))"))
+        end
     end
     vcat, iargs
 end
