@@ -32,6 +32,8 @@ jobs:
         package:
           - {repo: LazyBandedMatrices.jl, group: JuliaLinearAlgebra}
           - {repo: InfiniteLinearAlgebra.jl, group: JuliaLinearAlgebra}
+          - {repo: QuasiArrays.jl, group: JuliaApproximation}
+          - {repo: ContinuumArrays.jl, group: JuliaApproximation}
 
     steps:
       - uses: actions/checkout@v3
