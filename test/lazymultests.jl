@@ -352,5 +352,10 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test Zeros(5)' * Diagonal(y) * Zeros(5) == 0.0
         @test transpose(Zeros(5)) * Diagonal(y) * Zeros(5) == 0.0
     end
+
+    @testset "Vector LazyMul" begin
+        A = ApplyMatrix(*, [[1 2], [3 4]], permutedims([[1, 2], [3,4]]))
+        @test A == *(A.args...)
+    end
 end
 
