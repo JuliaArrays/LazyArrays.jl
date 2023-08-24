@@ -211,7 +211,7 @@ _mul_args_cols(jr, z, y...) = __mul_args_cols(_mul_args_colsupport(z,jr), y...)
 # this ensures a "scalar" output but need to treat array-valued separately
 # due to transpose also transposing entries
 _transposefirst_andmul(a, b...) = first(*(permutedims(a), b...))
-_transposeifnumber_first(a::AbstractArray{<:Number}, b...) = *(transpose(a), b...)
+_transposefirst_andmul(a::AbstractArray{<:Number}, b...) = *(transpose(a), b...)
 
 function _mul_getindex(args::Tuple, k::Int, j::Int)
     kjr = intersect.(_mul_args_rows(k, args...), _mul_args_cols(j, reverse(args)...))

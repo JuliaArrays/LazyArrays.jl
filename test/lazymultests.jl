@@ -356,7 +356,7 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
     @testset "Vector LazyMul" begin
         A = ApplyMatrix(*, [[1 2], [3 4]], permutedims([[1, 2], [3,4]]))
         Ã = *(A.args...)
-        @test A == Ã
+        @test A == [A[k,j] for k=1:2, j=1:2] == Ã
         @test_broken A[2,:] == Ã[2,:] # TODO: need to rethink arguments permuting
     end
 end
