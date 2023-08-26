@@ -3,7 +3,7 @@ module LazyArrays
 # Use README as the docstring of the module:
 @doc read(joinpath(dirname(@__DIR__), "README.md"), String) LazyArrays
 
-using Base, Base.Broadcast, LinearAlgebra, FillArrays, ArrayLayouts, MatrixFactorizations, SparseArrays
+using Base.Broadcast, LinearAlgebra, FillArrays, ArrayLayouts, MatrixFactorizations, SparseArrays
 import LinearAlgebra.BLAS
 
 import Base: AbstractArray, AbstractMatrix, AbstractVector,
@@ -14,7 +14,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
          fld, cld, div, min, max, minimum, maximum, mod,
          <, ≤, >, ≥, promote_rule, convert, copy,
          size, step, isempty, length, first, last, ndims,
-         getindex, setindex!, setindex, intersect, @_inline_meta, inv,
+         getindex, setindex!, setindex, intersect, inv,
          sort, sort!, issorted, sortperm, diff, accumulate, cumsum, sum, in, broadcast,
          eltype, parent, real, imag,
          conj, transpose, adjoint, permutedims, vec,
@@ -24,7 +24,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
                    acosh, asinh, atanh, acsch, asech, acoth, (:),
          AbstractMatrix, AbstractArray, checkindex, unsafe_length, OneTo, one, zero,
         to_shape, _sub2ind, print_matrix, print_matrix_row, print_matrix_vdots,
-      checkindex, Slice, @propagate_inbounds, @_propagate_inbounds_meta,
+      checkindex, Slice, @propagate_inbounds,
       _in_range, _range, Ordered,
       ArithmeticWraps, floatrange, reverse, unitrange_last,
       AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
@@ -34,8 +34,7 @@ import Base: AbstractArray, AbstractMatrix, AbstractVector,
       unsafe_convert, strides, union, map, searchsortedfirst, searchsortedlast, searchsorted
 
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
-                        combine_eltypes, DefaultArrayStyle, instantiate, materialize,
-                        materialize!, eltypes
+                        combine_eltypes, DefaultArrayStyle, instantiate, eltypes
 
 import LinearAlgebra: AbstractQ, checksquare, pinv, fill!, tilebufsize, dot, factorize, qr, lu, cholesky,
                         norm2, norm1, normInf, normp, normMinusInf, diag, det, logabsdet, tr, AdjOrTrans, triu, tril,
@@ -57,7 +56,7 @@ import FillArrays: AbstractFill, getindex_value
 import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot, Mul, _inv,
                         transposelayout, conjlayout, sublayout, triangularlayout, triangulardata,
                         reshapedlayout, diagonallayout, tridiagonallayout, symtridiagonallayout, bidiagonallayout, symmetriclayout, hermitianlayout,
-                        adjointlayout, sub_materialize, mulreduce,
+                        adjointlayout, sub_materialize, mulreduce, materialize, materialize!,
                         check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport,
                         _fill_lmul!, scalarone, scalarzero, fillzeros, zero!, layout_getindex, _copyto!,
                         AbstractQLayout, StridedLayout, layout_replace_in_print_matrix
