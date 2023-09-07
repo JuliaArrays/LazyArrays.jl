@@ -440,6 +440,8 @@ end
 
 # avoid ambiguity in LazyBandedMatrices
 copy(M::Mul{<:DiagonalLayout,<:PaddedLayout}) = copy(Lmul(M))
+copy(M::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:PaddedLayout}) = copy(Lmul(M))
+simplifiable(::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:PaddedLayout}) = Val(true)
 
 
 
