@@ -1,5 +1,5 @@
 using LazyArrays, LinearAlgebra, FillArrays, Test
-import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout
+import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout, simplifiable
 import Base.Broadcast: materialize
 
 @testset "Ldiv" begin
@@ -145,6 +145,14 @@ import Base.Broadcast: materialize
         D = Diagonal(randn(5))
         A = BroadcastArray(*, randn(5,5), randn(5))
         @test D \ A ≈ D \ Matrix(A)
+    end
+
+    @testset "simplifiable" begin
+        A = randn(5,5)
+        b = randn(5)
+        @test simplifiable(\, A, b) isa Val{true}
+        B = ApplyArray(*, randn(5,5), b)
+        @test simplifiable(\, A, B) isa Val{true}
     end
 end
 

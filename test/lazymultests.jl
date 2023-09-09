@@ -359,5 +359,14 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test A == [A[k,j] for k=1:2, j=1:2] == Ã
         @test_broken A[2,:] == Ã[2,:] # TODO: need to rethink arguments permuting
     end
+
+    @testset "Tri Lazy" begin
+        A = MyMatrix(randn(5,5))
+        b = Vcat(1:3,Zeros(2))
+        @test UpperTriangular(A)*b isa Vector
+        @test UpperTriangular(A)*b ≈ UpperTriangular(A.A)*b
+        @test (UpperTriangular(A)UpperTriangular(A)) * b isa Vector
+        @test (UpperTriangular(A)UpperTriangular(A)) * b ≈UpperTriangular(A.A)^2 * b
+    end
 end
 
