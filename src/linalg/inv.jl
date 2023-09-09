@@ -131,6 +131,11 @@ end
 @inline copy(L::Rdiv{<:AbstractLazyLayout}) = lazymaterialize(/, L.A, L.B)
 @inline copy(L::Rdiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(/, L.A, L.B)
 
+
+@inline simplifiable(L::Ldiv) = _not(_or(islazy(L.A), islazy(L.B)))
+@inline simplifiable(L::Ldiv{<:Any,ApplyLayout{typeof(*)}}) = simplifiable(\, L.A, first(arguments(*, L.B)))
+@inline simplifiable(::typeof(\), a, b) = simplifiable(Ldiv(a,b))
+
 simplifiable(M::Mul{ApplyLayout{typeof(\)}}) = simplifiable(*, last(arguments(\, M.A)), M.B)
 function copy(M::Mul{ApplyLayout{typeof(\)}})
     A,B = arguments(\, M.A)
