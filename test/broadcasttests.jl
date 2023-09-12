@@ -226,8 +226,7 @@ import Base: broadcasted
         a = BroadcastArray(exp, 1:5)
         b = randn(5)
         @test MemoryLayout(a') isa DualLayout{BroadcastLayout{typeof(exp)}}
-        @test a'b ≈ Vector(a)'b
-        @test BroadcastArray(a')b ≈ [a'b]
+        @test a'b ≈ BroadcastArray(a')b ≈ Vector(a)'b
     end
 
     @testset "show" begin
@@ -358,5 +357,15 @@ import Base: broadcasted
 
     @testset "zero-sized views" begin
         @test size(copy(view(BroadcastArray(+, 1, randn(1,3)), 1:0, 2:3))) == (0,2)
+    end
+
+    @testset "real adjortrans" begin
+        a = BroadcastArray(real, ((1:5) .+ im)')
+        @test a[:,1:3] == (1:3)'
+        @test a[:,1:3] isa Adjoint{Int,Vector{Int}}
+
+        a = BroadcastArray(real, transpose((1:5) .+ im))
+        @test a[:,1:3] == (1:3)'
+        @test a[:,1:3] isa Adjoint{Int,Vector{Int}}
     end
 end

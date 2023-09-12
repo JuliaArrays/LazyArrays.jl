@@ -403,3 +403,11 @@ permutedims(A::BroadcastArray{T}) where T = BroadcastArray{T}(A.f, map(_permuted
 ####
 
 @inline broadcastlayout(::Type{F}, ::DualLayout) where F = DualLayout{BroadcastLayout{F}}()
+
+# real broadcast can use adjoint or transpose. This keeps types simple
+sub_materialize(::DualLayout{BroadcastLayout{typeof(real)}}, A::AbstractMatrix{<:Real}) = sub_materialize(view(_adjortrans(A), parentindices(A)[2]))'
+
+_adjortrans(A::SubArray{<:Any,2, <:Any, <:Tuple{Slice,Any}}) = view(_adjortrans(parent(A)), parentindices(A)[2])
+_adjortrans(A::Adjoint) = A'
+_adjortrans(A::Transpose) = transpose(A)
+_adjortrans(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = BroadcastArray{T}(real, _adjortrans(A.args...))
