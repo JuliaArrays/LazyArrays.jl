@@ -73,6 +73,7 @@ BroadcastMatrix(A::BroadcastMatrix) = A
 @inline _broadcastarray2broadcasted(_, a) = a
 @inline _broadcastarray2broadcasted(lay, a::BroadcastArray) = error("Overload LazyArrays._broadcastarray2broadcasted(::$(lay), _)")
 @inline _broadcastarray2broadcasted(::DualLayout{ML}, a) where ML = _broadcastarray2broadcasted(ML(), a)
+@inline _broadcastarray2broadcasted(::DualLayout{ML}, a::BroadcastArray) where ML = _broadcastarray2broadcasted(ML(), a)
 @inline _broadcastarray2broadcasted(a) = _broadcastarray2broadcasted(MemoryLayout(a), a)
 @inline _broadcasted(A) = instantiate(_broadcastarray2broadcasted(A))
 broadcasted(A::BroadcastArray) = _broadcasted(A)
@@ -394,3 +395,11 @@ for op in (:*, :\, :/)
 end
 
 permutedims(A::BroadcastArray{T}) where T = BroadcastArray{T}(A.f, map(_permutedims,A.args)...)
+
+
+
+####
+# Dual broadcast: functions of transpose can also behave like transpose
+####
+
+@inline broadcastlayout(::Type{F}, ::DualLayout) where F = DualLayout{BroadcastLayout{F}}()

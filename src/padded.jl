@@ -327,43 +327,46 @@ _normInf(::PaddedLayout, a) = norm(paddeddata(a),Inf)
 _normp(::PaddedLayout, a, p) = norm(paddeddata(a),p)
 
 
-function copy(D::Dot{layA, layB}) where {layA<:PaddedLayout,layB<:PaddedLayout}
-    a = paddeddata(D.A)
-    b = paddeddata(D.B)
-    T = eltype(D)
-    if MemoryLayout(a) isa layA && MemoryLayout(b) isa layB
-        return convert(T, dot(Array(a),Array(b)))
+for (Dt, dt) in ((:Dot, :dot), (:Dotu, :dotu))
+    @eval begin
+        function copy(D::$Dt{layA, layB}) where {layA<:PaddedLayout,layB<:PaddedLayout}
+            a = paddeddata(D.A)
+            b = paddeddata(D.B)
+            T = eltype(D)
+            if MemoryLayout(a) isa layA && MemoryLayout(b) isa layB
+                return convert(T, $dt(Array(a),Array(b)))
+            end
+            length(a) == length(b) && return convert(T, $dt(a,b))
+            # following handles scalars
+            ((length(a) == 1) || (length(b) == 1)) && return convert(T, a[1] * b[1])
+            m = min(length(a), length(b))
+            convert(T, $dt(view(a, 1:m), view(b, 1:m)))
+        end
+
+        function copy(D::$Dt{<:PaddedLayout})
+            a = paddeddata(D.A)
+            m = length(a)
+            v = view(D.B, 1:m)
+            if MemoryLayout(a) isa PaddedLayout
+                convert(eltype(D), $dt(Array(a), v))
+            else
+                convert(eltype(D), $dt(a, v))
+            end
+
+        end
+
+        function copy(D::$Dt{<:Any, <:PaddedLayout})
+            b = paddeddata(D.B)
+            m = length(b)
+            v = view(D.A, 1:m)
+            if MemoryLayout(b) isa PaddedLayout
+                convert(eltype(D), $dt(v, Array(b)))
+            else
+                convert(eltype(D), $dt(v, b))
+            end
+        end
     end
-    length(a) == length(b) && return convert(T, dot(a,b))
-    # following handles scalars
-    ((length(a) == 1) || (length(b) == 1)) && return convert(T, a[1] * b[1])
-    m = min(length(a), length(b))
-    convert(T, dot(view(a, 1:m), view(b, 1:m)))
 end
-
-function copy(D::Dot{<:PaddedLayout})
-    a = paddeddata(D.A)
-    m = length(a)
-    v = view(D.B, 1:m)
-    if MemoryLayout(a) isa PaddedLayout
-        convert(eltype(D), dot(Array(a), v))
-    else
-        convert(eltype(D), dot(a, v))
-    end
-
-end
-
-function copy(D::Dot{<:Any, <:PaddedLayout})
-    b = paddeddata(D.B)
-    m = length(b)
-    v = view(D.A, 1:m)
-    if MemoryLayout(b) isa PaddedLayout
-        convert(eltype(D), dot(v, Array(b)))
-    else
-        convert(eltype(D), dot(v, b))
-    end
-end
-
 
 _vcat_sub_arguments(::PaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
 

@@ -19,7 +19,7 @@ LazyArraysStaticArraysExt = "StaticArrays"
 
 [compat]
 Aqua = "0.6"
-ArrayLayouts = "1.0"
+ArrayLayouts = "1.4"
 FillArrays = "1.0"
 MacroTools = "0.5"
 MatrixFactorizations = "1.0, 2.0"
