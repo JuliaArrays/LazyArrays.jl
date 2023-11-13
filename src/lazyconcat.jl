@@ -806,8 +806,8 @@ end
 # subarrays
 ###
 
-sublayout(::ApplyLayout{typeof(vcat)}, _) = ApplyLayout{typeof(vcat)}()
-sublayout(::ApplyLayout{typeof(hcat)}, _) = ApplyLayout{typeof(hcat)}()
+sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{Vararg{Union{AbstractVector{Int},Int}}}}) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Vararg{Union{AbstractVector{Int},Int}}}}) = ApplyLayout{typeof(hcat)}()
 # a row-slice of an Hcat is equivalent to a Vcat
 sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Number,AbstractVector}}) = ApplyLayout{typeof(vcat)}()
 
