@@ -2,7 +2,7 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, Test, Base64
 using StaticArrays
 import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
-                    CachedVector, ApplyLayout, arguments, BroadcastVector
+                    CachedVector, ApplyLayout, arguments, BroadcastVector, LazyLayout
 
 
 @testset "concat" begin
@@ -610,5 +610,13 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         v = ApplyArray(vcat)
         @test v isa AbstractVector{Any}
         @test stringmime("text/plain", v) == "vcat()"
+    end
+
+    @testset "matrix indexing" begin
+        a = Vcat(2, Ones(5))
+        h = Hcat([2,3], Ones(2,5))
+        @test MemoryLayout(view(a, [1 2; 1 2])) isa LazyLayout
+        @test MemoryLayout(view(h, [1 2; 1 2], 1)) isa LazyLayout
+        @test h[[1 2; 1 2],:] == Matrix(h)[[1 2; 1 2],:]
     end
 end
