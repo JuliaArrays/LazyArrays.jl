@@ -428,6 +428,7 @@ Cumsum(v::AbstractArray; dims::Integer=1) = Accumulate(+, v; dims=dims)
 IndexStyle(::Type{<:Accumulate{<:Any,1}}) = IndexLinear()
 
 size(Q::Accumulate) = size(Q.v)
+axes(Q::Accumulate) = axes(Q.v)
 
 copy(Q::Accumulate) = Accumulate(Q.op, copy(Q.data), copy(Q.v), Q.dims, Q.datasize)
 
