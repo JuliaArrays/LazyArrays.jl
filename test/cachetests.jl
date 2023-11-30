@@ -3,6 +3,8 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix
 
 include("infinitearrays.jl")
+using .InfiniteArrays
+using Infinities
 
 @testset "Cache" begin
     @testset "basics" begin
@@ -175,7 +177,7 @@ include("infinitearrays.jl")
         @test c[2:3] isa LazyArrays.CachedVector{Int,Vector{Int},Fill{Int,1,Tuple{Base.OneTo{Int}}}}
         @test c[[2,4,6]] isa LazyArrays.CachedVector{Int,Vector{Int},Fill{Int,1,Tuple{Base.OneTo{Int}}}}
 
-        F = Fill(2, InfiniteArrays.Infinity())
+        F = Fill(2, ℵ₀)
         C = cumsum(cache(F))
         @test axes(C) == (InfiniteArrays.OneToInf(),)
     end
