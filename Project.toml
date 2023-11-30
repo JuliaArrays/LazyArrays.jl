@@ -18,12 +18,17 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 LazyArraysStaticArraysExt = "StaticArrays"
 
 [compat]
-Aqua = "0.6"
+Aqua = "0.8"
 ArrayLayouts = "1.4.1"
+Base64 = "1"
 FillArrays = "1.0"
+LinearAlgebra = "1"
 MacroTools = "0.5"
 MatrixFactorizations = "1.0, 2.0"
+SparseArrays = "1"
 StaticArrays = "1.0"
+Test = "1"
+Tracker = "0.2"
 julia = "1.9"
 
 [extras]
