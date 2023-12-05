@@ -26,7 +26,7 @@ module InfiniteArrays
 
     Base.oneto(::InfiniteCardinal{0}) = OneToInf()
 
-    Base.axes(::AbstractInfUnitRange) = OneToInf()
+    Base.axes(::AbstractInfUnitRange) = (OneToInf(),)
 
     struct InfUnitRange{T<:Real} <: AbstractInfUnitRange{T}
         start::T
