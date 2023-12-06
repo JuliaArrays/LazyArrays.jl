@@ -973,3 +973,5 @@ searchsorted(f::Vcat{<:Any,1}, x) = searchsortedfirst(f, x):searchsortedlast(f,x
 
 @inline applied_eltype(::typeof(vec), a) = eltype(a)
 @inline applied_axes(::typeof(vec), a) = (oneto(length(a)),)
+@inline applied_ndims(::typeof(vec), a) = 1
+@inline applied_size(::typeof(vec), a) = (length(a),)
