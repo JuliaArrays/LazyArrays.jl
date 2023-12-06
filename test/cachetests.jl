@@ -2,6 +2,10 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, StaticArrays, SparseA
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix
 
+include("infinitearrays.jl")
+using .InfiniteArrays
+using Infinities
+
 @testset "Cache" begin
     @testset "basics" begin
         A = 1:10
@@ -172,6 +176,10 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
         c = cache(Fill(1,10))
         @test c[2:3] isa LazyArrays.CachedVector{Int,Vector{Int},Fill{Int,1,Tuple{Base.OneTo{Int}}}}
         @test c[[2,4,6]] isa LazyArrays.CachedVector{Int,Vector{Int},Fill{Int,1,Tuple{Base.OneTo{Int}}}}
+
+        F = Fill(2, ℵ₀)
+        C = cumsum(cache(F))
+        @test axes(C) == (InfiniteArrays.OneToInf(),)
     end
 
     @testset "linalg" begin
