@@ -63,6 +63,16 @@ import ArrayLayouts: StridedLayout
         end
     end
 
+    @testset "vec" begin
+        A = zeros(2,2)
+        v = applied(vec, A)
+        w = vec(A)
+        @test size(v) == size(w) == (4,)
+        @test axes(v) == axes(w) == (Base.OneTo(4),)
+        @test ndims(v) == ndims(w) == 1
+        @test eltype(v) == eltype(w) == Float64
+    end
+
     @testset "view" begin
         a = ApplyArray(+,[1,2,3],[3,4,5])
         v = view(a,1:2)
