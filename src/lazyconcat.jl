@@ -255,7 +255,10 @@ function vcat_copyto!(dest::AbstractMatrix, arrays...)
 end
 
 function vcat_copyto!(arr::AbstractVector, arrays...)
-    n = sum(length, arrays)
+    n = 0
+    for a in arrays
+        n += length(a)
+    end
     n == length(arr) || throw(DimensionMismatch("destination must have length equal to sums of concatenated vectors"))
 
     i = firstindex(arr)
