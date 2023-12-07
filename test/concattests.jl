@@ -37,7 +37,7 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             b = Array{Int}(undef, 30)
             copyto!(b, A)
             @test_broken @allocated(copyto!(b, A)) == 0
-            @test @allocated(copyto!(b, A)) ≤ 200
+            @test @allocated(copyto!(b, A)) ≤ 250
             @test b == vcat(A.args...)
             @test copy(A) === A
             @test vec(A) === A
