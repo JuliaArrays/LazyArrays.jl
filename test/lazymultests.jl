@@ -22,6 +22,7 @@ Base.getindex(A::MyMatrix, ::Colon, j::Integer) = A.A[:,j]
 Base.getindex(A::MyMatrix, ::Colon, j::AbstractVector) = MyMatrix(A.A[:,j])
 Base.setindex!(A::MyMatrix, v, kj...) = setindex!(A.A, v, kj...)
 Base.size(A::MyMatrix) = size(A.A)
+Base.copy(A::MyMatrix) = MyMatrix(copy(A.A))
 Base.similar(::Type{MyMatrix{T}}, m::Int, n::Int) where T = MyMatrix{T}(undef, m, n)
 Base.similar(::MyMatrix{T}, m::Int, n::Int) where T = MyMatrix{T}(undef, m, n)
 Base.similar(::MyMatrix, ::Type{T}, m::Int, n::Int) where T = MyMatrix{T}(undef, m, n)
@@ -33,6 +34,7 @@ end
 
 Base.size(A::MyLazyArray) = size(A.data)
 Base.getindex(A::MyLazyArray, j::Int...) = A.data[j...]
+Base.copy(M::MyLazyArray) = MyLazyArray(copy(M.data))
 LazyArrays.MemoryLayout(::Type{<:MyLazyArray}) = LazyLayout()
 LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
 
