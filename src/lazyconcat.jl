@@ -255,20 +255,20 @@ function vcat_copyto!(dest::AbstractMatrix, arrays...)
 end
 
 function vcat_copyto!(arr::AbstractVector, arrays...)
-    n = 0
-    for a in arrays
-        n += length(a)
-    end
+    n = sum(length, arrays)
     n == length(arr) || throw(DimensionMismatch("destination must have length equal to sums of concatenated vectors"))
 
-    i = 0
-    @inbounds for a in arrays
+    i = firstindex(arr)
+    for a in arrays
         m = length(a)
-        copyto!(view(arr,i+1:i+m), a)
+        copyto!(view(arr, range(i, length=m)), a)
         i += m
     end
     arr
 end
+
+# The following provides no performance benefit on Julia v1.10.0-rc2
+@static if VERSION < v"1.10-"
 
 function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
     n = 0
@@ -308,6 +308,8 @@ function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
     end
     @_gc_preserve_end t
     return arr
+end
+
 end
 
 # special case for adjoints of hcat. This is useful for catching fast paths
