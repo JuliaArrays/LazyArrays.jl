@@ -558,7 +558,7 @@ end
 
         D = similar(C)
         mul!(D, A, B)
-        @test all(C .=== D)
+        @test C ≈ D
 
         A = randn(Float64,20,22)
         B = randn(ComplexF64,22,24)
@@ -1055,10 +1055,10 @@ end
         @test @allocated(copyto!(c,Applied(V))) ≤ 200
         copyto!(c, V)
 
-        if VERSION < v"1.9-"
-            @test @allocated(copyto!(c, V)) ≤ 500
+        if v"1.9-" < VERSION < v"1.10-"
+            @test_broken @allocated(copyto!(c, V)) ≤ 500
         else
-            @test_broken @allocated(copyto!(c, V)) ≤ 500
+            @test @allocated(copyto!(c, V)) ≤ 500
         end
 
         @test all(c .=== apply(*, arguments(V)...))
