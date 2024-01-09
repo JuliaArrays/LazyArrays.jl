@@ -25,7 +25,7 @@ jobs:
     name: ${{ matrix.package.group }}/${{ matrix.package.repo }}/${{ matrix.julia-version }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         julia-version: ['1']
         os: [ubuntu-latest]
