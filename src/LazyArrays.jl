@@ -63,6 +63,8 @@ import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot, 
 
 import Base: require_one_based_indexing, oneto
 
+import EltypeExtensions: elconvert
+
 export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum, Accumulate,
         applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, @~, LazyArray,
