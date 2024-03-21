@@ -48,6 +48,10 @@ end
     end
 end
 
+include("infinitearrays.jl")
+using .InfiniteArrays
+using Infinities
+
 include("applytests.jl")
 include("multests.jl")
 include("ldivtests.jl")

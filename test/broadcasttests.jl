@@ -79,6 +79,19 @@ import Base: broadcasted
             @test eltype(B) == Float64
             @test B[1] ≡ 3.0
         end
+
+        @testset "infinite" begin
+            struct Wrapper{T,A<:AbstractVector{T}} <:AbstractVector{T}
+                r :: A
+            end
+            Base.size(w::Wrapper) = size(w.r)
+            Base.getindex(w::Wrapper, i::Int) = getindex(w.r, i)
+            Base.last(w::Wrapper) = last(w.r)
+            r = InfiniteArrays.OneToInf()
+            B = BroadcastArray(-, Wrapper(r), 2)
+            @test first(B) == -1
+            @test last(B) == last(r)
+        end
     end
 
     @testset "vector*matrix broadcasting #27" begin
