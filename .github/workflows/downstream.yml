@@ -31,7 +31,8 @@ jobs:
         os: [ubuntu-latest]
         package:
           - {repo: LazyBandedMatrices.jl, group: JuliaLinearAlgebra}
-          - {repo: InfiniteLinearAlgebra.jl, group: JuliaLinearAlgebra}
+          # uncomment when the tests for InfiniteLinearAlgebra.jl are fixed
+          # - {repo: InfiniteLinearAlgebra.jl, group: JuliaLinearAlgebra}
           - {repo: QuasiArrays.jl, group: JuliaApproximation}
           - {repo: ContinuumArrays.jl, group: JuliaApproximation}
 
