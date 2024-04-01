@@ -22,11 +22,13 @@ import Base: broadcasted
         @test Matrix(B) == exp.(A)
         @test B[1] == exp(A[1,1])
         @test B[7] == exp(A[1,2])
+        @test last(B) == exp(last(A))
 
         C = BroadcastArray(+, A, 2)
         @test C == A .+ 2
         D = BroadcastArray(+, A, C)
         @test D == A + C
+        @test last(C) == last(A) + 2
 
         @test sum(B) ≈ sum(exp, A)
         @test sum(C) ≈ sum(A .+ 2)

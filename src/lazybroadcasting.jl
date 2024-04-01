@@ -86,7 +86,7 @@ Broadcasted(A::SubArray{<:Any,N,<:BroadcastArray}) where N = broadcasted(A)::Bro
 axes(A::BroadcastArray) = axes(broadcasted(A))
 size(A::BroadcastArray) = map(length, axes(A))
 
-last(A::BroadcastArray) = foldl(A.f, last.(A.args))
+last(A::BroadcastArray) = A.f(last.(A.args)...)
 
 @propagate_inbounds getindex(A::BroadcastArray{T,N}, kj::Vararg{Int,N}) where {T,N} = convert(T,broadcasted(A)[kj...])::T
 
