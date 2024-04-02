@@ -82,6 +82,16 @@ import Base: broadcasted
             @test B[1] ≡ 3.0
         end
 
+        @testset "last" begin
+            B = BroadcastArray(*, [1 2; 3 4], [5,6]')
+            @test last(B) == B[end] == 4*6
+            B = BroadcastArray(*, [1 2; 3 4], [5,6])
+            @test last(B) == B[end] == 4*6
+            g(x,y) = x^2 + y^3
+            B = BroadcastArray(g, [1 2; 3 4], [1 2; 3 4;;;])
+            @test last(B) == B[end] == g(4,4)
+        end
+
         @testset "infinite" begin
             struct Wrapper{T,A<:AbstractVector{T}} <:AbstractVector{T}
                 r :: A
