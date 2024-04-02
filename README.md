@@ -3,6 +3,7 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliaarrays.github.io/LazyArrays.jl/dev)
 [![Build Status](https://github.com/JuliaArrays/LazyArrays.jl/workflows/CI/badge.svg)](https://github.com/JuliaArrays/LazyArrays.jl/actions)
 [![codecov](https://codecov.io/gh/JuliaArrays/LazyArrays.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaArrays/LazyArrays.jl)
+[![pkgeval](https://juliahub.com/docs/General/LazyArrays/stable/pkgeval.svg)](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html)
 
 Lazy arrays and linear algebra in Julia
 
