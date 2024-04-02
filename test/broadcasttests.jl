@@ -22,11 +22,13 @@ import Base: broadcasted
         @test Matrix(B) == exp.(A)
         @test B[1] == exp(A[1,1])
         @test B[7] == exp(A[1,2])
+        @test last(B) == exp(last(A))
 
         C = BroadcastArray(+, A, 2)
         @test C == A .+ 2
         D = BroadcastArray(+, A, C)
         @test D == A + C
+        @test last(C) == last(A) + 2
 
         @test sum(B) ≈ sum(exp, A)
         @test sum(C) ≈ sum(A .+ 2)
@@ -78,6 +80,31 @@ import Base: broadcasted
             B = BroadcastArray{Float64}(+, [1,2,3], 2)
             @test eltype(B) == Float64
             @test B[1] ≡ 3.0
+        end
+
+        @testset "last" begin
+            B = BroadcastArray(*, [1 2; 3 4], [5,6]')
+            @test last(B) == B[end] == 4*6
+            B = BroadcastArray(*, [1 2; 3 4], [5,6])
+            @test last(B) == B[end] == 4*6
+            g(x,y) = x^2 + y^3
+            B = BroadcastArray(g, [1 2; 3 4], [1 2; 3 4;;;])
+            @test last(B) == B[end] == g(4,4)
+            B = BroadcastArray(+, [1,2], [5,6]')
+            @test last(B) == B[end] == 2+6
+        end
+
+        @testset "infinite" begin
+            struct Wrapper{T,A<:AbstractVector{T}} <:AbstractVector{T}
+                r :: A
+            end
+            Base.size(w::Wrapper) = size(w.r)
+            Base.getindex(w::Wrapper, i::Int) = getindex(w.r, i)
+            Base.last(w::Wrapper) = last(w.r)
+            r = InfiniteArrays.OneToInf()
+            B = BroadcastArray(-, Wrapper(r), 2)
+            @test first(B) == -1
+            @test last(B) == last(r)
         end
     end
 
