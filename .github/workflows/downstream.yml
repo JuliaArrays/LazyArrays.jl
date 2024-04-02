@@ -33,6 +33,7 @@ jobs:
           - {repo: LazyBandedMatrices.jl, group: JuliaLinearAlgebra}
           # uncomment when the tests for InfiniteLinearAlgebra.jl are fixed
           # - {repo: InfiniteLinearAlgebra.jl, group: JuliaLinearAlgebra}
+          - {repo: InfiniteArrays.jl, group: JuliaArrays}
           - {repo: QuasiArrays.jl, group: JuliaApproximation}
           - {repo: ContinuumArrays.jl, group: JuliaApproximation}
 
