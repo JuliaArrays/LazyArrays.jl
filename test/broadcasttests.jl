@@ -90,6 +90,8 @@ import Base: broadcasted
             g(x,y) = x^2 + y^3
             B = BroadcastArray(g, [1 2; 3 4], [1 2; 3 4;;;])
             @test last(B) == B[end] == g(4,4)
+            B = BroadcastArray(+, [1,2], [5,6]')
+            @test last(B) == B[end] == 2+6
         end
 
         @testset "infinite" begin
