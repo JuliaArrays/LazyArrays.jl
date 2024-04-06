@@ -1,4 +1,7 @@
+module AddTests
+
 using LazyArrays, Test
+using LinearAlgebra
 import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayout
 
 @testset "Add/Subtract" begin
@@ -300,4 +303,6 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             @test C*B ≈ (-A) * 3A
         end
     end
-end
+end # testset
+
+end # module

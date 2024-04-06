@@ -1,3 +1,5 @@
+module SetOpTests
+
 using LazyArrays, Test
 import LazyArrays: ApplyStyle, VectorSetStyle, SetStyle
 
@@ -22,4 +24,6 @@ import LazyArrays: ApplyStyle, VectorSetStyle, SetStyle
     @test 2 ∈ applied(setdiff, [1,2], Set([1.0]))
 
     @test 1 ∈ applied(intersect, [1,2], Set([1.0]), 1f0)
-end
+end # testset
+
+end # module

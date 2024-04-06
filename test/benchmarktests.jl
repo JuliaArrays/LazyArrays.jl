@@ -23,4 +23,4 @@ end
     A = Hcat(1:10, 2:11)
     b = Array{Int}(undef, 10, 2)
     @test @belapsed(copyto!($b,$A)) < @belapsed(hcat($A.args...))
-en
+end

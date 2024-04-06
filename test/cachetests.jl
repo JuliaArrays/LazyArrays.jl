@@ -1,6 +1,12 @@
+module CacheTests
+
 using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, StaticArrays, SparseArrays, Test
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix
+
+include("infinitearrays.jl")
+using .InfiniteArrays
+using Infinities
 
 @testset "Cache" begin
     @testset "basics" begin
@@ -431,3 +437,4 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
     end
 end
 
+end # module
