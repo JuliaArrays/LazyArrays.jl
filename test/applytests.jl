@@ -1,7 +1,10 @@
+module ApplyTests
+
 using LazyArrays, FillArrays, ArrayLayouts, Test
 import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied, arguments,
             ApplyArray, ApplyMatrix, ApplyVector, LazyArrayApplyStyle, ApplyLayout, call
 import ArrayLayouts: StridedLayout
+using LinearAlgebra
 
 @testset "Applying" begin
     @testset "Applied" begin
@@ -112,4 +115,6 @@ import ArrayLayouts: StridedLayout
         @test arguments(R) == (rot180(A), rot180(B))
         @test R ≈ rot180(A*B)
     end
-end
+end # testset
+
+end # module

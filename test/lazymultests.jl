@@ -1,5 +1,8 @@
+module LazyMulTests
+
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays
 import LazyArrays: materialize!, MemoryLayout, triangulardata, LazyLayout, UnknownLayout, LazyMatrix, simplifiable
+using Test
 
 # used to test general matrix backends
 struct MyMatrix{T} <: LazyMatrix{T}
@@ -372,3 +375,4 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
     end
 end
 
+end # module

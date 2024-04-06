@@ -1,3 +1,5 @@
+module LdivRdivTests
+
 using LazyArrays, LinearAlgebra, FillArrays, Test
 import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout, simplifiable
 import Base.Broadcast: materialize
@@ -162,3 +164,5 @@ end
     @test axes(R) == (axes(R,1),axes(R,2)) == axes(A)
     @test R ≈ apply(/, A, A) ≈ Eye(5)
 end
+
+end # module

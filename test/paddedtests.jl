@@ -1,6 +1,9 @@
+module PaddedTests
+
 using LazyArrays, FillArrays, ArrayLayouts, StaticArrays, Base64, Test
 import LazyArrays: PaddedLayout, LayoutVector, MemoryLayout, paddeddata, ApplyLayout, sub_materialize, CachedVector
 import Base: setindex
+using LinearAlgebra
 
 # padded block arrays have padded data that is also padded. This is to test this
 struct PaddedPadded <: LayoutVector{Int} end
@@ -71,7 +74,7 @@ paddeddata(a::PaddedPadded) = a
 
         @testset "PaddedPadded" begin
             @test colsupport(PaddedPadded()) ≡ Base.OneTo(10)
-            @test stringmime("text/plain", PaddedPadded()) == "10-element PaddedPadded:\n 1\n 1\n 1\n 1\n 1\n 0\n 0\n 0\n 0\n 0"
+            @test stringmime("text/plain", PaddedPadded()) == "10-element $PaddedPadded:\n 1\n 1\n 1\n 1\n 1\n 0\n 0\n 0\n 0\n 0"
             @test dot(PaddedPadded(), PaddedPadded()) == 5
             @test dot(PaddedPadded(), 1:10) == dot(1:10, PaddedPadded()) == 15
 
@@ -324,3 +327,5 @@ paddeddata(a::PaddedPadded) = a
         @test norm(a) ≡ LinearAlgebra.normInf(c) ≡ LinearAlgebra.norm2(c) ≡ LinearAlgebra.norm1(c) ≡ LinearAlgebra.normp(c,2) ≡ 1.0
     end
 end
+
+end # module
