@@ -5,11 +5,11 @@ const AbstractCachedVector{T} = AbstractCachedArray{T,1}
 const AbstractCachedMatrix{T} = AbstractCachedArray{T,2}
 
 
-mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}} <: AbstractCachedArray{T,N}
+mutable struct CachedArray{T,N,DM<:AbstractArray{T,N},M} <: AbstractCachedArray{T,N}
     data::DM
     array::M
     datasize::NTuple{N,Int}
-    function CachedArray{T,N,DM,M}(data::DM, array::M, datasize::NTuple{N,Int}) where {T,N,DM<:AbstractArray{T,N},M<:AbstractArray{T,N}}
+    function CachedArray{T,N,DM,M}(data::DM, array::M, datasize::NTuple{N,Int}) where {T,N,DM<:AbstractArray{T,N},M}
         for d in datasize
             d < 0 && throw(ArgumentError("Datasize must be 0 or more"))
         end
@@ -26,7 +26,7 @@ function CachedArray(data::AbstractArray{T,N}, array::AbstractArray{V,N}, datasi
 end
 
 const CachedVector{T,DM<:AbstractVector{T},M<:AbstractVector{T}} = CachedArray{T,1,DM,M}
-const CachedMatrix{T,DM<:AbstractMatrix{T},M<:AbstractMatrix{T}} = CachedArray{T,2,DM,M}
+const CachedMatrix{T,DM<:AbstractMatrix{T},M} = CachedArray{T,2,DM,M}
 
 
 
@@ -539,3 +539,16 @@ function cacheddata(V::SubArray)
     data = cacheddata(P)
     view(data, intersect.(axes(data), parentindices(V))...)
 end
+
+
+##
+# AbstractQ
+##
+cache(A::AbstractQ) = _cache(MemoryLayout(A), A)
+_cache(_, O::AbstractQ) = CachedArray(O)
+CachedArray(array::AbstractQ{T}) where T = CachedArray(similar(Matrix{T}, (0,0)), array)
+CachedArray(data::AbstractMatrix, array::AbstractQ) = CachedArray(data, array, size(data))
+CachedArray(data::AbstractMatrix{T}, array::AbstractQ{T}, datasize::NTuple{2,Int}) where T =
+    CachedMatrix{T,typeof(data),typeof(array)}(data, array, datasize)
+
+length(A::CachedMatrix{<:T,<:AbstractMatrix{T},<:AbstractQ{T}}) where T = prod(size(A.array))
