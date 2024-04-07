@@ -1,6 +1,7 @@
 module CacheTests
 
-using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, StaticArrays, SparseArrays, Test
+using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, SparseArrays, Test
+using StaticArrays
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix
 
@@ -434,6 +435,13 @@ using Infinities
         @test A'[1,1:5] == transpose(A)[1,1:5] == A[1:5,1]
         @test  A'[1:3] == A.array'[1:3]
         @test  A'[1:11] == A.array'[1:11]
+    end
+
+    @testset "AbstractQ" begin
+        Q = qr(randn(5,5)).Q
+        C = cache(Q);
+        @test C[1:5,1:5] == Q[1:5,1:5]
+        @test length(C) == 25        
     end
 end
 
