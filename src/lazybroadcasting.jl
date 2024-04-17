@@ -134,7 +134,6 @@ BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyMatrix,<:Tuple{Slice,Any}}}) = LazyArrayStyle{1}()
-BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyVector}}) = LazyArrayStyle{1}()
 BroadcastStyle(L::LazyArrayStyle{N}, ::StructuredMatrixStyle)  where N = L
 
 
@@ -417,3 +416,5 @@ _adjortrans(A::Transpose) = transpose(A)
 
 
 _adjortrans(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = broadcast(real, _adjortrans(A.args...))
+transpose(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = broadcast(real, transpose(A.args...))
+adjoint(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = broadcast(real, adjoint(A.args...))
