@@ -46,6 +46,8 @@ BroadcastMatrix(bc::Broadcasted) = BroadcastMatrix{combine_eltypes(bc.f, bc.args
 @inline MemoryLayout(::Type{BroadcastArray{T,N,F,Args}}) where {T,N,F,Args} =
     broadcastlayout(F, tuple_type_memorylayouts(Args)...)
 
+arguments(::BroadcastLayout{F}, A::BroadcastArray{<:Any,N,F}) where {N,F} = A.args
+
 _broadcast2broadcastarray() = ()
 _broadcast2broadcastarray(a, b...) = tuple(a, _broadcast2broadcastarray(b...)...)
 _broadcast2broadcastarray(a::Broadcasted{DefaultArrayStyle{0}}, b...) = tuple(materialize(a), _broadcast2broadcastarray(b...)...)
@@ -127,11 +129,12 @@ end
 
 
 BroadcastStyle(::Type{<:LazyArray{<:Any,N}}) where N = LazyArrayStyle{N}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyVector{<:Any}}}) = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector{<:Any}}}) = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix{<:Any}}}) = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix{<:Any}}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyVector}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyMatrix,<:Tuple{Slice,Any}}}) = LazyArrayStyle{1}()
+BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyVector}}) = LazyArrayStyle{1}()
 BroadcastStyle(L::LazyArrayStyle{N}, ::StructuredMatrixStyle)  where N = L
 
 
@@ -271,11 +274,10 @@ end
 end
 
 @inline _broadcast_sub_arguments(lay::DualLayout{ML}, P, V::AbstractVector) where ML =
-    arguments(ML(), view(P', parentindices(V)[2]))
+    arguments(ML(), view(_adjortrans(P), parentindices(V)[2]))
 
-@inline _broadcast_sub_arguments(A, V) = _broadcast_sub_arguments(MemoryLayout(A), A, V)
-@inline _broadcast_sub_arguments(V) =  _broadcast_sub_arguments(parent(V), V)
-@inline arguments(b::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
+@inline _broadcast_sub_arguments(lay, V) =  _broadcast_sub_arguments(lay, parent(V), V)
+@inline arguments(lay::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(lay, V)
 @inline call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
 
 
@@ -411,4 +413,6 @@ sub_materialize(::DualLayout{BroadcastLayout{typeof(real)}}, A::AbstractMatrix{<
 _adjortrans(A::SubArray{<:Any,2, <:Any, <:Tuple{Slice,Any}}) = view(_adjortrans(parent(A)), parentindices(A)[2])
 _adjortrans(A::Adjoint) = A'
 _adjortrans(A::Transpose) = transpose(A)
-_adjortrans(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = BroadcastArray{T}(real, _adjortrans(A.args...))
+
+
+_adjortrans(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = broadcast(real, _adjortrans(A.args...))
