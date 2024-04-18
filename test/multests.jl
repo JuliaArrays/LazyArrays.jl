@@ -272,8 +272,9 @@ end
             c .= @~ Ac*b
             @test all(c .=== BLAS.gemv!('T', 1.0, A, b, 0.0, similar(c)))
 
+            b̃ = deepcopy(b)
             b .= @~ Ac*b
-            @test all(c .=== b)
+            @test all(b .=== BLAS.gemv!('T', 1.0, A, b̃, 0.0, deepcopy(b̃)))
 
             c .= @~ 2.0 * Ac*b
             @test all(c .=== BLAS.gemv!('T', 2.0, A, b, 0.0, similar(c)))
