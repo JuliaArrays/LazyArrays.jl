@@ -1,9 +1,11 @@
-using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, Base64
+using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, Base64, Random
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray,
                     MulStyle, MulAddStyle, Applied, ApplyStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
                     Rmul, ApplyLayout, arguments, colsupport, rowsupport, lazymaterialize
 import Base.Broadcast: materialize, materialize!, broadcasted
 import MatrixFactorizations: QRCompactWYQLayout, AdjQRCompactWYQLayout
+
+Random.seed!(123)
 
 @testset "Matrix * Vector" begin
     @testset "eltype" begin
@@ -272,8 +274,9 @@ end
             c .= @~ Ac*b
             @test all(c .=== BLAS.gemv!('T', 1.0, A, b, 0.0, similar(c)))
 
+            b̃ = deepcopy(b)
             b .= @~ Ac*b
-            @test all(c .=== b)
+            @test all(b .=== BLAS.gemv!('T', 1.0, A, Base.unalias(b̃,b̃), 0.0, b̃))
 
             c .= @~ 2.0 * Ac*b
             @test all(c .=== BLAS.gemv!('T', 2.0, A, b, 0.0, similar(c)))
