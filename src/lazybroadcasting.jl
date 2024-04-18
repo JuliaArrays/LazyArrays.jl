@@ -94,7 +94,7 @@ last(A::BroadcastArray) = A.f(last.(A.args)...)
 
 converteltype(::Type{T}, A::AbstractArray) where T = convert(AbstractArray{T}, A)
 converteltype(::Type{T}, A) where T = convert(T, A)
-sub_materialize(::BroadcastLayout, A) = converteltype(eltype(A), materialize(_broadcasted(A)))
+sub_materialize(::BroadcastLayout, A) = converteltype(eltype(A), sub_materialize(_broadcasted(A)))
 
 copy(bc::Broadcasted{<:LazyArrayStyle}) = BroadcastArray(bc)
 
@@ -407,15 +407,18 @@ permutedims(A::BroadcastArray{T}) where T = BroadcastArray{T}(A.f, map(_permuted
 
 @inline broadcastlayout(::Type{F}, ::DualLayout) where F = DualLayout{BroadcastLayout{F}}()
 
-# real broadcast can use adjoint or transpose. This keeps types simple
-sub_materialize(::DualLayout{BroadcastLayout{typeof(real)}}, A::AbstractMatrix{<:Real}) = sub_materialize(view(_adjortrans(A), parentindices(A)[2]))'
 
 _adjortrans(A::SubArray{<:Any,2, <:Any, <:Tuple{Slice,Any}}) = view(_adjortrans(parent(A)), parentindices(A)[2])
 _adjortrans(A::Adjoint) = A'
 _adjortrans(A::Transpose) = transpose(A)
 
 
-_adjortrans(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = broadcast(real, _adjortrans(A.args...))
-# transpose and adjoint are equivalent for real
-transpose(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = _adjortrans(A)
-adjoint(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = _adjortrans(A)
+# # real broadcast can use adjoint or transpose. This keeps types simple
+# sub_materialize(::DualLayout{BroadcastLayout{typeof(real)}}, A::AbstractMatrix{<:Real}) = sub_materialize(view(_adjortrans(A), parentindices(A)[2]))'
+
+# _adjortrans(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = broadcast(real, _adjortrans(A.args...))
+# # transpose and adjoint are equivalent for real
+# transpose(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = _adjortrans(A)
+# adjoint(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = _adjortrans(A)
+
+# broadcastlayout(::Type{typeof(real)}, ::DualLayout{ApplyLayout{typeof(hcat)}}) = DualLayout{ApplyLayout{typeof(hcat)}}()
