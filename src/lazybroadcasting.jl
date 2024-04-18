@@ -416,5 +416,6 @@ _adjortrans(A::Transpose) = transpose(A)
 
 
 _adjortrans(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = broadcast(real, _adjortrans(A.args...))
-transpose(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = broadcast(real, transpose(A.args...))
-adjoint(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = broadcast(real, adjoint(A.args...))
+# transpose and adjoint are equivalent for real
+transpose(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = _adjortrans(A)
+adjoint(A::BroadcastArray{T,N,typeof(real)}) where {T,N} = _adjortrans(A)
