@@ -1,6 +1,12 @@
+module BroadcastTests
+
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Tracker, Base64, Test
 import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize
 import Base: broadcasted
+
+include("infinitearrays.jl")
+using .InfiniteArrays
+using Infinities
 
 @testset "Broadcasting" begin
     @testset "BroadcastArray" begin
@@ -396,3 +402,5 @@ import Base: broadcasted
         @test a[:,1:3] isa Adjoint{Int,Vector{Int}}
     end
 end
+
+end #module

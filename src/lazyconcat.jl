@@ -947,10 +947,10 @@ _searchsortedlast(a, x) = searchsortedlast(a, x)
 _searchsortedlast(a::Number, x) = 0 + (x ≥ a)
 
 searchsortedfirst(f::Vcat{<:Any,1}, x) =
-    searchsortedfirst_recursive(0, x, arguments(f)...)
+    searchsortedfirst_recursive(0, x, arguments(vcat, f)...)
 
 searchsortedlast(f::Vcat{<:Any,1}, x) =
-    searchsortedlast_recursive(length(f), x, reverse(arguments(f))...)
+    searchsortedlast_recursive(length(f), x, reverse(arguments(vcat, f))...)
 
 @inline searchsortedfirst_recursive(n, x) = n + 1
 

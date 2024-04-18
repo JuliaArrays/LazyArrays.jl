@@ -267,7 +267,7 @@ end
 @inline __broadcastview(inds) = ()
 @inline __broadcastview(inds, a, b...) = (_broadcastview(a, inds), __broadcastview(inds, b...)...)
 
-@inline function _broadcast_sub_arguments(lay, P, V)
+@inline function _broadcast_sub_arguments(lay::BroadcastLayout, P, V)
     args = arguments(lay, P)
     __broadcastview(parentindices(V), args...)
 end
@@ -275,9 +275,9 @@ end
 @inline _broadcast_sub_arguments(lay::DualLayout{ML}, P, V::AbstractVector) where ML =
     arguments(ML(), view(_adjortrans(P), parentindices(V)[2]))
 
-@inline _broadcast_sub_arguments(lay, V) =  _broadcast_sub_arguments(lay, parent(V), V)
-@inline _broadcast_sub_arguments(V) = _broadcast_sub_arguments(MemoryLayout(V), V)
-@inline arguments(lay::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(lay, V)
+@inline _broadcast_sub_arguments(A, V) = _broadcast_sub_arguments(MemoryLayout(A), A, V)
+@inline _broadcast_sub_arguments(V) =  _broadcast_sub_arguments(parent(V), V)
+@inline arguments(lay::BroadcastLayout, V::SubArray) = _broadcast_sub_arguments(V)
 @inline call(b::BroadcastLayout, a::SubArray) = call(b, parent(a))
 
 
