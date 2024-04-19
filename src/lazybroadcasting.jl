@@ -267,7 +267,7 @@ end
 @inline __broadcastview(inds) = ()
 @inline __broadcastview(inds, a, b...) = (_broadcastview(a, inds), __broadcastview(inds, b...)...)
 
-@inline function _broadcast_sub_arguments(lay::BroadcastLayout, P, V)
+@inline function _broadcast_sub_arguments(lay, P, V)
     args = arguments(lay, P)
     __broadcastview(parentindices(V), args...)
 end
