@@ -401,6 +401,19 @@ using Infinities
         @test a[:,1:3] == (1:3)'
         @test a[:,1:3] isa Adjoint{Int,Vector{Int}}
     end
+
+    @testset "broadcast with adjtrans" begin
+        a = BroadcastArray(real, ((1:5) .+ im))
+        b = BroadcastArray(exp, ((1:5) .+ im))
+        @test exp.(transpose(a)) isa Transpose{<:Any,<:BroadcastVector}
+        @test exp.(a') isa Adjoint{<:Any,<:BroadcastVector}
+        @test exp.(a') == exp.(transpose(a)) == exp.(a)'
+
+        @test exp.(transpose(b)) isa Transpose{<:Any,<:BroadcastVector}
+        @test exp.(b') isa BroadcastMatrix
+        @test exp.(transpose(b)) == transpose(exp.(b))
+        @test exp.(b') == exp.(b)'
+    end
 end
 
 end #module

@@ -505,6 +505,7 @@ _flatten_nums(args::Tuple{Number, Vararg{Any}}, bc::Tuple{AbstractArray, Vararg{
 
 broadcasted(::LazyArrayStyle, op, A::Vcat) = Vcat(_flatten_nums(A.args, broadcast(x -> broadcast(op, x), A.args))...)
 broadcasted(::LazyArrayStyle, op, A::Transpose{<:Any,<:Vcat}) = transpose(broadcast(op, parent(A)))
+broadcasted(::LazyArrayStyle, op, A::Adjoint{<:Real,<:Vcat}) = broadcast(op, parent(A))'
 
 
 for Cat in (:Vcat, :Hcat)

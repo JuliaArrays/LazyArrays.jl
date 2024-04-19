@@ -620,6 +620,20 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test MemoryLayout(view(h, [1 2; 1 2], 1)) isa LazyLayout
         @test h[[1 2; 1 2],:] == Matrix(h)[[1 2; 1 2],:]
     end
+
+    @testset "transpose" begin
+        a = Vcat(2, Ones(5))
+        b = Vcat(2, Ones(5)) .+ im
+
+        @test exp.(transpose(a)) isa Transpose{<:Any,<:Vcat}
+        @test exp.(a') isa Adjoint{<:Any,<:Vcat}
+        @test exp.(transpose(a)) == exp.(a') == exp.(a)'
+
+        @test exp.(transpose(b)) isa Transpose{<:Any,<:Vcat}
+        @test exp.(b') isa BroadcastArray
+        @test exp.(transpose(b)) == transpose(exp.(b))
+        @test exp.(b') == exp.(b)'
+    end
 end
 
 end # module
