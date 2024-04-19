@@ -6,39 +6,22 @@ module LazyArrays
 using Base.Broadcast, LinearAlgebra, FillArrays, ArrayLayouts, MatrixFactorizations, SparseArrays
 import LinearAlgebra.BLAS
 
-import Base: AbstractArray, AbstractMatrix, AbstractVector,
-        ReinterpretArray, ReshapedArray, AbstractCartesianIndex, Slice,
-             RangeIndex, BroadcastStyle, copyto!, length, broadcastable, axes,
-             getindex, eltype, tail, IndexStyle, IndexLinear, getproperty,
-             *, +, -, /, \, ==, isinf, isfinite, sign, angle, show, isless,
-         fld, cld, div, min, max, minimum, maximum, mod,
-         <, ≤, >, ≥, promote_rule, convert, copy,
-         size, step, isempty, length, first, last, ndims,
-         getindex, setindex!, setindex, intersect, inv,
-         sort, sort!, issorted, sortperm, diff, accumulate, cumsum, sum, in, broadcast,
-         eltype, parent, real, imag,
-         conj, transpose, adjoint, permutedims, vec,
-         exp, log, sqrt, cos, sin, tan, csc, sec, cot,
-                   cosh, sinh, tanh, csch, sech, coth,
-                   acos, asin, atan, acsc, asec, acot,
-                   acosh, asinh, atanh, acsch, asech, acoth, (:),
-         AbstractMatrix, AbstractArray, checkindex, unsafe_length, OneTo, one, zero,
-        to_shape, _sub2ind, print_matrix, print_matrix_row, print_matrix_vdots,
-      checkindex, Slice, @propagate_inbounds,
-      _in_range, _range, Ordered,
-      ArithmeticWraps, floatrange, reverse, unitrange_last,
-      AbstractArray, AbstractVector, axes, (:), _sub2ind_recurse, broadcast, promote_eltypeof,
-      similar, @_gc_preserve_end, @_gc_preserve_begin,
-      @nexprs, @ncall, @ntuple, tuple_type_tail,
-      all, any, isbitsunion, issubset, replace_with_centered_mark, replace_in_print_matrix,
-      unsafe_convert, strides, union, map, searchsortedfirst, searchsortedlast, searchsorted
+import Base: *, +, -, /, <, ==, >, \, ≤, ≥, (:), @_gc_preserve_begin, @_gc_preserve_end, @propagate_inbounds,
+             AbstractArray, AbstractMatrix, AbstractVector, BroadcastStyle, IndexLinear, IndexStyle, OneTo, Slice,
+             accumulate, acos, acosh, acot, acoth, acsc, acsch, adjoint, all, any, asec, asech, asin, asinh, atan,
+             atanh, axes, broadcast, broadcastable, conj, convert, copy, copyto!, cos, cosh, cot, coth, csc, csch,
+             cumsum, diff, div, eltype, exp, first, getindex, in, intersect, inv, isbitsunion, isempty, isinf, issubset,
+             last, length, log, map, max, maximum, min, minimum, mod, ndims, one, parent, permutedims, print_matrix,
+             real, replace_in_print_matrix, replace_with_centered_mark, reverse, searchsorted, searchsortedfirst,
+             searchsortedlast, sec, sech, setindex, setindex!, show, similar, sin, sinh, size, sort, sqrt, strides, sum,
+             tail, tan, tanh, transpose, tuple_type_tail, union, unsafe_convert, vec, zero, fill!, require_one_based_indexing,
+             oneto
 
-import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, broadcasted,
-                        combine_eltypes, DefaultArrayStyle, instantiate, eltypes
+import Base.Broadcast: AbstractArrayStyle, BroadcastStyle, Broadcasted, DefaultArrayStyle, broadcasted, combine_eltypes,
+                       instantiate
 
-import LinearAlgebra: AbstractQ, checksquare, pinv, fill!, tilebufsize, dot, factorize, qr, lu, cholesky,
-                        norm2, norm1, normInf, normp, normMinusInf, diag, det, logabsdet, tr, AdjOrTrans, triu, tril,
-                        lmul!, rmul!, StructuredMatrixStyle
+import LinearAlgebra: AbstractQ, AdjOrTrans, StructuredMatrixStyle, checksquare, det, diag, dot, lmul!, logabsdet,
+                      norm1, norm2, normInf, normp, pinv, rmul!, tr, tril, triu
 
 if VERSION ≥ v"1.11.0-DEV.21"
     using LinearAlgebra: UpperOrLowerTriangular
@@ -49,19 +32,15 @@ else
                                               LinearAlgebra.UnitLowerTriangular{T,S}}
 end
 
-import LinearAlgebra.BLAS: BlasFloat, BlasReal, BlasComplex
+import ArrayLayouts: AbstractQLayout, Dot, Dotu, Ldiv, Lmul, MatMulMatAdd, MatMulVecAdd, Mul, MulAdd, Rmul,
+                     StridedLayout, _copyto!, _fill_lmul!, _inv, _mul_eltype, adjointlayout, bidiagonallayout,
+                     check_ldiv_axes, check_mul_axes, colsupport, conjlayout, diagonallayout, dotu, fillzeros,
+                     hermitianlayout, layout_getindex, layout_replace_in_print_matrix, ldivaxes, materialize,
+                     materialize!, mulreduce, reshapedlayout, rowsupport, scalarone, scalarzero, sub_materialize,
+                     sublayout, symmetriclayout, symtridiagonallayout, transposelayout, triangulardata,
+                     triangularlayout, tridiagonallayout, zero!
 
 import FillArrays: AbstractFill, getindex_value
-
-import ArrayLayouts: MatMulVecAdd, MatMulMatAdd, MulAdd, Lmul, Rmul, Ldiv, Dot, Mul, _inv,
-                        transposelayout, conjlayout, sublayout, triangularlayout, triangulardata,
-                        reshapedlayout, diagonallayout, tridiagonallayout, symtridiagonallayout, bidiagonallayout, symmetriclayout, hermitianlayout,
-                        adjointlayout, sub_materialize, mulreduce, materialize, materialize!,
-                        check_mul_axes, _mul_eltype, check_ldiv_axes, ldivaxes, colsupport, rowsupport,
-                        _fill_lmul!, scalarone, scalarzero, fillzeros, zero!, layout_getindex, _copyto!,
-                        AbstractQLayout, StridedLayout, layout_replace_in_print_matrix, dotu, Dotu
-
-import Base: require_one_based_indexing, oneto
 
 export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum, Accumulate,
