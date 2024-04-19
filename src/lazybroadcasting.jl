@@ -297,6 +297,10 @@ _transpose(a::Ref) = a
 arguments(b::BroadcastLayout, A::Adjoint) = map(_adjoint, arguments(b, parent(A)))
 arguments(b::BroadcastLayout, A::Transpose) = map(_transpose, arguments(b, parent(A)))
 
+# broadcasting a transpose is the same as broadcasting it to the array and transposing
+# this allows us to collapse to one broadcast.
+broadcasted(::LazyArrayStyle, op, A::Transpose{<:Any,<:BroadcastArray}) = transpose(broadcast(op, parent(A)))
+
 
 ###
 # Show
