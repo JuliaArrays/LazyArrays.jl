@@ -302,6 +302,11 @@ arguments(b::BroadcastLayout, A::Transpose) = map(_transpose, arguments(b, paren
 broadcasted(::LazyArrayStyle, op, A::Transpose{<:Any,<:BroadcastArray}) = transpose(broadcast(op, parent(A)))
 broadcasted(::LazyArrayStyle, op, A::Adjoint{<:Real,<:BroadcastArray}) = adjoint(broadcast(op, parent(A)))
 
+# ensure we benefit from fast linear indexing
+getindex(A::Transpose{<:Any,<:BroadcastVector}, k::AbstractVector) = parent(A)[k]
+getindex(A::Adjoint{<:Real,<:BroadcastVector}, k::AbstractVector) = parent(A)[k]
+getindex(A::Adjoint{<:Any,<:BroadcastVector}, k::AbstractVector) = conj.(parent(A))[k]
+
 
 ###
 # Show

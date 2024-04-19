@@ -414,6 +414,14 @@ using Infinities
         @test exp.(transpose(b)) == transpose(exp.(b))
         @test exp.(b') == exp.(b)'
     end
+
+    @testset "linear indexing" begin
+        a = BroadcastArray(real, ((1:5) .+ im))
+        b = BroadcastArray(exp, ((1:5) .+ im))
+        @test transpose(a)[1:5] == a'[1:5] == 1:5
+        @test transpose(b)[1:5] == exp.((1:5) .+ im)
+        @test b'[1:5] == exp.((1:5) .- im)
+    end
 end
 
 end #module
