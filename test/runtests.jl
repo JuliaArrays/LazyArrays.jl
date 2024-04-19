@@ -453,9 +453,9 @@ end
         M == BroadcastMatrix(BroadcastMatrix(bc)) == BroadcastMatrix(exp,[1 2; 3 4]) == exp.([1 2; 3 4])
 
     @test exp.(v') isa BroadcastMatrix
-    @test exp.(transpose(v)) isa BroadcastMatrix
+    @test exp.(transpose(v)) isa Transpose{<:Any,<:BroadcastVector}
     @test exp.(M') isa BroadcastMatrix
-    @test exp.(transpose(M)) isa BroadcastMatrix
+    @test exp.(transpose(M)) isa Transpose{<:Any,<:BroadcastMatrix}
 
     bc = BroadcastArray(broadcasted(+, 1:10, broadcasted(sin, 1:10)))
     @test bc[1:10] == (1:10) .+ sin.(1:10)
