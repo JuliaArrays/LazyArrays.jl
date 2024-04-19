@@ -504,6 +504,8 @@ _flatten_nums(args::Tuple, bc::Tuple) = (bc[1], _flatten_nums(tail(args), tail(b
 _flatten_nums(args::Tuple{Number, Vararg{Any}}, bc::Tuple{AbstractArray, Vararg{Any}}) = (Fill(bc[1],1), _flatten_nums(tail(args), tail(bc))...)
 
 broadcasted(::LazyArrayStyle, op, A::Vcat) = Vcat(_flatten_nums(A.args, broadcast(x -> broadcast(op, x), A.args))...)
+broadcasted(::LazyArrayStyle, op, A::Transpose{<:Any,<:Vcat}) = transpose(broadcast(op, parent(A)))
+broadcasted(::LazyArrayStyle, op, A::Adjoint{<:Real,<:Vcat}) = broadcast(op, parent(A))'
 
 
 for Cat in (:Vcat, :Hcat)
@@ -947,10 +949,10 @@ _searchsortedlast(a, x) = searchsortedlast(a, x)
 _searchsortedlast(a::Number, x) = 0 + (x ≥ a)
 
 searchsortedfirst(f::Vcat{<:Any,1}, x) =
-    searchsortedfirst_recursive(0, x, arguments(f)...)
+    searchsortedfirst_recursive(0, x, arguments(vcat, f)...)
 
 searchsortedlast(f::Vcat{<:Any,1}, x) =
-    searchsortedlast_recursive(length(f), x, reverse(arguments(f))...)
+    searchsortedlast_recursive(length(f), x, reverse(arguments(vcat, f))...)
 
 @inline searchsortedfirst_recursive(n, x) = n + 1
 

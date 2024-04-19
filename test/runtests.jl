@@ -48,10 +48,6 @@ end
     end
 end
 
-include("infinitearrays.jl")
-using .InfiniteArrays
-using Infinities
-
 include("applytests.jl")
 include("multests.jl")
 include("ldivtests.jl")
@@ -456,10 +452,10 @@ end
     @test BroadcastArray(bc) == BroadcastMatrix(bc) == BroadcastMatrix{Float64,typeof(exp),typeof(bc.args)}(bc) ==
         M == BroadcastMatrix(BroadcastMatrix(bc)) == BroadcastMatrix(exp,[1 2; 3 4]) == exp.([1 2; 3 4])
 
-    @test exp.(v') isa BroadcastMatrix
-    @test exp.(transpose(v)) isa BroadcastMatrix
-    @test exp.(M') isa BroadcastMatrix
-    @test exp.(transpose(M)) isa BroadcastMatrix
+    @test exp.(v') isa Adjoint{<:Any,<:BroadcastVector}
+    @test exp.(transpose(v)) isa Transpose{<:Any,<:BroadcastVector}
+    @test exp.(M') isa Adjoint{<:Any,<:BroadcastMatrix}
+    @test exp.(transpose(M)) isa Transpose{<:Any,<:BroadcastMatrix}
 
     bc = BroadcastArray(broadcasted(+, 1:10, broadcasted(sin, 1:10)))
     @test bc[1:10] == (1:10) .+ sin.(1:10)

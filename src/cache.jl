@@ -247,7 +247,7 @@ resizedata!(_, _, B::AbstractVector, n) = _vec_resizedata!(B, n)
 resizedata!(_, _, B::AbstractVector, n::Integer) = _vec_resizedata!(B, n)
 
 function resizedata!(_, _, B::AbstractArray{<:Any,N}, nm::Vararg{Integer,N}) where N
-    @boundscheck checkbounds(Bool, B, nm...) || throw(ArgumentError("Cannot resize beyond size of operator"))
+    @boundscheck all(nm .≤ size(B)) || throw(ArgumentError("Cannot resize beyond size of operator"))
 
     # increase size of array if necessary
     olddata = cacheddata(B)

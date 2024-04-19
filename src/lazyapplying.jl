@@ -328,6 +328,8 @@ MemoryLayout(::Type{Applied{Style,F,Args}}) where {Style,F,Args} =
 MemoryLayout(::Type{ApplyArray{T,N,F,Args}}) where {T,N,F,Args} =
     applylayout(F, tuple_type_memorylayouts(Args)...)
 
+arguments(::ApplyLayout{F}, A::ApplyArray{<:Any,N,F}) where {N,F} = A.args
+
 @inline Applied(A::AbstractArray) = Applied(call(A), arguments(A)...)
 
 function show(io::IO, A::Applied)

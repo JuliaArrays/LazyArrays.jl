@@ -1,6 +1,12 @@
+module BroadcastTests
+
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Tracker, Base64, Test
 import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize
 import Base: broadcasted
+
+include("infinitearrays.jl")
+using .InfiniteArrays
+using Infinities
 
 @testset "Broadcasting" begin
     @testset "BroadcastArray" begin
@@ -395,4 +401,27 @@ import Base: broadcasted
         @test a[:,1:3] == (1:3)'
         @test a[:,1:3] isa Adjoint{Int,Vector{Int}}
     end
+
+    @testset "broadcast with adjtrans" begin
+        a = BroadcastArray(real, ((1:5) .+ im))
+        b = BroadcastArray(exp, ((1:5) .+ im))
+        @test exp.(transpose(a)) isa Transpose{<:Any,<:BroadcastVector}
+        @test exp.(a') isa Adjoint{<:Any,<:BroadcastVector}
+        @test exp.(a') == exp.(transpose(a)) == exp.(a)'
+
+        @test exp.(transpose(b)) isa Transpose{<:Any,<:BroadcastVector}
+        @test exp.(b') isa BroadcastMatrix
+        @test exp.(transpose(b)) == transpose(exp.(b))
+        @test exp.(b') == exp.(b)'
+    end
+
+    @testset "linear indexing" begin
+        a = BroadcastArray(real, ((1:5) .+ im))
+        b = BroadcastArray(exp, ((1:5) .+ im))
+        @test transpose(a)[1:5] == a'[1:5] == 1:5
+        @test transpose(b)[1:5] == exp.((1:5) .+ im)
+        @test b'[1:5] == exp.((1:5) .- im)
+    end
 end
+
+end #module
