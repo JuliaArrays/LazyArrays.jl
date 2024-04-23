@@ -1,13 +1,16 @@
 module LazyArraysBandedMatricesExt
 
-using BandedMatrices
-using LazyArrays
+using BandedMatrices, LazyArrays, LinearAlgebra
 using LazyArrays.ArrayLayouts, LazyArrays.FillArrays, LazyArrays.LazyArrays
-import ArrayLayouts: colsupport, rowsupport
-import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout
-import Base: BroadcastStyle
-import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, BandedStyle, AbstractBandedLayout
-
+import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulMatAdd, DenseColumnMajor,
+                    OnesLayout, AbstractFillLayout
+import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout,
+                   LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout,
+                   DualOrPaddedLayout, PaddedLayout, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout
+import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto
+import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
+                        AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix
+import LinearAlgebra: AdjOrTrans, UpperOrLowerTriangular
 
 abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
 struct LazyBandedLayout <: AbstractLazyBandedLayout end
@@ -537,18 +540,20 @@ copy(M::Mul{<:DiagonalLayout{<:OnesLayout}, <:BandedLazyLayouts}) = _copy_oftype
 copy(M::Mul{<:DiagonalLayout{<:AbstractFillLayout}, <:BandedLazyLayouts}) = copy(mulreduce(M))
 copy(M::Mul{<:BandedLazyLayouts, <:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
 
-copy(M::Mul{<:StructuredApplyLayouts{typeof(*)},<:StructuredApplyLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{<:StructuredApplyLayouts{typeof(*)},<:BandedLazyLayouts}) = simplify(M)
-copy(M::Mul{<:BandedLazyLayouts,<:StructuredApplyLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{<:StructuredApplyLayouts{typeof(*)},<:BroadcastLayouts}) = simplify(M)
-copy(M::Mul{<:BroadcastLayouts,<:StructuredApplyLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{BroadcastLayout{typeof(*)},<:StructuredApplyLayouts{typeof(*)}}) = simplify(M)
+BandedAndBroadcastLayouts{F} = Union{BroadcastLayout{F},BroadcastBandedLayout{F}}
+
+copy(M::Mul{ApplyBandedLayout{typeof(*)},ApplyBandedLayout{typeof(*)}}) = simplify(M)
+copy(M::Mul{ApplyBandedLayout{typeof(*)},<:BandedLazyLayouts}) = simplify(M)
+copy(M::Mul{<:BandedLazyLayouts,ApplyBandedLayout{typeof(*)}}) = simplify(M)
+copy(M::Mul{ApplyBandedLayout{typeof(*)},<:BandedAndBroadcastLayouts}) = simplify(M)
+copy(M::Mul{<:BandedAndBroadcastLayouts,ApplyBandedLayout{typeof(*)}}) = simplify(M)
+copy(M::Mul{BroadcastLayout{typeof(*)},ApplyBandedLayout{typeof(*)}}) = simplify(M)
 copy(M::Mul{ApplyLayout{typeof(*)},<:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
-copy(M::Mul{ApplyLayout{typeof(*)},<:BroadcastLayouts}) = simplify(M)
-copy(M::Mul{<:BroadcastLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
+copy(M::Mul{ApplyLayout{typeof(*)},<:BandedAndBroadcastLayouts}) = simplify(M)
+copy(M::Mul{<:BandedAndBroadcastLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
 
-copy(M::Mul{<:AbstractInvLayout, <:StructuredApplyLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{<:AbstractInvLayout, ApplyBandedLayout{typeof(*)}}) = simplify(M)
 simplifiable(::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = Val(false)
 copy(M::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = simplify(M)
 
@@ -579,22 +584,22 @@ function rowsupport(lay::ApplyLayout{typeof(\)}, L, k)
     1:m
 end
 
-copy(M::Mul{ApplyLayout{typeof(\)}, <:StructuredLazyLayouts}) = lazymaterialize(*, M.A, M.B)
-copy(M::Mul{BroadcastLayout{typeof(*)}, <:StructuredLazyLayouts}) = lazymaterialize(*, M.A, M.B)
+copy(M::Mul{ApplyLayout{typeof(\)}, <:BroadcastBandedLayout}) = lazymaterialize(*, M.A, M.B)
+copy(M::Mul{BroadcastLayout{typeof(*)}, <:BroadcastBandedLayout}) = lazymaterialize(*, M.A, M.B)
 
 ## padded copy
-mulreduce(M::Mul{<:StructuredLazyLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = MulAdd(M)
-mulreduce(M::Mul{<:StructuredApplyLayouts{F}, D}) where {F,D<:Union{PaddedLayout,AbstractStridedLayout}} = Mul{ApplyLayout{F},D}(M.A, M.B)
+mulreduce(M::Mul{<:BroadcastBandedLayout, <:Union{PaddedLayout,AbstractStridedLayout}}) = MulAdd(M)
+mulreduce(M::Mul{ApplyBandedLayout{F}, D}) where {F,D<:Union{PaddedLayout,AbstractStridedLayout}} = Mul{ApplyLayout{F},D}(M.A, M.B)
 # need to overload copy due to above
-copy(M::Mul{<:StructuredLazyLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
+copy(M::Mul{<:BroadcastBandedLayout, <:Union{PaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
 copy(M::Mul{<:AbstractInvLayout{<:BandedLazyLayouts}, <:Union{PaddedLayout,AbstractStridedLayout}}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 copy(M::Mul{<:BandedLazyLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
 copy(M::Mul{<:Union{PaddedLayout,AbstractStridedLayout}, <:BandedLazyLayouts}) = copy(mulreduce(M))
-simplifiable(::Mul{<:StructuredLazyLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = Val(true)
+simplifiable(::Mul{<:BroadcastBandedLayout, <:Union{PaddedLayout,AbstractStridedLayout}}) = Val(true)
 
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
-copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:StructuredLazyLayouts = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
-_inv(::LazyBandedLayouts, _, A) = ApplyArray(inv, A)
+copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:BroadcastBandedLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+_inv(::LazyBandedLayout, _, A) = ApplyArray(inv, A)
 
 ####
 # Band getindex
