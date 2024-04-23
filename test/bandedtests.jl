@@ -1,0 +1,3 @@
+module LazyBandedTests
+using LazyArrays, BandedMatrices
+end

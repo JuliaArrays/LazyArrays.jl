@@ -1,10 +1,12 @@
 module LazyArraysBandedMatricesExt
 
-using ArrayLayouts, BandedMatrices, LazyArrays
+using BandedMatrices
+using LazyArrays
+using LazyArrays.ArrayLayouts, LazyArrays.FillArrays, LazyArrays.LazyArrays
 import ArrayLayouts: colsupport, rowsupport
-import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout
+import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout
 import Base: BroadcastStyle
-import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded
+import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, BandedStyle, AbstractBandedLayout
 
 
 abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
@@ -21,9 +23,6 @@ BroadcastStyle(::LazyArrayStyle{1}, ::BandedStyle) = LazyArrayStyle{2}()
 BroadcastStyle(::BandedStyle, ::LazyArrayStyle{1}) = LazyArrayStyle{2}()
 BroadcastStyle(::LazyArrayStyle{2}, ::BandedStyle) = LazyArrayStyle{2}()
 BroadcastStyle(::BandedStyle, ::LazyArrayStyle{2}) = LazyArrayStyle{2}()
-
-BroadcastStyle(::LazyArrayStyle{N}, ::AbstractBlockStyle{N}) where N = LazyArrayStyle{N}()
-BroadcastStyle(::AbstractBlockStyle{N}, ::LazyArrayStyle{N}) where N = LazyArrayStyle{N}()
 
 bandedcolumns(::AbstractLazyLayout) = BandedColumns{LazyLayout}()
 bandedcolumns(::DualLayout{<:AbstractLazyLayout}) = BandedColumns{LazyLayout}()

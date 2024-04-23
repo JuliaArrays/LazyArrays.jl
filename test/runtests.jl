@@ -478,3 +478,6 @@ end
     @test layout_getindex(w,1:4) == L[3,1:4]
     @test layout_getindex(w,1:4) isa Vcat
 end
+
+
+included("bandedtests.jl")
