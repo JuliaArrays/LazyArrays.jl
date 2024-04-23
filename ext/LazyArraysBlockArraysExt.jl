@@ -138,4 +138,16 @@ function BlockArrays.sortedunion(a::RangeCumsum{<:Any,<:AbstractRange}, b::Range
     a
 end
 
+##
+# support Inf Block ranges
+broadcasted(::LazyArrayStyle{1}, ::Type{Block}, r::AbstractUnitRange) = Block(first(r)):Block(last(r))
+broadcasted(::LazyArrayStyle{1}, ::Type{Int}, block_range::BlockRange{1}) = first(block_range.indices)
+broadcasted(::LazyArrayStyle{0}, ::Type{Int}, block::Block{1}) = Int(block)
+
+# useful for turning Array into block array
+unitblocks(a::AbstractArray) = PseudoBlockArray(a, Ones{Int}.(axes(a))...)
+unitblocks(a::OneTo) = blockedrange(Ones{Int}(length(a)))
+unitblocks(a::AbstractUnitRange) = BlockArrays._BlockedUnitRange(first(a),(first(a)-1) .+ BlockArrays._blocklengths2blocklasts(Ones{Int}(length(a))))
+
+
 end

@@ -271,4 +271,68 @@ bandedblockbandedcolumns(::LazyLayout) = BandedBlockBandedColumns{LazyLayout}()
 bandedblockbandedcolumns(::ApplyLayout) = BandedBlockBandedColumns{LazyLayout}()
 bandedblockbandedcolumns(::BroadcastLayout) = BandedBlockBandedColumns{LazyLayout}()
 
+LazyBlockBandedLayouts = Union{
+                BlockBandedColumns{LazyLayout}, BandedBlockBandedColumns{LazyLayout},
+                BlockBandedRows{LazyLayout},BandedBlockBandedRows{LazyLayout},
+                BlockLayout{LazyLayout},
+                BlockLayout{TridiagonalLayout{LazyLayout,LazyLayout,LazyLayout}}, BlockLayout{DiagonalLayout{LazyLayout}}, 
+                BlockLayout{BidiagonalLayout{LazyLayout,LazyLayout}}, BlockLayout{SymTridiagonalLayout{LazyLayout,LazyLayout}},
+                BlockLayout{LazyBandedLayout},
+                AbstractLazyBlockBandedLayout, LazyBandedBlockBandedLayouts}
+
+
+
+@inline _islazy(::LazyBlockBandedLayouts) = Val(true)
+
+copy(M::Mul{<:LazyBlockBandedLayouts, <:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:Any, <:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:LazyBlockBandedLayouts, <:AbstractLazyLayout}) = simplify(M)
+copy(M::Mul{<:AbstractLazyLayout, <:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout}) = simplify(M)
+copy(M::Mul{<:DiagonalLayout, <:LazyBlockBandedLayouts}) = simplify(M)
+
+
+copy(M::Mul{<:Union{ZerosLayout,DualLayout{ZerosLayout}}, <:LazyBlockBandedLayouts}) = copy(mulreduce(M))
+copy(M::Mul{<:LazyBlockBandedLayouts, <:Union{ZerosLayout,DualLayout{ZerosLayout}}}) = copy(mulreduce(M))
+
+simplifiable(::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout{<:OnesLayout}}) = Val(true)
+simplifiable(::Mul{<:DiagonalLayout{<:OnesLayout}, <:LazyBlockBandedLayouts}) = Val(true)
+copy(M::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout{<:OnesLayout}}) = _copy_oftype(M.A, eltype(M))
+copy(M::Mul{<:DiagonalLayout{<:OnesLayout}, <:LazyBlockBandedLayouts}) = _copy_oftype(M.B, eltype(M))
+
+copy(M::Mul{<:DiagonalLayout{<:AbstractFillLayout}, <:LazyBlockBandedLayouts}) = copy(mulreduce(M))
+copy(M::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
+
+copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:LazyBlockBandedLayouts,<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:BroadcastLayouts}) = simplify(M)
+copy(M::Mul{<:BroadcastLayouts,<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{BroadcastLayout{typeof(*)},<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{ApplyLayout{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:LazyBlockBandedLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
+copy(M::Mul{ApplyLayout{typeof(*)},<:BroadcastLayouts}) = simplify(M)
+copy(M::Mul{<:BroadcastLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
+
+copy(M::Mul{<:AbstractInvLayout, <:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+simplifiable(::Mul{<:AbstractInvLayout, <:LazyBlockBandedLayouts}) = Val(false)
+copy(M::Mul{<:AbstractInvLayout, <:LazyBlockBandedLayouts}) = simplify(M)
+
+
+copy(L::Ldiv{<:LazyBlockBandedLayouts, <:LazyBlockBandedLayouts}) = lazymaterialize(\, L.A, L.B)
+
+
+copy(M::Mul{ApplyLayout{typeof(\)}, <:LazyBlockBandedLayouts}) = lazymaterialize(*, M.A, M.B)
+copy(M::Mul{BroadcastLayout{typeof(*)}, <:LazyBlockBandedLayouts}) = lazymaterialize(*, M.A, M.B)
+
+## padded copy
+mulreduce(M::Mul{<:LazyBlockBandedLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = MulAdd(M)
+mulreduce(M::Mul{<:ApplyBlockBandedLayouts{F}, D}) where {F,D<:Union{PaddedLayout,AbstractStridedLayout}} = Mul{ApplyLayout{F},D}(M.A, M.B)
+# need to overload copy due to above
+copy(M::Mul{<:LazyBlockBandedLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
+simplifiable(::Mul{<:LazyBlockBandedLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = Val(true)
+
+_inv(::LazyBlockBandedLayouts, _, A) = ApplyArray(inv, A)
+
 end
