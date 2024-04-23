@@ -3,13 +3,16 @@ module LazyArraysBandedMatricesExt
 using BandedMatrices, LazyArrays, LinearAlgebra
 using LazyArrays.ArrayLayouts, LazyArrays.FillArrays, LazyArrays.LazyArrays
 import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulMatAdd, DenseColumnMajor,
-                    OnesLayout, AbstractFillLayout
-import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout,
+                    OnesLayout, AbstractFillLayout, mulreduce, _inv, _fill_lmul!
+import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout, transposelayout,
                    LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout,
-                   DualOrPaddedLayout, PaddedLayout, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout
-import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto
+                   DualOrPaddedLayout, PaddedLayout, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
+                   paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
+                   arguments, call, applybroadcaststyle, simplify, simplifiable, _islazy, lazymaterialize
+import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
-                        AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix
+                        AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
+                        _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix
 import LinearAlgebra: AdjOrTrans, UpperOrLowerTriangular
 
 abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
