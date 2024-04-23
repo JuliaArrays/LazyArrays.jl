@@ -2,9 +2,13 @@ module LazyArraysBlockArraysExt
 
 import BlockArrays
 import LazyArrays
-import Base: getindex
+import Base: getindex, BroadcastStyle
 
 BlockArrays._broadcaststyle(S::LazyArrays.LazyArrayStyle{1}) = S
+
+BroadcastStyle(::LazyArrayStyle{N}, ::AbstractBlockStyle{N}) where N = LazyArrayStyle{N}()
+BroadcastStyle(::AbstractBlockStyle{N}, ::LazyArrayStyle{N}) where N = LazyArrayStyle{N}()
+
 
 ###
 # Specialised multiplication for arrays padded for zeros
