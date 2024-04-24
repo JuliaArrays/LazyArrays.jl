@@ -1,8 +1,14 @@
 module LazyArraysBlockArraysExt
 
-import BlockArrays
-import LazyArrays
-import Base: getindex, BroadcastStyle
+using BlockArrays
+using LazyArrays
+using LazyArrays.ArrayLayouts
+import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
+                    LazyArrayStyle, CachedVector, PaddedLayout, BroadcastLayout,
+                    AbstractCachedMatrix, AbstractCachedArray
+import ArrayLayouts: sub_materialize
+import Base: getindex, BroadcastStyle, broadcasted, OneTo
+import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice
 
 BlockArrays._broadcaststyle(S::LazyArrays.LazyArrayStyle{1}) = S
 
@@ -104,23 +110,23 @@ call(lay::BroadcastLayout, a::PseudoBlockArray) = call(lay, a.blocks)
 resizedata!(lay1, lay2, B::AbstractMatrix, N::Block{2}) = resizedata!(lay1, lay2, B, Block.(N.n)...)
 
 # Use memory laout for sub-blocks
-@inline function Base.getindex(A::AbstractCachedMatrix, K::Block{1}, J::Block{1})
+@inline function getindex(A::AbstractCachedMatrix, K::Block{1}, J::Block{1})
     @boundscheck checkbounds(A, K, J)
     resizedata!(A, K, J)
     A.data[K, J]
 end
-@inline Base.getindex(A::AbstractCachedMatrix, kr::Colon, jr::Block{1}) = ArrayLayouts.layout_getindex(A, kr, jr)
-@inline Base.getindex(A::AbstractCachedMatrix, kr::Block{1}, jr::Colon) = ArrayLayouts.layout_getindex(A, kr, jr)
-@inline Base.getindex(A::AbstractCachedMatrix, kr::Block{1}, jr::AbstractVector) = ArrayLayouts.layout_getindex(A, kr, jr)
-@inline Base.getindex(A::AbstractCachedArray{T,N}, kr::Block{1}, jrs...) where {T,N} = ArrayLayouts.layout_getindex(A, kr, jrs...)
-@inline function Base.getindex(A::AbstractCachedArray{T,N}, block::Block{N}) where {T,N}
+@inline getindex(A::AbstractCachedMatrix, kr::Colon, jr::Block{1}) = ArrayLayouts.layout_getindex(A, kr, jr)
+@inline getindex(A::AbstractCachedMatrix, kr::Block{1}, jr::Colon) = ArrayLayouts.layout_getindex(A, kr, jr)
+@inline getindex(A::AbstractCachedMatrix, kr::Block{1}, jr::AbstractVector) = ArrayLayouts.layout_getindex(A, kr, jr)
+@inline getindex(A::AbstractCachedArray{T,N}, kr::Block{1}, jrs...) where {T,N} = ArrayLayouts.layout_getindex(A, kr, jrs...)
+@inline function getindex(A::AbstractCachedArray{T,N}, block::Block{N}) where {T,N}
     @boundscheck checkbounds(A, block)
     resizedata!(A, block)
     A.data[block]
 end
 
-@inline Base.getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::Block) = ArrayLayouts.layout_getindex(A, kr, jr)
-@inline Base.getindex(A::AbstractCachedMatrix, kr::BlockRange{1}, jr::BlockRange{1}) = ArrayLayouts.layout_getindex(A, kr, jr)
+@inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::Block) = ArrayLayouts.layout_getindex(A, kr, jr)
+@inline getindex(A::AbstractCachedMatrix, kr::BlockRange{1}, jr::BlockRange{1}) = ArrayLayouts.layout_getindex(A, kr, jr)
 
 ###
 # PseudoBlockArray apply
@@ -135,23 +141,11 @@ arguments(LAY::MemoryLayout, A::PseudoBlockArray) = arguments(LAY, A.blocks)
 LazyArrays._lazy_getindex(dat::PseudoBlockArray, kr::UnitRange) = view(dat.blocks,kr)
 LazyArrays._lazy_getindex(dat::PseudoBlockArray, kr::OneTo) = view(dat.blocks,kr)
 
-const OneToCumsum = RangeCumsum{Int,OneTo{Int}}
-BlockArrays.sortedunion(a::OneToCumsum, ::OneToCumsum) = a
-function BlockArrays.sortedunion(a::RangeCumsum{<:Any,<:AbstractRange}, b::RangeCumsum{<:Any,<:AbstractRange})
-    @assert a == b
-    a
-end
 
 ##
 # support Inf Block ranges
 broadcasted(::LazyArrayStyle{1}, ::Type{Block}, r::AbstractUnitRange) = Block(first(r)):Block(last(r))
 broadcasted(::LazyArrayStyle{1}, ::Type{Int}, block_range::BlockRange{1}) = first(block_range.indices)
 broadcasted(::LazyArrayStyle{0}, ::Type{Int}, block::Block{1}) = Int(block)
-
-# useful for turning Array into block array
-unitblocks(a::AbstractArray) = PseudoBlockArray(a, Ones{Int}.(axes(a))...)
-unitblocks(a::OneTo) = blockedrange(Ones{Int}(length(a)))
-unitblocks(a::AbstractUnitRange) = BlockArrays._BlockedUnitRange(first(a),(first(a)-1) .+ BlockArrays._blocklengths2blocklasts(Ones{Int}(length(a))))
-
 
 end
