@@ -213,6 +213,8 @@ _mul_args_cols(jr, z, y...) = __mul_args_cols(_mul_args_colsupport(z,jr), y...)
 _transposefirst_andmul(a, b...) = first(*(permutedims(a), b...))
 _transposefirst_andmul(a::AbstractArray{<:Number}, b...) = *(transpose(a), b...)
 
+
+_mul_getindex((A,)::Tuple{Any}, k::Int, j::Int) = A[k,j]
 function _mul_getindex(args::Tuple, k::Int, j::Int)
     kjr = intersect.(_mul_args_rows(k, args...), _mul_args_cols(j, reverse(args)...))
     any(isempty, kjr) && return zero(mapreduce(eltype, promote_type, args))
