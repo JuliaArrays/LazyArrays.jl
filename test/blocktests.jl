@@ -1,5 +1,8 @@
 module LazyArraysBlockArraysTest
-using LazyArrays, BlockArrays, Test
+using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, Test
+using LazyArrays: LazyArrayStyle, PaddedLayout, paddeddata
+using BlockArrays: blockcolsupport, blockrowsupport
+
 @testset "Lazy BlockArrays" begin
     @testset "LazyBlock" begin
         @test Block(5) in BroadcastVector(Block, [1,3,5])
@@ -36,7 +39,7 @@ using LazyArrays, BlockArrays, Test
 
     @testset "padded" begin
         c = Vcat(randn(3), Zeros(7))
-        b = PseudoBlockVector(c, (axes(A,2),))
+        b = PseudoBlockVector(c, 1:4)
         @test MemoryLayout(b) isa PaddedLayout
         @test b[Block.(2:3)] isa PseudoBlockVector{Float64,<:ApplyArray}
         @test MemoryLayout(b[Block.(2:3)]) isa PaddedLayout

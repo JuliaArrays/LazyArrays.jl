@@ -3,9 +3,10 @@ module LazyArraysBlockArraysExt
 using BlockArrays
 using LazyArrays
 using LazyArrays.ArrayLayouts
+using LazyArrays.FillArrays
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     LazyArrayStyle, CachedVector, PaddedLayout, BroadcastLayout,
-                    AbstractCachedMatrix, AbstractCachedArray
+                    AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle
 import ArrayLayouts: sub_materialize
 import Base: getindex, BroadcastStyle, broadcasted, OneTo
 import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice
