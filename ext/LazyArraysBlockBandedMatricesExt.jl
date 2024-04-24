@@ -1,8 +1,24 @@
 module LazyArraysBlockBandedMatricesExt
 
-using BlockBandedMatrices
-using LazyArrays
-import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout, conjlayout
+using BlockBandedMatrices, LazyArrays
+using BlockBandedMatrices.BlockArrays
+using BlockBandedMatrices.BandedMatrices
+using LazyArrays.ArrayLayouts
+import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout, conjlayout,
+                PaddedLayout, _islazy, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
+                BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
+                AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout
+import BlockBandedMatrices: AbstractBlockBandedLayout, AbstractBandedBlockBandedLayout, blockbandwidths, subblockbandwidths,
+                            bandedblockbandedbroadcaststyle, bandedblockbandedcolumns, BandedBlockBandedColumns, BandedBlockBandedRows,
+                            BlockRange1, Block1, BlockIndexRange1, BlockBandedColumns, BlockBandedRows
+import BlockBandedMatrices.BlockArrays: BlockLayout, AbstractBlockLayout, BlockSlice
+import BlockBandedMatrices.BandedMatrices: resize
+import Base: similar, copy
+import ArrayLayouts: materialize!, MatMulVecAdd, sublayout, colsupport, rowsupport, _copyto!, mulreduce, _inv,
+                        OnesLayout, AbstractFillLayout
+
+LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
+LazyBandedLayout = LazyArraysBandedMatricesExt.LazyBandedLayout
 
 abstract type AbstractLazyBlockBandedLayout <: AbstractBlockBandedLayout end
 abstract type AbstractLazyBandedBlockBandedLayout <: AbstractBandedBlockBandedLayout end
@@ -57,13 +73,10 @@ function materialize!(M::MatMulVecAdd{<:BlockBandedLayouts,<:PaddedLayout,<:Padd
 end
 
 struct ApplyBlockBandedLayout{F} <: AbstractLazyBlockBandedLayout end
-struct ApplyBandedBlockBandedLayout{F} <:LazyArrays._mul_arguments(::StructuredApplyLayouts{F}, A) where F = LazyArrays._mul_arguments(ApplyLayout{F}(), A)
-@inline _islazy(::StructuredApplyLayouts) = Val(true)
- AbstractLazyBandedBlockBandedLayout end
+struct ApplyBandedBlockBandedLayout{F} <: AbstractLazyBandedBlockBandedLayout end
+    
 
 ApplyBlockBandedLayouts{F} = Union{ApplyBlockBandedLayout{F},ApplyBandedBlockBandedLayout{F}}
-StructuredApplyLayouts{F} = Union{ApplyBandedLayout{F},ApplyBlockBandedLayouts{F}}
-ApplyLayouts{F} = Union{ApplyLayout{F},ApplyBandedLayout{F},ApplyBlockBandedLayout{F},ApplyBandedBlockBandedLayout{F}}
 
 LazyArrays._mul_arguments(::ApplyBlockBandedLayouts{F}, A) where F = LazyArrays._mul_arguments(ApplyLayout{F}(), A)
 @inline _islazy(::ApplyBlockBandedLayouts) = Val(true)
@@ -137,9 +150,6 @@ struct BroadcastBlockBandedLayout{F} <: AbstractLazyBlockBandedLayout end
 struct BroadcastBandedBlockBandedLayout{F} <: AbstractLazyBandedBlockBandedLayout end
 
 BroadcastBlockBandedLayouts{F} = Union{BroadcastBlockBandedLayout{F},BroadcastBandedBlockBandedLayout{F}}
-StructuredBroadcastLayouts{F} = Union{BroadcastBandedLayout{F},BroadcastBlockBandedLayout{F},BroadcastBandedBlockBandedLayout{F}}
-BroadcastLayouts{F} = Union{BroadcastLayout{F},StructuredBroadcastLayouts{F}}
-
 
 blockbandwidths(B::BroadcastMatrix) = blockbandwidths(broadcasted(B))
 subblockbandwidths(B::BroadcastMatrix) = subblockbandwidths(broadcasted(B))
@@ -176,9 +186,6 @@ end
 sublayout(LAY::BroadcastBlockBandedLayout, ::Type{<:Tuple{BlockSlice{<:BlockRange1},BlockSlice{<:BlockRange1}}}) = LAY
 sublayout(LAY::BroadcastBandedBlockBandedLayout, ::Type{<:Tuple{BlockSlice{<:BlockRange1},BlockSlice{<:BlockRange1}}}) = LAY
 
-
-@inline colsupport(::BroadcastBandedLayout, A, j) = banded_colsupport(A, j)
-@inline rowsupport(::BroadcastBandedLayout, A, j) = banded_rowsupport(A, j)
 
 _broadcastarray2broadcasted(::BroadcastBlockBandedLayouts{F}, A) where F = _broadcastarray2broadcasted(BroadcastLayout{F}(), A)
 _broadcastarray2broadcasted(::BroadcastBlockBandedLayouts{F}, A::BroadcastArray) where F = _broadcastarray2broadcasted(BroadcastLayout{F}(), A)
@@ -307,13 +314,13 @@ copy(M::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout{<:AbstractFillLayout}}) =
 copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
 copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts,<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:BroadcastLayouts}) = simplify(M)
-copy(M::Mul{<:BroadcastLayouts,<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:BroadcastBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:BroadcastBlockBandedLayouts,<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
 copy(M::Mul{BroadcastLayout{typeof(*)},<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
 copy(M::Mul{ApplyLayout{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
-copy(M::Mul{ApplyLayout{typeof(*)},<:BroadcastLayouts}) = simplify(M)
-copy(M::Mul{<:BroadcastLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
+copy(M::Mul{ApplyLayout{typeof(*)},<:BroadcastBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:BroadcastBlockBandedLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
 
 copy(M::Mul{<:AbstractInvLayout, <:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
 simplifiable(::Mul{<:AbstractInvLayout, <:LazyBlockBandedLayouts}) = Val(false)

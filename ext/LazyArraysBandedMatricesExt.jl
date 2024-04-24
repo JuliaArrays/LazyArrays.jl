@@ -12,7 +12,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
-                        _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix
+                        _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix, resize
 import LinearAlgebra: AdjOrTrans, UpperOrLowerTriangular
 
 abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
@@ -320,6 +320,9 @@ sublayout(M::BroadcastBandedLayout, ::Type{<:NTuple{2,AbstractUnitRange}}) = M
 transposelayout(b::BroadcastBandedLayout) = b
 arguments(b::BroadcastBandedLayout, A::AdjOrTrans) = arguments(BroadcastLayout(b), A)
 
+@inline colsupport(::BroadcastBandedLayout, A, j) = banded_colsupport(A, j)
+@inline rowsupport(::BroadcastBandedLayout, A, j) = banded_rowsupport(A, j)
+
 
 ######
 # Concat banded matrix
@@ -434,15 +437,6 @@ function bandeddata(B::SubArray{<:Any,2,<:CachedMatrix})
     kr,jr = parentindices(B)
     resizedata!(A, maximum(kr), maximum(jr))
     bandeddata(view(A.data,kr,jr))
-end
-
-function resize(A::BandedMatrix, n::Integer, m::Integer)
-    l,u = bandwidths(A)
-    _BandedMatrix(reshape(resize!(vec(bandeddata(A)), (l+u+1)*m), l+u+1, m), n, l,u)
-end
-function resize(A::BandedSubBandedMatrix, n::Integer, m::Integer)
-    l,u = bandwidths(A)
-    _BandedMatrix(reshape(resize!(vec(copy(bandeddata(A))), (l+u+1)*m), l+u+1, m), n, l,u)
 end
 
 function resizedata!(::BandedColumns{DenseColumnMajor}, _, B::AbstractMatrix{T}, n::Integer, m::Integer) where T<:Number
