@@ -36,6 +36,7 @@ applylayout(::Type{typeof(vcat)}, ::ScalarLayout, ::ScalarLayout, ::PaddedColumn
 applylayout(::Type{typeof(hcat)}, ::A, ::ZerosLayout) where A = PaddedRows{A}()
 applylayout(::Type{typeof(hcat)}, ::ScalarLayout, ::ScalarLayout, ::ZerosLayout) = PaddedRows{ApplyLayout{typeof(vcat)}}()
 applylayout(::Type{typeof(hcat)}, ::A, ::PaddedRows) where A = PaddedRows{ApplyLayout{typeof(vcat)}}()
+applylayout(::Type{typeof(hcat)}, ::A, ::PaddedLayout) where A = PaddedLayout{ApplyLayout{typeof(vcat)}}()
 applylayout(::Type{typeof(hcat)}, ::ScalarLayout, ::ScalarLayout, ::PaddedRows) = PaddedRows{ApplyLayout{typeof(vcat)}}()
 
 
@@ -109,7 +110,7 @@ function rowsupport(lay::Union{PaddedColumns{Lay}, PaddedLayout{Lay}}, A, k) whe
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
 end
 
-function _vcat_resizedata!(::Union{AbstractPaddedLayout, DualLayout{PaddedRows{Lay}}}, B, m...) where Lay
+function _vcat_resizedata!(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows}}, B, m...)
     any(iszero,m) || Base.checkbounds(paddeddata(B), m...)
     B
 end
