@@ -3,6 +3,7 @@ module PaddedTests
 using LazyArrays, FillArrays, ArrayLayouts, Base64, Test
 using StaticArrays
 import LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, LayoutVector, MemoryLayout, paddeddata, ApplyLayout, sub_materialize, CachedVector
+import ArrayLayouts: OnesLayout
 import Base: setindex
 using LinearAlgebra
 
