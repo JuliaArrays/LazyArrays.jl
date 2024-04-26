@@ -211,6 +211,11 @@ paddeddata(a::PaddedPadded) = a
         H = Hcat(1, 3, Zeros(1,3))
         @test MemoryLayout(H) isa PaddedRows
         @test paddeddata(H) == [1 3]
+
+        @test MemoryLayout(Hcat(1, H)) isa PaddedRows
+        @test paddeddata(Hcat(1, H)) == [1 1 3]
+        @test MemoryLayout(Hcat(1, 2, H)) isa PaddedRows
+        @test paddeddata(Hcat(1, 2, H)) == [1 2 1 3]
     end
     @testset "padded broadcast" begin
         @testset "vector" begin
@@ -283,6 +288,8 @@ paddeddata(a::PaddedPadded) = a
         @test P[1:10,6] == P[:,6]
         @test P[:,6] isa Vcat
         @test P[6,1:11] == P[6,:]
+
+        @test MemoryLayout(P[1:6,1:7]) isa PaddedLayout
     end
     @testset "setindex" begin
         a = ApplyArray(setindex, 1:6, 5, 2)
@@ -327,6 +334,10 @@ paddeddata(a::PaddedPadded) = a
         b = Vcat(SVector(1,2), Zeros(3))
         @test paddeddata(b') ≡ SVector(1,2)'
         @test paddeddata(transpose(b)) ≡ transpose(SVector(1,2))
+
+        H = Hcat(1, 3, Zeros(1,3))
+        @test MemoryLayout(Transpose(H)) isa PaddedColumns
+        @test paddeddata(Transpose(H)) == [1,3]
     end
 
     @testset "norm" begin
@@ -335,7 +346,6 @@ paddeddata(a::PaddedPadded) = a
         @test norm(a) ≡ LinearAlgebra.normInf(c) ≡ LinearAlgebra.norm2(c) ≡ LinearAlgebra.norm1(c) ≡ LinearAlgebra.normp(c,2) ≡ 1.0
     end
 
-    
     @testset "padded columns" begin
         A = randn(5,5)
         U = UpperTriangular(A)
