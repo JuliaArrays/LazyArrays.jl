@@ -211,6 +211,7 @@ paddeddata(a::PaddedPadded) = a
         H = Hcat(1, 3, Zeros(1,3))
         @test MemoryLayout(H) isa PaddedRows
         @test paddeddata(H) == [1 3]
+        @test rowsupport(H) == 1:2
 
         @test MemoryLayout(Hcat(1, H)) isa PaddedRows
         @test paddeddata(Hcat(1, H)) == [1 1 3]
@@ -359,6 +360,11 @@ paddeddata(a::PaddedPadded) = a
         @test MemoryLayout(w) isa PaddedColumns{ArrayLayouts.StridedLayout}
         @test layout_getindex(w,1:4) == L[3,1:4]
         @test layout_getindex(w,1:4) isa Vcat
+    end
+
+    @testset "vcat sub arguments" begin
+        a = Vcat(1:5, Zeros(10))
+        @test LazyArrays.arguments(vcat, view(a, 1:7)) == (1:5, Zeros(2))
     end
 end
 
