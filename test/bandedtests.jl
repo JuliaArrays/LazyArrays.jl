@@ -614,6 +614,85 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test Li * x ≈ L \ x
         @test Bi * x ≈ B \ x
     end
+
+    @testset "Banded kron" begin
+        @testset "2D" begin
+            A = brand(5,5,2,2)
+            B = brand(2,2,1,0)
+            @test isbanded(Kron(A,B))
+            K = kron(A,B)
+            @test K isa BandedMatrix
+            @test bandwidths(K) == (5,4)
+            @test Matrix(K) == kron(Matrix(A), Matrix(B))
+
+            A = brand(3,4,1,1)
+            B = brand(3,2,1,0)
+            K = kron(A,B)
+            @test K isa BandedMatrix
+            @test bandwidths(K) == (7,2)
+            @test Matrix(K) ≈ kron(Matrix(A), Matrix(B))
+            K = kron(B,A)
+            @test Matrix(K) ≈ kron(Matrix(B), Matrix(A))
+
+            K = kron(A, B')
+            K isa BandedMatrix
+            @test Matrix(K) ≈ kron(Matrix(A), Matrix(B'))
+            K = kron(A', B)
+            K isa BandedMatrix
+            @test Matrix(K) ≈ kron(Matrix(A'), Matrix(B))
+            K = kron(A', B')
+            K isa BandedMatrix
+            @test Matrix(K) ≈ kron(Matrix(A'), Matrix(B'))
+
+            A = brand(5,6,2,2)
+            B = brand(3,2,1,0)
+            K = kron(A,B)
+            @test K isa BandedMatrix
+            @test bandwidths(K) == (12,4)
+            @test Matrix(K) ≈ kron(Matrix(A), Matrix(B))
+
+            n = 10; h = 1/n
+            D² = BandedMatrix(0 => Fill(-2,n), 1 => Fill(1,n-1), -1 => Fill(1,n-1))
+            D_xx = kron(D², Eye(n))
+            D_yy = kron(Eye(n), D²)
+            @test D_xx isa BandedMatrix
+            @test D_yy isa BandedMatrix
+            @test bandwidths(D_xx) == (10,10)
+            @test bandwidths(D_yy) == (1,1)
+            X = randn(n,n)
+            @test reshape(D_xx*vec(X),n,n) ≈ X*D²'
+            @test reshape(D_yy*vec(X),n,n) ≈ D²*X
+            Δ = D_xx + D_yy
+            @test Δ isa BandedMatrix
+            @test bandwidths(Δ) == (10,10)
+        end
+
+        @testset "#87" begin
+            @test kron(Diagonal([1,2,3]), Eye(3)) isa Diagonal{Float64,Vector{Float64}}
+        end
+
+        @testset "3D" begin
+            n = 10; h = 1/n
+            D² = BandedMatrix(0 => Fill(-2,n), 1 => Fill(1,n-1), -1 => Fill(1,n-1))
+            
+            D_xx = kron(D², Eye(n), Eye(n))
+            D_yy = kron(Eye(n), D², Eye(n))
+            D_zz = kron(Eye(n), Eye(n), D²)
+            @test bandwidths(D_xx) == (n^2,n^2)
+            @test bandwidths(D_yy) == (n,n)
+            @test bandwidths(D_zz) == (1,1)
+
+            X = randn(n,n,n)
+            
+            Y = similar(X)
+            for k = 1:n, j=1:n Y[k,j,:] = D²*X[k,j,:] end
+            @test reshape(D_xx*vec(X), n, n, n) ≈ Y
+            for k = 1:n, j=1:n Y[k,:,j] = D²*X[k,:,j] end
+            @test reshape(D_yy*vec(X), n, n, n) ≈ Y
+            for k = 1:n, j=1:n Y[:,k,j] = D²*X[:,k,j] end
+            @test reshape(D_zz*vec(X), n, n, n) ≈ Y
+        end
+    end
 end
 
 end
