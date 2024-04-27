@@ -693,6 +693,12 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
             @test reshape(D_zz*vec(X), n, n, n) ≈ Y
         end
     end
+
+    @testset "vec broadcasting" begin
+        A = brand(5,5,0,1)
+        b = Vcat(1,Zeros(4))
+        @test A .+ b == b .+ A == Matrix(A) .+ Vector(b)
+    end
 end
 
 end # module
