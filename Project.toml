@@ -35,7 +35,7 @@ SparseArrays = "1"
 StaticArrays = "1.0"
 Test = "1"
 Tracker = "0.2"
-julia = "1.9"
+julia = "1.10"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
