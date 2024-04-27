@@ -17,13 +17,13 @@ BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extensions]
-LazyArraysStaticArraysExt = "StaticArrays"
 LazyArraysBandedMatricesExt = "BandedMatrices"
+LazyArraysStaticArraysExt = "StaticArrays"
 
 [compat]
 Aqua = "0.8"
-BandedMatrices = "1.6.2"
 ArrayLayouts = "1.4.1"
+BandedMatrices = "1.6.2"
 Base64 = "1"
 FillArrays = "1.0"
 Infinities = "0.1"

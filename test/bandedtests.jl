@@ -1,14 +1,13 @@
 module LazyBandedTests
 using ArrayLayouts, LazyArrays, BandedMatrices, LinearAlgebra, Test
-using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows
-using LazyArrays: PaddedLayout, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout
+using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize
+using LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout
 using ArrayLayouts: OnesLayout, StridedLayout
 LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
 BroadcastBandedLayout = LazyArraysBandedMatricesExt.BroadcastBandedLayout
 ApplyBandedLayout = LazyArraysBandedMatricesExt.ApplyBandedLayout
 LazyBandedLayout = LazyArraysBandedMatricesExt.LazyBandedLayout
 VcatBandedMatrix = LazyArraysBandedMatricesExt.VcatBandedMatrix
-resize = LazyArraysBandedMatricesExt.resize
 
 include("mylazyarray.jl")
 
@@ -52,7 +51,7 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
     @testset "Banded padded" begin
         A = _BandedMatrix((1:10)', 10, -1,1)
         x = Vcat(1:3, Zeros(10-3))
-        @test MemoryLayout(x) isa PaddedLayout
+        @test MemoryLayout(x) isa PaddedColumns
         @test A*x isa Vcat{Float64,1,<:Tuple{<:Vector,<:Zeros}}
         @test length((A*x).args[1]) == length(x.args[1]) + bandwidth(A,1) == 2
         @test A*x == A*Vector(x)
@@ -421,6 +420,11 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A*A isa MulMatrix
         @test A*A ≈ BandedMatrix(A)*A ≈ A*BandedMatrix(A) ≈ BandedMatrix(A*A)
         @test A[1:5,1:5] isa BandedMatrix
+
+        A = Vcat(brand(9,10,1,1), Zeros(1,10))
+        @test MemoryLayout(A) isa PaddedColumns{<:BandedColumns}
+        @test bandwidths(A) == (1,1)
+        @test A == BandedMatrix(A)
     end
 
     @testset "Banded Hcat" begin
@@ -439,13 +443,11 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test MemoryLayout(A) isa ApplyBandedLayout{typeof(hcat)}
         @test BandedMatrix(A) == Array(A) == A
         @test A[1:5,1:5] isa BandedMatrix
-    end
 
-    @testset "resize" begin
-        A = brand(4,5,1,1)
-        @test resize(A,6,5)[1:4,1:5] == A
-        @test resize(view(A,2:3,2:5),5,5) isa BandedMatrix
-        @test resize(view(A,2:3,2:5),5,5)[1:2,1:4] == A[2:3,2:5]
+        A = Hcat(brand(10,9,1,1)', Zeros(9,5))
+        @test MemoryLayout(A) isa PaddedRows{<:BandedRows}
+        @test bandwidths(A) == (1,1)
+        @test BandedMatrix(A) == A
     end
 
     @testset "Lazy banded * Padded" begin

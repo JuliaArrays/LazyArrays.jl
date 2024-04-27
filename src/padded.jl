@@ -39,6 +39,9 @@ applylayout(::Type{typeof(hcat)}, ::A, ::PaddedRows) where A = PaddedRows{ApplyL
 applylayout(::Type{typeof(hcat)}, ::A, ::PaddedLayout) where A = PaddedLayout{ApplyLayout{typeof(vcat)}}()
 applylayout(::Type{typeof(hcat)}, ::ScalarLayout, ::ScalarLayout, ::PaddedRows) = PaddedRows{ApplyLayout{typeof(vcat)}}()
 
+applylayout(::Type{typeof(vcat)}, ::AbstractPaddedLayout, ::AbstractPaddedLayout) = ApplyLayout{typeof(vcat)}()
+applylayout(::Type{typeof(hcat)}, ::AbstractPaddedLayout, ::AbstractPaddedLayout) = ApplyLayout{typeof(hcat)}()
+
 
 applylayout(::Type{typeof(hvcat)}, _, ::A, ::ZerosLayout...) where A = PaddedLayout{A}()
 cachedlayout(::A, ::ZerosLayout) where A = PaddedLayout{A}()
