@@ -149,4 +149,7 @@ broadcasted(::LazyArrayStyle{1}, ::Type{Block}, r::AbstractUnitRange) = Block(fi
 broadcasted(::LazyArrayStyle{1}, ::Type{Int}, block_range::BlockRange{1}) = first(block_range.indices)
 broadcasted(::LazyArrayStyle{0}, ::Type{Int}, block::Block{1}) = Int(block)
 
+
+Base.in(K::Block, B::BroadcastVector{<:Block,Type{Block}}) = Int(K) in B.args[1]
+
 end
