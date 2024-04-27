@@ -13,7 +13,7 @@ import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto,
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
                         _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix
-import LinearAlgebra: AdjOrTrans, UpperOrLowerTriangular
+import LinearAlgebra: AdjOrTrans, UpperOrLowerTriangular, kron
 
 abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
 struct LazyBandedLayout <: AbstractLazyBandedLayout end

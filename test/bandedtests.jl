@@ -635,13 +635,13 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
             @test Matrix(K) ≈ kron(Matrix(B), Matrix(A))
 
             K = kron(A, B')
-            K isa BandedMatrix
+            @test K isa BandedMatrix
             @test Matrix(K) ≈ kron(Matrix(A), Matrix(B'))
             K = kron(A', B)
-            K isa BandedMatrix
+            @test K isa BandedMatrix
             @test Matrix(K) ≈ kron(Matrix(A'), Matrix(B))
             K = kron(A', B')
-            K isa BandedMatrix
+            @test K isa BandedMatrix
             @test Matrix(K) ≈ kron(Matrix(A'), Matrix(B'))
 
             A = brand(5,6,2,2)
@@ -695,4 +695,4 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
     end
 end
 
-end
+end # module
