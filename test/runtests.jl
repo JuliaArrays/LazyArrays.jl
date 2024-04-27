@@ -1,6 +1,7 @@
-using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, ArrayLayouts, SparseArrays
+using Test, LinearAlgebra, LazyArrays, FillArrays, ArrayLayouts, SparseArrays
+using StaticArrays
 import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
-            PaddedLayout, ApplyLayout, BroadcastLayout, AddArray, LazyLayout
+            ApplyLayout, BroadcastLayout, AddArray, LazyLayout
 import ArrayLayouts: OnesLayout
 
 using Aqua
@@ -23,11 +24,6 @@ end
             BroadcastLayout{typeof(+)}()
 
         @test MemoryLayout(typeof(Diagonal(BroadcastArray(exp,randn(5))))) == DiagonalLayout{LazyLayout}()
-    end
-
-    @testset "Vcat" begin
-        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedLayout{OnesLayout}()
-        @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedLayout{DenseColumnMajor}()
     end
 
     @testset "adjtrans/symherm/triangular" begin
