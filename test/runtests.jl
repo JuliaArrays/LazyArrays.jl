@@ -1,7 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, FillArrays, ArrayLayouts, SparseArrays
 using StaticArrays
 import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
-            ApplyLayout, BroadcastLayout, AddArray, LazyLayout
+            ApplyLayout, BroadcastLayout, AddArray, LazyLayout, PaddedLayout, PaddedRows, PaddedColumns
 import ArrayLayouts: OnesLayout
 
 using Aqua
@@ -460,20 +460,6 @@ end
     @test bc.args[2] == 3
 end
 
-@testset "padded columns" begin
-    A = randn(5,5)
-    U = UpperTriangular(A)
-    v = view(U,:,3)
-    @test MemoryLayout(v) isa PaddedLayout{DenseColumnMajor}
-    @test layout_getindex(v,1:4) == U[1:4,3]
-    @test layout_getindex(v,1:4) isa Vcat
-
-    L = LowerTriangular(A)
-    w = view(L,3,:)
-    @test MemoryLayout(w) isa PaddedLayout{ArrayLayouts.StridedLayout}
-    @test layout_getindex(w,1:4) == L[3,1:4]
-    @test layout_getindex(w,1:4) isa Vcat
-end
-
 
 include("blocktests.jl")
+include("bandedtests.jl")
