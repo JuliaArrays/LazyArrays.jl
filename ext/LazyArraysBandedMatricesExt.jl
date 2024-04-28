@@ -3,16 +3,17 @@ module LazyArraysBandedMatricesExt
 using BandedMatrices, LazyArrays, LinearAlgebra
 using LazyArrays.ArrayLayouts, LazyArrays.FillArrays, LazyArrays.LazyArrays
 import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulMatAdd, DenseColumnMajor,
-                    OnesLayout, AbstractFillLayout, mulreduce, _inv, _fill_lmul!, _copyto!
+                    OnesLayout, AbstractFillLayout, mulreduce, _inv, _fill_lmul!, _copyto!, _copy_oftype
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout, transposelayout,
                    LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout,
-                   AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
+                   AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, _islazy, lazymaterialize
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
-                        _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix, _banded_broadcast!
+                        _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix, _banded_broadcast!,
+                        resize
 import LinearAlgebra: AdjOrTrans, UpperOrLowerTriangular, kron
 
 abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
@@ -407,6 +408,8 @@ LazyArrays._vcat_sub_arguments(::ApplyBandedLayout{typeof(hcat)}, A, V) = LazyAr
 # CachedArray
 #######
 
+CachedArray(::Type{BandedMatrix}, matrix::AbstractMatrix{T}) where T = CachedArray(BandedMatrix{T}(undef, (0,0), bandwidths(matrix)), matrix)
+
 cachedlayout(::BandedColumns{DenseColumnMajor}, ::AbstractBandedLayout) = BandedColumns{DenseColumnMajor}()
 bandwidths(B::CachedMatrix) = bandwidths(B.data)
 isbanded(B::CachedMatrix) = isbanded(B.data)
@@ -423,14 +426,6 @@ function bandeddata(B::SubArray{<:Any,2,<:CachedMatrix})
     bandeddata(view(A.data,kr,jr))
 end
 
-function resize(A::BandedMatrix, n::Integer, m::Integer)
-    l,u = bandwidths(A)
-    _BandedMatrix(reshape(resize!(vec(bandeddata(A)), (l+u+1)*m), l+u+1, m), n, l,u)
-end
-function resize(A::BandedSubBandedMatrix, n::Integer, m::Integer)
-    l,u = bandwidths(A)
-    _BandedMatrix(reshape(resize!(vec(copy(bandeddata(A))), (l+u+1)*m), l+u+1, m), n, l,u)
-end
 
 function resizedata!(::BandedColumns{DenseColumnMajor}, _, B::AbstractMatrix{T}, n::Integer, m::Integer) where T<:Number
     (n ≤ 0 || m ≤ 0) && return B
@@ -492,8 +487,7 @@ function bandwidths(R::Applied{<:Any,typeof(rot180)})
     u+sh,l-sh
 end
 
-bandeddata(R::ApplyMatrix{<:Any,typeof(rot180)}) =
-    @view bandeddata(arguments(R)[1])[end:-1:1,end:-1:1]
+bandeddata(R::ApplyMatrix{<:Any,typeof(rot180)}) = @view(bandeddata(arguments(R)[1])[end:-1:1,end:-1:1])
 
 
 
@@ -589,7 +583,7 @@ simplifiable(::Mul{<:BroadcastBandedLayout, <:Union{AbstractPaddedLayout,Abstrac
 
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:BroadcastBandedLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
-_inv(::LazyBandedLayout, _, A) = ApplyArray(inv, A)
+_inv(::BandedLazyLayouts, _, A) = ApplyArray(inv, A)
 
 ####
 # Band getindex
