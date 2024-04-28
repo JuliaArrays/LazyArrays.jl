@@ -1,6 +1,6 @@
 name = "LazyArrays"
 uuid = "5078a376-72f3-5289-bfd5-ec5146d43c02"
-version = "2.0-dev"
+version = "2.0.0-dev"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -20,6 +20,7 @@ BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extensions]
+LazyArraysBandedMatricesExt = "BandedMatrices"
 LazyArraysStaticArraysExt = "StaticArrays"
 LazyArraysBandedMatricesExt = "BandedMatrices"
 LazyArraysBlockArraysExt = "BlockArrays"
@@ -29,19 +30,20 @@ LazyArraysBlockBandedMatricesExt = "BlockBandedMatrices"
 Aqua = "0.8"
 BandedMatrices = "1.6.2"
 ArrayLayouts = "1.4.1"
+BandedMatrices = "1.6.2"
 Base64 = "1"
 BlockArrays = "1.0"
 BlockBandedMatrices = "0.13"
 FillArrays = "1.0"
-LinearAlgebra = "1"
 Infinities = "0.1"
+LinearAlgebra = "1"
 MacroTools = "0.5"
 Random = "1.0"
 SparseArrays = "1"
 StaticArrays = "1.0"
 Test = "1"
 Tracker = "0.2"
-julia = "1.9"
+julia = "1.10"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"

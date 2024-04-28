@@ -3,7 +3,8 @@ module CacheTests
 using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, SparseArrays, Test
 using StaticArrays
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
-                    CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix
+                    CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
+                    PaddedColumns
 
 include("infinitearrays.jl")
 using .InfiniteArrays
@@ -151,7 +152,7 @@ using Infinities
         @test v[3:100] == [3; zeros(Int,97)]
         @test v[3:100] isa CachedArray{Int,1,Vector{Int},Zeros{Int,1,Tuple{Base.OneTo{Int}}}}
         @test v[4:end] isa CachedArray{Int,1,Vector{Int},Zeros{Int,1,Tuple{Base.OneTo{Int}}}}
-        @test MemoryLayout(v) isa PaddedLayout
+        @test MemoryLayout(v) isa PaddedColumns
         @test all(iszero,v[4:end])
         @test isempty(v[4:0])
         @test norm(v) == norm(Array(v)) == norm(v,2)
@@ -222,7 +223,7 @@ using Infinities
 
         @testset "padded" begin
             z = cache(Zeros(2));
-            @test MemoryLayout(z) isa PaddedLayout
+            @test MemoryLayout(z) isa PaddedColumns
             @test A*z ≈ A*Vector(z)
             @test B*z ≈ Matrix(B)*Vector(z)
             @test C*z ≈ Matrix(C)*Vector(z)
@@ -232,7 +233,7 @@ using Infinities
             @test C'z ≈ Matrix(C)'Vector(z)
 
             p = Vcat([1,2],Zeros(3)) + cache(Zeros(5))
-            @test MemoryLayout(p) isa PaddedLayout
+            @test MemoryLayout(p) isa PaddedColumns
             @test p isa CachedVector{Float64,Vector{Float64},<:Zeros}
             @test p == [1; 2; zeros(3)]
         end
@@ -289,7 +290,7 @@ using Infinities
     @testset "Padded broadcast" begin
         a = CachedArray([1,2,3], Zeros{Int}(8));
         r = a .- a;
-        @test MemoryLayout(r) isa PaddedLayout
+        @test MemoryLayout(r) isa PaddedColumns
         @test r.datasize[1] == 3
         @test r == Vector(a) - Vector(a)
 

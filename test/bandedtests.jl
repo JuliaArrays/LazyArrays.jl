@@ -1,14 +1,13 @@
 module LazyBandedTests
 using ArrayLayouts, LazyArrays, BandedMatrices, LinearAlgebra, Test
-using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows
-using LazyArrays: PaddedLayout, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout
+using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize
+using LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout
 using ArrayLayouts: OnesLayout, StridedLayout
 LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
 BroadcastBandedLayout = LazyArraysBandedMatricesExt.BroadcastBandedLayout
 ApplyBandedLayout = LazyArraysBandedMatricesExt.ApplyBandedLayout
 LazyBandedLayout = LazyArraysBandedMatricesExt.LazyBandedLayout
 VcatBandedMatrix = LazyArraysBandedMatricesExt.VcatBandedMatrix
-resize = LazyArraysBandedMatricesExt.resize
 
 include("mylazyarray.jl")
 
@@ -52,7 +51,7 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
     @testset "Banded padded" begin
         A = _BandedMatrix((1:10)', 10, -1,1)
         x = Vcat(1:3, Zeros(10-3))
-        @test MemoryLayout(x) isa PaddedLayout
+        @test MemoryLayout(x) isa PaddedColumns
         @test A*x isa Vcat{Float64,1,<:Tuple{<:Vector,<:Zeros}}
         @test length((A*x).args[1]) == length(x.args[1]) + bandwidth(A,1) == 2
         @test A*x == A*Vector(x)
@@ -70,6 +69,13 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         A = Hcat(Zeros(5,2), brand(5,5,1,1))
         @test bandwidths(A) == (-1,3)
         @test BandedMatrix(A) == Array(A) == A
+
+
+        A = Vcat(_BandedMatrix(randn(3,10), 10, 1,1), Vcat(randn(2,10), Zeros(10,10)))
+        @test MemoryLayout(A) isa PaddedColumns
+
+        A = Hcat(_BandedMatrix(randn(3,10), 10, 1,1), Hcat(randn(10,2), Zeros(10,10)))
+        @test MemoryLayout(A) isa PaddedRows
     end
 
     @testset "BroadcastBanded * Padded" begin
@@ -270,6 +276,15 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test rowsupport(ApplyMatrix(\,L,B), 2) == 1:4
         @test rowsupport(ApplyMatrix(\,U,B), 3) == 2:5
         @test rowsupport(ApplyMatrix(\,B,B), 3) == 1:5
+
+        A = brand(5,5,1,1)
+        C = BroadcastMatrix(*, A, 2)
+        @test ApplyMatrix(inv,D) * C == inv(D) * (2A)
+        @test C * ApplyMatrix(inv,D) == (2A) * inv(D)
+        @test ApplyMatrix(inv,D) \ C == D * (2A)
+        @test C / ApplyMatrix(inv,D) ≈ (2A) * D
+
+        @test inv(C) ≈ inv(2A)
     end
 
     @testset "Cat" begin
@@ -327,6 +342,9 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A == broadcast(*, A.args...) == BandedMatrix(A)
         @test MemoryLayout(A) isa BroadcastBandedLayout{typeof(*)}
 
+        B = BandedMatrix{Float64}(undef, (5,5), (1,1))
+        @test copyto!(B, A) == B == A
+
         @test MemoryLayout(A') isa BroadcastBandedLayout{typeof(*)}
         @test bandwidths(A') == (1,1)
         @test colsupport(A',1) == rowsupport(A', 1) == 1:2
@@ -377,6 +395,22 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
             C = BroadcastMatrix(*, 2, im*brand(5,5,2,1))
             @test MemoryLayout(C') isa ConjLayout{BroadcastBandedLayout{typeof(*)}}
         end
+
+        @testset "/" begin
+            A = BroadcastMatrix(/, brand(5,5,1,2),2)
+            B = BandedMatrix{Float64}(undef, size(A), bandwidths(A))
+            C = Matrix{Float64}(undef, size(A))
+            @test copyto!(B, A) == B == A
+            @test copyto!(C, A) == C == A
+        end
+
+        @testset "Broadcast *" begin
+            A = brand(5,5,1,2)
+            B = BroadcastMatrix(*, brand(5,5,1,2), brand(5,5,2,1))
+            C = BandedMatrix{Float64}(undef, size(B), (1,2))
+            C .= A .+ B
+            @test C == A + B
+        end
     end
 
     @testset "Cache" begin
@@ -421,6 +455,11 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A*A isa MulMatrix
         @test A*A ≈ BandedMatrix(A)*A ≈ A*BandedMatrix(A) ≈ BandedMatrix(A*A)
         @test A[1:5,1:5] isa BandedMatrix
+
+        A = Vcat(brand(9,10,1,1), Zeros(1,10))
+        @test MemoryLayout(A) isa PaddedColumns{<:BandedColumns}
+        @test bandwidths(A) == (1,1)
+        @test A == BandedMatrix(A)
     end
 
     @testset "Banded Hcat" begin
@@ -439,13 +478,11 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test MemoryLayout(A) isa ApplyBandedLayout{typeof(hcat)}
         @test BandedMatrix(A) == Array(A) == A
         @test A[1:5,1:5] isa BandedMatrix
-    end
 
-    @testset "resize" begin
-        A = brand(4,5,1,1)
-        @test resize(A,6,5)[1:4,1:5] == A
-        @test resize(view(A,2:3,2:5),5,5) isa BandedMatrix
-        @test resize(view(A,2:3,2:5),5,5)[1:2,1:4] == A[2:3,2:5]
+        A = Hcat(brand(10,9,1,1)', Zeros(9,5))
+        @test MemoryLayout(A) isa PaddedRows{<:BandedRows}
+        @test bandwidths(A) == (1,1)
+        @test BandedMatrix(A) == A
     end
 
     @testset "Lazy banded * Padded" begin
@@ -454,6 +491,12 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         x = Vcat([1,2], Zeros(3))
         @test A*x isa Vcat
         @test A*A*x isa Vcat
+
+        @test_throws BoundsError muladd!(1.0, A, x, 2.0, Vcat(zeros(2), Zeros(3)))
+
+        y = ones(3)
+        @test muladd!(1.0, A, x, 2.0, Vcat(y, Zeros(2))) ≈ A*x .+ [2,2,2,0,0]
+        @test y ≈ (A*x .+ 2)[1:3]
 
         B = PaddedArray(randn(3,4),5,5)
         @test MemoryLayout(A*B) isa PaddedLayout
@@ -465,7 +508,8 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
 
         B.args[2][end,:] .= 0
         C = PaddedArray(randn(3,4),5,5)
-        @test muladd!(1.0, A, B, 2.0, deepcopy(C)) ≈ A*B + 2C
+        D = deepcopy(C)
+        @test muladd!(1.0, A, B, 2.0, D) == D ≈ A*B + 2C
     end
 
     @testset "Lazy banded" begin
@@ -533,6 +577,11 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test MemoryLayout(R) isa ApplyBandedLayout{typeof(*)}
         @test bandwidths(R) == (4,-2)
         @test R == rot180(A*B)
+
+        A = brand(5,5,1,2)
+        R = ApplyArray(rot180, BroadcastArray(+, A, A))
+        @test MemoryLayout(R) isa ApplyBandedLayout{typeof(rot180)}
+        @test BandedMatrix(R) == rot180(2A)
     end
 
     @testset "Triangular bandwidths" begin
@@ -612,6 +661,114 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test Li * x ≈ L \ x
         @test Bi * x ≈ B \ x
     end
+
+    @testset "Banded kron" begin
+        @testset "2D" begin
+            A = brand(5,5,2,2)
+            B = brand(2,2,1,0)
+            @test isbanded(Kron(A,B))
+            K = kron(A,B)
+            @test K isa BandedMatrix
+            @test bandwidths(K) == (5,4)
+            @test Matrix(K) == kron(Matrix(A), Matrix(B))
+
+            A = brand(3,4,1,1)
+            B = brand(3,2,1,0)
+            K = kron(A,B)
+            @test K isa BandedMatrix
+            @test bandwidths(K) == (7,2)
+            @test Matrix(K) ≈ kron(Matrix(A), Matrix(B))
+            K = kron(B,A)
+            @test Matrix(K) ≈ kron(Matrix(B), Matrix(A))
+
+            K = kron(A, B')
+            @test K isa BandedMatrix
+            @test Matrix(K) ≈ kron(Matrix(A), Matrix(B'))
+            K = kron(A', B)
+            @test K isa BandedMatrix
+            @test Matrix(K) ≈ kron(Matrix(A'), Matrix(B))
+            K = kron(A', B')
+            @test K isa BandedMatrix
+            @test Matrix(K) ≈ kron(Matrix(A'), Matrix(B'))
+
+            A = brand(5,6,2,2)
+            B = brand(3,2,1,0)
+            K = kron(A,B)
+            @test K isa BandedMatrix
+            @test bandwidths(K) == (12,4)
+            @test Matrix(K) ≈ kron(Matrix(A), Matrix(B))
+
+            n = 10; h = 1/n
+            D² = BandedMatrix(0 => Fill(-2,n), 1 => Fill(1,n-1), -1 => Fill(1,n-1))
+            D_xx = kron(D², Eye(n))
+            D_yy = kron(Eye(n), D²)
+            @test D_xx isa BandedMatrix
+            @test D_yy isa BandedMatrix
+            @test bandwidths(D_xx) == (10,10)
+            @test bandwidths(D_yy) == (1,1)
+            X = randn(n,n)
+            @test reshape(D_xx*vec(X),n,n) ≈ X*D²'
+            @test reshape(D_yy*vec(X),n,n) ≈ D²*X
+            Δ = D_xx + D_yy
+            @test Δ isa BandedMatrix
+            @test bandwidths(Δ) == (10,10)
+        end
+
+        @testset "#87" begin
+            @test kron(Diagonal([1,2,3]), Eye(3)) isa Diagonal{Float64,Vector{Float64}}
+        end
+
+        @testset "3D" begin
+            n = 10; h = 1/n
+            D² = BandedMatrix(0 => Fill(-2,n), 1 => Fill(1,n-1), -1 => Fill(1,n-1))
+
+            D_xx = kron(D², Eye(n), Eye(n))
+            D_yy = kron(Eye(n), D², Eye(n))
+            D_zz = kron(Eye(n), Eye(n), D²)
+            @test bandwidths(D_xx) == (n^2,n^2)
+            @test bandwidths(D_yy) == (n,n)
+            @test bandwidths(D_zz) == (1,1)
+
+            X = randn(n,n,n)
+
+            Y = similar(X)
+            for k = 1:n, j=1:n Y[k,j,:] = D²*X[k,j,:] end
+            @test reshape(D_xx*vec(X), n, n, n) ≈ Y
+            for k = 1:n, j=1:n Y[k,:,j] = D²*X[k,:,j] end
+            @test reshape(D_yy*vec(X), n, n, n) ≈ Y
+            for k = 1:n, j=1:n Y[:,k,j] = D²*X[:,k,j] end
+            @test reshape(D_zz*vec(X), n, n, n) ≈ Y
+        end
+    end
+
+    @testset "vec broadcasting" begin
+        A = brand(5,5,0,1)
+        b = Vcat(1,Zeros(4))
+        @test A .+ b == b .+ A == Matrix(A) .+ Vector(b)
+    end
+
+    @testset "cache" begin
+        B = brand(10,10,2,1)
+        A = ApplyArray(*, B, B)
+        @test_broken cache(A).data isa BandedMatrix
+        C = cache(BandedMatrix,A)
+        @test isbanded(C)
+        @test bandwidths(C) == (4,2)
+        @test C ≈ A
+    end
+
+    @testset "I multiplication" begin
+        B = brand(10,10,2,1)
+        A = ApplyArray(*, B, B)
+        @test Eye(10) * A == A * Eye(10) == A
+    end
+
+    @testset "Special Mul Overloads" begin
+        A = randn(5,5)
+        B = brand(5,5,2,1)
+        @test ApplyArray(\, A, A) * BroadcastArray(*, B, 3) ≈ 3B
+        @test BroadcastArray(*, 2, A) * BroadcastArray(*, B, 3) ≈ 6A*B
+    end
 end
 
-end
+end # module

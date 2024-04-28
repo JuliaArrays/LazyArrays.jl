@@ -5,11 +5,12 @@ using LazyArrays
 using LazyArrays.ArrayLayouts
 using LazyArrays.FillArrays
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
-                    LazyArrayStyle, CachedVector, PaddedLayout, BroadcastLayout,
-                    AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle
+                    LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
+                    AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle,
+                    ApplyLayout
 import ArrayLayouts: sub_materialize
 import Base: getindex, BroadcastStyle, broadcasted, OneTo
-import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice
+import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange
 
 BlockArrays._broadcaststyle(S::LazyArrays.LazyArrayStyle{1}) = S
 
@@ -72,25 +73,25 @@ function paddeddata(P::PseudoBlockMatrix)
     PseudoBlockArray(_block_paddeddata(C, data, n, m), (ax[Block(1):N],bx[Block(1):M]))
 end
 
-blockcolsupport(::PaddedLayout, A, j) = Block.(OneTo(blocksize(paddeddata(A),1)))
-blockrowsupport(::PaddedLayout, A, k) = Block.(OneTo(blocksize(paddeddata(A),2)))
+blockcolsupport(::AbstractPaddedLayout, A, j) = Block.(OneTo(blocksize(paddeddata(A),1)))
+blockrowsupport(::AbstractPaddedLayout, A, k) = Block.(OneTo(blocksize(paddeddata(A),2)))
 
-function sub_materialize(::PaddedLayout, v::AbstractVector{T}, ax::Tuple{AbstractBlockedUnitRange}) where T
+function sub_materialize(::PaddedColumns, v::AbstractVector{T}, ax::Tuple{AbstractBlockedUnitRange}) where T
     dat = paddeddata(v)
     PseudoBlockVector(Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat))), ax)
 end
 
-function sub_materialize(::PaddedLayout, V::AbstractMatrix{T}, ::Tuple{AbstractBlockedUnitRange,AbstractUnitRange}) where T
+function sub_materialize(::AbstractPaddedLayout, V::AbstractMatrix{T}, ::Tuple{AbstractBlockedUnitRange,AbstractUnitRange}) where T
     dat = paddeddata(V)
     ApplyMatrix{T}(setindex, Zeros{T}(axes(V)), sub_materialize(dat), axes(dat)...)
 end
 
-function sub_materialize(::PaddedLayout, V::AbstractMatrix{T}, ::Tuple{AbstractBlockedUnitRange,AbstractBlockedUnitRange}) where T
+function sub_materialize(::AbstractPaddedLayout, V::AbstractMatrix{T}, ::Tuple{AbstractBlockedUnitRange,AbstractBlockedUnitRange}) where T
     dat = paddeddata(V)
     ApplyMatrix{T}(setindex, Zeros{T}(axes(V)), sub_materialize(dat), axes(dat)...)
 end
 
-function sub_materialize(::PaddedLayout, V::AbstractMatrix{T}, ::Tuple{AbstractUnitRange,AbstractBlockedUnitRange}) where T
+function sub_materialize(::AbstractPaddedLayout, V::AbstractMatrix{T}, ::Tuple{AbstractUnitRange,AbstractBlockedUnitRange}) where T
     dat = paddeddata(V)
     ApplyMatrix{T}(setindex, Zeros{T}(axes(V)), sub_materialize(dat), axes(dat)...)
 end
@@ -148,5 +149,65 @@ LazyArrays._lazy_getindex(dat::PseudoBlockArray, kr::OneTo) = view(dat.blocks,kr
 broadcasted(::LazyArrayStyle{1}, ::Type{Block}, r::AbstractUnitRange) = Block(first(r)):Block(last(r))
 broadcasted(::LazyArrayStyle{1}, ::Type{Int}, block_range::BlockRange{1}) = first(block_range.indices)
 broadcasted(::LazyArrayStyle{0}, ::Type{Int}, block::Block{1}) = Int(block)
+
+
+Base.in(K::Block, B::BroadcastVector{<:Block,Type{Block}}) = Int(K) in B.args[1]
+
+
+###
+# Concat
+###
+
+sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractVector, ::Tuple{<:BlockedUnitRange}) = blockvcat(sub_materialize.(arguments(lay, V))...)
+sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, ::Tuple{<:BlockedUnitRange,<:BlockedUnitRange}) = blockvcat(sub_materialize.(arguments(lay, V))...)
+sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, ::Tuple{<:BlockedUnitRange,<:AbstractUnitRange}) = blockvcat(sub_materialize.(arguments(lay, V))...)
+
+LazyArrays._vcat_sub_arguments(lay::ApplyLayout{typeof(vcat)}, A, V, kr::BlockSlice{<:BlockRange{1}}) =
+    arguments(lay, A)[Int.(kr.block)]
+
+
+_split2blocks(KR) = ()
+function _split2blocks(KR, ax::OneTo, C...)
+    if isempty(KR)
+        (Base.OneTo(0), _split2blocks(Block.(1:0), C...)...)
+    elseif first(KR) ≠ Block(1)
+        (Base.OneTo(0), _split2blocks((KR[1] - Block(1)):(KR[end] - Block(1)), C...)...)
+    elseif length(KR) == 1
+        (ax, _split2blocks(Block.(1:0), C...)...)
+    else
+        (ax, _split2blocks((KR[2]- Block(1)):(KR[end]-Block(1)), C...)...)
+    end
+end
+function _split2blocks(KR, A, C...)
+    M = blocklength(A)
+    if Int(last(KR)) ≤ M
+        (KR, _split2blocks(Block.(1:0), C...)...)
+    else
+        (KR[1]:Block(M), _split2blocks(Block(1):(last(KR)-Block(M)), C...)...)
+    end
+end
+
+const Block1 = Block{1,Int}
+const BlockRange1{R<:AbstractUnitRange{Int}} = BlockRange{1,Tuple{R}}
+const BlockIndexRange1{R<:AbstractUnitRange{Int}} = BlockIndexRange{1,Tuple{R}}
+
+
+function arguments(lay::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1,<:Any,<:Tuple{BlockSlice{<:BlockRange1}}})
+    kr, = parentindices(V)
+    P = parent(V)
+    a = arguments(lay, P)
+    KR = _split2blocks(kr.block, axes.(a,1)...)
+    filter(!isempty,getindex.(a, KR))
+end
+
+
+function arguments(lay::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{BlockSlice{<:BlockRange1},BlockSlice}})
+    kr, jr = parentindices(V)
+    P = parent(V)
+    a = arguments(lay, P)
+    KR = _split2blocks(kr.block, axes.(a,1)...)
+    filter(!isempty,getindex.(a, KR, Ref(jr.block)))
+end
+
 
 end

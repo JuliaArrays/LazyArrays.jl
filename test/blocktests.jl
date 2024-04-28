@@ -1,6 +1,6 @@
 module LazyArraysBlockArraysTest
 using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, Test
-using LazyArrays: LazyArrayStyle, PaddedLayout, paddeddata
+using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata
 using BlockArrays: blockcolsupport, blockrowsupport
 
 @testset "Lazy BlockArrays" begin
@@ -40,9 +40,9 @@ using BlockArrays: blockcolsupport, blockrowsupport
     @testset "padded" begin
         c = Vcat(randn(3), Zeros(7))
         b = PseudoBlockVector(c, 1:4)
-        @test MemoryLayout(b) isa PaddedLayout
+        @test MemoryLayout(b) isa PaddedColumns
         @test b[Block.(2:3)] isa PseudoBlockVector{Float64,<:ApplyArray}
-        @test MemoryLayout(b[Block.(2:3)]) isa PaddedLayout
+        @test MemoryLayout(b[Block.(2:3)]) isa PaddedColumns
         @test b[Block.(2:3)] == b[2:6] 
         
         c = PseudoBlockVector(Vcat(1, Zeros(5)), 1:3)
@@ -56,11 +56,12 @@ using BlockArrays: blockcolsupport, blockrowsupport
         @test C[Block.(1:2),1:3] == C[Block.(1:2),Block.(1:2)] == C[1:3,Block.(1:2)] == C[1:3,1:3]
         
         H = PseudoBlockArray(Hcat(1, Zeros(1,5)), [1], 1:3)
+        @test MemoryLayout(H) isa PaddedRows
         @test paddeddata(H) == Ones(1,1)
         
         b = PseudoBlockArray(cache(Zeros(55)),1:10);
         b[10] = 5;
-        @test MemoryLayout(b) isa PaddedLayout{DenseColumnMajor}
+        @test MemoryLayout(b) isa PaddedColumns{DenseColumnMajor}
         @test paddeddata(b) isa PseudoBlockVector
         @test paddeddata(b) == [zeros(9); 5]
     end
