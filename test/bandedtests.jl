@@ -326,6 +326,9 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A == broadcast(*, A.args...) == BandedMatrix(A)
         @test MemoryLayout(A) isa BroadcastBandedLayout{typeof(*)}
 
+        B = BandedMatrix{Float64}(undef, (5,5), (1,1))
+        @test copyto!(B, A) == B == A
+
         @test MemoryLayout(A') isa BroadcastBandedLayout{typeof(*)}
         @test bandwidths(A') == (1,1)
         @test colsupport(A',1) == rowsupport(A', 1) == 1:2
@@ -375,6 +378,22 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @testset "Complex" begin
             C = BroadcastMatrix(*, 2, im*brand(5,5,2,1))
             @test MemoryLayout(C') isa ConjLayout{BroadcastBandedLayout{typeof(*)}}
+        end
+
+        @testset "/" begin
+            A = BroadcastMatrix(/, brand(5,5,1,2),2)
+            B = BandedMatrix{Float64}(undef, size(A), bandwidths(A))
+            C = Matrix{Float64}(undef, size(A))
+            @test copyto!(B, A) == B == A
+            @test copyto!(C, A) == C == A
+        end
+
+        @testset "Broadcast *" begin
+            A = brand(5,5,1,2)
+            B = BroadcastMatrix(*, brand(5,5,1,2), brand(5,5,2,1))
+            C = BandedMatrix{Float64}(undef, size(B), (1,2))
+            C .= A .+ B
+            @test C == A + B
         end
     end
 
@@ -457,6 +476,12 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A*x isa Vcat
         @test A*A*x isa Vcat
 
+        @test_throws BoundsError muladd!(1.0, A, x, 2.0, Vcat(zeros(2), Zeros(3)))
+
+        y = ones(3)
+        @test muladd!(1.0, A, x, 2.0, Vcat(y, Zeros(2))) ≈ A*x .+ [2,2,2,0,0]
+        @test y ≈ (A*x .+ 2)[1:3]
+
         B = PaddedArray(randn(3,4),5,5)
         @test MemoryLayout(A*B) isa PaddedLayout
         @test A*B ≈ Matrix(A)Matrix(B)
@@ -467,7 +492,8 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
 
         B.args[2][end,:] .= 0
         C = PaddedArray(randn(3,4),5,5)
-        @test muladd!(1.0, A, B, 2.0, deepcopy(C)) ≈ A*B + 2C
+        D = deepcopy(C)
+        @test muladd!(1.0, A, B, 2.0, D) == D ≈ A*B + 2C
     end
 
     @testset "Lazy banded" begin

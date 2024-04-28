@@ -3,7 +3,7 @@ module LazyArraysBandedMatricesExt
 using BandedMatrices, LazyArrays, LinearAlgebra
 using LazyArrays.ArrayLayouts, LazyArrays.FillArrays, LazyArrays.LazyArrays
 import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulMatAdd, DenseColumnMajor,
-                    OnesLayout, AbstractFillLayout, mulreduce, _inv, _fill_lmul!
+                    OnesLayout, AbstractFillLayout, mulreduce, _inv, _fill_lmul!, _copyto!
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout, transposelayout,
                    LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout,
                    AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
@@ -12,12 +12,12 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
-                        _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix
+                        _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix, _banded_broadcast!
 import LinearAlgebra: AdjOrTrans, UpperOrLowerTriangular, kron
 
 abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
 struct LazyBandedLayout <: AbstractLazyBandedLayout end
-sublayout(::AbstractLazyBandedLayout, ::Type{<:NTuple{2,AbstractUnitRange}}) = LazyBandedLayout()
+
 symmetriclayout(::AbstractLazyBandedLayout) = SymmetricLayout{LazyBandedLayout}()
 hermitianlayout(::Type{<:Real}, ::AbstractLazyBandedLayout) = SymmetricLayout{LazyBandedLayout}()
 hermitianlayout(::Type{<:Complex}, ::AbstractLazyBandedLayout) = HermitianLayout{LazyBandedLayout}()
@@ -153,13 +153,6 @@ function materialize!(M::MatMulVecAdd{<:BandedLayouts,<:AbstractPaddedLayout,<:A
     resizedata!(y, min(length(M),length(x̃)+bandwidth(A,1)))
     ỹ = paddeddata(y)
 
-    if length(ỹ) < min(length(M),length(x̃)+bandwidth(A,1))
-        # its ok if the entries are actually zero
-        for k = max(1,length(x̃)-bandwidth(A,1)):length(x̃)
-            iszero(x̃[k]) || throw(ArgumentError("Cannot assign non-zero entries to Zero"))
-        end
-    end
-
     muladd!(α, view(A, axes(ỹ,1), axes(x̃,1)) , x̃, β, ỹ)
     y
 end
@@ -206,7 +199,6 @@ struct ApplyBandedLayout{F} <: AbstractLazyBandedLayout end
 
 arguments(::ApplyBandedLayout{F}, A) where F = arguments(ApplyLayout{F}(), A)
 sublayout(::ApplyBandedLayout{F}, A) where F = sublayout(ApplyLayout{F}(), A)
-sublayout(::ApplyBandedLayout, ::Type{<:NTuple{2,AbstractUnitRange}}) = LazyBandedLayout()
 
 LazyArrays._mul_arguments(::ApplyBandedLayout{F}, A) where F = LazyArrays._mul_arguments(ApplyLayout{F}(), A)
 @inline _islazy(::ApplyBandedLayout) = Val(true)
@@ -218,7 +210,6 @@ applybroadcaststyle(::Type{<:AbstractMatrix}, ::ApplyBandedLayout) = LazyArraySt
 
 @inline colsupport(::ApplyBandedLayout{typeof(*)}, A, j) = banded_colsupport(A, j)
 @inline rowsupport(::ApplyBandedLayout{typeof(*)}, A, j) = banded_rowsupport(A, j)
-@inline _mul_arguments(::ApplyBandedLayout{typeof(*)}, A) = arguments(A)
 
 ###
 # BroadcastMatrix
@@ -262,8 +253,8 @@ _copyto!(::AbstractBandedLayout, ::BroadcastBandedLayout, dest::AbstractMatrix, 
 _copyto!(_, ::BroadcastBandedLayout, dest::AbstractMatrix, bc::AbstractMatrix) =
     copyto!(dest, _broadcastarray2broadcasted(bc))
 
-_banded_broadcast!(dest::AbstractMatrix, f, (A,B)::Tuple{AbstractMatrix{T},AbstractMatrix{V}}, _, ::Tuple{<:Any,ApplyBandedLayout{typeof(*)}}) where {T,V} =
-    broadcast!(f, dest, BandedMatrix(A), BandedMatrix(B))
+# _banded_broadcast!(dest::AbstractMatrix, f, (A,B)::Tuple{AbstractMatrix{T},AbstractMatrix{V}}, _, ::Tuple{<:Any,ApplyBandedLayout{typeof(*)}}) where {T,V} =
+#     broadcast!(f, dest, BandedMatrix(A), BandedMatrix(B))
 
 broadcasted(::LazyArrayStyle, ::typeof(*), c::Number, A::BandedMatrix) = _BandedMatrix(c .* A.data, A.raxis, A.l, A.u)
 broadcasted(::LazyArrayStyle, ::typeof(*), A::BandedMatrix, c::Number) = _BandedMatrix(A.data .* c, A.raxis, A.l, A.u)
@@ -285,8 +276,6 @@ _BandedMatrix(::BroadcastBandedLayout, V::AbstractMatrix{T}) where T =
 
 _broadcast_BandedMatrix(a::AbstractMatrix) = BandedMatrix(a)
 _broadcast_BandedMatrix(a) = a
-_broadcast_BandedBlockBandedMatrix(a::AbstractMatrix) = BandedBlockBandedMatrix(a)
-_broadcast_BandedBlockBandedMatrix(a) = a
 
 for op in (:+, :-, :*)
     @eval begin
