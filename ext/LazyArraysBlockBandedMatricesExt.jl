@@ -4,6 +4,7 @@ module LazyArraysBlockBandedMatricesExt
 using BlockBandedMatrices, LazyArrays
 using BlockBandedMatrices.BlockArrays
 using BlockBandedMatrices.BandedMatrices
+using LazyArrays.LinearAlgebra
 using LazyArrays.ArrayLayouts
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout, conjlayout,
                 PaddedLayout, _islazy, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
