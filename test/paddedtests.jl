@@ -366,6 +366,20 @@ paddeddata(a::PaddedPadded) = a
         a = Vcat(1:5, Zeros(10))
         @test LazyArrays.arguments(vcat, view(a, 1:7)) == (1:5, Zeros(2))
     end
+
+    @testset "vcat padded" begin
+        A = Vcat([1,2,3], Zeros(7))
+        B = Vcat([1,2], Zeros(8))
+        C = Vcat(A,B)
+        D = Hcat(A', B')
+        @test MemoryLayout(C) isa PaddedColumns
+        @test paddeddata(C) == [A; 1:2]
+        @test MemoryLayout(D) isa DualLayout{<:PaddedRows}
+        @test paddeddata(D) == [A' (1:2)']
+
+        E = Hcat(Hcat(randn(3,2), Zeros(3,3)), Hcat(randn(3,2), Zeros(3,3)))
+        @test MemoryLayout(E) isa PaddedRows
+    end
 end
 
 end # module

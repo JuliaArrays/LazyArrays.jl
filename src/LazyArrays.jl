@@ -73,6 +73,7 @@ broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{<:Fill,Typ
 
 if !isdefined(Base, :get_extension)
     include("../ext/LazyArraysStaticArraysExt.jl")
+    include("../ext/LazyArraysBandedMatricesExt.jl")
 end
 
 end # module

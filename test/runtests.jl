@@ -1,7 +1,7 @@
 using Test, LinearAlgebra, LazyArrays, FillArrays, ArrayLayouts, SparseArrays
 using StaticArrays
 import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
-            ApplyLayout, BroadcastLayout, AddArray, LazyLayout
+            ApplyLayout, BroadcastLayout, AddArray, LazyLayout, PaddedLayout, PaddedRows, PaddedColumns
 import ArrayLayouts: OnesLayout
 
 using Aqua
@@ -460,3 +460,4 @@ end
     @test bc.args[2] == 3
 end
 
+include("bandedtests.jl")

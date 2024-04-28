@@ -1,9 +1,10 @@
 name = "LazyArrays"
 uuid = "5078a376-72f3-5289-bfd5-ec5146d43c02"
-version = "2.0.0"
+version = "2.0.0-dev"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
@@ -12,14 +13,17 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extensions]
+LazyArraysBandedMatricesExt = "BandedMatrices"
 LazyArraysStaticArraysExt = "StaticArrays"
 
 [compat]
 Aqua = "0.8"
 ArrayLayouts = "1.4.1"
+BandedMatrices = "1.6.2"
 Base64 = "1"
 FillArrays = "1.0"
 Infinities = "0.1"
@@ -31,10 +35,11 @@ SparseArrays = "1"
 StaticArrays = "1.0"
 Test = "1"
 Tracker = "0.2"
-julia = "1.9"
+julia = "1.10"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 Infinities = "e1ba4f0e-776d-440f-acd9-e1d2e9742647"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -43,4 +48,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 
 [targets]
-test = ["Aqua", "Base64", "StaticArrays", "Tracker", "Test", "Infinities", "Random"]
+test = ["Aqua", "BandedMatrices", "Base64", "StaticArrays", "Tracker", "Test", "Infinities", "Random"]
