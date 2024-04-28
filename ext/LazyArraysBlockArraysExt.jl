@@ -209,5 +209,21 @@ function arguments(lay::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:T
     filter(!isempty,getindex.(a, KR, Ref(jr.block)))
 end
 
+function arguments(lay::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{BlockSlice,BlockSlice{<:BlockRange1}}})
+    kr, jr = parentindices(V)
+    P = parent(V)
+    a = arguments(lay, P)
+    JR = _split2blocks(jr.block, axes.(a,2)...)
+    filter(!isempty,getindex.(a, Ref(kr.block), JR))
+end
+
+function arguments(lay::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{BlockSlice{<:BlockRange1},BlockSlice{<:Block1}}})
+    kr, jr = parentindices(V)
+    J = jr.block
+    P = parent(V)
+    arguments(lay, view(P,kr,J:J))
+end
+
+
 
 end
