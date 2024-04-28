@@ -342,4 +342,7 @@ simplifiable(::Mul{<:LazyBlockBandedLayouts, <:Union{PaddedLayout,AbstractStride
 
 _inv(::LazyBlockBandedLayouts, _, A) = ApplyArray(inv, A)
 
+_broadcast_BandedBlockBandedMatrix(a::AbstractMatrix) = BandedBlockBandedMatrix(a)
+_broadcast_BandedBlockBandedMatrix(a) = a
+
 end
