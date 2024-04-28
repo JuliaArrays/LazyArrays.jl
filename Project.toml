@@ -21,14 +21,12 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extensions]
 LazyArraysBandedMatricesExt = "BandedMatrices"
-LazyArraysStaticArraysExt = "StaticArrays"
-LazyArraysBandedMatricesExt = "BandedMatrices"
 LazyArraysBlockArraysExt = "BlockArrays"
 LazyArraysBlockBandedMatricesExt = "BlockBandedMatrices"
+LazyArraysStaticArraysExt = "StaticArrays"
 
 [compat]
 Aqua = "0.8"
-BandedMatrices = "1.6.2"
 ArrayLayouts = "1.4.1"
 BandedMatrices = "1.6.2"
 Base64 = "1"

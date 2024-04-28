@@ -1,5 +1,6 @@
 module LazyArraysBlockBandedMatricesExt
 
+
 using BlockBandedMatrices, LazyArrays
 using BlockBandedMatrices.BlockArrays
 using BlockBandedMatrices.BandedMatrices
