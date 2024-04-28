@@ -345,4 +345,42 @@ _inv(::LazyBlockBandedLayouts, _, A) = ApplyArray(inv, A)
 _broadcast_BandedBlockBandedMatrix(a::AbstractMatrix) = BandedBlockBandedMatrix(a)
 _broadcast_BandedBlockBandedMatrix(a) = a
 
+
+####
+# concat
+####
+
+sublayout(::ApplyBlockBandedLayout{typeof(hcat)}, ::Type{<:Tuple{<:BlockSlice{<:BlockRange1}, <:BlockSlice{<:BlockRange1}}}) = ApplyBlockBandedLayout{typeof(hcat)}()
+
+_copyto!(_, LAY::ApplyBlockBandedLayout{typeof(hcat)}, dest::AbstractMatrix, H::AbstractMatrix) =
+    block_hcat_copyto!(dest, arguments(LAY,H)...)
+function block_hcat_copyto!(dest::AbstractMatrix, arrays...)
+    nrows = blocksize(dest, 1)
+    ncols = 0
+    dense = true
+    for a in arrays
+        dense &= isa(a,Array)
+        nd = ndims(a)
+        ncols += (nd==2 ? blocksize(a,2) : 1)
+    end
+
+    nrows == blocksize(first(arrays),1) || throw(DimensionMismatch("Destination rows must match"))
+    ncols == blocksize(dest,2) || throw(DimensionMismatch("Destination columns must match"))
+
+    pos = 1
+    for a in arrays
+        p1 = pos+(isa(a,AbstractMatrix) ? blocksize(a, 2) : 1)-1
+        copyto!(view(dest,:, Block.(pos:p1)), a)
+        pos = p1+1
+    end
+    return dest
+end
+
+##
+# special for unitblocks
+blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedUnitRange{<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
+blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Diagonal,<:NTuple{2,BlockedUnitRange{<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
+subblockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedUnitRange{<:AbstractUnitRange{Int}}}}) = (0,0)
+
+
 end
