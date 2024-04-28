@@ -69,6 +69,13 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         A = Hcat(Zeros(5,2), brand(5,5,1,1))
         @test bandwidths(A) == (-1,3)
         @test BandedMatrix(A) == Array(A) == A
+
+
+        A = Vcat(_BandedMatrix(randn(3,10), 10, 1,1), Vcat(randn(2,10), Zeros(10,10)))
+        @test MemoryLayout(A) isa PaddedColumns
+
+        A = Hcat(_BandedMatrix(randn(3,10), 10, 1,1), Hcat(randn(10,2), Zeros(10,10)))
+        @test MemoryLayout(A) isa PaddedRows
     end
 
     @testset "BroadcastBanded * Padded" begin
