@@ -7,9 +7,14 @@ using BandedMatrices
 using LazyArrays: paddeddata
 import BlockArrays: blockcolsupport, blockrowsupport
 import LazyArrays: arguments, colsupport, rowsupport,
-                    PaddedLayout, paddeddata, ApplyLayout, LazyArrayStyle
-import LazyBandedMatrices: BroadcastBlockBandedLayout, BroadcastBandedBlockBandedLayout,
-                    ApplyBlockBandedLayout, ApplyBandedBlockBandedLayout
+                    PaddedLayout, PaddedColumns, paddeddata, ApplyLayout, LazyArrayStyle
+
+
+LazyArraysBlockBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBlockBandedMatricesExt)
+ApplyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.ApplyBlockBandedLayout
+ApplyBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.ApplyBandedBlockBandedLayout
+BroadcastBlockBandedLayout = LazyArraysBlockBandedMatricesExt.BroadcastBlockBandedLayout
+BroadcastBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.BroadcastBandedBlockBandedLayout
 
 
 @testset "Block" begin
@@ -18,8 +23,8 @@ import LazyBandedMatrices: BroadcastBlockBandedLayout, BroadcastBandedBlockBande
         D = mortar(Diagonal([randn(k,k) for k=1:4]))
         c = Vcat(randn(3), Zeros(7))
         b = PseudoBlockVector(c, (axes(A,2),))
-        @test MemoryLayout(A*b) isa PaddedLayout
-        @test MemoryLayout(A*c) isa PaddedLayout
+        @test MemoryLayout(A*b) isa PaddedColumns
+        @test MemoryLayout(A*c) isa PaddedColumns
         @test A*b ≈ A*c ≈ Matrix(A)*Vector(b)
         @test D*b ≈ D*c ≈ Matrix(D)*Vector(b)
     end

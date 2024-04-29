@@ -7,13 +7,15 @@ using BlockBandedMatrices.BandedMatrices
 using LazyArrays.LinearAlgebra
 using LazyArrays.ArrayLayouts
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout, conjlayout,
-                PaddedLayout, _islazy, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
+                PaddedLayout, PaddedColumns, PaddedRows, paddeddata,
+                _islazy, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
                 BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
-                AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout
+                AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
+                _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments
 import BlockBandedMatrices: AbstractBlockBandedLayout, AbstractBandedBlockBandedLayout, blockbandwidths, subblockbandwidths,
                             bandedblockbandedbroadcaststyle, bandedblockbandedcolumns, BandedBlockBandedColumns, BandedBlockBandedRows,
                             BlockRange1, Block1, BlockIndexRange1, BlockBandedColumns, BlockBandedRows
-import BlockBandedMatrices.BlockArrays: BlockLayout, AbstractBlockLayout, BlockSlice
+import BlockBandedMatrices.BlockArrays: BlockLayout, AbstractBlockLayout, BlockSlice, blockcolsupport
 import BlockBandedMatrices.BandedMatrices: resize
 import Base: similar, copy
 import ArrayLayouts: materialize!, MatMulVecAdd, sublayout, colsupport, rowsupport, _copyto!, mulreduce, _inv,
@@ -44,7 +46,7 @@ hermitianlayout(_, ::LazyBandedBlockBandedLayouts) = LazyBandedBlockBandedLayout
 
 _block_last(b::Block) = b
 _block_last(b::AbstractVector{<:Block}) = last(b)
-function similar(Ml::MulAdd{<:BlockBandedLayouts,<:PaddedLayout}, ::Type{T}, _) where T
+function similar(Ml::MulAdd{<:BlockBandedLayouts,<:PaddedColumns}, ::Type{T}, _) where T
     A,x = Ml.A,Ml.B
     xf = paddeddata(x)
     ax1,ax2 = axes(A)
@@ -57,7 +59,7 @@ function similar(Ml::MulAdd{<:BlockBandedLayouts,<:PaddedLayout}, ::Type{T}, _) 
     PseudoBlockVector(c, (ax1,))
 end
 
-function materialize!(M::MatMulVecAdd{<:BlockBandedLayouts,<:PaddedLayout,<:PaddedLayout})
+function materialize!(M::MatMulVecAdd{<:BlockBandedLayouts,<:PaddedColumns,<:PaddedColumns})
     α,A,x,β,y = M.α,M.A,M.B,M.β,M.C
     length(y) == size(A,1) || throw(DimensionMismatch())
     length(x) == size(A,2) || throw(DimensionMismatch())
