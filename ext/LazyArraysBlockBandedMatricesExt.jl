@@ -11,18 +11,21 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout,
                 _islazy, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
                 BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
                 AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
-                _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments
+                _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments,
+                CachedArray, _broadcast_sub_arguments
 import BlockBandedMatrices: AbstractBlockBandedLayout, AbstractBandedBlockBandedLayout, blockbandwidths, subblockbandwidths,
                             bandedblockbandedbroadcaststyle, bandedblockbandedcolumns, BandedBlockBandedColumns, BandedBlockBandedRows,
-                            BlockRange1, Block1, BlockIndexRange1, BlockBandedColumns, BlockBandedRows
-import BlockBandedMatrices.BlockArrays: BlockLayout, AbstractBlockLayout, BlockSlice, blockcolsupport
-import BlockBandedMatrices.BandedMatrices: resize
-import Base: similar, copy
+                            BlockRange1, Block1, BlockIndexRange1, BlockBandedColumns, BlockBandedRows, BandedBlockBandedLayout
+import BlockBandedMatrices.BlockArrays: BlockLayout, AbstractBlockLayout, BlockSlice, blockcolsupport, blockrowsupport
+import BlockBandedMatrices.BandedMatrices: resize, BandedLayout
+import Base: similar, copy, broadcasted
 import ArrayLayouts: materialize!, MatMulVecAdd, sublayout, colsupport, rowsupport, _copyto!, mulreduce, _inv,
                         OnesLayout, AbstractFillLayout
 
 LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
 LazyBandedLayout = LazyArraysBandedMatricesExt.LazyBandedLayout
+_mulbanded_copyto! = LazyArraysBandedMatricesExt._mulbanded_copyto!
+
 
 abstract type AbstractLazyBlockBandedLayout <: AbstractBlockBandedLayout end
 abstract type AbstractLazyBandedBlockBandedLayout <: AbstractBandedBlockBandedLayout end

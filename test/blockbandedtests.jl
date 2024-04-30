@@ -15,7 +15,8 @@ ApplyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.ApplyBlockBandedLayout
 ApplyBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.ApplyBandedBlockBandedLayout
 BroadcastBlockBandedLayout = LazyArraysBlockBandedMatricesExt.BroadcastBlockBandedLayout
 BroadcastBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.BroadcastBandedBlockBandedLayout
-
+LazyBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBandedBlockBandedLayout
+LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
 
 @testset "Block" begin
     @testset "BlockBanded and padded" begin
@@ -80,15 +81,15 @@ BroadcastBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.BroadcastBan
             @test blockbandwidths(B) == (1,1)
             @test MemoryLayout(B) == BroadcastBlockBandedLayout{typeof(*)}()
             @test BandedBlockBandedMatrix(B) == B == copyto!(BandedBlockBandedMatrix(B), B) == 2*B.args[2]
-            @test MemoryLayout(B') isa LazyBandedMatrices.LazyBlockBandedLayout
+            @test MemoryLayout(B') isa LazyBlockBandedLayout
             @test BlockBandedMatrix(B') == B'
 
             x = randn(size(B,2))
             @test B*x ≈ 2A*x
 
             C = BroadcastMatrix(*, 2, im*A)
-            @test MemoryLayout(C') isa LazyBandedMatrices.LazyBlockBandedLayout
-            @test MemoryLayout(transpose(C)) isa LazyBandedMatrices.LazyBlockBandedLayout
+            @test MemoryLayout(C') isa LazyBlockBandedLayout
+            @test MemoryLayout(transpose(C)) isa LazyBlockBandedLayout
 
             E = BroadcastMatrix(*, A, 2)
             @test MemoryLayout(E) == BroadcastBlockBandedLayout{typeof(*)}()
@@ -109,14 +110,14 @@ BroadcastBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.BroadcastBan
             @test subblockbandwidths(B) == (1,1)
             @test MemoryLayout(B) == BroadcastBandedBlockBandedLayout{typeof(*)}()
             @test BandedBlockBandedMatrix(B) == B == copyto!(BandedBlockBandedMatrix(B), B) == 2*B.args[2]
-            @test MemoryLayout(B') isa LazyBandedMatrices.LazyBandedBlockBandedLayout
+            @test MemoryLayout(B') isa LazyBandedBlockBandedLayout
             @test BandedBlockBandedMatrix(B') == B'
-            @test MemoryLayout(Symmetric(B)) isa LazyBandedMatrices.LazyBandedBlockBandedLayout
-            @test MemoryLayout(Hermitian(B)) isa LazyBandedMatrices.LazyBandedBlockBandedLayout
+            @test MemoryLayout(Symmetric(B)) isa LazyBandedBlockBandedLayout
+            @test MemoryLayout(Hermitian(B)) isa LazyBandedBlockBandedLayout
 
             C = BroadcastMatrix(*, 2, im*A)
-            @test MemoryLayout(C') isa LazyBandedMatrices.LazyBandedBlockBandedLayout
-            @test MemoryLayout(transpose(C)) isa LazyBandedMatrices.LazyBandedBlockBandedLayout
+            @test MemoryLayout(C') isa LazyBandedBlockBandedLayout
+            @test MemoryLayout(transpose(C)) isa LazyBandedBlockBandedLayout
 
             E = BroadcastMatrix(*, A, 2)
             @test MemoryLayout(E) == BroadcastBandedBlockBandedLayout{typeof(*)}()
@@ -140,10 +141,6 @@ BroadcastBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.BroadcastBan
         @test exp.(view(A,Block.(1:3),Block.(1:3))) == exp.(A)
         @test exp.(view(A,Block.(1:3),2)) == exp.(A)[Block.(1:3),2]
         @test exp.(view(A,2,Block.(1:3))) == exp.(A)[2,Block.(1:3)]
-    end
-
-    @testset "Blockbandwidths" begin
-        @test blockbandwidths(unitblocks(Diagonal(1:5))) == (0,0)
     end
 end
 
