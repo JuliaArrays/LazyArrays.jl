@@ -385,9 +385,9 @@ end
 
 ##
 # special for unitblocks
-blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedUnitRange{<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
-blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Diagonal,<:NTuple{2,BlockedUnitRange{<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
-subblockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedUnitRange{<:AbstractUnitRange{Int}}}}) = (0,0)
+blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
+blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Diagonal,<:NTuple{2,BlockedOneTo{<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
+subblockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{<:AbstractUnitRange{Int}}}}) = (0,0)
 
 
 end

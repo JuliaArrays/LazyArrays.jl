@@ -97,9 +97,9 @@ function sub_materialize(::AbstractPaddedLayout, V::AbstractMatrix{T}, ::Tuple{A
 end
 
 
-BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{BlockSlice{<:Any,<:BlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
-BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{BlockSlice{<:Any,<:BlockedUnitRange},BlockSlice{<:Any,<:BlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
-BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{Any,BlockSlice{<:Any,<:BlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
+BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{BlockSlice{<:Any,<:AbstractBlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
+BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{BlockSlice{<:Any,<:AbstractBlockedUnitRange},BlockSlice{<:Any,<:AbstractBlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
+BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{Any,BlockSlice{<:Any,<:AbstractBlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
 
 function getindex(A::ApplyMatrix{<:Any,typeof(*)}, kr::BlockRange{1}, jr::BlockRange{1})
     args = A.args
@@ -157,10 +157,6 @@ Base.in(K::Block, B::BroadcastVector{<:Block,Type{Block}}) = Int(K) in B.args[1]
 ###
 # Concat
 ###
-
-sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractVector, ::Tuple{<:BlockedUnitRange}) = blockvcat(sub_materialize.(arguments(lay, V))...)
-sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, ::Tuple{<:BlockedUnitRange,<:BlockedUnitRange}) = blockvcat(sub_materialize.(arguments(lay, V))...)
-sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, ::Tuple{<:BlockedUnitRange,<:AbstractUnitRange}) = blockvcat(sub_materialize.(arguments(lay, V))...)
 
 LazyArrays._vcat_sub_arguments(lay::ApplyLayout{typeof(vcat)}, A, V, kr::BlockSlice{<:BlockRange{1}}) =
     arguments(lay, A)[Int.(kr.block)]
