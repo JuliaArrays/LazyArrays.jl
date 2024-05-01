@@ -12,7 +12,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout,
                 BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
                 AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
                 _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments,
-                CachedArray, _broadcast_sub_arguments
+                CachedArray, _broadcast_sub_arguments, simplify
 import BlockBandedMatrices: AbstractBlockBandedLayout, AbstractBandedBlockBandedLayout, blockbandwidths, subblockbandwidths,
                             bandedblockbandedbroadcaststyle, bandedblockbandedcolumns, BandedBlockBandedColumns, BandedBlockBandedRows,
                             BlockRange1, Block1, BlockIndexRange1, BlockBandedColumns, BlockBandedRows, BandedBlockBandedLayout
@@ -305,6 +305,7 @@ copy(M::Mul{<:LazyBlockBandedLayouts, <:AbstractLazyLayout}) = simplify(M)
 copy(M::Mul{<:AbstractLazyLayout, <:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout}) = simplify(M)
 copy(M::Mul{<:DiagonalLayout, <:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:LazyBlockBandedLayouts, <:Union{PaddedColumns,AbstractStridedLayout}}) = copy(mulreduce(M))
 
 
 copy(M::Mul{<:Union{ZerosLayout,DualLayout{ZerosLayout}}, <:LazyBlockBandedLayouts}) = copy(mulreduce(M))
@@ -385,9 +386,9 @@ end
 
 ##
 # special for unitblocks
-blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
-blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Diagonal,<:NTuple{2,BlockedOneTo{<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
-subblockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{<:AbstractUnitRange{Int}}}}) = (0,0)
+blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
+blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Diagonal,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
+subblockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = (0,0)
 
 
 end

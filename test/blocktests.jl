@@ -84,5 +84,10 @@ using BlockArrays: blockcolsupport, blockrowsupport
         @test paddeddata(p) == [1:5; 0]
         @test blocksize(paddeddata(p),1) == 3
     end
+
+    @testset "blockedrange" begin
+        b = blockedrange(SVector{2}([1,2]))
+        @test b .+ b == 2:2:6
+    end
 end
 end
