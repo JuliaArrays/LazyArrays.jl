@@ -667,26 +667,52 @@ function _vcat_cumsum(x...)
 end
 
 @inline cumsum(V::Vcat{<:Any,1}) = ApplyVector(vcat,_vcat_cumsum(V.args...)...)
+# For simplicity we just use accumulate
+@inline accumulate(::typeof(+), V::Vcat{<:Any,1}) = cumsum(V)
 
 ###
 # cumsum(Vcat(::Number, ::Fill))
 # special override. Used with BlockArrays
 ###
 
-@inline function cumsum(v::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
+@inline function cumsum(v::Vcat{T,1,<:Tuple{Number,AbstractFill}}) where T
+    V = promote_op(add_sum, T, T)
     a,b = v.args
-    FillArrays.steprangelen(a, getindex_value(b), length(b)+1)
+    FillArrays.steprangelen(convert(V, a), getindex_value(b), length(b)+1)
 end
 
 @inline function cumsum(v::Vcat{T,1,<:Tuple{Number,Zeros}}) where T
     a,b = v.args
-    Fill(convert(T,a), length(b)+1)
+    V = promote_op(add_sum, T, T)
+    Fill(convert(V,a), length(b)+1)
 end
 
 @inline function cumsum(v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
     a,b = v.args
-    convert(T,a) .+ (0:length(b))
+    V = promote_op(add_sum, T, T)
+    convert(V,a) .+ range(zero(V); length=length(b))
 end
+
+for op in (:+, :-)
+    @eval @inline function accumulate(::typeof($op), v::Vcat{T,1,<:Tuple{Number,AbstractFill}}) where T
+        V = promote_op(add_sum, T, T)
+        a,b = v.args
+        FillArrays.steprangelen(convert(V, a), getindex_value(b), length(b)+1)
+    end
+end
+
+@inline function accumulate(::typeof(+), v::Vcat{T,1,<:Tuple{Number,Zeros}}) where T
+    a,b = v.args
+    V = promote_op(+, T, T)
+    Fill(convert(V,a), length(b)+1)
+end
+
+@inline function accumulate(::typeof(+), v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
+    a,b = v.args
+    V = promote_op(+, T, T)
+    convert(V,a) .+ range(zero(V); length=length(b))
+end
+
 
 
 _vcat_diff(x::Number) = ()

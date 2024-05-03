@@ -8,7 +8,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
                    LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout,
                    AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
-                   arguments, call, applybroadcaststyle, simplify, simplifiable, _islazy, lazymaterialize
+                   arguments, call, applybroadcaststyle, simplify, simplifiable, _islazy, lazymaterialize, _broadcast_mul_mul
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
@@ -334,7 +334,17 @@ for op in (:hcat, :vcat)
     @eval sublayout(::ApplyBandedLayout{typeof($op)}, ::Type{<:NTuple{2,AbstractUnitRange}}) = ApplyBandedLayout{typeof($op)}()
 end
 
-# applylayout(::Type{typeof(hvcat)}, _, ::ScalarOrBandedLayouts...)= ApplyBandedLayout{typeof(hvcat)}()
+
+# some special cases of hvcat we can recognise are banded
+
+applylayout(::Type{typeof(hvcat)}, _, 
+            ::ScalarLayout, ::DualLayout{<:PaddedRows},
+            ::PaddedColumns, ::AbstractBandedLayout) = ApplyBandedLayout{typeof(hvcat)}()
+
+applylayout(::Type{typeof(hvcat)}, _, 
+            ::ScalarLayout, ::ScalarLayout, ::DualLayout{<:PaddedRows},
+            ::ScalarLayout, ::ScalarLayout, ::DualLayout{<:PaddedRows},
+            ::PaddedColumns, ::PaddedColumns, ::AbstractBandedLayout) = ApplyBandedLayout{typeof(hvcat)}()
 
 
 # cumsum for tuples
@@ -509,6 +519,7 @@ copy(M::Mul{<:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:Any, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts, <:AbstractLazyLayout}) = simplify(M)
 copy(M::Mul{<:AbstractLazyLayout, <:BandedLazyLayouts}) = simplify(M)
+copy(M::Mul{BroadcastLayout{typeof(*)}, <:BandedLazyLayouts}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
 copy(M::Mul{<:BandedLazyLayouts, <:DiagonalLayout}) = simplify(M)
 copy(M::Mul{<:DiagonalLayout, <:BandedLazyLayouts}) = simplify(M)
 
@@ -579,6 +590,10 @@ copy(M::Mul{<:BroadcastBandedLayout, <:Union{AbstractPaddedLayout,AbstractStride
 copy(M::Mul{<:AbstractInvLayout{<:BandedLazyLayouts}, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 copy(M::Mul{<:BandedLazyLayouts, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
 copy(M::Mul{<:Union{AbstractPaddedLayout,AbstractStridedLayout}, <:BandedLazyLayouts}) = copy(mulreduce(M))
+
+simplifiable(M::Mul{<:AbstractInvLayout{<:BandedLazyLayouts}, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = Val(true)
+simplifiable(M::Mul{<:Union{AbstractPaddedLayout,AbstractStridedLayout}, <:BandedLazyLayouts}) = Val(true)
+simplifiable(M::Mul{<:BandedLazyLayouts, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = Val(true)
 simplifiable(::Mul{<:BroadcastBandedLayout, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = Val(true)
 
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))

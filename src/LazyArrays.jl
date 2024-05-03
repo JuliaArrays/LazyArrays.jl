@@ -15,7 +15,7 @@ import Base: *, +, -, /, <, ==, >, \, ≤, ≥, (:), @_gc_preserve_begin, @_gc_p
              real, replace_in_print_matrix, replace_with_centered_mark, reverse, searchsorted, searchsortedfirst,
              searchsortedlast, sec, sech, setindex, setindex!, show, similar, sin, sinh, size, sort, sqrt, strides, sum,
              tail, tan, tanh, transpose, tuple_type_tail, union, unsafe_convert, vec, zero, fill!, require_one_based_indexing,
-             oneto
+             oneto, add_sum, promote_op
 
 import Base.Broadcast: AbstractArrayStyle, BroadcastStyle, Broadcasted, DefaultArrayStyle, broadcasted, combine_eltypes,
                        instantiate

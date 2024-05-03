@@ -17,7 +17,7 @@ import BlockBandedMatrices: AbstractBlockBandedLayout, AbstractBandedBlockBanded
                             bandedblockbandedbroadcaststyle, bandedblockbandedcolumns, BandedBlockBandedColumns, BandedBlockBandedRows,
                             BlockRange1, Block1, BlockIndexRange1, BlockBandedColumns, BlockBandedRows, BandedBlockBandedLayout
 import BlockBandedMatrices.BlockArrays: BlockLayout, AbstractBlockLayout, BlockSlice, blockcolsupport, blockrowsupport
-import BlockBandedMatrices.BandedMatrices: resize, BandedLayout
+import BlockBandedMatrices.BandedMatrices: resize, BandedLayout, _copy_oftype
 import Base: similar, copy, broadcasted
 import ArrayLayouts: materialize!, MatMulVecAdd, sublayout, colsupport, rowsupport, _copyto!, mulreduce, _inv,
                         OnesLayout, AbstractFillLayout
