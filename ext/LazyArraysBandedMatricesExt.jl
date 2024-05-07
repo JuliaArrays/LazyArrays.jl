@@ -197,15 +197,27 @@ isbanded(M::MulMatrix) = isbanded(Applied(M))
 ###
 
 struct ApplyBandedLayout{F} <: AbstractLazyBandedLayout end
+struct BroadcastBandedLayout{F} <: AbstractLazyBandedLayout end
 
-arguments(::ApplyBandedLayout{F}, A) where F = arguments(ApplyLayout{F}(), A)
-sublayout(::ApplyBandedLayout{F}, A) where F = sublayout(ApplyLayout{F}(), A)
 
-LazyArrays._mul_arguments(::ApplyBandedLayout{F}, A) where F = LazyArrays._mul_arguments(ApplyLayout{F}(), A)
+bandedlayout(::AbstractLazyLayout) = LazyBandedLayout()
+bandedlayout(::ApplyLayout{F}) where F = ApplyBandedLayout{F}()
+bandedlayout(::BroadcastLayout{F}) where F = BroadcastBandedLayout{F}()
+nonbandedlayout(::AbstractLazyBandedLayout) = LazyLayout()
+nonbandedlayout(::ApplyBandedLayout{F}) where F = ApplyLayout{F}()
+nonbandedlayout(::BroadcastBandedLayout{F}) where F = BroadcastLayout{F}()
+
+arguments(lay::ApplyBandedLayout, A) = arguments(nonbandedlayout(lay), A)
+
+
+sublayout(lay::ApplyBandedLayout, ind::Type{<:NTuple{2,AbstractUnitRange}}) = bandedlayout(sublayout(nonbandedlayout(lay), ind))
+
+LazyArrays._mul_arguments(lay::ApplyBandedLayout, A) = LazyArrays._mul_arguments(nonbandedlayout(lay), A)
 @inline _islazy(::ApplyBandedLayout) = Val(true)
 
 
 applylayout(::Type{typeof(*)}, ::BandedLayouts...) = ApplyBandedLayout{typeof(*)}()
+applylayout(::Type{typeof(*)}, ::PaddedRows, ::BandedLayouts...) = PaddedRows{ApplyLayout{typeof(*)}}()
 
 applybroadcaststyle(::Type{<:AbstractMatrix}, ::ApplyBandedLayout) = LazyArrayStyle{2}()
 
@@ -218,7 +230,6 @@ applybroadcaststyle(::Type{<:AbstractMatrix}, ::ApplyBandedLayout) = LazyArraySt
 
 bandwidths(M::BroadcastMatrix) = bandwidths(broadcasted(M))
 isbanded(M::BroadcastMatrix) = all(isfinite, bandwidths(M))
-struct BroadcastBandedLayout{F} <: AbstractLazyBandedLayout end
 
 BroadcastLayout(::BroadcastBandedLayout{F}) where F = BroadcastLayout{F}()
 
@@ -304,8 +315,8 @@ arguments(::BroadcastBandedLayout{F}, V::SubArray) where F = _broadcast_sub_argu
 call(b::BroadcastBandedLayout, a) = call(BroadcastLayout(b), a)
 call(b::BroadcastBandedLayout, a::SubArray) = call(BroadcastLayout(b), a)
 
-sublayout(M::ApplyBandedLayout{typeof(*)}, ::Type{<:NTuple{2,AbstractUnitRange}}) = M
-sublayout(M::BroadcastBandedLayout, ::Type{<:NTuple{2,AbstractUnitRange}}) = M
+sublayout(lay::ApplyBandedLayout{typeof(*)}, ind::Type{<:NTuple{2,AbstractUnitRange}}) = bandedlayout(sublayout(nonbandedlayout(lay), ind))
+sublayout(lay::BroadcastBandedLayout, ind::Type{<:NTuple{2,AbstractUnitRange}}) = bandedlayout(sublayout(nonbandedlayout(lay), ind))
 
 transposelayout(b::BroadcastBandedLayout) = b
 arguments(b::BroadcastBandedLayout, A::AdjOrTrans) = arguments(BroadcastLayout(b), A)
@@ -325,6 +336,7 @@ applylayout(::Type{typeof(hcat)}, ::Lay, ::ZerosLayout) where Lay<:BandedLayouts
 
 applylayout(::Type{typeof(vcat)}, ::BandedLayouts, ::PaddedColumns) = PaddedColumns{ApplyLayout{typeof(vcat)}}()
 applylayout(::Type{typeof(hcat)}, ::BandedLayouts, ::PaddedRows) = PaddedRows{ApplyLayout{typeof(hcat)}}()
+applylayout(::Type{typeof(hcat)}, ::PaddedColumns, ::BandedLayouts) = ApplyBandedLayout{typeof(hcat)}()
 
 applylayout(::Type{typeof(vcat)}, ::ZerosLayout, ::Lay) where Lay<:BandedLayouts = ApplyBandedLayout{typeof(vcat)}()
 applylayout(::Type{typeof(hcat)}, ::ZerosLayout, ::Lay) where Lay<:BandedLayouts = ApplyBandedLayout{typeof(hcat)}()
@@ -554,7 +566,6 @@ copy(M::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = simplify(M)
 
 
 copy(L::Ldiv{<:BandedLazyLayouts, <:BandedLazyLayouts}) = lazymaterialize(\, L.A, L.B)
-
 
 # TODO: this is type piracy
 function colsupport(lay::ApplyLayout{typeof(\)}, L, j)
