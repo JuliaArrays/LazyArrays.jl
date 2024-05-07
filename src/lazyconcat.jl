@@ -690,7 +690,7 @@ end
 @inline function cumsum(v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
     a,b = v.args
     V = promote_op(add_sum, T, T)
-    convert(V,a) .+ range(zero(V); length=length(b))
+    convert(V,a) .+ range(zero(V); length=length(b)+1)
 end
 
 for op in (:+, :-)

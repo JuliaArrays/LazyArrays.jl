@@ -211,6 +211,8 @@ arguments(lay::ApplyBandedLayout, A) = arguments(nonbandedlayout(lay), A)
 
 
 sublayout(lay::ApplyBandedLayout, ind::Type{<:NTuple{2,AbstractUnitRange}}) = bandedlayout(sublayout(nonbandedlayout(lay), ind))
+sublayout(lay::ApplyBandedLayout, ind) = sublayout(nonbandedlayout(lay), ind)
+
 
 LazyArrays._mul_arguments(lay::ApplyBandedLayout, A) = LazyArrays._mul_arguments(nonbandedlayout(lay), A)
 @inline _islazy(::ApplyBandedLayout) = Val(true)
@@ -349,14 +351,17 @@ end
 
 # some special cases of hvcat we can recognise are banded
 
-applylayout(::Type{typeof(hvcat)}, _, 
-            ::ScalarLayout, ::DualLayout{<:PaddedRows},
-            ::PaddedColumns, ::AbstractBandedLayout) = ApplyBandedLayout{typeof(hvcat)}()
+const DualPaddedOrZerosRow = DualLayout{<:Union{PaddedRows,ZerosLayout}}
+const DualPaddedOrZerosColumn = Union{PaddedColumns,ZerosLayout}
 
 applylayout(::Type{typeof(hvcat)}, _, 
-            ::ScalarLayout, ::ScalarLayout, ::DualLayout{<:PaddedRows},
-            ::ScalarLayout, ::ScalarLayout, ::DualLayout{<:PaddedRows},
-            ::PaddedColumns, ::PaddedColumns, ::AbstractBandedLayout) = ApplyBandedLayout{typeof(hvcat)}()
+            ::ScalarLayout, ::DualPaddedOrZerosRow,
+            ::DualPaddedOrZerosColumn, ::AbstractBandedLayout) = ApplyBandedLayout{typeof(hvcat)}()
+
+applylayout(::Type{typeof(hvcat)}, _, 
+            ::ScalarLayout, ::ScalarLayout, ::DualPaddedOrZerosRow,
+            ::ScalarLayout, ::ScalarLayout, ::DualPaddedOrZerosRow,
+            ::DualPaddedOrZerosColumn, ::DualPaddedOrZerosColumn, ::AbstractBandedLayout) = ApplyBandedLayout{typeof(hvcat)}()
 
 
 # cumsum for tuples

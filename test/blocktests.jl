@@ -1,5 +1,5 @@
 module LazyArraysBlockArraysTest
-using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, Test
+using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, StaticArrays, Test
 using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata
 using BlockArrays: blockcolsupport, blockrowsupport
 
