@@ -23,7 +23,7 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         A = BlockBandedMatrix{Float64}(undef, 1:4, 1:4, (1,0)); A.data .= randn.();
         D = mortar(Diagonal([randn(k,k) for k=1:4]))
         c = Vcat(randn(3), Zeros(7))
-        b = PseudoBlockVector(c, (axes(A,2),))
+        b = BlockedVector(c, (axes(A,2),))
         @test MemoryLayout(A*b) isa PaddedColumns
         @test MemoryLayout(A*c) isa PaddedColumns
         @test A*b ≈ A*c ≈ Matrix(A)*Vector(b)
@@ -68,10 +68,10 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         @test M[Block(2)[1:2],Block(2)] isa BandedMatrix
         @test M[Block(2),Block(2)[1:2]] isa BandedMatrix
         @test M[Block.(1:2), Block.(2:3)] isa BandedBlockBandedMatrix
-        @test M[Block(2),Block.(2:3)] isa PseudoBlockArray
-        @test M[Block.(2:3),Block(2)] isa PseudoBlockArray
-        @test M[Block.(2:3),Block(2)[1:2]] isa PseudoBlockArray
-        @test M[Block(2)[1:2],Block.(2:3)] isa PseudoBlockArray
+        @test M[Block(2),Block.(2:3)] isa BlockedArray
+        @test M[Block.(2:3),Block(2)] isa BlockedArray
+        @test M[Block.(2:3),Block(2)[1:2]] isa BlockedArray
+        @test M[Block(2)[1:2],Block.(2:3)] isa BlockedArray
     end
 
     @testset "BroadcastMatrix" begin
@@ -95,7 +95,7 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
             @test MemoryLayout(E) == BroadcastBlockBandedLayout{typeof(*)}()
 
 
-            D = Diagonal(PseudoBlockArray(randn(6),1:3))
+            D = Diagonal(BlockedArray(randn(6),1:3))
             @test MemoryLayout(BroadcastMatrix(*, A, D)) isa BroadcastBlockBandedLayout{typeof(*)}
             @test MemoryLayout(BroadcastMatrix(*, D, A)) isa BroadcastBlockBandedLayout{typeof(*)}
 
@@ -122,7 +122,7 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
             E = BroadcastMatrix(*, A, 2)
             @test MemoryLayout(E) == BroadcastBandedBlockBandedLayout{typeof(*)}()
 
-            D = Diagonal(PseudoBlockArray(randn(6),1:3))
+            D = Diagonal(BlockedArray(randn(6),1:3))
             @test MemoryLayout(BroadcastMatrix(*, A, D)) isa BroadcastBandedBlockBandedLayout{typeof(*)}
             @test MemoryLayout(BroadcastMatrix(*, D, A)) isa BroadcastBandedBlockBandedLayout{typeof(*)}
 

@@ -59,7 +59,7 @@ function similar(Ml::MulAdd{<:BlockBandedLayouts,<:PaddedColumns}, ::Type{T}, _)
     m = last(ax1[M]) # number of non-zero entries
     c = cache(Zeros{T}(length(ax1)))
     resizedata!(c, m)
-    PseudoBlockVector(c, (ax1,))
+    BlockedVector(c, (ax1,))
 end
 
 function materialize!(M::MatMulVecAdd{<:BlockBandedLayouts,<:PaddedColumns,<:PaddedColumns})
@@ -386,9 +386,9 @@ end
 
 ##
 # special for unitblocks
-blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
-blockbandwidths(A::PseudoBlockMatrix{<:Any,<:Diagonal,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
-subblockbandwidths(A::PseudoBlockMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = (0,0)
+blockbandwidths(A::BlockedMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
+blockbandwidths(A::BlockedMatrix{<:Any,<:Diagonal,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
+subblockbandwidths(A::BlockedMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = (0,0)
 
 
 end
