@@ -32,48 +32,48 @@ using BlockArrays: blockcolsupport, blockrowsupport
         # not clear why allocatinos so high: all allocations are coming from checking
         # axes
 
-        u = PseudoBlockArray{Float64}(undef, collect(1:N))
+        u = BlockedArray{Float64}(undef, collect(1:N))
         @test copyto!(u, bc) == (k .* (k .- n .- a) ./ (2k .+ (b+c-1)))
         @test @allocated(copyto!(u, bc)) ≤ 1000
     end
 
     @testset "padded" begin
         c = Vcat(randn(3), Zeros(7))
-        b = PseudoBlockVector(c, 1:4)
+        b = BlockedVector(c, 1:4)
         @test MemoryLayout(b) isa PaddedColumns
-        @test b[Block.(2:3)] isa PseudoBlockVector{Float64,<:ApplyArray}
+        @test b[Block.(2:3)] isa BlockedVector{Float64,<:ApplyArray}
         @test MemoryLayout(b[Block.(2:3)]) isa PaddedColumns
         @test b[Block.(2:3)] == b[2:6] 
         
-        c = PseudoBlockVector(Vcat(1, Zeros(5)), 1:3)
+        c = BlockedVector(Vcat(1, Zeros(5)), 1:3)
         @test paddeddata(c) == [1]
-        @test paddeddata(c) isa PseudoBlockVector
+        @test paddeddata(c) isa BlockedVector
         @test blockcolsupport(c) == Block.(1:1)
-        C = PseudoBlockArray(Vcat(randn(2,3), Zeros(4,3)), 1:3, [1,2])
+        C = BlockedArray(Vcat(randn(2,3), Zeros(4,3)), 1:3, [1,2])
         @test blockcolsupport(C) == Block.(1:2)
         @test blockrowsupport(C) == Block.(1:2)
         
         @test C[Block.(1:2),1:3] == C[Block.(1:2),Block.(1:2)] == C[1:3,Block.(1:2)] == C[1:3,1:3]
         
-        H = PseudoBlockArray(Hcat(1, Zeros(1,5)), [1], 1:3)
+        H = BlockedArray(Hcat(1, Zeros(1,5)), [1], 1:3)
         @test MemoryLayout(H) isa PaddedRows
         @test paddeddata(H) == Ones(1,1)
         
-        b = PseudoBlockArray(cache(Zeros(55)),1:10);
+        b = BlockedArray(cache(Zeros(55)),1:10);
         b[10] = 5;
         @test MemoryLayout(b) isa PaddedColumns{DenseColumnMajor}
-        @test paddeddata(b) isa PseudoBlockVector
+        @test paddeddata(b) isa BlockedVector
         @test paddeddata(b) == [zeros(9); 5]
     end
 
     @testset "Lazy block" begin
-        b = PseudoBlockVector(randn(5),[2,3])
+        b = BlockedVector(randn(5),[2,3])
         c = BroadcastVector(exp,1:5)
         @test c .* b isa BroadcastVector
         @test b .* c isa BroadcastVector
         @test (c .* b)[Block(1)] == c[1:2] .* b[Block(1)]
 
-        b = PseudoBlockVector(randn(5),[2,3])
+        b = BlockedVector(randn(5),[2,3])
         a = ApplyArray(+, b, b)
 
         @test exp.(view(a,Block.(1:2))) == exp.(a)

@@ -40,37 +40,37 @@ end
 _block_paddeddata(C, data::Union{Number,AbstractVector}, n) = Vcat(data, Zeros{eltype(data)}(n-length(data)))
 _block_paddeddata(C, data::Union{Number,AbstractMatrix}, n, m) = PaddedArray(data, n, m)
 
-function resizedata!(P::PseudoBlockVector, n::Integer)
+function resizedata!(P::BlockedVector, n::Integer)
     ax = axes(P,1)
     N = findblock(ax,n)
     resizedata!(P.blocks, last(ax[N]))
     P
 end
 
-function paddeddata(P::PseudoBlockVector)
+function paddeddata(P::BlockedVector)
     C = P.blocks
     ax = axes(P,1)
     data = paddeddata(C)
     N = findblock(ax,max(length(data),1))
     n = last(ax[N])
-    PseudoBlockVector(_block_paddeddata(C, data, n), (ax[Block(1):N],))
+    BlockedVector(_block_paddeddata(C, data, n), (ax[Block(1):N],))
 end
 
 function paddeddata_axes((ax,)::Tuple{AbstractBlockedUnitRange}, A)
     data = A.args[2]
     N = findblock(ax,max(length(data),1))
     n = last(ax[N])
-    PseudoBlockVector(_block_paddeddata(nothing, data, n), (ax[Block(1):N],))
+    BlockedVector(_block_paddeddata(nothing, data, n), (ax[Block(1):N],))
 end
 
-function paddeddata(P::PseudoBlockMatrix)
+function paddeddata(P::BlockedMatrix)
     C = P.blocks
     ax,bx = axes(P)
     data = paddeddata(C)
     N = findblock(ax,max(size(data,1),1))
     M = findblock(bx,max(size(data,2),1))
     n,m = last(ax[N]),last(bx[M])
-    PseudoBlockArray(_block_paddeddata(C, data, n, m), (ax[Block(1):N],bx[Block(1):M]))
+    BlockedArray(_block_paddeddata(C, data, n, m), (ax[Block(1):N],bx[Block(1):M]))
 end
 
 blockcolsupport(::AbstractPaddedLayout, A, j) = Block.(OneTo(blocksize(paddeddata(A),1)))
@@ -78,7 +78,7 @@ blockrowsupport(::AbstractPaddedLayout, A, k) = Block.(OneTo(blocksize(paddeddat
 
 function sub_materialize(::PaddedColumns, v::AbstractVector{T}, ax::Tuple{AbstractBlockedUnitRange}) where T
     dat = paddeddata(v)
-    PseudoBlockVector(Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat))), ax)
+    BlockedVector(Vcat(sub_materialize(dat), Zeros{T}(length(v) - length(dat))), ax)
 end
 
 function sub_materialize(::AbstractPaddedLayout, V::AbstractMatrix{T}, ::Tuple{AbstractBlockedUnitRange,AbstractUnitRange}) where T
@@ -107,7 +107,7 @@ function getindex(A::ApplyMatrix{<:Any,typeof(*)}, kr::BlockRange{1}, jr::BlockR
     *(map(getindex, args, (kr, kjr...), (kjr..., jr))...)
 end
 
-call(lay::BroadcastLayout, a::PseudoBlockArray) = call(lay, a.blocks)
+call(lay::BroadcastLayout, a::BlockedArray) = call(lay, a.blocks)
 
 resizedata!(lay1, lay2, B::AbstractMatrix, N::Block{2}) = resizedata!(lay1, lay2, B, Block.(N.n)...)
 
@@ -131,17 +131,17 @@ end
 @inline getindex(A::AbstractCachedMatrix, kr::BlockRange{1}, jr::BlockRange{1}) = ArrayLayouts.layout_getindex(A, kr, jr)
 
 ###
-# PseudoBlockArray apply
+# BlockedArray apply
 ###
 
-arguments(LAY::MemoryLayout, A::PseudoBlockArray) = arguments(LAY, A.blocks)
+arguments(LAY::MemoryLayout, A::BlockedArray) = arguments(LAY, A.blocks)
 
 ###
 # work around bug in dat
 ###
 
-LazyArrays._lazy_getindex(dat::PseudoBlockArray, kr::UnitRange) = view(dat.blocks,kr)
-LazyArrays._lazy_getindex(dat::PseudoBlockArray, kr::OneTo) = view(dat.blocks,kr)
+LazyArrays._lazy_getindex(dat::BlockedArray, kr::UnitRange) = view(dat.blocks,kr)
+LazyArrays._lazy_getindex(dat::BlockedArray, kr::OneTo) = view(dat.blocks,kr)
 
 
 ##
