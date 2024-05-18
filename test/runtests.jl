@@ -460,4 +460,6 @@ end
     @test bc.args[2] == 3
 end
 
+
+include("blocktests.jl")
 include("bandedtests.jl")
