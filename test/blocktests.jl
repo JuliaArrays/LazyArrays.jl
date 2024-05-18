@@ -59,11 +59,21 @@ using BlockArrays: blockcolsupport, blockrowsupport
         @test MemoryLayout(H) isa PaddedRows
         @test paddeddata(H) == Ones(1,1)
         
-        b = BlockedArray(cache(Zeros(55)),1:10);
+        c = cache(Zeros(55));
+        c[2] = 3;
+        b = BlockedArray(c,1:10);
+        @test paddeddata(b) == [0;3;0]
+
         b[10] = 5;
         @test MemoryLayout(b) isa PaddedColumns{DenseColumnMajor}
         @test paddeddata(b) isa BlockedVector
-        @test paddeddata(b) == [zeros(9); 5]
+        @test paddeddata(b) == [0; 3; zeros(7); 5]
+
+        LazyArrays.resizedata!(b, 20);
+        @test length(paddeddata(b)) == 21
+        
+        LazyArrays.CachedArray(5, Zeros(6))
+        paddeddata(BlockedArray(Vcat(2, Zeros{Int}(3)), [2,2]))
     end
 
     @testset "Lazy block" begin
@@ -83,6 +93,17 @@ using BlockArrays: blockcolsupport, blockrowsupport
         p = PaddedArray(1:5, (blockedrange(1:4),))
         @test paddeddata(p) == [1:5; 0]
         @test blocksize(paddeddata(p),1) == 3
+    end
+
+    @testset "broadcaststyle" begin
+        r = blockedrange(Vcat(1,4:5))
+        @test Base.BroadcastStyle(typeof(r)) isa LazyArrayStyle{1}
+    end
+
+    @testset "Cached Block Matrix" begin
+        C = cache(BlockedArray(Vcat([1 2 3; 4 5 6], Ones(4,3)), 1:3, [1,2]))
+        @test C[Block(2,2)] == C[2:3,Block(2)] == [5 6; 1 1]
+        @test C[Block.(1:2), Block.(1:2)] == C[1:3,1:3]
     end
 end
 end

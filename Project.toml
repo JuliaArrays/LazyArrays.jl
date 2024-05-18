@@ -20,8 +20,8 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extensions]
 LazyArraysBandedMatricesExt = "BandedMatrices"
-LazyArraysStaticArraysExt = "StaticArrays"
 LazyArraysBlockArraysExt = "BlockArrays"
+LazyArraysStaticArraysExt = "StaticArrays"
 
 [compat]
 Aqua = "0.8"
