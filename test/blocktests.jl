@@ -114,6 +114,8 @@ using BlockArrays: blockcolsupport, blockrowsupport
         @test C[Block(2,2)] == C[2:3,Block(2)] ==  C[Block(2),2:3] == C[Block(2),Block(2)] == [5 6; 1 1]
         @test C[Block.(1:2), Block.(1:2)] == C[1:3,1:3]
         @test C[Block(2),2] == [5,1]
+        @test C[:,Block(2)] == C[Block.(1:3),Block(2)]
+        @test C[Block(2),:] == C[Block(2), Block.(1:2)]
     end
 
     @testset "subpadded" begin
@@ -124,10 +126,15 @@ using BlockArrays: blockcolsupport, blockrowsupport
     @testset "arguments vcat" begin
         a = BlockedArray(Vcat([1, 2, 3], Ones(3), [4,4]), [3,3,2])
         @test ApplyArray(view(a, Block.(1:2))) == [1:3; Ones(3)]
+        @test ApplyArray(view(a, Block.(2:3))) == [Ones(3); 4; 4]
         
         # TODO: fix assumption vcat matches with block
         a = BlockedArray(Vcat([1, 2, 3], Ones(3)), 1:3)
         @test_broken ApplyArray(view(a, Block.(1:2))) == 1:3
+
+        a = BlockedArray(Vcat(blockedrange(1:3), blockedrange(1:2)), [1:3; 1:2])
+        @test ApplyArray(view(a, Block.(1:2))) == 1:3
+        @test ApplyArray(view(a, Block.(2:4))) == [2:6; 1]
 
         A = BlockedArray(Vcat([1 2 3; 4 5 6], Ones(3,3), fill(4, 2, 3)), [2,3,2], [3])
         @test ApplyArray(view(A, Block.(1:2), Block(1))) == [[1 2 3; 4 5 6]; ones(3,3)]
