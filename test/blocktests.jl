@@ -69,7 +69,7 @@ using BlockArrays: blockcolsupport, blockrowsupport
         @test paddeddata(b) isa BlockedVector
         @test paddeddata(b) == [0; 3; zeros(7); 5]
 
-        LazyArrays.resizedata!(b, 20);
+        @test LazyArrays.resizedata!(b, 20) === b;
         @test length(paddeddata(b)) == 21
         
         @test paddeddata(BlockedArray(Vcat(2, Zeros{Int}(3)), [2,2])) == [2,0]
@@ -82,10 +82,20 @@ using BlockArrays: blockcolsupport, blockrowsupport
         @test b .* c isa BroadcastVector
         @test (c .* b)[Block(1)] == c[1:2] .* b[Block(1)]
 
+        @test LazyArrays.call(BlockedVector(c, [2,3])) == exp
+
         b = BlockedVector(randn(5),[2,3])
         a = ApplyArray(+, b, b)
 
         @test exp.(view(a,Block.(1:2))) == exp.(a)
+
+        B = BlockedMatrix(randn(5,3),[2,3],[1,2])
+        A = ApplyArray(+, B, B)
+        @test exp.(view(A, Block.(1:2), Block.(1:2))) == exp.(view(A, 1:5, Block.(1:2))) == exp.(view(A, Block.(1:2), 1:3)) == exp.(A)
+
+        C = BlockedMatrix(randn(3,2),[1,2],[1,1])
+        M = ApplyArray(*, B, C)
+        @test M[Block.(1:2),Block.(1:2)] == B*C
     end
 
     @testset "PaddedArray" begin
@@ -101,8 +111,30 @@ using BlockArrays: blockcolsupport, blockrowsupport
 
     @testset "Cached Block Matrix" begin
         C = cache(BlockedArray(Vcat([1 2 3; 4 5 6], Ones(4,3)), 1:3, [1,2]))
-        @test C[Block(2,2)] == C[2:3,Block(2)] == [5 6; 1 1]
+        @test C[Block(2,2)] == C[2:3,Block(2)] ==  C[Block(2),2:3] == C[Block(2),Block(2)] == [5 6; 1 1]
         @test C[Block.(1:2), Block.(1:2)] == C[1:3,1:3]
+        @test C[Block(2),2] == [5,1]
+    end
+
+    @testset "subpadded" begin
+        c = BlockedVector(Vcat(1, Zeros(5)), (Base.OneTo(6),))
+        @test paddeddata(view(c, Base.OneTo(3))) == [1,0,0]
+    end
+
+    @testset "arguments vcat" begin
+        a = BlockedArray(Vcat([1, 2, 3], Ones(3), [4,4]), [3,3,2])
+        @test ApplyArray(view(a, Block.(1:2))) == [1:3; Ones(3)]
+        
+        # TODO: fix assumption vcat matches with block
+        a = BlockedArray(Vcat([1, 2, 3], Ones(3)), 1:3)
+        @test_broken ApplyArray(view(a, Block.(1:2))) == 1:3
+
+        A = BlockedArray(Vcat([1 2 3; 4 5 6], Ones(3,3), fill(4, 2, 3)), [2,3,2], [3])
+        @test ApplyArray(view(A, Block.(1:2), Block(1))) == [[1 2 3; 4 5 6]; ones(3,3)]
+        @test ApplyArray(view(A, Block(1), Block(1))) == [1 2 3; 4 5 6]
+
+        B = BlockedArray(Vcat([1 2 3; 4 5 6], Ones(3,3), fill(4, 2, 3))', [3], [2,3,2])
+        @test ApplyArray(view(B, Block.(1:1), Block(1))) == [1 4; 2 5; 3 6]
     end
 end
 end

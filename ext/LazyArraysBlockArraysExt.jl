@@ -127,11 +127,6 @@ function resizedata!(lay1, lay2, B::AbstractMatrix{T}, N::Block{1}, M::Block{1})
 end
 
 # Use memory laout for sub-blocks
-@inline function getindex(A::AbstractCachedMatrix, K::Block{1}, J::Block{1})
-    @boundscheck checkbounds(A, K, J)
-    resizedata!(A, K, J)
-    A.data[K, J]
-end
 @inline getindex(A::AbstractCachedMatrix, kr::Colon, jr::Block{1}) = ArrayLayouts.layout_getindex(A, kr, jr)
 @inline getindex(A::AbstractCachedMatrix, kr::Block{1}, jr::Colon) = ArrayLayouts.layout_getindex(A, kr, jr)
 @inline getindex(A::AbstractCachedMatrix, kr::Block{1}, jr::AbstractVector) = ArrayLayouts.layout_getindex(A, kr, jr)
@@ -172,10 +167,6 @@ Base.in(K::Block, B::BroadcastVector{<:Block,Type{Block}}) = Int(K) in B.args[1]
 ###
 # Concat
 ###
-
-sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractVector, ::Tuple{<:AbstractBlockedUnitRange}) = blockvcat(sub_materialize.(arguments(lay, V))...)
-sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, ::Tuple{<:AbstractBlockedUnitRange,<:AbstractBlockedUnitRange}) = blockvcat(sub_materialize.(arguments(lay, V))...)
-sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, ::Tuple{<:AbstractBlockedUnitRange,<:AbstractUnitRange}) = blockvcat(sub_materialize.(arguments(lay, V))...)
 
 LazyArrays._vcat_sub_arguments(lay::ApplyLayout{typeof(vcat)}, A, V, kr::BlockSlice{<:BlockRange{1}}) =
     arguments(lay, A)[Int.(kr.block)]
