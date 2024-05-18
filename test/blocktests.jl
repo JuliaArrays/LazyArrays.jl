@@ -72,8 +72,7 @@ using BlockArrays: blockcolsupport, blockrowsupport
         LazyArrays.resizedata!(b, 20);
         @test length(paddeddata(b)) == 21
         
-        LazyArrays.CachedArray(5, Zeros(6))
-        paddeddata(BlockedArray(Vcat(2, Zeros{Int}(3)), [2,2]))
+        @test paddeddata(BlockedArray(Vcat(2, Zeros{Int}(3)), [2,2])) == [2,0]
     end
 
     @testset "Lazy block" begin
