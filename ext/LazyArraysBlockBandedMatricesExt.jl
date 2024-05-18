@@ -7,7 +7,7 @@ using BlockBandedMatrices.BandedMatrices
 using LazyArrays.LinearAlgebra
 using LazyArrays.ArrayLayouts
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout, conjlayout,
-                PaddedLayout, PaddedColumns, PaddedRows, paddeddata,
+                PaddedLayout, PaddedColumns, AbstractPaddedLayout, PaddedRows, paddeddata,
                 _islazy, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
                 BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
                 AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
@@ -305,7 +305,6 @@ copy(M::Mul{<:LazyBlockBandedLayouts, <:AbstractLazyLayout}) = simplify(M)
 copy(M::Mul{<:AbstractLazyLayout, <:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout}) = simplify(M)
 copy(M::Mul{<:DiagonalLayout, <:LazyBlockBandedLayouts}) = simplify(M)
-copy(M::Mul{<:LazyBlockBandedLayouts, <:Union{PaddedColumns,AbstractStridedLayout}}) = copy(mulreduce(M))
 
 
 copy(M::Mul{<:Union{ZerosLayout,DualLayout{ZerosLayout}}, <:LazyBlockBandedLayouts}) = copy(mulreduce(M))
@@ -342,11 +341,11 @@ copy(M::Mul{ApplyLayout{typeof(\)}, <:LazyBlockBandedLayouts}) = lazymaterialize
 copy(M::Mul{BroadcastLayout{typeof(*)}, <:LazyBlockBandedLayouts}) = lazymaterialize(*, M.A, M.B)
 
 ## padded copy
-mulreduce(M::Mul{<:LazyBlockBandedLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = MulAdd(M)
-mulreduce(M::Mul{<:ApplyBlockBandedLayouts{F}, D}) where {F,D<:Union{PaddedLayout,AbstractStridedLayout}} = Mul{ApplyLayout{F},D}(M.A, M.B)
+mulreduce(M::Mul{<:LazyBlockBandedLayouts, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = MulAdd(M)
+mulreduce(M::Mul{<:ApplyBlockBandedLayouts{F}, D}) where {F,D<:Union{AbstractPaddedLayout,AbstractStridedLayout}} = Mul{ApplyLayout{F},D}(M.A, M.B)
 # need to overload copy due to above
-copy(M::Mul{<:LazyBlockBandedLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
-simplifiable(::Mul{<:LazyBlockBandedLayouts, <:Union{PaddedLayout,AbstractStridedLayout}}) = Val(true)
+copy(M::Mul{<:LazyBlockBandedLayouts, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
+simplifiable(::Mul{<:LazyBlockBandedLayouts, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = Val(true)
 
 _inv(::LazyBlockBandedLayouts, _, A) = ApplyArray(inv, A)
 
