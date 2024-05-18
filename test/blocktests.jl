@@ -1,5 +1,5 @@
 module LazyArraysBlockArraysTest
-using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, StaticArrays, Test
+using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, Test
 using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata
 using BlockArrays: blockcolsupport, blockrowsupport
 
@@ -32,51 +32,70 @@ using BlockArrays: blockcolsupport, blockrowsupport
         # not clear why allocatinos so high: all allocations are coming from checking
         # axes
 
-        u = PseudoBlockArray{Float64}(undef, collect(1:N))
+        u = BlockedArray{Float64}(undef, collect(1:N))
         @test copyto!(u, bc) == (k .* (k .- n .- a) ./ (2k .+ (b+c-1)))
         @test @allocated(copyto!(u, bc)) ≤ 1000
     end
 
     @testset "padded" begin
         c = Vcat(randn(3), Zeros(7))
-        b = PseudoBlockVector(c, 1:4)
+        b = BlockedVector(c, 1:4)
         @test MemoryLayout(b) isa PaddedColumns
-        @test b[Block.(2:3)] isa PseudoBlockVector{Float64,<:ApplyArray}
+        @test b[Block.(2:3)] isa BlockedVector{Float64,<:ApplyArray}
         @test MemoryLayout(b[Block.(2:3)]) isa PaddedColumns
         @test b[Block.(2:3)] == b[2:6] 
         
-        c = PseudoBlockVector(Vcat(1, Zeros(5)), 1:3)
+        c = BlockedVector(Vcat(1, Zeros(5)), 1:3)
         @test paddeddata(c) == [1]
-        @test paddeddata(c) isa PseudoBlockVector
+        @test paddeddata(c) isa BlockedVector
         @test blockcolsupport(c) == Block.(1:1)
-        C = PseudoBlockArray(Vcat(randn(2,3), Zeros(4,3)), 1:3, [1,2])
+        C = BlockedArray(Vcat(randn(2,3), Zeros(4,3)), 1:3, [1,2])
         @test blockcolsupport(C) == Block.(1:2)
         @test blockrowsupport(C) == Block.(1:2)
         
         @test C[Block.(1:2),1:3] == C[Block.(1:2),Block.(1:2)] == C[1:3,Block.(1:2)] == C[1:3,1:3]
         
-        H = PseudoBlockArray(Hcat(1, Zeros(1,5)), [1], 1:3)
+        H = BlockedArray(Hcat(1, Zeros(1,5)), [1], 1:3)
         @test MemoryLayout(H) isa PaddedRows
         @test paddeddata(H) == Ones(1,1)
         
-        b = PseudoBlockArray(cache(Zeros(55)),1:10);
+        c = cache(Zeros(55));
+        c[2] = 3;
+        b = BlockedArray(c,1:10);
+        @test paddeddata(b) == [0;3;0]
+
         b[10] = 5;
         @test MemoryLayout(b) isa PaddedColumns{DenseColumnMajor}
-        @test paddeddata(b) isa PseudoBlockVector
-        @test paddeddata(b) == [zeros(9); 5]
+        @test paddeddata(b) isa BlockedVector
+        @test paddeddata(b) == [0; 3; zeros(7); 5]
+
+        @test LazyArrays.resizedata!(b, 20) === b;
+        @test length(paddeddata(b)) == 21
+        
+        @test paddeddata(BlockedArray(Vcat(2, Zeros{Int}(3)), [2,2])) == [2,0]
     end
 
     @testset "Lazy block" begin
-        b = PseudoBlockVector(randn(5),[2,3])
+        b = BlockedVector(randn(5),[2,3])
         c = BroadcastVector(exp,1:5)
         @test c .* b isa BroadcastVector
         @test b .* c isa BroadcastVector
         @test (c .* b)[Block(1)] == c[1:2] .* b[Block(1)]
 
-        b = PseudoBlockVector(randn(5),[2,3])
+        @test LazyArrays.call(BlockedVector(c, [2,3])) == exp
+
+        b = BlockedVector(randn(5),[2,3])
         a = ApplyArray(+, b, b)
 
         @test exp.(view(a,Block.(1:2))) == exp.(a)
+
+        B = BlockedMatrix(randn(5,3),[2,3],[1,2])
+        A = ApplyArray(+, B, B)
+        @test exp.(view(A, Block.(1:2), Block.(1:2))) == exp.(view(A, 1:5, Block.(1:2))) == exp.(view(A, Block.(1:2), 1:3)) == exp.(A)
+
+        C = BlockedMatrix(randn(3,2),[1,2],[1,1])
+        M = ApplyArray(*, B, C)
+        @test M[Block.(1:2),Block.(1:2)] == B*C
     end
 
     @testset "PaddedArray" begin
@@ -85,9 +104,44 @@ using BlockArrays: blockcolsupport, blockrowsupport
         @test blocksize(paddeddata(p),1) == 3
     end
 
-    @testset "blockedrange" begin
-        b = blockedrange(SVector{2}([1,2]))
-        @test b .+ b == 2:2:6
+    @testset "broadcaststyle" begin
+        r = blockedrange(Vcat(1,4:5))
+        @test Base.BroadcastStyle(typeof(r)) isa LazyArrayStyle{1}
+    end
+
+    @testset "Cached Block Matrix" begin
+        C = cache(BlockedArray(Vcat([1 2 3; 4 5 6], Ones(4,3)), 1:3, [1,2]))
+        @test C[Block(2,2)] == C[2:3,Block(2)] ==  C[Block(2),2:3] == C[Block(2),Block(2)] == [5 6; 1 1]
+        @test C[Block.(1:2), Block.(1:2)] == C[1:3,1:3]
+        @test C[Block(2),2] == [5,1]
+        @test C[:,Block(2)] == C[Block.(1:3),Block(2)]
+        @test C[Block(2),:] == C[Block(2), Block.(1:2)]
+    end
+
+    @testset "subpadded" begin
+        c = BlockedVector(Vcat(1, Zeros(5)), (Base.OneTo(6),))
+        @test paddeddata(view(c, Base.OneTo(3))) == [1,0,0]
+    end
+
+    @testset "arguments vcat" begin
+        a = BlockedArray(Vcat([1, 2, 3], Ones(3), [4,4]), [3,3,2])
+        @test ApplyArray(view(a, Block.(1:2))) == [1:3; Ones(3)]
+        @test ApplyArray(view(a, Block.(2:3))) == [Ones(3); 4; 4]
+        
+        # TODO: fix assumption vcat matches with block
+        a = BlockedArray(Vcat([1, 2, 3], Ones(3)), 1:3)
+        @test_broken ApplyArray(view(a, Block.(1:2))) == 1:3
+
+        a = BlockedArray(Vcat(blockedrange(1:3), blockedrange(1:2)), [1:3; 1:2])
+        @test ApplyArray(view(a, Block.(1:2))) == 1:3
+        @test ApplyArray(view(a, Block.(2:4))) == [2:6; 1]
+
+        A = BlockedArray(Vcat([1 2 3; 4 5 6], Ones(3,3), fill(4, 2, 3)), [2,3,2], [3])
+        @test ApplyArray(view(A, Block.(1:2), Block(1))) == [[1 2 3; 4 5 6]; ones(3,3)]
+        @test ApplyArray(view(A, Block(1), Block(1))) == [1 2 3; 4 5 6]
+
+        B = BlockedArray(Vcat([1 2 3; 4 5 6], Ones(3,3), fill(4, 2, 3))', [3], [2,3,2])
+        @test ApplyArray(view(B, Block.(1:1), Block(1))) == [1 4; 2 5; 3 6]
     end
 end
 end
