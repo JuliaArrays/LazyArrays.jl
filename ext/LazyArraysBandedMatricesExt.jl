@@ -200,10 +200,8 @@ struct ApplyBandedLayout{F} <: AbstractLazyBandedLayout end
 struct BroadcastBandedLayout{F} <: AbstractLazyBandedLayout end
 
 
-bandedlayout(::AbstractLazyLayout) = LazyBandedLayout()
 bandedlayout(::ApplyLayout{F}) where F = ApplyBandedLayout{F}()
 bandedlayout(::BroadcastLayout{F}) where F = BroadcastBandedLayout{F}()
-nonbandedlayout(::AbstractLazyBandedLayout) = LazyLayout()
 nonbandedlayout(::ApplyBandedLayout{F}) where F = ApplyLayout{F}()
 nonbandedlayout(::BroadcastBandedLayout{F}) where F = BroadcastLayout{F}()
 
@@ -219,7 +217,6 @@ LazyArrays._mul_arguments(lay::ApplyBandedLayout, A) = LazyArrays._mul_arguments
 
 
 applylayout(::Type{typeof(*)}, ::BandedLayouts...) = ApplyBandedLayout{typeof(*)}()
-applylayout(::Type{typeof(*)}, ::PaddedRows, ::BandedLayouts...) = PaddedRows{ApplyLayout{typeof(*)}}()
 
 applybroadcaststyle(::Type{<:AbstractMatrix}, ::ApplyBandedLayout) = LazyArrayStyle{2}()
 

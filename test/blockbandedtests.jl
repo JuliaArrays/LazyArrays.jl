@@ -203,9 +203,15 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         @test D*B ≈ D*Matrix(B)
 
         @test B*Zeros(10) isa Zeros
+        @test mul(B,Zeros(10)) isa Zeros
         @test Zeros(10)'*B isa Adjoint{<:Any,<:Zeros}
+        @test mul(Zeros(10)',B) isa Adjoint{<:Any,<:Zeros}
 
         @test B*Eye(10) ≡ Eye(10)*B ≡ B
+        @test simplifiable(*, B, Eye(10)) isa Val{true}
+        @test simplifiable(*, Eye(10), B) isa Val{true}
+
+        @test B*Diagonal(Fill(2,10)) == Diagonal(Fill(2,10))*B == 2B
 
         @test M*M ≈ A^4
         @test M*B ≈ A^2*B
@@ -215,6 +221,8 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
 
         @test MA * B ≈ MA * Matrix(B)
         @test B * MA ≈ Matrix(B) * MA
+        @test MA * M ≈ MA * Matrix(M)
+        @test M * MA ≈ Matrix(M) * MA
 
         Ai = ApplyArray(inv, A)
 
