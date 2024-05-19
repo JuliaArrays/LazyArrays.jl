@@ -12,7 +12,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout,
                 BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
                 AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
                 _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments,
-                CachedArray, _broadcast_sub_arguments, simplify
+                CachedArray, _broadcast_sub_arguments, simplify, lazymaterialize
 import BlockBandedMatrices: AbstractBlockBandedLayout, AbstractBandedBlockBandedLayout, blockbandwidths, subblockbandwidths,
                             bandedblockbandedbroadcaststyle, bandedblockbandedcolumns, BandedBlockBandedColumns, BandedBlockBandedRows,
                             BlockRange1, Block1, BlockIndexRange1, BlockBandedColumns, BlockBandedRows, BandedBlockBandedLayout
@@ -313,12 +313,12 @@ copy(M::Mul{<:DiagonalLayout{<:OnesLayout}, <:LazyBlockBandedLayouts}) = _copy_o
 copy(M::Mul{<:DiagonalLayout{<:AbstractFillLayout}, <:LazyBlockBandedLayouts}) = copy(mulreduce(M))
 copy(M::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
 
-copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
-copy(M::Mul{<:LazyBlockBandedLayouts,<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:BroadcastBlockBandedLayouts}) = simplify(M)
-copy(M::Mul{<:BroadcastBlockBandedLayouts,<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{BroadcastLayout{typeof(*)},<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{ApplyBlockBandedLayouts{typeof(*)},ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{ApplyBlockBandedLayouts{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:LazyBlockBandedLayouts,ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{ApplyBlockBandedLayouts{typeof(*)},<:BroadcastBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:BroadcastBlockBandedLayouts,ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{BroadcastLayout{typeof(*)},ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
 copy(M::Mul{ApplyLayout{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
 copy(M::Mul{ApplyLayout{typeof(*)},<:BroadcastBlockBandedLayouts}) = simplify(M)
@@ -347,42 +347,6 @@ _inv(::LazyBlockBandedLayouts, _, A) = ApplyArray(inv, A)
 _broadcast_BandedBlockBandedMatrix(a::AbstractMatrix) = BandedBlockBandedMatrix(a)
 _broadcast_BandedBlockBandedMatrix(a) = a
 
-
-####
-# concat
-####
-
-sublayout(::ApplyBlockBandedLayout{typeof(hcat)}, ::Type{<:Tuple{<:BlockSlice{<:BlockRange1}, <:BlockSlice{<:BlockRange1}}}) = ApplyBlockBandedLayout{typeof(hcat)}()
-
-_copyto!(_, LAY::ApplyBlockBandedLayout{typeof(hcat)}, dest::AbstractMatrix, H::AbstractMatrix) =
-    block_hcat_copyto!(dest, arguments(LAY,H)...)
-function block_hcat_copyto!(dest::AbstractMatrix, arrays...)
-    nrows = blocksize(dest, 1)
-    ncols = 0
-    dense = true
-    for a in arrays
-        dense &= isa(a,Array)
-        nd = ndims(a)
-        ncols += (nd==2 ? blocksize(a,2) : 1)
-    end
-
-    nrows == blocksize(first(arrays),1) || throw(DimensionMismatch("Destination rows must match"))
-    ncols == blocksize(dest,2) || throw(DimensionMismatch("Destination columns must match"))
-
-    pos = 1
-    for a in arrays
-        p1 = pos+(isa(a,AbstractMatrix) ? blocksize(a, 2) : 1)-1
-        copyto!(view(dest,:, Block.(pos:p1)), a)
-        pos = p1+1
-    end
-    return dest
-end
-
-##
-# special for unitblocks
-blockbandwidths(A::BlockedMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
-blockbandwidths(A::BlockedMatrix{<:Any,<:Diagonal,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = bandwidths(A.blocks)
-subblockbandwidths(A::BlockedMatrix{<:Any,<:Any,<:NTuple{2,BlockedOneTo{Int,<:AbstractUnitRange{Int}}}}) = (0,0)
 
 
 end

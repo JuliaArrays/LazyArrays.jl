@@ -185,6 +185,38 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         resizedata!(C, 4, 4);
         @test C.data[Block.(1:3), Block.(1:3)] == M[Block.(1:3), Block.(1:3)]
     end
+
+    @testset "Muls" begin
+        A = BlockBandedMatrix(randn(10,10),1:4,1:4,(1,2))
+        B = BroadcastArray(*, A, A)
+        M = ApplyArray(*, A, A)
+        N = BroadcastArray(*, randn(size(A)),  randn(size(A)))
+        D = Diagonal(1:10)
+
+        @test B*B ≈ Matrix(B)^2
+        @test B*A ≈ Matrix(B)*A
+        @test A*B ≈ A*Matrix(B)
+        @test B*N ≈ Matrix(B)*Matrix(N)
+        @test N*B ≈ Matrix(N)*Matrix(B)
+        @test B*D ≈ Matrix(B)*D
+        @test D*B ≈ D*Matrix(B)
+
+        @test B*Zeros(10) isa Zeros
+        @test Zeros(10)'*B isa Adjoint{<:Any,<:Zeros}
+
+        @test B*Eye(10) ≡ Eye(10)*B ≡ B
+
+        @test M*M ≈ A^4
+        @test M*B ≈ A^2*B
+        @test B*M ≈ B*A^2
+        @test M*N ≈ A^2*N
+        @test N*M ≈ N*A^2
+
+        Ai = ApplyArray(inv, A)
+
+        @test Ai * M ≈ A\M
+        @test Ai * B ≈ A\B
+    end
 end
 
 end # module
