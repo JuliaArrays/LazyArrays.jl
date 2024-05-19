@@ -139,10 +139,8 @@ subblockbandwidths(M::MulMatrix) = prodsubblockbandwidths(M.args...)
 # TODO: Generalize
 for op in (:+, :-)
     @eval begin
-        blockbandwidths(M::BroadcastMatrix{<:Any,typeof($op)}) =
-            broadcast(max, map(blockbandwidths,arguments(M))...)
-        subblockbandwidths(M::BroadcastMatrix{<:Any,typeof($op)}) =
-            broadcast(max, map(subblockbandwidths,arguments(M))...)
+        blockbandwidths(M::BroadcastMatrix{<:Any,typeof($op)}) = broadcast(max, map(blockbandwidths,arguments(M))...)
+        subblockbandwidths(M::BroadcastMatrix{<:Any,typeof($op)}) = broadcast(max, map(subblockbandwidths,arguments(M))...)
     end
 end
 
@@ -160,9 +158,6 @@ BroadcastBlockBandedLayouts{F} = Union{BroadcastBlockBandedLayout{F},BroadcastBa
 
 blockbandwidths(B::BroadcastMatrix) = blockbandwidths(broadcasted(B))
 subblockbandwidths(B::BroadcastMatrix) = subblockbandwidths(broadcasted(B))
-
-broadcastlayout(::Type{F}, ::AbstractBlockBandedLayout) where F = BroadcastBlockBandedLayout{F}()
-broadcastlayout(::Type{F}, ::AbstractBandedBlockBandedLayout) where F = BroadcastBandedBlockBandedLayout{F}()
 
 
 for op in (:*, :/, :\, :+, :-)

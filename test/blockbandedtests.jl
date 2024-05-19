@@ -4,10 +4,9 @@ using LazyArrays, BlockBandedMatrices, BlockArrays, Test
 using LinearAlgebra
 using ArrayLayouts
 using BandedMatrices
-using LazyArrays: paddeddata
 import BlockArrays: blockcolsupport, blockrowsupport
-import LazyArrays: arguments, colsupport, rowsupport,
-                    PaddedLayout, PaddedColumns, paddeddata, ApplyLayout, LazyArrayStyle
+import LazyArrays: arguments, colsupport, rowsupport, resizedata!, paddeddata,
+                    PaddedLayout, PaddedColumns, paddeddata, ApplyLayout, LazyArrayStyle, BroadcastLayout
 
 
 LazyArraysBlockBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBlockBandedMatricesExt)
@@ -121,6 +120,8 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
 
             E = BroadcastMatrix(*, A, 2)
             @test MemoryLayout(E) == BroadcastBandedBlockBandedLayout{typeof(*)}()
+            @test blockbandwidths(E) == (1,1)
+            @test subblockbandwidths(E) == (1,1)
 
             D = Diagonal(BlockedArray(randn(6),1:3))
             @test MemoryLayout(BroadcastMatrix(*, A, D)) isa BroadcastBandedBlockBandedLayout{typeof(*)}
@@ -130,6 +131,37 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
             @test blockbandwidths(F) == (1,1)
             @test subblockbandwidths(F) == (1,1)
             @test F == A
+        end
+
+        @testset "broadcast ±" begin
+            A = BandedBlockBandedMatrix(randn(10,10),1:4,1:4,(1,2),(2,1))
+            @test blockbandwidths(BroadcastArray(+, A, A)) == (1,2)
+            @test blockbandwidths(BroadcastArray(-, A, 2A)) == (1,2)
+            @test subblockbandwidths(BroadcastArray(+, A, A)) == (2,1)
+            @test subblockbandwidths(BroadcastArray(-, A, 2A)) == (2,1)
+        end
+
+        @testset "non-sparse broadcast" begin
+            A = BandedBlockBandedMatrix(randn(10,10),1:4,1:4,(1,2),(2,1))
+            E = BroadcastArray(exp, A)
+            @test MemoryLayout(E) isa BroadcastLayout
+        end
+
+        @testset "broadcast *" begin
+            A = BandedBlockBandedMatrix(randn(10,10),1:4,1:4,(1,2),(2,1))
+            M = BroadcastArray(*, A, A)
+            @test MemoryLayout(M) isa BroadcastBandedBlockBandedLayout
+            @test M == A .* A
+            @test blockbandwidths(A) == (1,2)
+            @test subblockbandwidths(A) == (2,1)
+            @test M[Block.(1:2), Block.(1:2)] == (A.*A)[Block.(1:2), Block.(1:2)]
+
+            A = BlockBandedMatrix(randn(10,10),1:4,1:4,(1,2))
+            M = BroadcastArray(*, A, A)
+            @test MemoryLayout(M) isa BroadcastBlockBandedLayout
+            @test M == A .* A
+            @test blockbandwidths(A) == (1,2)
+            @test M[Block.(1:2), Block.(1:2)] == (A.*A)[Block.(1:2), Block.(1:2)]
         end
     end
 
@@ -141,6 +173,17 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         @test exp.(view(A,Block.(1:3),Block.(1:3))) == exp.(A)
         @test exp.(view(A,Block.(1:3),2)) == exp.(A)[Block.(1:3),2]
         @test exp.(view(A,2,Block.(1:3))) == exp.(A)[2,Block.(1:3)]
+    end
+
+    @testset "cache" begin
+        A = BlockBandedMatrix(randn(10,10),1:4,1:4,(1,2))
+        M = BroadcastArray(*, A, A)
+        C = cache(M);
+        @test C.data isa BlockBandedMatrix
+        resizedata!(C, Block(2), Block(2));
+        @test C.data[Block.(1:2), Block.(1:2)] == M[Block.(1:2), Block.(1:2)]
+        resizedata!(C, 4, 4);
+        @test C.data[Block.(1:3), Block.(1:3)] == M[Block.(1:3), Block.(1:3)]
     end
 end
 
