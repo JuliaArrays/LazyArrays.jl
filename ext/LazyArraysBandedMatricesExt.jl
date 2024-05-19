@@ -8,7 +8,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
                    LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout,
                    AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
-                   arguments, call, applybroadcaststyle, simplify, simplifiable, _islazy, lazymaterialize, _broadcast_mul_mul
+                   arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
@@ -215,7 +215,7 @@ sublayout(lay::ApplyBandedLayout, ind) = sublayout(nonbandedlayout(lay), ind)
 
 
 LazyArrays._mul_arguments(lay::ApplyBandedLayout, A) = LazyArrays._mul_arguments(nonbandedlayout(lay), A)
-@inline _islazy(::ApplyBandedLayout) = Val(true)
+@inline islazy_layout(::ApplyBandedLayout) = Val(true)
 
 
 applylayout(::Type{typeof(*)}, ::BandedLayouts...) = ApplyBandedLayout{typeof(*)}()
@@ -468,7 +468,7 @@ function resizedata!(::BandedColumns{DenseColumnMajor}, _, B::AbstractMatrix{T},
         λ,ω = bandwidths(B.data)
         if n ≥ size(B.data,1) || m ≥ size(B.data,2)
             M = 2*max(m,n+u)
-            B.data = resize(olddata, M+λ, M)
+            B.data = resize(olddata, min(M+λ,size(B,1)), min(M,size(B,2)))
         end
         if ν > 0 # upper-right
             kr = max(1,μ+1-ω):ν
@@ -529,7 +529,7 @@ TriangularLayout{UPLO,UNIT,BandedColumns{LazyLayout}} where {UPLO,UNIT},
 SymTridiagonalLayout{LazyLayout}, BidiagonalLayout{LazyLayout}, TridiagonalLayout{LazyLayout},
 SymmetricLayout{BandedColumns{LazyLayout}}, HermitianLayout{BandedColumns{LazyLayout}}}
 
-@inline _islazy(::BandedLazyLayouts) = Val(true)
+@inline islazy_layout(::BandedLazyLayouts) = Val(true)
 
 copy(M::Mul{<:BandedLazyLayouts, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts}) = simplify(M)

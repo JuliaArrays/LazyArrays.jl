@@ -697,7 +697,7 @@ for op in (:+, :-)
     @eval @inline function accumulate(::typeof($op), v::Vcat{T,1,<:Tuple{Number,AbstractFill}}) where T
         V = promote_op(add_sum, T, T)
         a,b = v.args
-        FillArrays.steprangelen(convert(V, a), getindex_value(b), length(b)+1)
+        FillArrays.steprangelen(convert(V, a), $op(getindex_value(b)), length(b)+1)
     end
 end
 
@@ -710,7 +710,7 @@ end
 @inline function accumulate(::typeof(+), v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
     a,b = v.args
     V = promote_op(+, T, T)
-    convert(V,a) .+ range(zero(V); length=length(b))
+    convert(V,a) .+ range(zero(V); length=length(b)+1)
 end
 
 

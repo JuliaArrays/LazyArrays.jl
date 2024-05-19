@@ -588,23 +588,29 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
     @testset "cumsum(Vcat(::Number, ::Fill))" begin
         v = Vcat(2, Fill(3,5))
         @test cumsum(v) isa StepRangeLen{Int}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
         v = Vcat(2, Zeros{Int}(5))
         @test cumsum(v) isa Fill{Int}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
         v = Vcat(2, Ones{Int}(5))
         @test cumsum(v) isa UnitRange{Int}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
 
         v = Vcat(2, Fill(3.0,5))
         @test cumsum(v) isa StepRangeLen{Float64}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
         v = Vcat(2, Zeros(5))
         @test cumsum(v) isa Fill{Float64}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
         v = Vcat(2, Ones(5))
         @test cumsum(v) isa StepRangeLen{Float64}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
     end
 
     @testset "empty vcat" begin

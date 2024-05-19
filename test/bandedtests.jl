@@ -1,6 +1,6 @@
 module LazyBandedTests
 using ArrayLayouts, LazyArrays, BandedMatrices, LinearAlgebra, Test
-using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize
+using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize, bandeddata
 using LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout
 using ArrayLayouts: OnesLayout, StridedLayout
 LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
@@ -423,6 +423,8 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         resizedata!(C,1,1);
         @test C[1:10,1:10] == A[1:10,1:10]
         @test C[1:10,1:10] isa BandedMatrix
+        @test bandeddata(view(C,1:5,1:5)) == C.data.data[:,1:5]
+        @test size(bandeddata(C)) == (3,10000)
     end
 
     @testset "NaN Bug" begin

@@ -5,9 +5,9 @@ using LinearAlgebra
 using ArrayLayouts
 using BandedMatrices
 import BlockArrays: blockcolsupport, blockrowsupport
-import LazyArrays: arguments, colsupport, rowsupport, resizedata!, paddeddata,
+import LazyArrays: arguments, colsupport, rowsupport, resizedata!, paddeddata, islazy, LazyLayout,
                     PaddedLayout, PaddedColumns, paddeddata, ApplyLayout, LazyArrayStyle, BroadcastLayout
-
+import BlockBandedMatrices: _BandedBlockBandedMatrix, BandedBlockBandedColumns
 
 LazyArraysBlockBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBlockBandedMatricesExt)
 ApplyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.ApplyBlockBandedLayout
@@ -192,6 +192,7 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         M = ApplyArray(*, A, A)
         N = BroadcastArray(*, randn(size(A)),  randn(size(A)))
         D = Diagonal(1:10)
+        MA = ApplyArray(*, randn(10,10), randn(10,10))
 
         @test B*B ≈ Matrix(B)^2
         @test B*A ≈ Matrix(B)*A
@@ -212,10 +213,46 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         @test M*N ≈ A^2*N
         @test N*M ≈ N*A^2
 
+        @test MA * B ≈ MA * Matrix(B)
+        @test B * MA ≈ Matrix(B) * MA
+
         Ai = ApplyArray(inv, A)
 
         @test Ai * M ≈ A\M
         @test Ai * B ≈ A\B
+
+        @test M \ M ≈ inv(M) * M ≈ I
+
+        @test ApplyArray(\, M, M) * M ≈ M
+
+        x = randn(10)
+        @test M * x ≈ Matrix(M) * x
+    end
+
+    @testset "islazy" begin
+        A = BlockBandedMatrix(randn(10,10),1:4,1:4,(1,2))
+        M = ApplyArray(*, A, A)
+        @test islazy(M) isa Val{true}
+    end
+
+    @testset "* with 1 arg" begin
+        A = BandedBlockBandedMatrix{Float64}(undef, 1:4, 1:4, (1,0), (1,2)); A.data .= randn.();
+        M = ApplyMatrix(*, A)
+        @test blockbandwidths(M) == (1,0)
+        @test subblockbandwidths(M) == (1,2)
+    end
+
+    @testset "lazy data" begin
+        l , u = 1,1
+        λ , μ = 1,1
+        N = M = 4
+        cols = rows = 1:N
+        data = Vcat(randn(2,10), randn(7,10))
+        A = _BandedBlockBandedMatrix(data, rows,cols, (l,u), (λ,μ))
+        @test MemoryLayout(A) isa BandedBlockBandedColumns{LazyLayout}
+
+        A = _BandedBlockBandedMatrix(BroadcastArray(exp,randn(9,10)), rows,cols, (l,u), (λ,μ))
+        @test MemoryLayout(A) isa BandedBlockBandedColumns{LazyLayout}
     end
 end
 

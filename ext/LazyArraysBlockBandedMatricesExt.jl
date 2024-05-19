@@ -8,7 +8,7 @@ using LazyArrays.LinearAlgebra
 using LazyArrays.ArrayLayouts
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout, conjlayout,
                 PaddedLayout, PaddedColumns, AbstractPaddedLayout, PaddedRows, paddeddata,
-                _islazy, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
+                islazy_layout, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
                 BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
                 AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
                 _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments,
@@ -86,7 +86,7 @@ struct ApplyBandedBlockBandedLayout{F} <: AbstractLazyBandedBlockBandedLayout en
 ApplyBlockBandedLayouts{F} = Union{ApplyBlockBandedLayout{F},ApplyBandedBlockBandedLayout{F}}
 
 LazyArrays._mul_arguments(::ApplyBlockBandedLayouts{F}, A) where F = LazyArrays._mul_arguments(ApplyLayout{F}(), A)
-@inline _islazy(::ApplyBlockBandedLayouts) = Val(true)
+@inline islazy_layout(::ApplyBlockBandedLayouts) = Val(true)
 
 # The following catches the arguments machinery to work for BlockRange
 # see LazyArrays.jl/src/mul.jl
@@ -122,11 +122,9 @@ applybroadcaststyle(::Type{<:AbstractMatrix}, ::ApplyBlockBandedLayout) = LazyAr
 applybroadcaststyle(::Type{<:AbstractMatrix}, ::ApplyBandedBlockBandedLayout) = LazyArrayStyle{2}()
 
 prodblockbandwidths(A) = blockbandwidths(A)
-prodblockbandwidths() = (0,0)
 prodblockbandwidths(A...) = broadcast(+, blockbandwidths.(A)...)
 
 prodsubblockbandwidths(A) = subblockbandwidths(A)
-prodsubblockbandwidths() = (0,0)
 prodsubblockbandwidths(A...) = broadcast(+, subblockbandwidths.(A)...)
 
 blockbandwidths(M::MulMatrix) = prodblockbandwidths(M.args...)
@@ -291,7 +289,7 @@ LazyBlockBandedLayouts = Union{
 
 
 
-@inline _islazy(::LazyBlockBandedLayouts) = Val(true)
+@inline islazy_layout(::LazyBlockBandedLayouts) = Val(true)
 
 copy(M::Mul{<:LazyBlockBandedLayouts, <:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts}) = simplify(M)
@@ -313,12 +311,12 @@ copy(M::Mul{<:DiagonalLayout{<:OnesLayout}, <:LazyBlockBandedLayouts}) = _copy_o
 copy(M::Mul{<:DiagonalLayout{<:AbstractFillLayout}, <:LazyBlockBandedLayouts}) = copy(mulreduce(M))
 copy(M::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
 
-copy(M::Mul{ApplyBlockBandedLayouts{typeof(*)},ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{ApplyBlockBandedLayouts{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
-copy(M::Mul{<:LazyBlockBandedLayouts,ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{ApplyBlockBandedLayouts{typeof(*)},<:BroadcastBlockBandedLayouts}) = simplify(M)
-copy(M::Mul{<:BroadcastBlockBandedLayouts,ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
-copy(M::Mul{BroadcastLayout{typeof(*)},ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:LazyBlockBandedLayouts,<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{<:ApplyBlockBandedLayouts{typeof(*)},<:BroadcastBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:BroadcastBlockBandedLayouts,<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
+copy(M::Mul{BroadcastLayout{typeof(*)},<:ApplyBlockBandedLayouts{typeof(*)}}) = simplify(M)
 copy(M::Mul{ApplyLayout{typeof(*)},<:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts,ApplyLayout{typeof(*)}}) = simplify(M)
 copy(M::Mul{ApplyLayout{typeof(*)},<:BroadcastBlockBandedLayouts}) = simplify(M)
