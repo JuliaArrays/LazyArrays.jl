@@ -1059,11 +1059,7 @@ end
         copyto!(c, V)
 
         # This test fails intermittently on GitHub Actions
-        # if v"1.9-" < VERSION < v"1.10-"
-        #     @test_broken @allocated(copyto!(c, V)) ≤ 500
-        # else
         #     @test @allocated(copyto!(c, V)) ≤ 500
-        # end
 
         @test all(c .=== apply(*, arguments(V)...))
 
