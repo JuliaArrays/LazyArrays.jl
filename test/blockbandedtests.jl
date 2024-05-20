@@ -6,7 +6,8 @@ using ArrayLayouts
 using BandedMatrices
 import BlockArrays: blockcolsupport, blockrowsupport
 import LazyArrays: arguments, colsupport, rowsupport, resizedata!, paddeddata, islazy, LazyLayout,
-                    PaddedLayout, PaddedColumns, paddeddata, ApplyLayout, LazyArrayStyle, BroadcastLayout
+                    PaddedLayout, PaddedColumns, paddeddata, ApplyLayout, LazyArrayStyle, BroadcastLayout,
+                    simplifiable
 import BlockBandedMatrices: _BandedBlockBandedMatrix, BandedBlockBandedColumns
 
 LazyArraysBlockBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBlockBandedMatricesExt)
