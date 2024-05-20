@@ -806,6 +806,17 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
                         Zeros(n-2), Zeros(n-2), B)
         @test MemoryLayout(P) isa ApplyBandedLayout
     end
+
+    @testset "dual padded rows" begin
+        n = 10
+        B = BroadcastArray(*, 3, brand(n,n,2,1))
+        a = Vcat(randn(3), Zeros(n-3))
+        c = cache(Zeros(n)); c[1] = 2;
+        muladd!(2.0, a', B, 3.0, c');
+        @test c.datasize == (4,)
+        @test c' ≈ 2*a'*B + 3*[2; Zeros(n-1)]'
+        @test a'B ≈ a'Matrix(B)
+    end
 end
 
 end # module

@@ -179,6 +179,18 @@ function materialize!(M::MatMulMatAdd{<:BandedLayouts,<:AbstractPaddedLayout,<:A
     y
 end
 
+function materialize!(M::MatMulMatAdd{<:DualLayout{<:PaddedRows}, <:BandedLayouts, <:DualLayout{<:PaddedRows}})
+    α,A,X,β,Y = M.α,M.A,M.B,M.β,M.C
+    size(Y) == (size(A,1),size(X,2)) || throw(DimensionMismatch())
+    size(X,1) == size(A,2) || throw(DimensionMismatch())
+
+    Ã = paddeddata(A)
+    resizedata!(Y, 1, min(size(M,2),size(Ã,2)+bandwidth(X,2)))
+    Ỹ = paddeddata(Y)
+    muladd!(α, Ã, view(X, axes(Ã,2), axes(Ỹ,2)), β, Ỹ)
+    Y
+end
+
 # (vec .* mat) * B is typically faster as vec .* (mat * b)
 _broadcast_banded_padded_mul((A1,A2)::Tuple{<:AbstractVector,<:AbstractMatrix}, B) = A1 .* mul(A2, B)
 _broadcast_banded_padded_mul(Aargs, B) = copy(mulreduce(Mul(BroadcastArray(*, Aargs...), B)))
@@ -200,6 +212,7 @@ struct ApplyBandedLayout{F} <: AbstractLazyBandedLayout end
 struct BroadcastBandedLayout{F} <: AbstractLazyBandedLayout end
 
 
+bandedlayout(::LazyLayout) = LazyBandedLayout()
 bandedlayout(::ApplyLayout{F}) where F = ApplyBandedLayout{F}()
 bandedlayout(::BroadcastLayout{F}) where F = BroadcastBandedLayout{F}()
 nonbandedlayout(::ApplyBandedLayout{F}) where F = ApplyLayout{F}()
@@ -602,7 +615,7 @@ mulreduce(M::Mul{ApplyBandedLayout{F}, D}) where {F,D<:Union{AbstractPaddedLayou
 copy(M::Mul{<:BroadcastBandedLayout, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
 copy(M::Mul{<:AbstractInvLayout{<:BandedLazyLayouts}, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 copy(M::Mul{<:BandedLazyLayouts, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
-copy(M::Mul{<:Union{AbstractPaddedLayout,AbstractStridedLayout}, <:BandedLazyLayouts}) = copy(mulreduce(M))
+copy(M::Mul{<:Union{AbstractPaddedLayout,AbstractStridedLayout,DualLayout{<:PaddedRows}}, <:BandedLazyLayouts}) = copy(mulreduce(M))
 
 simplifiable(M::Mul{<:AbstractInvLayout{<:BandedLazyLayouts}, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = Val(true)
 simplifiable(M::Mul{<:Union{AbstractPaddedLayout,AbstractStridedLayout}, <:BandedLazyLayouts}) = Val(true)
