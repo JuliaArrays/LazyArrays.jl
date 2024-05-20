@@ -793,7 +793,7 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test ApplyArray(*,P,B) ≈ P*B
     end
 
-    @tstset "banded hvcat" begin
+    @testset "banded hvcat" begin
         n = 10
         B = brand(n-1,n-1,2,1)
         P = ApplyArray(hvcat, 2,
