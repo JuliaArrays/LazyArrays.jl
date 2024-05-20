@@ -59,11 +59,7 @@ using LinearAlgebra
         @test copyto!(b, a) == a == b
         @test copyto!(c, a) == a == c
         @test copyto!(similar(a), a) == a
-        if VERSION < v"1.8.0-"
-            @test_throws ErrorException copyto!(c, Array(a))
-        else
-            @test_throws Base.CanonicalIndexError copyto!(c, Array(a))
-        end
+        @test_throws Base.CanonicalIndexError copyto!(c, Array(a))
     end
 
     @testset "vec" begin
@@ -114,6 +110,16 @@ using LinearAlgebra
         @test MemoryLayout(R) isa ApplyLayout{typeof(*)}
         @test arguments(R) == (rot180(A), rot180(B))
         @test R ≈ rot180(A*B)
+    end
+
+    @testset "scalar * Matrix" begin
+        A = randn(5,5)
+        M = ApplyArray(*,1.0,A)
+        @test M ≈ A
+        for k = axes(A,1), j = axes(A,2)
+            @test M[k,j] ≈ A[k,j]
+        end
+        @test colsupport(M,1) == 1:5
     end
 end # testset
 

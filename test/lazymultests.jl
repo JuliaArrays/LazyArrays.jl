@@ -104,11 +104,7 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test MyMatrix(A) \ B == apply(\, MyMatrix(A), B)
         @test ldiv!(MyMatrix(A), copy(B)) == materialize!(Ldiv(MyMatrix(A), copy(B)))
         @test MyMatrix(A) \ B ≈ MyMatrix(A) \ MyMatrix(B) ≈ ldiv!(MyMatrix(A), copy(B)) ≈  A\B
-        if VERSION < v"1.9-"
-            @test_broken ldiv!(MyMatrix(A), MyMatrix(copy(B))) ≈ A\B
-        else
-            @test ldiv!(MyMatrix(A), MyMatrix(copy(B))) ≈ A\B
-        end
+        @test ldiv!(MyMatrix(A), MyMatrix(copy(B))) ≈ A\B
 
         C = randn(5,3)
         @test all(MyMatrix(C)\x .=== apply(\,MyMatrix(C),x))

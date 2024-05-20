@@ -218,6 +218,10 @@ end
 resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(B.data), MemoryLayout(B.array), B, mn...)
 resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(B.data), UnknownLayout(), B, mn...)
 resizedata!(A::AbstractArray, mn...) = A # don't do anything
+function resizedata!(A::AdjOrTrans, m, n)
+    m ≤ 0 || resizedata!(parent(A), n)
+    A
+end
 
 function cache_filldata!(B, inds...)
     B.data[inds...] .= view(B.array,inds...)

@@ -131,15 +131,6 @@ const Hcat{T,I<:Tuple} = ApplyArray{T,2,typeof(hcat),I}
 Hcat(A...) = ApplyArray(hcat, A...)
 Hcat{T}(A...) where T = ApplyArray{T}(hcat, A...)
 
-function instantiate(A::Applied{DefaultApplyStyle,typeof(hcat)})
-    isempty(A.args) && return A
-    m = size(A.args[1],1)
-    for k=2:length(A.args)
-        size(A.args[k],1) == m || throw(ArgumentError("number of rows of each array must match (got $(map(x->size(x,1), A)))"))
-    end
-    Applied{DefaultApplyStyle}(A.f,map(instantiate,A.args))
-end
-
 @inline applied_eltype(::typeof(hcat), args...) = promote_type(map(eltype,args)...)
 @inline applied_ndims(::typeof(hcat), args...) = 2
 @inline applied_size(::typeof(hcat), args...) = (size(args[1],1), +(map(a -> size(a,2), args)...))
@@ -226,7 +217,6 @@ end
 @inline hvcat_getindex_recursive(f, idx, N) = throw(BoundsError(f, idx))
 
 getindex(f::ApplyMatrix{<:Any,typeof(hvcat)}, k::Integer, j::Integer) = hvcat_getindex(f, k, j)
-getindex(f::Applied{DefaultArrayApplyStyle,typeof(hvcat)}, k::Integer, j::Integer)= hvcat_getindex(f, k, j)
 getindex(f::Applied{<:Any,typeof(hvcat)}, k::Integer, j::Integer)= hvcat_getindex(f, k, j)
 
 #####
@@ -268,51 +258,6 @@ function vcat_copyto!(arr::AbstractVector, arrays...)
         i += m
     end
     arr
-end
-
-# The following provides no performance benefit on Julia v1.10.0-rc2
-@static if VERSION < v"1.10-"
-
-function vcat_copyto!(arr::Vector{T}, arrays::Vector{T}...) where T
-    n = 0
-    for a in arrays
-        n += length(a)
-    end
-    n == length(arr) || throw(DimensionMismatch("destination must have length equal to sums of concatenated vectors"))
-
-    ptr = pointer(arr)
-    if isbitstype(T)
-        elsz = Core.sizeof(T)
-    elseif isbitsunion(T)
-        elsz = bitsunionsize(T)
-        selptr = convert(Ptr{UInt8}, ptr) + n * elsz
-    else
-        elsz = Core.sizeof(Ptr{Cvoid})
-    end
-    t = @_gc_preserve_begin arr
-    for a in arrays
-        na = length(a)
-        nba = na * elsz
-        if isbitstype(T)
-            ccall(:memcpy, Ptr{Cvoid}, (Ptr{Cvoid}, Ptr{Cvoid}, UInt),
-                  ptr, a, nba)
-        elseif isbitsunion(T)
-            ccall(:memcpy, Ptr{Cvoid}, (Ptr{Cvoid}, Ptr{Cvoid}, UInt),
-                  ptr, a, nba)
-            # copy selector bytes
-            ccall(:memcpy, Ptr{Cvoid}, (Ptr{Cvoid}, Ptr{Cvoid}, UInt),
-                  selptr, convert(Ptr{UInt8}, pointer(a)) + nba, na)
-            selptr += na
-        else
-            ccall(:jl_array_ptr_copy, Cvoid, (Any, Ptr{Cvoid}, Any, Ptr{Cvoid}, Int),
-                  arr, ptr, a, pointer(a), na)
-        end
-        ptr += nba
-    end
-    @_gc_preserve_end t
-    return arr
-end
-
 end
 
 # special case for adjoints of hcat. This is useful for catching fast paths
@@ -667,26 +612,52 @@ function _vcat_cumsum(x...)
 end
 
 @inline cumsum(V::Vcat{<:Any,1}) = ApplyVector(vcat,_vcat_cumsum(V.args...)...)
+# For simplicity we just use accumulate
+@inline accumulate(::typeof(+), V::Vcat{<:Any,1}) = cumsum(V)
 
 ###
 # cumsum(Vcat(::Number, ::Fill))
 # special override. Used with BlockArrays
 ###
 
-@inline function cumsum(v::Vcat{<:Any,1,<:Tuple{Number,AbstractFill}})
+@inline function cumsum(v::Vcat{T,1,<:Tuple{Number,AbstractFill}}) where T
+    V = promote_op(add_sum, T, T)
     a,b = v.args
-    FillArrays.steprangelen(a, getindex_value(b), length(b)+1)
+    FillArrays.steprangelen(convert(V, a), getindex_value(b), length(b)+1)
 end
 
 @inline function cumsum(v::Vcat{T,1,<:Tuple{Number,Zeros}}) where T
     a,b = v.args
-    Fill(convert(T,a), length(b)+1)
+    V = promote_op(add_sum, T, T)
+    Fill(convert(V,a), length(b)+1)
 end
 
 @inline function cumsum(v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
     a,b = v.args
-    convert(T,a) .+ (0:length(b))
+    V = promote_op(add_sum, T, T)
+    convert(V,a) .+ range(zero(V); length=length(b)+1)
 end
+
+for op in (:+, :-)
+    @eval @inline function accumulate(::typeof($op), v::Vcat{T,1,<:Tuple{Number,AbstractFill}}) where T
+        V = promote_op(add_sum, T, T)
+        a,b = v.args
+        FillArrays.steprangelen(convert(V, a), $op(getindex_value(b)), length(b)+1)
+    end
+end
+
+@inline function accumulate(::typeof(+), v::Vcat{T,1,<:Tuple{Number,Zeros}}) where T
+    a,b = v.args
+    V = promote_op(+, T, T)
+    Fill(convert(V,a), length(b)+1)
+end
+
+@inline function accumulate(::typeof(+), v::Vcat{T,1,<:Tuple{Number,Ones}}) where T
+    a,b = v.args
+    V = promote_op(+, T, T)
+    convert(V,a) .+ range(zero(V); length=length(b)+1)
+end
+
 
 
 _vcat_diff(x::Number) = ()

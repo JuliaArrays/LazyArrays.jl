@@ -588,23 +588,29 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
     @testset "cumsum(Vcat(::Number, ::Fill))" begin
         v = Vcat(2, Fill(3,5))
         @test cumsum(v) isa StepRangeLen{Int}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
         v = Vcat(2, Zeros{Int}(5))
         @test cumsum(v) isa Fill{Int}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
         v = Vcat(2, Ones{Int}(5))
         @test cumsum(v) isa UnitRange{Int}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
 
         v = Vcat(2, Fill(3.0,5))
         @test cumsum(v) isa StepRangeLen{Float64}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
         v = Vcat(2, Zeros(5))
         @test cumsum(v) isa Fill{Float64}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
         v = Vcat(2, Ones(5))
         @test cumsum(v) isa StepRangeLen{Float64}
-        @test cumsum(v) == cumsum(collect(v))
+        @test cumsum(v) == cumsum(collect(v)) == accumulate(+, v)
+        @test accumulate(-, v) == accumulate(-, collect(v))
     end
 
     @testset "empty vcat" begin
@@ -633,6 +639,13 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test exp.(b') isa BroadcastArray
         @test exp.(transpose(b)) == transpose(exp.(b))
         @test exp.(b') == exp.(b)'
+    end
+
+    @testset "Applied hvcat" begin
+        A,B,C,D = randn(5,5), randn(5,6), randn(6,5), randn(6,6)
+        M = ApplyArray(hvcat, 2, A, B, C, D)
+        A = Applied(hvcat, 2, A, B, C, D)
+        @test A[1,2] == M[1,2]
     end
 end
 

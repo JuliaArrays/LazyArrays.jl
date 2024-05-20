@@ -7,6 +7,7 @@ module InfiniteArrays
     Base.length(r::AbstractInfUnitRange) = ℵ₀
     Base.size(r::AbstractInfUnitRange) = (ℵ₀,)
     Base.last(r::AbstractInfUnitRange) = ℵ₀
+    Base.sum(r::AbstractInfUnitRange) = ℵ₀
 
     Base.IteratorSize(::Type{<:AbstractInfUnitRange}) = Base.IsInfinite()
 

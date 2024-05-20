@@ -116,9 +116,8 @@ ApplyStyle(::typeof(*), a::AbstractArray) = DefaultArrayApplyStyle()
 end
 _mul_ApplyStyle(a) = MulStyle()
 ApplyStyle(::typeof(*), a, b...) = _mul_ApplyStyle(a, b...)
-if !(AbstractQ  <: AbstractMatrix) # VERSION >= v"1.10-"
-    ApplyStyle(::typeof(*), a::Type{<:Union{AbstractArray,AbstractQ}}, b::Type{<:Union{AbstractArray,AbstractQ}}...) = _mul_ApplyStyle(a, b...)
-end
+ApplyStyle(::typeof(*), a::Type{<:Union{AbstractArray,AbstractQ}}, b::Type{<:Union{AbstractArray,AbstractQ}}...) = _mul_ApplyStyle(a, b...)
+
 # needed for disambiguation
 ApplyStyle(::typeof(*), a::Type{<:AbstractArray}, b::Type{<:AbstractArray}...) = _mul_ApplyStyle(a, b...)
 ApplyStyle(::typeof(*), ::Type{<:AbstractArray}) = DefaultArrayApplyStyle()
@@ -160,10 +159,8 @@ ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractQ}) = MulStyle
 _mul(A) = A
 _mul(A,B,C...) = lazymaterialize(*,A,B,C...)
 
-_mul_colsupport(j, Z) = colsupport(Z,j)
-_mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
-_mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
-
+_mul_colsupport(j) = j
+_mul_colsupport(j, Z::Number, Y...) = _mul_colsupport(j, Y...) # scalar mul doesn't do anything
 _mul_colsupport(j, Z::AbstractArray, Y...) = _mul_colsupport(colsupport(Z,j), Y...)
 
 colsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_colsupport(j, reverse(B.args)...)
@@ -213,11 +210,15 @@ _mul_args_cols(jr, z, y...) = __mul_args_cols(_mul_args_colsupport(z,jr), y...)
 _transposefirst_andmul(a, b...) = first(*(permutedims(a), b...))
 _transposefirst_andmul(a::AbstractArray{<:Number}, b...) = *(transpose(a), b...)
 
+
+_mul_getindex((A,)::Tuple{Any}, k::Int, j::Int) = A[k,j]
 function _mul_getindex(args::Tuple, k::Int, j::Int)
     kjr = intersect.(_mul_args_rows(k, args...), _mul_args_cols(j, reverse(args)...))
     any(isempty, kjr) && return zero(mapreduce(eltype, promote_type, args))
     _transposefirst_andmul(map(getindex, args, (k, kjr...), (kjr..., j))...)
 end
+
+_mul_getindex(args::Tuple{Number,Vararg{Any}}, k::Int, j::Int) = first(args) * _mul_getindex(tail(args), k, j)
 
 sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 # matrix-indexing loses the multiplication structure as we don't support tensor multiplication

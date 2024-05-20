@@ -3,7 +3,7 @@ import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTr
                     MulStyle, MulAddStyle, Applied, ApplyStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
                     Rmul, ApplyLayout, arguments, colsupport, rowsupport, lazymaterialize
 import Base.Broadcast: materialize, materialize!, broadcasted
-import MatrixFactorizations: QRCompactWYQLayout, AdjQRCompactWYQLayout
+import ArrayLayouts: QRCompactWYQLayout, AdjQRCompactWYQLayout
 
 Random.seed!(123)
 
@@ -1059,11 +1059,7 @@ end
         copyto!(c, V)
 
         # This test fails intermittently on GitHub Actions
-        # if v"1.9-" < VERSION < v"1.10-"
-        #     @test_broken @allocated(copyto!(c, V)) ≤ 500
-        # else
         #     @test @allocated(copyto!(c, V)) ≤ 500
-        # end
 
         @test all(c .=== apply(*, arguments(V)...))
 

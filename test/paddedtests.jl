@@ -1,20 +1,25 @@
 module PaddedTests
 
-using LazyArrays, FillArrays, ArrayLayouts, StaticArrays, Base64, Test
-import LazyArrays: PaddedLayout, LayoutVector, MemoryLayout, paddeddata, ApplyLayout, sub_materialize, CachedVector
+using LazyArrays, FillArrays, ArrayLayouts, Base64, Test
+using StaticArrays
+import LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, LayoutVector, MemoryLayout, paddeddata, ApplyLayout, sub_materialize, CachedVector
+import ArrayLayouts: OnesLayout
 import Base: setindex
 using LinearAlgebra
 
 # padded block arrays have padded data that is also padded. This is to test this
 struct PaddedPadded <: LayoutVector{Int} end
 
-MemoryLayout(::Type{PaddedPadded}) = PaddedLayout{UnknownLayout}()
+MemoryLayout(::Type{PaddedPadded}) = PaddedColumns{UnknownLayout}()
 Base.size(::PaddedPadded) = (10,)
 Base.getindex(::PaddedPadded, k::Int) = k ≤ 5 ? 1 : 0
 paddeddata(a::PaddedPadded) = a
 
 @testset "Padded" begin
-    @testset "PaddedLayout" begin
+    @testset "Vcat" begin
+        @test @inferred(MemoryLayout(typeof(Vcat(Ones(10),Zeros(10))))) == PaddedColumns{OnesLayout}()
+        @test @inferred(MemoryLayout(typeof(Vcat([1.],Zeros(10))))) == PaddedColumns{DenseColumnMajor}()
+
         A = Vcat([1,2,3], Zeros(7))
         B = Vcat([1,2], Zeros(8))
 
@@ -59,17 +64,17 @@ paddeddata(a::PaddedPadded) = a
         @testset "multiple scalar" begin
             # We only do 1 or 2 for now, this should be redesigned later
             A = Vcat(1, Zeros(8))
-            @test MemoryLayout(A) isa PaddedLayout{ScalarLayout}
+            @test MemoryLayout(A) isa PaddedColumns{ScalarLayout}
             @test paddeddata(A) == 1
             B = Vcat(1, 2, Zeros(8))
             @test paddeddata(B) == [1,2]
-            @test MemoryLayout(B) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+            @test MemoryLayout(B) isa PaddedColumns{ApplyLayout{typeof(vcat)}}
             C = Vcat(1, cache(Zeros(8)));
             @test paddeddata(C) == [1]
-            @test MemoryLayout(C) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+            @test MemoryLayout(C) isa PaddedColumns{ApplyLayout{typeof(vcat)}}
             D = Vcat(1, 2, cache(Zeros(8)));
             @test paddeddata(D) == [1,2]
-            @test MemoryLayout(D) isa PaddedLayout{ApplyLayout{typeof(vcat)}}
+            @test MemoryLayout(D) isa PaddedColumns{ApplyLayout{typeof(vcat)}}
         end
 
         @testset "PaddedPadded" begin
@@ -86,7 +91,9 @@ paddeddata(a::PaddedPadded) = a
         @testset "Matrix padded" begin
             a = Vcat(randn(2,3), Zeros(3,3))
             b = Vcat(randn(3,3), Zeros(2,3))
+            @test MemoryLayout(a) isa PaddedColumns{DenseColumnMajor}
             @test a + b isa Vcat
+            @test MemoryLayout(a+b) isa PaddedColumns{DenseColumnMajor}
             @test a + b == Matrix(a) + Matrix(b)
         end
     end
@@ -94,16 +101,16 @@ paddeddata(a::PaddedPadded) = a
     @testset "copyto!" begin
         a = Vcat(1, Zeros(10));
         c = cache(Zeros(11));
-        @test MemoryLayout(typeof(a)) isa PaddedLayout
-        @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
+        @test MemoryLayout(typeof(a)) isa PaddedColumns
+        @test MemoryLayout(typeof(c)) isa PaddedColumns{DenseColumnMajor}
         @test copyto!(c, a) ≡ c;
         @test c.datasize[1] == 1
         @test c == a
 
         a = Vcat(1:3, Zeros(10))
         c = cache(Zeros(13));
-        @test MemoryLayout(typeof(a)) isa PaddedLayout
-        @test MemoryLayout(typeof(c)) isa PaddedLayout{DenseColumnMajor}
+        @test MemoryLayout(typeof(a)) isa PaddedColumns
+        @test MemoryLayout(typeof(c)) isa PaddedColumns{DenseColumnMajor}
         @test copyto!(c, a) ≡ c;
         @test c.datasize[1] == 3
         @test c == a
@@ -134,7 +141,7 @@ paddeddata(a::PaddedPadded) = a
 
     @testset "vcat and padded" begin
         x,y = Vcat([1,2,3],Zeros(5)), Vcat(5, 1:7)
-        @test MemoryLayout(x) isa PaddedLayout
+        @test MemoryLayout(x) isa PaddedColumns
         @test MemoryLayout(y) isa ApplyLayout{typeof(vcat)}
         @test x .+ y == y .+ x == Vector(x) .+ Vector(y)
         @test x .+ y isa Vcat
@@ -166,14 +173,14 @@ paddeddata(a::PaddedPadded) = a
     @testset "subpadded" begin
         A = Hcat(1:10, Zeros(10,10))
         V = view(A,3:5,:)
-        @test MemoryLayout(V) isa PaddedLayout
+        @test MemoryLayout(V) isa PaddedRows
         @test A[parentindices(V)...] == copy(V) == Array(A)[parentindices(V)...]
         V = view(A,3:5,1:4)
-        @test MemoryLayout(V) isa PaddedLayout
+        @test MemoryLayout(V) isa PaddedRows
         @test @inferred(paddeddata(V)) == reshape(3:5,3,1)
 
         v = view(A,2,1:5)
-        @test MemoryLayout(v) isa PaddedLayout
+        @test MemoryLayout(v) isa PaddedColumns
         @test paddeddata(v) == [2]
         @test A[2,1:5] == copy(v) == sub_materialize(v)
 
@@ -184,12 +191,13 @@ paddeddata(a::PaddedPadded) = a
             c = cache(Zeros(10)); c[1:3] = 1:3;
             v = view(a,2:4)
             w = view(c,2:4);
-            @test MemoryLayout(typeof(a)) isa PaddedLayout{DenseColumnMajor}
-            @test MemoryLayout(v) isa PaddedLayout{DenseColumnMajor}
+            @test MemoryLayout(typeof(a)) isa PaddedColumns{DenseColumnMajor}
+            @test MemoryLayout(v) isa PaddedColumns{DenseColumnMajor}
             @test sub_materialize(v) == a[2:4] == sub_materialize(w)
             @test sub_materialize(v) isa Vcat
             @test sub_materialize(w) isa Vcat
             A = Vcat(Eye(2), Zeros(10,2))
+            @test MemoryLayout(A) isa PaddedColumns
             V = view(A, 1:5, 1:2)
             @test sub_materialize(V) == A[1:5,1:2]
         end
@@ -201,8 +209,14 @@ paddeddata(a::PaddedPadded) = a
         @test MemoryLayout(H) isa PaddedLayout
         @test paddeddata(H) == [1 2 3]
         H = Hcat(1, 3, Zeros(1,3))
-        @test MemoryLayout(H) isa PaddedLayout
+        @test MemoryLayout(H) isa PaddedRows
         @test paddeddata(H) == [1 3]
+        @test rowsupport(H) == 1:2
+
+        @test MemoryLayout(Hcat(1, H)) isa PaddedRows
+        @test paddeddata(Hcat(1, H)) == [1 1 3]
+        @test MemoryLayout(Hcat(1, 2, H)) isa PaddedRows
+        @test paddeddata(Hcat(1, 2, H)) == [1 2 1 3]
     end
     @testset "padded broadcast" begin
         @testset "vector" begin
@@ -235,7 +249,7 @@ paddeddata(a::PaddedPadded) = a
         @testset "matrix" begin
             a = Vcat([1 2], Zeros(3,2))
             b = Vcat([1 2; 3 4], Zeros(2,2))
-            @test MemoryLayout(a + a) isa PaddedLayout
+            @test MemoryLayout(a + a) isa PaddedColumns
             @test a + a isa Vcat
             @test a + a == 2a
             @test a + b == b + a
@@ -275,6 +289,8 @@ paddeddata(a::PaddedPadded) = a
         @test P[1:10,6] == P[:,6]
         @test P[:,6] isa Vcat
         @test P[6,1:11] == P[6,:]
+
+        @test MemoryLayout(P[1:6,1:7]) isa PaddedLayout
     end
     @testset "setindex" begin
         a = ApplyArray(setindex, 1:6, 5, 2)
@@ -296,7 +312,7 @@ paddeddata(a::PaddedPadded) = a
 
 
         a = ApplyArray(setindex, Zeros(5), [1,2], Base.OneTo(2))
-        @test MemoryLayout(a) isa PaddedLayout{DenseColumnMajor}
+        @test MemoryLayout(a) isa PaddedColumns{DenseColumnMajor}
         @test paddeddata(a) == 1:2
 
         a = ApplyArray(setindex, Zeros(5,5), [1 2 3; 4 5 6], Base.OneTo(2), Base.OneTo(3))
@@ -313,18 +329,56 @@ paddeddata(a::PaddedPadded) = a
 
     @testset "adjtrans" begin
         a = Vcat(1, Zeros(3))
-        @test MemoryLayout(a') isa DualLayout{<:PaddedLayout}
-        @test MemoryLayout(transpose(a)) isa DualLayout{<:PaddedLayout}
+        @test MemoryLayout(a') isa DualLayout{<:PaddedRows}
+        @test MemoryLayout(transpose(a)) isa DualLayout{<:PaddedRows}
         @test paddeddata(a') ≡ 1
         b = Vcat(SVector(1,2), Zeros(3))
         @test paddeddata(b') ≡ SVector(1,2)'
         @test paddeddata(transpose(b)) ≡ transpose(SVector(1,2))
+
+        H = Hcat(1, 3, Zeros(1,3))
+        @test MemoryLayout(Transpose(H)) isa PaddedColumns
+        @test paddeddata(Transpose(H)) == [1,3]
     end
 
     @testset "norm" begin
         a = Vcat(1, Zeros(3))
         c = cache(Zeros(4)); c[1] = 1
         @test norm(a) ≡ LinearAlgebra.normInf(c) ≡ LinearAlgebra.norm2(c) ≡ LinearAlgebra.norm1(c) ≡ LinearAlgebra.normp(c,2) ≡ 1.0
+    end
+
+    @testset "padded columns" begin
+        A = randn(5,5)
+        U = UpperTriangular(A)
+        v = view(U,:,3)
+        @test MemoryLayout(v) isa PaddedColumns{DenseColumnMajor}
+        @test layout_getindex(v,1:4) == U[1:4,3]
+        @test layout_getindex(v,1:4) isa Vcat
+
+        L = LowerTriangular(A)
+        w = view(L,3,:)
+        @test MemoryLayout(w) isa PaddedColumns{ArrayLayouts.StridedLayout}
+        @test layout_getindex(w,1:4) == L[3,1:4]
+        @test layout_getindex(w,1:4) isa Vcat
+    end
+
+    @testset "vcat sub arguments" begin
+        a = Vcat(1:5, Zeros(10))
+        @test LazyArrays.arguments(vcat, view(a, 1:7)) == (1:5, Zeros(2))
+    end
+
+    @testset "vcat padded" begin
+        A = Vcat([1,2,3], Zeros(7))
+        B = Vcat([1,2], Zeros(8))
+        C = Vcat(A,B)
+        D = Hcat(A', B')
+        @test MemoryLayout(C) isa PaddedColumns
+        @test paddeddata(C) == [A; 1:2]
+        @test MemoryLayout(D) isa DualLayout{<:PaddedRows}
+        @test paddeddata(D) == [A' (1:2)']
+
+        E = Hcat(Hcat(randn(3,2), Zeros(3,3)), Hcat(randn(3,2), Zeros(3,3)))
+        @test MemoryLayout(E) isa PaddedRows
     end
 end
 
