@@ -5,7 +5,7 @@ using LazyArrays.ArrayLayouts, LazyArrays.FillArrays, LazyArrays.LazyArrays
 import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulMatAdd, DenseColumnMajor,
                     OnesLayout, AbstractFillLayout, mulreduce, _inv, _fill_lmul!, _copyto!, _copy_oftype
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout, transposelayout,
-                   LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout,
+                   LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout, LazyLayouts,
                    AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul
@@ -543,6 +543,7 @@ SymmetricLayout{BandedColumns{LazyLayout}}, HermitianLayout{BandedColumns{LazyLa
 
 copy(M::Mul{<:BandedLazyLayouts, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts}) = simplify(M)
+copy(M::Mul{<:BandedLazyLayouts, <:LazyLayouts}) = simplify(M)
 copy(M::Mul{<:Any, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts, <:AbstractLazyLayout}) = simplify(M)
 copy(M::Mul{<:AbstractLazyLayout, <:BandedLazyLayouts}) = simplify(M)

@@ -817,6 +817,14 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test c' ≈ 2*a'*B + 3*[2; Zeros(n-1)]'
         @test a'B ≈ a'Matrix(B)
     end
+
+    @testset "lazy banded * Lazy" begin
+        n = 10
+        A = BroadcastArray(*, 3, brand(n,n,2,1))
+        B = BroadcastArray(*, 3, rand(n,n))
+
+        @test A*LowerTriangular(B) ≈ Matrix(A)*LowerTriangular(B)
+    end
 end
 
 end # module
