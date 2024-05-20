@@ -160,10 +160,8 @@ ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractQ}) = MulStyle
 _mul(A) = A
 _mul(A,B,C...) = lazymaterialize(*,A,B,C...)
 
-_mul_colsupport(j, Z) = colsupport(Z,j)
-_mul_colsupport(j, Z::AbstractArray) = colsupport(Z,j)
-_mul_colsupport(j, Z, Y...) = axes(Z,1) # default is return all
-
+_mul_colsupport(j) = j
+_mul_colsupport(j, Z::Number, Y...) = _mul_colsupport(j, Y...) # scalar mul doesn't do anything
 _mul_colsupport(j, Z::AbstractArray, Y...) = _mul_colsupport(colsupport(Z,j), Y...)
 
 colsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_colsupport(j, reverse(B.args)...)
@@ -220,6 +218,8 @@ function _mul_getindex(args::Tuple, k::Int, j::Int)
     any(isempty, kjr) && return zero(mapreduce(eltype, promote_type, args))
     _transposefirst_andmul(map(getindex, args, (k, kjr...), (kjr..., j))...)
 end
+
+_mul_getindex(args::Tuple{Number,Vararg{Any}}, k::Int, j::Int) = first(args) * _mul_getindex(tail(args), k, j)
 
 sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
 # matrix-indexing loses the multiplication structure as we don't support tensor multiplication

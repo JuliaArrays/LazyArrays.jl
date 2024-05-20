@@ -115,6 +115,16 @@ using LinearAlgebra
         @test arguments(R) == (rot180(A), rot180(B))
         @test R ≈ rot180(A*B)
     end
+
+    @testset "scalar * Matrix" begin
+        A = randn(5,5)
+        M = ApplyArray(*,1.0,A)
+        @test M ≈ A
+        for k = axes(A,1), j = axes(A,2)
+            @test M[k,j] ≈ A[k,j]
+        end
+        @test colsupport(M,1) == 1:5
+    end
 end # testset
 
 end # module
