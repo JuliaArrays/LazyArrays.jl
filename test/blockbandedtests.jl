@@ -194,6 +194,7 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         N = BroadcastArray(*, randn(size(A)),  randn(size(A)))
         D = Diagonal(1:10)
         MA = ApplyArray(*, randn(10,10), randn(10,10))
+        P = ApplyArray(+, randn(10,10), randn(10,10))
 
         @test B*B ≈ Matrix(B)^2
         @test B*A ≈ Matrix(B)*A
@@ -202,6 +203,8 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         @test N*B ≈ Matrix(N)*Matrix(B)
         @test B*D ≈ Matrix(B)*D
         @test D*B ≈ D*Matrix(B)
+        @test B*M ≈ B*A^2
+        @test M*B ≈ A^2*B
 
         @test B*Zeros(10) isa Zeros
         @test mul(B,Zeros(10)) isa Zeros
@@ -224,6 +227,10 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         @test B * MA ≈ Matrix(B) * MA
         @test MA * M ≈ MA * Matrix(M)
         @test M * MA ≈ Matrix(M) * MA
+        @test P * B ≈ P * Matrix(B)
+        @test B * P ≈ Matrix(B) * P
+        @test P * M ≈ P * Matrix(M)
+        @test M * P ≈ Matrix(M) * P
 
         Ai = ApplyArray(inv, A)
 

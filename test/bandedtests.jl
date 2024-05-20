@@ -825,6 +825,13 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
 
         @test A*LowerTriangular(B) ≈ Matrix(A)*LowerTriangular(B)
     end
+
+    @testset "Lazy triangular" begin
+        n = 10
+        A = BroadcastArray(*, 3, brand(n,n,2,1))
+        @test MemoryLayout(UpperTriangular(A)) isa TriangularLayout{'U', 'N', LazyBandedLayout}
+        @test MemoryLayout(LowerTriangular(A)) isa TriangularLayout{'L', 'N', LazyBandedLayout}
+    end
 end
 
 end # module

@@ -355,10 +355,6 @@ applylayout(::Type{typeof(vcat)}, ::ZerosLayout, ::Lay) where Lay<:BandedLayouts
 applylayout(::Type{typeof(hcat)}, ::ZerosLayout, ::Lay) where Lay<:BandedLayouts = ApplyBandedLayout{typeof(hcat)}()
 
 
-for op in (:hcat, :vcat)
-    @eval sublayout(::ApplyBandedLayout{typeof($op)}, ::Type{<:NTuple{2,AbstractUnitRange}}) = ApplyBandedLayout{typeof($op)}()
-end
-
 
 # some special cases of hvcat we can recognise are banded
 
@@ -439,8 +435,8 @@ Base.typed_vcat(::Type{T}, A::BandedMatrix, B::AbstractVecOrMat...) where T = Ma
 # layout_broadcasted(lay, ::ApplyBandedLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(lay, ApplyLayout{typeof(vcat)}(), op,A, B)
 # layout_broadcasted(::ApplyBandedLayout{typeof(vcat)}, lay, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(ApplyLayout{typeof(vcat)}(), lay, op,A, B)
 
-LazyArrays._vcat_sub_arguments(::ApplyBandedLayout{typeof(vcat)}, A, V) = LazyArrays._vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
-LazyArrays._vcat_sub_arguments(::ApplyBandedLayout{typeof(hcat)}, A, V) = LazyArrays._vcat_sub_arguments(ApplyLayout{typeof(hcat)}(), A, V)
+LazyArrays._vcat_sub_arguments(lay::ApplyBandedLayout{typeof(vcat)}, A, V) = LazyArrays._vcat_sub_arguments(nonbandedlayout(lay), A, V)
+LazyArrays._vcat_sub_arguments(lay::ApplyBandedLayout{typeof(hcat)}, A, V) = LazyArrays._vcat_sub_arguments(nonbandedlayout(lay), A, V)
 
 #######
 # CachedArray
