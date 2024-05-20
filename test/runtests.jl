@@ -463,3 +463,4 @@ end
 
 include("blocktests.jl")
 include("bandedtests.jl")
+include("blockbandedtests.jl")

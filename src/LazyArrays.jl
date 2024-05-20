@@ -3,7 +3,7 @@ module LazyArrays
 # Use README as the docstring of the module:
 @doc read(joinpath(dirname(@__DIR__), "README.md"), String) LazyArrays
 
-using Base.Broadcast, LinearAlgebra, FillArrays, ArrayLayouts, MatrixFactorizations, SparseArrays
+using Base.Broadcast, LinearAlgebra, FillArrays, ArrayLayouts, SparseArrays
 import LinearAlgebra.BLAS
 
 import Base: *, +, -, /, <, ==, >, \, ≤, ≥, (:), @_gc_preserve_begin, @_gc_preserve_end, @propagate_inbounds,
@@ -15,7 +15,7 @@ import Base: *, +, -, /, <, ==, >, \, ≤, ≥, (:), @_gc_preserve_begin, @_gc_p
              real, replace_in_print_matrix, replace_with_centered_mark, reverse, searchsorted, searchsortedfirst,
              searchsortedlast, sec, sech, setindex, setindex!, show, similar, sin, sinh, size, sort, sqrt, strides, sum,
              tail, tan, tanh, transpose, tuple_type_tail, union, unsafe_convert, vec, zero, fill!, require_one_based_indexing,
-             oneto
+             oneto, add_sum, promote_op
 
 import Base.Broadcast: AbstractArrayStyle, BroadcastStyle, Broadcasted, DefaultArrayStyle, broadcasted, combine_eltypes,
                        instantiate
@@ -74,6 +74,8 @@ broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{<:Fill,Typ
 if !isdefined(Base, :get_extension)
     include("../ext/LazyArraysStaticArraysExt.jl")
     include("../ext/LazyArraysBandedMatricesExt.jl")
+    include("../ext/LazyArraysBlockArraysExt.jl")
+    include("../ext/LazyArraysBlockBandedMatricesExt.jl")
 end
 
 end # module

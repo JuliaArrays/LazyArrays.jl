@@ -1,6 +1,6 @@
 module LazyBandedTests
 using ArrayLayouts, LazyArrays, BandedMatrices, LinearAlgebra, Test
-using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize
+using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize, bandeddata
 using LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout
 using ArrayLayouts: OnesLayout, StridedLayout
 LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
@@ -63,8 +63,10 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A*x ≈ A*Vector(x)
 
         A = Vcat(Zeros(1,10), brand(9,10,0,2))
+        @test MemoryLayout(A) isa ApplyBandedLayout
         @test bandwidths(A) == (1,1)
         @test BandedMatrix(A) == Array(A) == A
+        @test A[1:3,1:3] isa BandedMatrix
 
         A = Hcat(Zeros(5,2), brand(5,5,1,1))
         @test bandwidths(A) == (-1,3)
@@ -76,6 +78,9 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
 
         A = Hcat(_BandedMatrix(randn(3,10), 10, 1,1), Hcat(randn(10,2), Zeros(10,10)))
         @test MemoryLayout(A) isa PaddedRows
+
+        A = Hcat(Vcat(1:3, Zeros(7)), _BandedMatrix(randn(3,10), 10, 1,1))
+        @test MemoryLayout(A) isa ApplyBandedLayout
     end
 
     @testset "BroadcastBanded * Padded" begin
@@ -423,6 +428,8 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         resizedata!(C,1,1);
         @test C[1:10,1:10] == A[1:10,1:10]
         @test C[1:10,1:10] isa BandedMatrix
+        @test bandeddata(view(C,1:5,1:5)) == C.data.data[:,1:5]
+        @test size(bandeddata(C)) == (3,10000)
     end
 
     @testset "NaN Bug" begin
@@ -768,6 +775,36 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         B = brand(5,5,2,1)
         @test ApplyArray(\, A, A) * BroadcastArray(*, B, 3) ≈ 3B
         @test BroadcastArray(*, 2, A) * BroadcastArray(*, B, 3) ≈ 6A*B
+    end
+
+    @testset "Lazy data" begin
+        D = MyLazyArray(randn(3,5))
+        B = _BandedMatrix(D, 5, 1,1)
+        A = BroadcastArray(*, 2,  randn(5,5))
+        @test B*A ≈ B*Matrix(A)
+        @test A*B ≈ Matrix(A)B
+        @test simplifiable(*, randn(5,5), B) isa Val{true}
+        @test simplifiable(*, B, randn(5,5)) isa Val{true}
+    end
+
+    @testset "PaddedRows * Banded" begin
+        P = Hcat(randn(2,3), Zeros(2,2))
+        B = brand(5,5,2,1)
+        @test ApplyArray(*,P,B) ≈ P*B
+    end
+
+    @testset "banded hvcat" begin
+        n = 10
+        B = brand(n-1,n-1,2,1)
+        P = ApplyArray(hvcat, 2,
+                        1,          Zeros(n-1)',
+                        Zeros(n-1), B)
+        @test MemoryLayout(P) isa ApplyBandedLayout
+        P = ApplyArray(hvcat, 3,
+                        1,          2,          Zeros(n-2)',
+                        3,          4,          Zeros(n-2)',
+                        Zeros(n-2), Zeros(n-2), B)
+        @test MemoryLayout(P) isa ApplyBandedLayout
     end
 end
 

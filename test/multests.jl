@@ -3,7 +3,7 @@ import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTr
                     MulStyle, MulAddStyle, Applied, ApplyStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
                     Rmul, ApplyLayout, arguments, colsupport, rowsupport, lazymaterialize
 import Base.Broadcast: materialize, materialize!, broadcasted
-import MatrixFactorizations: QRCompactWYQLayout, AdjQRCompactWYQLayout
+import ArrayLayouts: QRCompactWYQLayout, AdjQRCompactWYQLayout
 
 Random.seed!(123)
 
