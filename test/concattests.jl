@@ -640,6 +640,13 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test exp.(transpose(b)) == transpose(exp.(b))
         @test exp.(b') == exp.(b)'
     end
+
+    @testset "Applied hvcat" begin
+        A,B,C,D = randn(5,5), randn(5,6), randn(6,5), randn(6,6)
+        M = ApplyArray(hvcat, 2, A, B, C, D)
+        A = Applied(hvcat, 2, A, B, C, D)
+        @test A[1,2] == M[1,2]
+    end
 end
 
 end # module
