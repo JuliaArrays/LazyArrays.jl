@@ -380,6 +380,16 @@ paddeddata(a::PaddedPadded) = a
         E = Hcat(Hcat(randn(3,2), Zeros(3,3)), Hcat(randn(3,2), Zeros(3,3)))
         @test MemoryLayout(E) isa PaddedRows
     end
+
+    @testset "scalar vcat bug" begin
+        v = Vcat(1, Zeros(10))
+        w = Vcat(1, 2, Zeros(9))
+        @test v[1:10] == [1; zeros(9)]
+        @test v[2:10] == zeros(9)
+        @test w[1:10] == [1; 2; zeros(8)]
+        @test w[2:10] == [2; zeros(8)]
+        @test w[3:10] == zeros(8)
+    end
 end
 
 end # module
