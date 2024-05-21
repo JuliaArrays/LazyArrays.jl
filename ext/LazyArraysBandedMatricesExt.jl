@@ -580,6 +580,9 @@ copy(M::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = simplify(M)
 
 copy(L::Ldiv{<:BandedLazyLayouts, <:BandedLazyLayouts}) = lazymaterialize(\, L.A, L.B)
 
+## The following needs more thought but for now it fixes a bug downstream.
+copy(L::Ldiv{<:BandedLazyLayouts, <:DiagonalLayout}) = lazymaterialize(\, L.A, L.B)
+
 # TODO: this is type piracy
 function colsupport(lay::ApplyLayout{typeof(\)}, L, j)
     A,B = arguments(lay, L)
