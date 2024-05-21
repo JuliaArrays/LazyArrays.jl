@@ -425,7 +425,7 @@ end
 _vcat_sub_arguments(::AbstractPaddedLayout, A, V) = _vcat_sub_arguments(ApplyLayout{typeof(vcat)}(), A, V)
 
 _lazy_getindex(dat, kr...) = view(dat, kr...)
-_lazy_getindex(dat::Number, _...) = dat
+_lazy_getindex(dat::Number, kr) = 1 ∈ kr ? dat : zero(kr)
 
 function sub_paddeddata(_, S::SubArray{<:Any,1,<:AbstractVector})
     dat = paddeddata(parent(S))
