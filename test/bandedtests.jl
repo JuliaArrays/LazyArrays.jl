@@ -832,6 +832,14 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test MemoryLayout(UpperTriangular(A)) isa TriangularLayout{'U', 'N', LazyBandedLayout}
         @test MemoryLayout(LowerTriangular(A)) isa TriangularLayout{'L', 'N', LazyBandedLayout}
     end
+
+    @testset "copyto! broadcast view" begin
+        n = 10
+        A = brand(n,n,2,1)
+        B = BroadcastArray(\, 1:n, A)
+        @test B[1:3,1:4] ≈ (1:3) .\ A[1:3,1:4]
+        @test B'[1:3,1:4] ≈ B[1:4,1:3]'
+    end
 end
 
 end # module
