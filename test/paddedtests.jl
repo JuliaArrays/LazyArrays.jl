@@ -389,6 +389,9 @@ paddeddata(a::PaddedPadded) = a
         @test w[1:10] == [1; 2; zeros(8)]
         @test w[2:10] == [2; zeros(8)]
         @test w[3:10] == zeros(8)
+        H = Hcat(1, Zeros(1, 10))
+        @test H[:,1:10] == [1 zeros(9)']
+        @test H[:,2:10] == zeros(9)'
     end
 end
 
