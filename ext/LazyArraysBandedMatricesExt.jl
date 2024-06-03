@@ -623,6 +623,7 @@ simplifiable(::Mul{<:BroadcastBandedLayout, <:Union{AbstractPaddedLayout,Abstrac
 
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:BroadcastBandedLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:Union{PaddedColumns,AbstractStridedLayout} = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 _inv(::BandedLazyLayouts, _, A) = ApplyArray(inv, A)
 
 ####
