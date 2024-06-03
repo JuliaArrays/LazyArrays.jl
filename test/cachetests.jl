@@ -385,7 +385,7 @@ using Infinities
 
     @testset "getindex and data structure" begin
         A = Matrix(1.0I[1:100,1:100])
-        A[2,1] = 3. 
+        A[2,1] = 3.
         Ac = cache(sparse(A))
         @test Ac isa AbstractCachedArray
         @test Ac isa AbstractCachedMatrix
@@ -442,7 +442,19 @@ using Infinities
         Q = qr(randn(5,5)).Q
         C = cache(Q);
         @test C[1:5,1:5] == Q[1:5,1:5]
-        @test length(C) == 25        
+        @test length(C) == 25
+    end
+
+    @testset "fill! views" begin
+        a = CachedArray(Zeros{Float64}(100));
+        view(a, 2:2:5) .= 2;
+        @test a.datasize == (4,)
+        @test a[1:5] == [0,2,0,2,0]
+
+        a = CachedArray(Zeros{Float64}(∞));
+        a[4] = 2;
+        view(a, 2:2:∞) .= 0.0;
+        @test a[1:5] == zeros(5)
     end
 end
 

@@ -578,7 +578,8 @@ simplifiable(::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = Val(false)
 copy(M::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = simplify(M)
 
 
-copy(L::Ldiv{<:BandedLazyLayouts, <:BandedLazyLayouts}) = lazymaterialize(\, L.A, L.B)
+copy(L::Ldiv{<:BandedLazyLayouts}) = lazymaterialize(\, L.A, L.B)
+copy(L::Ldiv{<:BandedLazyLayouts, Blay}) where Blay<:Union{AbstractStridedLayout,PaddedColumns} = copy(Ldiv{UnknownLayout,Blay}(L.A, L.B))
 
 # TODO: this is type piracy
 function colsupport(lay::ApplyLayout{typeof(\)}, L, j)
