@@ -412,6 +412,22 @@ function fill!(a::CachedArray, x)
     a
 end
 
+function fill!(a::SubArray{<:Any,1,<:CachedVector}, x)
+    p = parent(a)
+    kr = parentindices(a)[1]
+    if !isempty(kr)
+        N = maximum(kr)
+        if isfinite(N)
+            resizedata!(p, N)
+            fill!(view(p.data, kr), x)
+        else    
+            fill!(view(p.data, kr ∩ OneTo(p.datasize[1])), x)
+            fill!(view(p.array, kr), x)
+        end
+    end
+    a
+end
+
 function rmul!(a::CachedArray, x::Number)
     rmul!(a.data, x)
     rmul!(a.array, x)

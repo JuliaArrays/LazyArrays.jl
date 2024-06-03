@@ -833,6 +833,20 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test MemoryLayout(LowerTriangular(A)) isa TriangularLayout{'L', 'N', LazyBandedLayout}
     end
 
+    @testset "lazy banded Ldiv" begin
+        n = 10
+        A = BroadcastArray(*, 3, brand(n,n,2,1))
+        b = randn(n)
+        @test A \ b ≈ Matrix(A) \ b
+        @test A \ b isa Vector
+        b = Vcat(randn(3), Zeros(7))
+        @test inv(A) * b == A \ b
+        @test A\b isa Vector
+
+        @test A \ A ≈ I
+        @test A \ A isa ApplyArray
+    end
+    
     @testset "copyto! broadcast view" begin
         n = 10
         A = brand(n,n,2,1)
