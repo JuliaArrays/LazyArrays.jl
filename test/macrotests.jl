@@ -103,4 +103,8 @@ end
     @test copy(@views @~ exp.(A[1:2, 1:2])) == exp.(A[1:2, 1:2])
 end
 
+@testset "error capturing" begin
+    @test_throws "ArgumentError: @~ is capturing more than one expression, try capturing \"u - v\" with brackets" @macroexpand @~ u - v, 2
+end
+
 end  # module

@@ -86,7 +86,7 @@ function checkex(ex)
         end
     end
     if @capture(ex, (arg_,rest__) )
-        throw(ArgumentError("@~ is capturing more than one expression, try $name($arg) with brackets"))
+        throw(ArgumentError("@~ is capturing more than one expression, try capturing \"$arg\" with brackets"))
     end
     ex
 end
