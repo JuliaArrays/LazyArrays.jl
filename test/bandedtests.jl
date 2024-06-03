@@ -846,6 +846,22 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A \ A ≈ I
         @test A \ A isa ApplyArray
     end
+    
+    @testset "copyto! broadcast view" begin
+        n = 10
+        A = brand(n,n,2,1)
+        B = BroadcastArray(\, 1:n, A)
+        @test B[1:3,1:4] ≈ (1:3) .\ A[1:3,1:4]
+        @test B'[1:3,1:4] ≈ B[1:4,1:3]'
+    end
+
+    @testset "Ldiv with Diagonal" begin
+        n = 10
+        a = BroadcastArray(*, 2, 2 .+ rand(n))
+        b = BroadcastArray(*, 2, randn(n-1))
+        B = Bidiagonal(a, b, :U)
+        @test ldiv(B, Diagonal(1:n)) ≈ ApplyArray(inv,B) * Diagonal(1:n) ≈ B \ Diagonal(1:n)
+    end
 end
 
 end # module

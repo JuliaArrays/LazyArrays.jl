@@ -297,7 +297,7 @@ copy(M::Mul{BroadcastBandedLayout{typeof(*)}, <:AbstractPaddedLayout}) = _broadc
 _BandedMatrix(::ApplyBandedLayout{typeof(*)}, V::AbstractMatrix{T}) where T = 
     copyto!(BandedMatrix{T}(undef, axes(V), bandwidths(V)), V)
 _BandedMatrix(::BroadcastBandedLayout, V::AbstractMatrix{T}) where T = 
-    copyto!(BandedMatrix{T}(undef, axes(V), bandwidths(V)), broadcasted(V))
+    copyto!(BandedMatrix{T}(undef, axes(V), bandwidths(V)), _broadcastarray2broadcasted(V))
 
 _broadcast_BandedMatrix(a::AbstractMatrix) = BandedMatrix(a)
 _broadcast_BandedMatrix(a) = a
@@ -580,6 +580,9 @@ copy(M::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = simplify(M)
 
 copy(L::Ldiv{<:BandedLazyLayouts}) = lazymaterialize(\, L.A, L.B)
 copy(L::Ldiv{<:BandedLazyLayouts, Blay}) where Blay<:Union{AbstractStridedLayout,PaddedColumns} = copy(Ldiv{UnknownLayout,Blay}(L.A, L.B))
+
+## The following needs more thought but for now it fixes a bug downstream.
+copy(L::Ldiv{<:BandedLazyLayouts, <:DiagonalLayout}) = lazymaterialize(\, L.A, L.B)
 
 # TODO: this is type piracy
 function colsupport(lay::ApplyLayout{typeof(\)}, L, j)
