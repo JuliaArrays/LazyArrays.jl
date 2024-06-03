@@ -446,14 +446,14 @@ using Infinities
     end
 
     @testset "fill! views" begin
-        a = CachedArray(Zeros{Float64}(100));
+        a = CachedArray(Zeros(100));
         view(a, 2:2:5) .= 2;
         @test a.datasize == (4,)
         @test a[1:5] == [0,2,0,2,0]
 
-        a = CachedArray(Zeros{Float64}(∞));
+        a = CachedArray(Zeros(ℵ₀));
         a[4] = 2;
-        view(a, 2:2:∞) .= 0.0;
+        view(a, 2:ℵ₀) .= 0.0;
         @test a[1:5] == zeros(5)
     end
 end
