@@ -1,7 +1,7 @@
 module LazyBandedTests
 using ArrayLayouts, LazyArrays, BandedMatrices, LinearAlgebra, Test
 using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize, bandeddata
-using LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout
+using LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout, BroadcastLayout
 using ArrayLayouts: OnesLayout, StridedLayout
 LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
 BroadcastBandedLayout = LazyArraysBandedMatricesExt.BroadcastBandedLayout
@@ -415,6 +415,15 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
             C = BandedMatrix{Float64}(undef, size(B), (1,2))
             C .= A .+ B
             @test C == A + B
+        end
+
+        @testset "generalise broadcast" begin
+            for A in (brand(5,5,1,2), Symmetric(brand(5,5,1,2)))
+                @test MemoryLayout(BroadcastMatrix(-, A)) isa BroadcastBandedLayout
+                @test MemoryLayout(BroadcastMatrix(-, A, A)) isa BroadcastBandedLayout
+                @test MemoryLayout(BroadcastMatrix(abs, A)) isa BroadcastBandedLayout
+                @test MemoryLayout(BroadcastMatrix(cos, A)) isa BroadcastLayout
+            end
         end
     end
 

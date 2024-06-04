@@ -157,6 +157,13 @@ BroadcastBlockBandedLayouts{F} = Union{BroadcastBlockBandedLayout{F},BroadcastBa
 blockbandwidths(B::BroadcastMatrix) = blockbandwidths(broadcasted(B))
 subblockbandwidths(B::BroadcastMatrix) = subblockbandwidths(broadcasted(B))
 
+for op in LazyArraysBandedMatricesExt._ZERO_OPS
+    @eval begin
+        broadcastlayout(::Type{typeof($op)}, ::BlockBandedLayouts) = BroadcastBlockBandedLayout{typeof($op)}()
+        broadcastlayout(::Type{typeof($op)}, ::BandedBlockBandedLayouts) = BroadcastBandedBlockBandedLayout{typeof($op)}()
+    end
+end
+
 
 for op in (:*, :/, :\, :+, :-)
     @eval begin
