@@ -10,7 +10,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul,
                    triangularlayout
-import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail
+import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
                         _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix, _banded_broadcast!,
@@ -246,26 +246,31 @@ isbanded(M::BroadcastMatrix) = all(isfinite, bandwidths(M))
 
 BroadcastLayout(::BroadcastBandedLayout{F}) where F = BroadcastLayout{F}()
 
-broadcastlayout(::Type{F}, ::AbstractBandedLayout) where F = BroadcastBandedLayout{F}()
 
 # functions that satisfy f(0,0) == 0
 
+const _ZERO_OPS = (:*, :-, :+, :sign, :abs)
+
+for op in _ZERO_OPS
+    @eval broadcastlayout(::Type{typeof($op)}, ::BandedLayouts) where F = BroadcastBandedLayout{typeof($op)}()
+end
+
 for op in (:+, :-)
     @eval begin
-        broadcastlayout(::Type{typeof($op)}, ::AbstractBandedLayout, ::AbstractPaddedLayout) = BroadcastBandedLayout{typeof($op)}()
-        broadcastlayout(::Type{typeof($op)}, ::AbstractPaddedLayout, ::AbstractBandedLayout) = BroadcastBandedLayout{typeof($op)}()
+        broadcastlayout(::Type{typeof($op)}, ::BandedLayouts, ::AbstractPaddedLayout) = BroadcastBandedLayout{typeof($op)}()
+        broadcastlayout(::Type{typeof($op)}, ::AbstractPaddedLayout, ::BandedLayouts) = BroadcastBandedLayout{typeof($op)}()
     end
 end
 
 for op in (:*, :/, :\, :+, :-)
-    @eval broadcastlayout(::Type{typeof($op)}, ::AbstractBandedLayout, ::AbstractBandedLayout) = BroadcastBandedLayout{typeof($op)}()
+    @eval broadcastlayout(::Type{typeof($op)}, ::BandedLayouts, ::BandedLayouts) = BroadcastBandedLayout{typeof($op)}()
 end
 for op in (:*, :/)
-    @eval broadcastlayout(::Type{typeof($op)}, ::AbstractBandedLayout, ::Any) = BroadcastBandedLayout{typeof($op)}()
+    @eval broadcastlayout(::Type{typeof($op)}, ::BandedLayouts, ::Any) = BroadcastBandedLayout{typeof($op)}()
 end
 
 for op in (:*, :\)
-    @eval broadcastlayout(::Type{typeof($op)}, ::Any, ::AbstractBandedLayout) = BroadcastBandedLayout{typeof($op)}()
+    @eval broadcastlayout(::Type{typeof($op)}, ::Any, ::BandedLayouts) = BroadcastBandedLayout{typeof($op)}()
 end
 
 _broadcastarray2broadcasted(::BroadcastBandedLayout{F}, A) where F = _broadcastarray2broadcasted(BroadcastLayout{F}(), A)
