@@ -252,7 +252,7 @@ BroadcastLayout(::BroadcastBandedLayout{F}) where F = BroadcastLayout{F}()
 const _ZERO_OPS = (:*, :-, :+, :sign, :abs)
 
 for op in _ZERO_OPS
-    @eval broadcastlayout(::Type{typeof($op)}, ::BandedLayouts) where F = BroadcastBandedLayout{typeof($op)}()
+    @eval broadcastlayout(::Type{typeof($op)}, ::BandedLayouts) = BroadcastBandedLayout{typeof($op)}()
 end
 
 for op in (:+, :-)

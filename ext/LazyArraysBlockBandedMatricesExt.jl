@@ -159,8 +159,8 @@ subblockbandwidths(B::BroadcastMatrix) = subblockbandwidths(broadcasted(B))
 
 for op in LazyArraysBandedMatricesExt._ZERO_OPS
     @eval begin
-        broadcastlayout(::Type{typeof($op)}, ::BlockBandedLayouts) where F = BroadcastBlockBandedLayout{typeof($op)}()
-        broadcastlayout(::Type{typeof($op)}, ::BandedBlockBandedLayouts) where F = BroadcastBandedBlockBandedLayout{typeof($op)}()
+        broadcastlayout(::Type{typeof($op)}, ::BlockBandedLayouts) = BroadcastBlockBandedLayout{typeof($op)}()
+        broadcastlayout(::Type{typeof($op)}, ::BandedBlockBandedLayouts) = BroadcastBandedBlockBandedLayout{typeof($op)}()
     end
 end
 
