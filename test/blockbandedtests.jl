@@ -168,14 +168,14 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         @testset "generalise broadcast" begin
             B = BlockBandedMatrix(randn(10,10),1:4,1:4,(1,2))
             BB = BandedBlockBandedMatrix(randn(10,10),1:4,1:4,(1,2),(2,1))
-            for A in (B, Symmetric(B))
+            for A in (B, UpperTriangular(B))
                 @test MemoryLayout(BroadcastMatrix(-, A)) isa BroadcastBlockBandedLayout
                 @test MemoryLayout(BroadcastMatrix(-, A, A)) isa BroadcastBlockBandedLayout
                 @test MemoryLayout(BroadcastMatrix(abs, A)) isa BroadcastBlockBandedLayout
                 @test MemoryLayout(BroadcastMatrix(cos, A)) isa BroadcastLayout
             end
 
-            for A in (BB, Symmetric(BB))
+            for A in (BB, UpperTriangular(BB))
                 @test MemoryLayout(BroadcastMatrix(-, A)) isa BroadcastBandedBlockBandedLayout
                 @test MemoryLayout(BroadcastMatrix(-, A, A)) isa BroadcastBandedBlockBandedLayout
                 @test MemoryLayout(BroadcastMatrix(abs, A)) isa BroadcastBandedBlockBandedLayout
