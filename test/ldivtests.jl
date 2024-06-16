@@ -165,7 +165,7 @@ end
     @test R ≈ apply(/, A, A) ≈ Eye(5)
 end
 
-@testset "Issue" begin
+@testset "Issue #316" begin
     X = [1.0 2.0; 3.0 4.0]
     Y = ApplyArray(inv, ApplyArray(*, X, [1.0 0.0; 0.0 1.0]))
     Z = Diagonal(Ones(2))
