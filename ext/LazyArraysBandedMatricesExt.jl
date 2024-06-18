@@ -535,11 +535,11 @@ bandeddata(R::ApplyMatrix{<:Any,typeof(rot180)}) = @view(bandeddata(arguments(R)
 # overload copy as overloading `mulreduce` requires `copyto!` overloads
 # Should probably be redesigned in a trait-based way, but hard to see how to do this
 
-BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{LazyLayout}, BandedRows{LazyLayout},
-TriangularLayout{UPLO,UNIT,BandedRows{LazyLayout}} where {UPLO,UNIT},
-TriangularLayout{UPLO,UNIT,BandedColumns{LazyLayout}} where {UPLO,UNIT},
-SymTridiagonalLayout{LazyLayout}, BidiagonalLayout{LazyLayout}, TridiagonalLayout{LazyLayout},
-SymmetricLayout{BandedColumns{LazyLayout}}, HermitianLayout{BandedColumns{LazyLayout}}}
+const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{LazyLayout}, BandedRows{LazyLayout},
+    TriangularLayout{UPLO,UNIT,BandedRows{LazyLayout}} where {UPLO,UNIT},
+    TriangularLayout{UPLO,UNIT,BandedColumns{LazyLayout}} where {UPLO,UNIT},
+    SymTridiagonalLayout{LazyLayout}, BidiagonalLayout{LazyLayout}, TridiagonalLayout{LazyLayout},
+    SymmetricLayout{BandedColumns{LazyLayout}}, HermitianLayout{BandedColumns{LazyLayout}}}
 
 @inline islazy_layout(::BandedLazyLayouts) = Val(true)
 
@@ -565,7 +565,7 @@ copy(M::Mul{<:DiagonalLayout{<:OnesLayout}, <:BandedLazyLayouts}) = _copy_oftype
 copy(M::Mul{<:DiagonalLayout{<:AbstractFillLayout}, <:BandedLazyLayouts}) = copy(mulreduce(M))
 copy(M::Mul{<:BandedLazyLayouts, <:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
 
-BandedAndBroadcastLayouts{F} = Union{BroadcastLayout{F},BroadcastBandedLayout{F}}
+const BandedAndBroadcastLayouts{F} = Union{BroadcastLayout{F},BroadcastBandedLayout{F}}
 
 copy(M::Mul{ApplyBandedLayout{typeof(*)},ApplyBandedLayout{typeof(*)}}) = simplify(M)
 copy(M::Mul{ApplyBandedLayout{typeof(*)},<:BandedLazyLayouts}) = simplify(M)

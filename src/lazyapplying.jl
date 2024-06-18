@@ -308,7 +308,7 @@ hermitianlayout(::Type{<:Complex}, ::AbstractLazyLayout) = HermitianLayout{LazyL
 hermitianlayout(::Type{<:Real}, ::AbstractLazyLayout) = SymmetricLayout{LazyLayout}()
 triangularlayout(::Type{Tri}, ::AbstractLazyLayout) where Tri = Tri{LazyLayout}()
 
-LazyLayouts = Union{AbstractLazyLayout, SymmetricLayout{<:AbstractLazyLayout}, HermitianLayout{<:AbstractLazyLayout},
+const LazyLayouts = Union{AbstractLazyLayout, SymmetricLayout{<:AbstractLazyLayout}, HermitianLayout{<:AbstractLazyLayout},
                     TriangularLayout{'L', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'N', <:AbstractLazyLayout},
                     TriangularLayout{'L', 'U', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}
 
