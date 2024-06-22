@@ -3,7 +3,7 @@ module LazyArraysBandedMatricesExt
 using BandedMatrices, LazyArrays, LinearAlgebra
 using LazyArrays.ArrayLayouts, LazyArrays.FillArrays, LazyArrays.LazyArrays
 import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulMatAdd, DenseColumnMajor,
-                    OnesLayout, AbstractFillLayout, mulreduce, _inv, _fill_lmul!, _copyto!, _copy_oftype
+                    OnesLayout, AbstractFillLayout, mulreduce, inv_layout, _fill_lmul!, copyto!_layout, _copy_oftype
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout, transposelayout,
                    LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout, LazyLayouts,
                    AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
@@ -277,10 +277,10 @@ _broadcastarray2broadcasted(::BroadcastBandedLayout{F}, A) where F = _broadcasta
 _broadcastarray2broadcasted(::BroadcastBandedLayout{F}, A::BroadcastArray) where F = _broadcastarray2broadcasted(BroadcastLayout{F}(), A)
 
 
-_copyto!(::AbstractBandedLayout, ::BroadcastBandedLayout, dest::AbstractMatrix, bc::AbstractMatrix) =
+copyto!_layout(::AbstractBandedLayout, ::BroadcastBandedLayout, dest::AbstractMatrix, bc::AbstractMatrix) =
     copyto!(dest, _broadcastarray2broadcasted(bc))
 
-_copyto!(_, ::BroadcastBandedLayout, dest::AbstractMatrix, bc::AbstractMatrix) =
+copyto!_layout(_, ::BroadcastBandedLayout, dest::AbstractMatrix, bc::AbstractMatrix) =
     copyto!(dest, _broadcastarray2broadcasted(bc))
 
 # _banded_broadcast!(dest::AbstractMatrix, f, (A,B)::Tuple{AbstractMatrix{T},AbstractMatrix{V}}, _, ::Tuple{<:Any,ApplyBandedLayout{typeof(*)}}) where {T,V} =
@@ -310,7 +310,7 @@ _broadcast_BandedMatrix(a) = a
 for op in (:+, :-, :*)
     @eval begin
         @inline _BandedMatrix(::BroadcastBandedLayout{typeof($op)}, V::AbstractMatrix)::BandedMatrix = broadcast($op, map(_broadcast_BandedMatrix,arguments(V))...)
-        _copyto!(::AbstractBandedLayout, ::BroadcastBandedLayout{typeof($op)}, dest::AbstractMatrix, src::AbstractMatrix) =
+        copyto!_layout(::AbstractBandedLayout, ::BroadcastBandedLayout{typeof($op)}, dest::AbstractMatrix, src::AbstractMatrix) =
             broadcast!($op, dest, map(_broadcast_BandedMatrix, arguments(src))...)
     end
 end
@@ -324,7 +324,7 @@ _mulbanded_BandedMatrix(A, _) = A
 _mulbanded_BandedMatrix(A, ::NTuple{2,OneTo{Int}}) = BandedMatrix(A)
 _mulbanded_BandedMatrix(A) = _mulbanded_BandedMatrix(A, axes(A))
 
-_copyto!(::AbstractBandedLayout, ::ApplyBandedLayout{typeof(*)}, dest::AbstractMatrix, src::AbstractMatrix) =
+copyto!_layout(::AbstractBandedLayout, ::ApplyBandedLayout{typeof(*)}, dest::AbstractMatrix, src::AbstractMatrix) =
     _mulbanded_copyto!(dest, map(_mulbanded_BandedMatrix,arguments(src))...)
 
 arguments(::BroadcastBandedLayout{F}, V::SubArray) where F = _broadcast_sub_arguments(V)
@@ -632,7 +632,7 @@ simplifiable(::Mul{<:BroadcastBandedLayout, <:Union{AbstractPaddedLayout,Abstrac
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:BroadcastBandedLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:Union{PaddedColumns,AbstractStridedLayout} = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
-_inv(::BandedLazyLayouts, _, A) = ApplyArray(inv, A)
+inv_layout(::BandedLazyLayouts, _, A) = ApplyArray(inv, A)
 
 ####
 # Band getindex

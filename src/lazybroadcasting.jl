@@ -20,7 +20,7 @@ struct BroadcastLayout{F} <: AbstractLazyLayout end
 @inline broadcastlayout(::Type{F}, _...) where F = BroadcastLayout{F}()
 
 
-function _copyto!(_, ::BroadcastLayout, dest::AbstractArray{<:Any,N}, bc::AbstractArray{<:Any,N}) where N
+function copyto!_layout(_, ::BroadcastLayout, dest::AbstractArray{<:Any,N}, bc::AbstractArray{<:Any,N}) where N
     materialize!(dest, _broadcastarray2broadcasted(bc))
     dest
 end

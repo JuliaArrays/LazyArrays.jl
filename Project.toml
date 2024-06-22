@@ -1,6 +1,6 @@
 name = "LazyArrays"
 uuid = "5078a376-72f3-5289-bfd5-ec5146d43c02"
-version = "2.0.4"
+version = "2.0.5"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -27,7 +27,7 @@ LazyArraysStaticArraysExt = "StaticArrays"
 
 [compat]
 Aqua = "0.8"
-ArrayLayouts = "1.4.1"
+ArrayLayouts = "1.10"
 BandedMatrices = "1.6.2"
 Base64 = "1"
 BlockArrays = "1.0"

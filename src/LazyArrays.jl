@@ -33,7 +33,7 @@ else
 end
 
 import ArrayLayouts: AbstractQLayout, Dot, Dotu, Ldiv, Lmul, MatMulMatAdd, MatMulVecAdd, Mul, MulAdd, Rmul,
-                     StridedLayout, _copyto!, _fill_lmul!, _inv, _mul_eltype, adjointlayout, bidiagonallayout,
+                     StridedLayout, copyto!_layout, _fill_lmul!, inv_layout, _mul_eltype, adjointlayout, bidiagonallayout,
                      check_ldiv_axes, check_mul_axes, colsupport, conjlayout, diagonallayout, dotu, fillzeros,
                      hermitianlayout, layout_getindex, layout_replace_in_print_matrix, ldivaxes, materialize,
                      materialize!, mulreduce, reshapedlayout, rowsupport, scalarone, scalarzero, sub_materialize,
