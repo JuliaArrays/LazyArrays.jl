@@ -22,9 +22,9 @@ import Base: similar, copy, broadcasted
 import ArrayLayouts: materialize!, MatMulVecAdd, sublayout, colsupport, rowsupport, _copyto!, mulreduce, _inv,
                         OnesLayout, AbstractFillLayout
 
-LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
-LazyBandedLayout = LazyArraysBandedMatricesExt.LazyBandedLayout
-_mulbanded_copyto! = LazyArraysBandedMatricesExt._mulbanded_copyto!
+const LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
+const LazyBandedLayout = LazyArraysBandedMatricesExt.LazyBandedLayout
+const _mulbanded_copyto! = LazyArraysBandedMatricesExt._mulbanded_copyto!
 
 
 abstract type AbstractLazyBlockBandedLayout <: AbstractBlockBandedLayout end
@@ -83,7 +83,7 @@ struct ApplyBlockBandedLayout{F} <: AbstractLazyBlockBandedLayout end
 struct ApplyBandedBlockBandedLayout{F} <: AbstractLazyBandedBlockBandedLayout end
     
 
-ApplyBlockBandedLayouts{F} = Union{ApplyBlockBandedLayout{F},ApplyBandedBlockBandedLayout{F}}
+const ApplyBlockBandedLayouts{F} = Union{ApplyBlockBandedLayout{F},ApplyBandedBlockBandedLayout{F}}
 
 LazyArrays._mul_arguments(::ApplyBlockBandedLayouts{F}, A) where F = LazyArrays._mul_arguments(ApplyLayout{F}(), A)
 @inline islazy_layout(::ApplyBlockBandedLayouts) = Val(true)
@@ -152,7 +152,7 @@ end
 struct BroadcastBlockBandedLayout{F} <: AbstractLazyBlockBandedLayout end
 struct BroadcastBandedBlockBandedLayout{F} <: AbstractLazyBandedBlockBandedLayout end
 
-BroadcastBlockBandedLayouts{F} = Union{BroadcastBlockBandedLayout{F},BroadcastBandedBlockBandedLayout{F}}
+const BroadcastBlockBandedLayouts{F} = Union{BroadcastBlockBandedLayout{F},BroadcastBandedBlockBandedLayout{F}}
 
 blockbandwidths(B::BroadcastMatrix) = blockbandwidths(broadcasted(B))
 subblockbandwidths(B::BroadcastMatrix) = subblockbandwidths(broadcasted(B))
@@ -285,7 +285,7 @@ bandedblockbandedcolumns(::LazyLayout) = BandedBlockBandedColumns{LazyLayout}()
 bandedblockbandedcolumns(::ApplyLayout) = BandedBlockBandedColumns{LazyLayout}()
 bandedblockbandedcolumns(::BroadcastLayout) = BandedBlockBandedColumns{LazyLayout}()
 
-LazyBlockBandedLayouts = Union{
+const LazyBlockBandedLayouts = Union{
                 BlockBandedColumns{LazyLayout}, BandedBlockBandedColumns{LazyLayout},
                 BlockBandedRows{LazyLayout},BandedBlockBandedRows{LazyLayout},
                 BlockLayout{LazyLayout},
