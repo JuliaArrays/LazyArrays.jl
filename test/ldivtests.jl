@@ -173,4 +173,11 @@ end
     @test inv(UpperTriangular(M)) ≈ inv(UpperTriangular(Matrix(M)))
 end
 
+@testset "Issue #316" begin
+    X = [1.0 2.0; 3.0 4.0]
+    Y = ApplyArray(inv, ApplyArray(*, X, [1.0 0.0; 0.0 1.0]))
+    Z = Diagonal(Ones(2))
+    @test Z \ Y ≈ [-2.0 1.0; 1.5 -0.5]
+end
+
 end # module
