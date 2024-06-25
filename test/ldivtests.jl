@@ -156,6 +156,13 @@ import Base.Broadcast: materialize
         B = ApplyArray(*, randn(5,5), b)
         @test simplifiable(\, A, B) isa Val{true}
     end
+
+    @testset "diagonal fill ambiguity (#316)" begin
+        X = [1.0 2.0; 3.0 4.0]
+        Y = ApplyArray(inv, ApplyArray(*, X, [1.0 0.0; 0.0 1.0]))
+        Z = Diagonal(Ones(2))
+        @test Z \ Y ≈ [-2 1; 1.5 -0.5]
+    end
 end
 
 @testset "Rdiv" begin

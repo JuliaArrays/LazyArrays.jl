@@ -126,6 +126,7 @@ end
 @inline copy(L::Ldiv{<:Any,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 
 @inline copy(L::Ldiv{D,<:AbstractLazyLayout}) where D<:DiagonalLayout = copy(Ldiv{D,UnknownLayout}(L.A,L.B))
+@inline copy(L::Ldiv{D,<:AbstractLazyLayout}) where D<:DiagonalLayout{<:AbstractFillLayout} = copy(Ldiv{D,UnknownLayout}(L.A,L.B))
 
 @inline copy(L::Rdiv{<:AbstractLazyLayout,<:AbstractLazyLayout}) = lazymaterialize(/, L.A, L.B)
 @inline copy(L::Rdiv{<:AbstractLazyLayout}) = lazymaterialize(/, L.A, L.B)
