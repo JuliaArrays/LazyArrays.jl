@@ -386,7 +386,7 @@ applylayout(::Type{typeof(*)}, ::DualLayout{Lay}, args...) where Lay = DualLayou
 
 # inv
 
-function _inv(Lay::ApplyLayout{typeof(*)}, _, A)
+function inv_layout(Lay::ApplyLayout{typeof(*)}, _, A)
     args = arguments(Lay, A)
     map(checksquare,args)
     *(reverse(map(inv, arguments(Lay, A)))...)

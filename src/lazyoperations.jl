@@ -356,11 +356,11 @@ end
 
 _kron!(R, a) = copyto!(R, a)
 
-_kron!(R, a, b, c, d...) = _copyto!(UnknownLayout(), UnknownLayout(), R, Kron(a,b,c,d...))
+_kron!(R, a, b, c, d...) = copyto!_layout(UnknownLayout(), UnknownLayout(), R, Kron(a,b,c,d...))
 
-_copyto!(_, ::ApplyLayout{typeof(kron)}, R::AbstractMatrix, K::AbstractMatrix) =
+copyto!_layout(_, ::ApplyLayout{typeof(kron)}, R::AbstractMatrix, K::AbstractMatrix) =
     _kron!(R, arguments(K)...)
-_copyto!(_, ::ApplyLayout{typeof(kron)}, R::AbstractVector, K::AbstractVector) =
+copyto!_layout(_, ::ApplyLayout{typeof(kron)}, R::AbstractVector, K::AbstractVector) =
     _kron!(R, arguments(K)...)
 
 

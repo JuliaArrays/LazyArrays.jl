@@ -165,6 +165,14 @@ end
     @test R ≈ apply(/, A, A) ≈ Eye(5)
 end
 
+@testset "UpperTriangular inv (#320)" begin
+    A = randn(5,5)
+    B = randn(5,5)
+    M = ApplyArray(*, A, B)
+    @test inv(UpperTriangular(M)) isa ApplyArray
+    @test inv(UpperTriangular(M)) ≈ inv(UpperTriangular(Matrix(M)))
+end
+
 @testset "Issue #316" begin
     X = [1.0 2.0; 3.0 4.0]
     Y = ApplyArray(inv, ApplyArray(*, X, [1.0 0.0; 0.0 1.0]))

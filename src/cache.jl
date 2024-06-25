@@ -525,7 +525,7 @@ broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedAbstractArray) = CachedAbstra
 # copyto!
 ###
 
-function _copyto!(_, ::CachedLayout, dest::AbstractArray{T,N}, src::AbstractArray{V,N}) where {T,V,N}
+function copyto!_layout(_, ::CachedLayout, dest::AbstractArray{T,N}, src::AbstractArray{V,N}) where {T,V,N}
     resizedata!(src, size(dest)...)
     copyto!(dest, view(cacheddata(src), axes(dest)...))
 end

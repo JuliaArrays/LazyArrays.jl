@@ -125,7 +125,7 @@ function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:
     view(A.data,OneTo(n)) == view(B.data,OneTo(n))
 end
 
-function _copyto!(::PaddedColumns, ::PaddedColumns, dest::AbstractVector, src::AbstractVector)
+function copyto!_layout(::PaddedColumns, ::PaddedColumns, dest::AbstractVector, src::AbstractVector)
     length(src) ≤ length(dest)  || throw(BoundsError())
     src_data = paddeddata(src)
     n = length(src_data)
@@ -137,7 +137,7 @@ function _copyto!(::PaddedColumns, ::PaddedColumns, dest::AbstractVector, src::A
 end
 
 
-function _copyto!(::AbstractPaddedLayout, ::AbstractPaddedLayout, dest::AbstractMatrix, src::AbstractMatrix)
+function copyto!_layout(::AbstractPaddedLayout, ::AbstractPaddedLayout, dest::AbstractMatrix, src::AbstractMatrix)
     (size(src,1) ≤ size(dest,1) && size(src,2) ≤ size(dest,2))  || throw(BoundsError())
     src_data = paddeddata(src)
     m,n = size(src_data)
@@ -150,7 +150,7 @@ function _copyto!(::AbstractPaddedLayout, ::AbstractPaddedLayout, dest::Abstract
 end
 
 for AbsMatOrVec in (:AbstractVector, :AbstractMatrix)
-    @eval function _copyto!(::AbstractPaddedLayout, ::ZerosLayout, dest::$AbsMatOrVec, src::$AbsMatOrVec)
+    @eval function copyto!_layout(::AbstractPaddedLayout, ::ZerosLayout, dest::$AbsMatOrVec, src::$AbsMatOrVec)
         axes(dest) == axes(src) || error("copyto! with padded/zeros only supported with equal axes")
         zero!(paddeddata(dest))
         dest

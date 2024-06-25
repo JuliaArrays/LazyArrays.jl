@@ -367,12 +367,12 @@ end
 # on the memory layout
 ###
 
-function _copyto!(::LAY, ::LAY, dest::AbstractArray{<:Any,N}, src::AbstractArray{<:Any,N}) where {LAY<:ApplyLayout,N}
+function copyto!_layout(::LAY, ::LAY, dest::AbstractArray{<:Any,N}, src::AbstractArray{<:Any,N}) where {LAY<:ApplyLayout,N}
     map(copyto!, arguments(dest), arguments(src))
     dest
 end
 
-@inline _copyto!(_, ::ApplyLayout, dest::AbstractArray, src::AbstractArray) = copyto!(dest, Applied(src))
+@inline copyto!_layout(_, ::ApplyLayout, dest::AbstractArray, src::AbstractArray) = copyto!(dest, Applied(src))
 
 # avoid infinite-loop
 _base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)

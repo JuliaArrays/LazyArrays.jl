@@ -19,7 +19,7 @@ import BlockBandedMatrices: AbstractBlockBandedLayout, AbstractBandedBlockBanded
 import BlockBandedMatrices.BlockArrays: BlockLayout, AbstractBlockLayout, BlockSlice, blockcolsupport, blockrowsupport
 import BlockBandedMatrices.BandedMatrices: resize, BandedLayout, _copy_oftype
 import Base: similar, copy, broadcasted
-import ArrayLayouts: materialize!, MatMulVecAdd, sublayout, colsupport, rowsupport, _copyto!, mulreduce, _inv,
+import ArrayLayouts: materialize!, MatMulVecAdd, sublayout, colsupport, rowsupport, copyto!_layout, mulreduce, inv_layout,
                         OnesLayout, AbstractFillLayout
 
 const LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
@@ -207,7 +207,7 @@ end
 ###
 
 for op in (:+, :-, :*)
-    @eval _copyto!(::AbstractBandedBlockBandedLayout, ::BroadcastBandedBlockBandedLayout{typeof($op)}, dest::AbstractMatrix, src::AbstractMatrix) =
+    @eval copyto!_layout(::AbstractBandedBlockBandedLayout, ::BroadcastBandedBlockBandedLayout{typeof($op)}, dest::AbstractMatrix, src::AbstractMatrix) =
             broadcast!($op, dest, map(_broadcast_BandedBlockBandedMatrix, arguments(src))...)
 end
 
@@ -216,7 +216,7 @@ _mulbanded_BandedBlockBandedMatrix(A, _) = A
 _mulbanded_BandedBlockBandedMatrix(A, ::NTuple{2,Int}) = BandedBlockBandedMatrix(A)
 _mulbanded_BandedBlockBandedMatrix(A) = _mulbanded_BandedBlockBandedMatrix(A, size(A))
 
-_copyto!(::AbstractBandedBlockBandedLayout, ::ApplyBandedBlockBandedLayout{typeof(*)}, dest::AbstractMatrix, src::AbstractMatrix) =
+copyto!_layout(::AbstractBandedBlockBandedLayout, ::ApplyBandedBlockBandedLayout{typeof(*)}, dest::AbstractMatrix, src::AbstractMatrix) =
     _mulbanded_copyto!(dest, map(_mulbanded_BandedBlockBandedMatrix,arguments(src))...)
 
 arguments(::BroadcastBandedBlockBandedLayout, V::SubArray) = _broadcast_sub_arguments(V)
@@ -347,7 +347,7 @@ mulreduce(M::Mul{<:ApplyBlockBandedLayouts{F}, D}) where {F,D<:Union{AbstractPad
 copy(M::Mul{<:LazyBlockBandedLayouts, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
 simplifiable(::Mul{<:LazyBlockBandedLayouts, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = Val(true)
 
-_inv(::LazyBlockBandedLayouts, _, A) = ApplyArray(inv, A)
+inv_layout(::LazyBlockBandedLayouts, _, A) = ApplyArray(inv, A)
 
 _broadcast_BandedBlockBandedMatrix(a::AbstractMatrix) = BandedBlockBandedMatrix(a)
 _broadcast_BandedBlockBandedMatrix(a) = a

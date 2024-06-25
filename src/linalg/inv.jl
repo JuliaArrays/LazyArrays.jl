@@ -182,3 +182,6 @@ getindex(L::ApplyMatrix{<:Any,typeof(\)}, k::Integer, j::Integer) = L[:,j][k]
 
 getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, ::Colon) = permutedims(L.args[2]) \ L.args[1][k,:]
 getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, j::Integer) = L[k,:][j]
+
+
+inv_layout(::LazyLayouts, _, A) = ApplyArray(inv, A)

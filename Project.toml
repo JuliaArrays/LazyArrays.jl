@@ -27,7 +27,7 @@ LazyArraysStaticArraysExt = "StaticArrays"
 
 [compat]
 Aqua = "0.8"
-ArrayLayouts = "1.4.1"
+ArrayLayouts = "1.10"
 BandedMatrices = "1.6.2"
 Base64 = "1"
 BlockArrays = "1.0"
