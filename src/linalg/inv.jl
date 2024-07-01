@@ -86,6 +86,7 @@ applylayout(::Type{typeof(pinv)}, ::A) where A = PInvLayout{A}()
 
 # Can always  simplify by lowering to \
 simplifiable(::Mul{<:AbstractInvLayout}) = Val(true)
+simplifiable(::Mul{<:AbstractInvLayout, <:DiagonalLayout{<:AbstractFillLayout}}) = Val(true)
 
 copy(M::Mul{<:AbstractInvLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 copy(M::Mul{<:AbstractInvLayout,<:AbstractLazyLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
