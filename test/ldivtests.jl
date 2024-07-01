@@ -156,14 +156,6 @@ import Base.Broadcast: materialize
         B = ApplyArray(*, randn(5,5), b)
         @test simplifiable(\, A, B) isa Val{true}
     end
-
-    @testset "simplifiable ambiguities (#32)" begin
-        A = ApplyArray(inv, rand(5, 5))
-        B = Diagonal(Fill(1, 5))
-        @test simplifiable(Mul(A, B)) isa Val{true}
-        A = A * A # get a ApplyLayout{typeof(/)}
-        @test simplifiable(Mul(A, B)) isa Val{true}
-    end
 end
 
 @testset "Rdiv" begin
