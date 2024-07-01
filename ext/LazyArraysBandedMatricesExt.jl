@@ -584,6 +584,7 @@ copy(M::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = simplify(M)
 
 
 copy(L::Ldiv{<:BandedLazyLayouts}) = lazymaterialize(\, L.A, L.B)
+copy(L::Ldiv{<:BandedLazyLayouts,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 copy(L::Ldiv{<:BandedLazyLayouts, Blay}) where Blay<:Union{AbstractStridedLayout,PaddedColumns} = copy(Ldiv{UnknownLayout,Blay}(L.A, L.B))
 
 ## The following needs more thought but for now it fixes a bug downstream.
@@ -630,6 +631,7 @@ simplifiable(M::Mul{<:BandedLazyLayouts, <:Union{AbstractPaddedLayout,AbstractSt
 simplifiable(::Mul{<:BroadcastBandedLayout, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = Val(true)
 
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where {Lay<:AbstractLazyLayout} = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:BroadcastBandedLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:Union{PaddedColumns,AbstractStridedLayout} = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 inv_layout(::BandedLazyLayouts, _, A) = ApplyArray(inv, A)

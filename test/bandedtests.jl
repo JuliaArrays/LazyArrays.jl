@@ -871,6 +871,15 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         B = Bidiagonal(a, b, :U)
         @test ldiv(B, Diagonal(1:n)) ≈ ApplyArray(inv,B) * Diagonal(1:n) ≈ B \ Diagonal(1:n)
     end
+    
+    @testset "Ambiguity between ldiv(BandedLazy, Lazy) and ldiv(ApplyBandedLazy, Lazy)" begin
+        A = ApplyArray(*, brand(5, 2, 3), brand(5, 2, 3))
+        B = ApplyArray(inv, rand(5, 5))
+        @test A \ B ≈ Matrix(A) \ Matrix(B)
+
+        A = Bidiagonal(ApplyVector(+, 1:5, 1:5), ApplyVector(+, 1:4, 1:4), 'U')
+        @test A \ B ≈ Matrix(A) \ Matrix(B)
+    end
 end
 
 end # module
