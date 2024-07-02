@@ -880,6 +880,14 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         A = Bidiagonal(ApplyVector(+, 1:5, 1:5), ApplyVector(+, 1:4, 1:4), 'U')
         @test A \ B ≈ Matrix(A) \ Matrix(B)
     end
+
+    @testset "Issue #325" begin
+        A = cache(reshape(1:25,5,5))
+        @test A[band(0)] == [1, 7, 13, 19, 25]
+        A = cache(rand(23, 8))
+        @test A[band(1)] == [A[i, i+1] for i in 1:7]
+        @test A[band(-1)] == [A[i+1, i] for i in 1:8]
+    end
 end
 
 end # module

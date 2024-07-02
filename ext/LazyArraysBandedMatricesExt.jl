@@ -3,13 +3,14 @@ module LazyArraysBandedMatricesExt
 using BandedMatrices, LazyArrays, LinearAlgebra
 using LazyArrays.ArrayLayouts, LazyArrays.FillArrays, LazyArrays.LazyArrays
 import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulMatAdd, DenseColumnMajor,
-                    OnesLayout, AbstractFillLayout, mulreduce, inv_layout, _fill_lmul!, copyto!_layout, _copy_oftype
+                    OnesLayout, AbstractFillLayout, mulreduce, inv_layout, _fill_lmul!, copyto!_layout, _copy_oftype,
+                    layout_getindex
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout, transposelayout,
                    LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout, LazyLayouts,
                    AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul,
-                   triangularlayout
+                   triangularlayout, AbstractCachedMatrix
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
@@ -653,7 +654,11 @@ function getindex(bc::BroadcastArray{<:Any,2,<:Any,<:Tuple{AbstractMatrix,Number
     bc.f.(A[b],c)
 end
 
+# issue 325 
+getindex(A::AbstractCachedMatrix, b::Band) = layout_getindex(A, b)
 
 triangularlayout(::Type{Tri}, ::AbstractLazyBandedLayout) where Tri = Tri{LazyBandedLayout}()
+
+
 
 end
