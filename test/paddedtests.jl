@@ -6,7 +6,6 @@ import LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, LayoutVector, Memory
 import ArrayLayouts: OnesLayout
 import Base: setindex
 using LinearAlgebra
-using Infinities
 
 include("infinitearrays.jl")
 using InfiniteArrays: OneToInf
