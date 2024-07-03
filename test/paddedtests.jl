@@ -8,7 +8,7 @@ import Base: setindex
 using LinearAlgebra
 
 include("infinitearrays.jl")
-using InfiniteArrays: OneToInf
+using .InfiniteArrays: OneToInf
 
 # padded block arrays have padded data that is also padded. This is to test this
 struct PaddedPadded <: LayoutVector{Int} end
