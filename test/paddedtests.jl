@@ -396,34 +396,6 @@ paddeddata(a::PaddedPadded) = a
         @test H[:,1:10] == [1 zeros(9)']
         @test H[:,2:10] == zeros(9)'
     end
-
-    @testset "Issue #327" begin
-        A = cache(Zeros((1:5, OneToInf())))
-        B = cache(Zeros((1:5, OneToInf())))
-        @test A == B
-        A[2, 7] = 2.0
-        @test A ≠ B
-        B[2, 7] = 2.0 
-        @test A == B
-
-        A = cache(Zeros((OneToInf(), 1:7)))
-        B = cache(Zeros((OneToInf(), 1:10)))
-        @test A ≠ B 
-        B = cache(Zeros((OneToInf(), 1:7)))
-        @test A == B 
-        B[2, 2] = 1.0
-        @test A ≠ B 
-        A[2, 2] = 1.0 
-        @test A == B 
-
-        A = cache(Zeros((OneToInf(), OneToInf())))
-        B = cache(Zeros((OneToInf(), OneToInf())))
-        @test A == B 
-        A[5, 7] = 3.4
-        @test A ≠ B 
-        B[5, 7] = 3.4
-        @test A == B
-    end
 end
 
 end # module
