@@ -1180,3 +1180,10 @@ end
         @test LazyArrays.simplify(Applied(*, A, A)) == A*A
     end
 end
+
+@testset "Issue #330" begin
+    A = UpperTriangular(ApplyArray(inv, rand(5, 5)))
+    v1, v2 = ApplyVector(+, rand(5), rand(5)), ApplyVector(+, rand(4), rand(4))
+    B = Tridiagonal(v2, v1, v2)
+    @test copy(Mul(A, B)) ≈ Matrix(A) * Matrix(B)
+end

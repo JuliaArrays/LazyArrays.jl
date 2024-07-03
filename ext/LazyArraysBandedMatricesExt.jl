@@ -547,6 +547,7 @@ const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{LazyLayo
 copy(M::Mul{<:BandedLazyLayouts, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts, <:LazyLayouts}) = simplify(M)
+copy(M::Mul{<:LazyLayouts, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:Any, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts, <:AbstractLazyLayout}) = simplify(M)
 copy(M::Mul{<:AbstractLazyLayout, <:BandedLazyLayouts}) = simplify(M)
