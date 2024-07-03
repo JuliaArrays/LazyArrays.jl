@@ -126,7 +126,7 @@ function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:
 end
 
 function ==(A::CachedArray{<:Any,<:Any,<:Any,<:Zeros}, B::CachedArray{<:Any,<:Any,<:Any,<:Zeros})
-    length(A) == length(B) || return false
+    size(A) == size(B) || return false
     m = max(A.datasize[1], B.datasize[1])
     n = max(A.datasize[2], B.datasize[2])
     resizedata!(A, m, n); resizedata!(B, m, n)
