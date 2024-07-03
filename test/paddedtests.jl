@@ -6,6 +6,10 @@ import LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, LayoutVector, Memory
 import ArrayLayouts: OnesLayout
 import Base: setindex
 using LinearAlgebra
+using Infinities
+
+include("infinitearrays.jl")
+using InfiniteArrays: OneToInf
 
 # padded block arrays have padded data that is also padded. This is to test this
 struct PaddedPadded <: LayoutVector{Int} end
@@ -392,6 +396,16 @@ paddeddata(a::PaddedPadded) = a
         H = Hcat(1, Zeros(1, 10))
         @test H[:,1:10] == [1 zeros(9)']
         @test H[:,2:10] == zeros(9)'
+    end
+
+    @testset "Issue #327" begin
+        A = cache(Zeros((1:5, OneToInf())))
+        B = cache(Zeros((1:5, OneToInf())))
+        @test A == B
+        A[2, 7] = 2.0
+        @test A ≠ B
+        B[2, 7] = 2.0 
+        @test A == B
     end
 end
 
