@@ -125,6 +125,14 @@ function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:
     view(A.data,OneTo(n)) == view(B.data,OneTo(n))
 end
 
+function ==(A::CachedArray{<:Any,<:Any,<:Any,<:Zeros}, B::CachedArray{<:Any,<:Any,<:Any,<:Zeros})
+    size(A) == size(B) || return false
+    m = max(A.datasize[1], B.datasize[1])
+    n = max(A.datasize[2], B.datasize[2])
+    resizedata!(A, m, n); resizedata!(B, m, n)
+    view(A.data, OneTo(m), OneTo(n)) == view(B.data, OneTo(m), OneTo(n))
+end
+
 function copyto!_layout(::PaddedColumns, ::PaddedColumns, dest::AbstractVector, src::AbstractVector)
     length(src) ≤ length(dest)  || throw(BoundsError())
     src_data = paddeddata(src)
