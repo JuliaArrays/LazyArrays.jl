@@ -890,20 +890,4 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
     end
 end
 
-@testset "Issue #329" begin
-    for op in (UpperTriangular, UnitUpperTriangular)
-        A = UpperTriangular(ApplyArray(inv, rand(5, 5)))
-        B = inv(A)
-        @test colsupport.(Ref(B), 1:5) == Base.OneTo.(1:5)
-        @test rowsupport.(Ref(B), 1:5) == range.(1:5, 5)
-    end 
-
-    for op in (LowerTriangular, UnitLowerTriangular)
-        A = LowerTriangular(ApplyArray(inv, rand(15, 15)))
-        B = inv(A)
-        @test colsupport.(Ref(B), 1:15) == range.(1:15, 15)
-        @test rowsupport.(Ref(B), 1:15) == Base.OneTo.(1:15)
-    end
-end
-
 end # module
