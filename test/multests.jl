@@ -1,4 +1,4 @@
-using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, Base64, Random
+using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, Base64, Random, BandedMatrices
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray,
                     MulStyle, MulAddStyle, Applied, ApplyStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
                     Rmul, ApplyLayout, arguments, colsupport, rowsupport, lazymaterialize
@@ -1179,4 +1179,11 @@ end
         @test LazyArrays.simplifiable(*, A) == Val(false)
         @test LazyArrays.simplify(Applied(*, A, A)) == A*A
     end
+end
+
+@testset "Issue #330" begin
+    A = UpperTriangular(ApplyArray(inv, rand(5, 5)))
+    v1, v2 = ApplyVector(+, rand(5), rand(5)), ApplyVector(+, rand(4), rand(4))
+    B = Tridiagonal(v2, v1, v2)
+    @test copy(Mul(A, B)) ≈ Matrix(A) * Matrix(B)
 end
