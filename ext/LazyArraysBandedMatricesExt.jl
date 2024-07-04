@@ -87,6 +87,16 @@ function rowsupport(::AbstractInvLayout{<:AbstractBandedLayout}, A, k)
     1:n
 end
 
+function colsupport(lay::AbstractInvLayout{<:TriangularLayout}, A, j)
+    B, = arguments(lay, A)
+    return colsupport(B, j)
+end
+
+function rowsupport(lay::AbstractInvLayout{<:TriangularLayout}, A, k)
+    B, = arguments(lay, A)
+    return rowsupport(B, k)
+end
+
 isbanded(K::Kron{<:Any,2}) = all(isbanded, K.args)
 
 function bandwidths(K::Kron{<:Any,2})
