@@ -1,6 +1,7 @@
 module LdivRdivTests
 
-using LazyArrays, LinearAlgebra, FillArrays, Test
+using LazyArrays, LinearAlgebra, FillArrays, Test, ArrayLayouts 
+import ArrayLayouts: rowsupport, colsupport
 import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout, simplifiable
 import Base.Broadcast: materialize
 
