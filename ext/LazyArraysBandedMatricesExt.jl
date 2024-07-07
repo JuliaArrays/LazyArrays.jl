@@ -628,10 +628,11 @@ copy(M::Mul{<:AbstractInvLayout{<:BandedLazyLayouts}, <:Union{AbstractPaddedLayo
 copy(M::Mul{<:BandedLazyLayouts, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
 copy(M::Mul{<:Union{AbstractPaddedLayout,AbstractStridedLayout,DualLayout{<:PaddedRows}}, <:BandedLazyLayouts}) = copy(mulreduce(M))
 
-simplifiable(M::Mul{<:AbstractInvLayout{<:BandedLayouts}, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
+simplifiable(M::Mul{<:AbstractInvLayout{<:BandedLayouts}, <:Union{PaddedColumns,PaddedLayout,AbstractStridedLayout}}) = Val(true)
 simplifiable(M::Mul{<:Union{PaddedRows,PaddedLayout}, <:BandedLayouts}) = Val(true)
 simplifiable(M::Mul{<:BandedLayouts, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
-simplifiable(::Mul{<:BroadcastBandedLayout, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
+simplifiable(M::Mul{<:AbstractStridedLayout, <:BandedLazyLayouts}) = Val(true)
+simplifiable(M::Mul{<:BandedLazyLayouts, <:AbstractStridedLayout}) = Val(true)
 
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where {Lay<:AbstractLazyLayout} = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))

@@ -363,7 +363,6 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 @inline copy(M::Mul{<:LazyLayouts,<:AbstractQLayout}) = simplify(M)
 @inline copy(M::Mul{<:LazyLayouts,ZerosLayout}) = FillArrays.mult_zeros(M.A, M.B)
 @inline copy(M::Mul{DualLayout{ZerosLayout},<:LazyLayouts}) = copy(Mul{DualLayout{ZerosLayout},UnknownLayout}(M.A, M.B))
-@inline copy(M::Mul{<:DualLayout{<:AbstractLazyLayout},<:AbstractStridedLayout}) = copy(mulreduce(M)) # always materialize a lazy matrix '* strided
 
 @inline simplifiable(M::Mul{<:DualLayout,<:LazyLayouts,<:AbstractMatrix,<:AbstractVector}) = Val(true)
 @inline copy(M::Mul{<:DualLayout,<:LazyLayouts,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
