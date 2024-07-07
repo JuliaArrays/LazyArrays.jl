@@ -368,6 +368,7 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 @inline copy(M::Mul{<:DualLayout,<:LazyLayouts,<:AbstractMatrix,<:AbstractVector}) = copy(Dot(M))
 
 applylayout(::Type{typeof(*)}, ::DualLayout{Lay}, args...) where Lay = DualLayout{typeof(applylayout(typeof(*), Lay(), args...))}()
+transtype(A::MulMatrix) = transtype(first(A.args))
 
 #TODO: Why not all DiagonalLayout?
 @inline simplifiable(M::Mul{<:DiagonalLayout{<:AbstractFillLayout}}) = Val(true)

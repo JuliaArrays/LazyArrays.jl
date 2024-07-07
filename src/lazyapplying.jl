@@ -310,7 +310,8 @@ triangularlayout(::Type{Tri}, ::AbstractLazyLayout) where Tri = Tri{LazyLayout}(
 
 const LazyLayouts = Union{AbstractLazyLayout, SymmetricLayout{<:AbstractLazyLayout}, HermitianLayout{<:AbstractLazyLayout},
                     TriangularLayout{'L', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'N', <:AbstractLazyLayout},
-                    TriangularLayout{'L', 'U', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}
+                    TriangularLayout{'L', 'U', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout},
+                    DualLayout{<:AbstractLazyLayout}}
 
 @inline islazy_layout(::LazyLayouts) = Val(true)
 @inline islazy_layout(_) = Val(false)
