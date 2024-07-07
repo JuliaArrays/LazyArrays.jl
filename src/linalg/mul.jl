@@ -358,6 +358,7 @@ simplify(M::Applied{<:Any,typeof(*)}) = simplify(*, arguments(M)...)
 
 @inline copy(M::Mul{<:LazyLayouts,<:LazyLayouts}) = simplify(M)
 @inline copy(M::Mul{<:LazyLayouts}) = simplify(M)
+@inline copy(M::Mul{<:LazyLayouts,<:AbstractStridedLayout,<:AbstractMatrix}) = copy(mulreduce(M)) # always materialize a lazy matrix * strided
 @inline copy(M::Mul{<:Any,<:LazyLayouts}) = simplify(M)
 @inline copy(M::Mul{<:AbstractQLayout,<:LazyLayouts}) = simplify(M)
 @inline copy(M::Mul{<:LazyLayouts,<:AbstractQLayout}) = simplify(M)
