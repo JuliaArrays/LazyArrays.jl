@@ -319,16 +319,16 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             @test simplifiable(*, B, D) == Val(true)
             @test simplifiable(*, D, B) == Val(true)
 
-            @test A*B ≈ A * Matrix(B)
-            @test B*A ≈ Matrix(B)A
-            @test A*C ≈ A * Matrix(C)
-            @test C*A ≈ Matrix(C)A
-            @test B*C ≈ B * Matrix(C)
-            @test C*B ≈ Matrix(C)B
-            @test B*B ≈ Matrix(B)B
-            @test C*C ≈ Matrix(C)C
-            @test B*D ≈ Matrix(B)*D
-            @test D*B ≈ D*Matrix(B)
+            @test A*B ≈ simplify(Mul(A,B)) ≈ A * Matrix(B)
+            @test B*A ≈ simplify(Mul(B,A)) ≈ Matrix(B)A
+            @test A*C ≈ simplify(Mul(A,C)) ≈ A * Matrix(C)
+            @test C*A ≈ simplify(Mul(C,A)) ≈ Matrix(C)A
+            @test B*C ≈ simplify(Mul(B,C)) ≈ B * Matrix(C)
+            @test C*B ≈ simplify(Mul(C,B)) ≈ Matrix(C)B
+            @test B*B ≈ simplify(Mul(B,B)) ≈ Matrix(B)B
+            @test C*C ≈ simplify(Mul(C,C)) ≈ Matrix(C)C
+            @test B*D ≈ simplify(Mul(B,D)) ≈ Matrix(B)*D
+            @test D*B ≈ simplify(Mul(D,B)) ≈ D*Matrix(B)
         end
     end
 end # testset

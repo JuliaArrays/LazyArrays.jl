@@ -110,6 +110,9 @@ for op in (:+, :-)
         copy(M::Mul{<:Any,Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(M.A, arguments(Lay(), M.B))...)
         copy(M::Mul{<:LazyLayouts,Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(M.A, arguments(Lay(), M.B))...)
         copy(M::Mul{Lay,Lay}) where Lay<:BroadcastLayout{typeof($op)} = copy(Mul{Lay,UnknownLayout}(M.A, M.B))
+        simplify(M::Mul{Lay}) where Lay<:BroadcastLayout{typeof($op)} = copy(Mul{Lay,UnknownLayout}(M.A, M.B)) # TODO: remove, here for back-compat with QuasiArrays.jl
+        simplify(M::Mul{<:Any,Lay}) where Lay<:BroadcastLayout{typeof($op)} = copy(Mul{UnknownLayout,Lay}(M.A, M.B)) # TODO: remove, here for back-compat with QuasiArrays.jl
+        simplify(M::Mul{Lay,Lay}) where Lay<:BroadcastLayout{typeof($op)} = copy(M) # TODO: remove, here for back-compat with QuasiArrays.jl
     end
 end
 
@@ -118,3 +121,5 @@ simplifiable(M::Mul{Lay,BroadcastLayout{typeof(+)}}) where Lay<:BroadcastLayout{
 
 copy(M::Mul{Lay,BroadcastLayout{typeof(-)}}) where Lay<:BroadcastLayout{typeof(+)} = copy(Mul{Lay,UnknownLayout}(M.A, M.B))
 copy(M::Mul{Lay,BroadcastLayout{typeof(+)}}) where Lay<:BroadcastLayout{typeof(-)} = copy(Mul{Lay,UnknownLayout}(M.A, M.B))
+simplify(M::Mul{Lay,BroadcastLayout{typeof(-)}}) where Lay<:BroadcastLayout{typeof(+)} = copy(Mul{Lay,UnknownLayout}(M.A, M.B)) # TODO: remove, here for back-compat with QuasiArrays.jl
+simplify(M::Mul{Lay,BroadcastLayout{typeof(+)}}) where Lay<:BroadcastLayout{typeof(-)} = copy(Mul{Lay,UnknownLayout}(M.A, M.B)) # TODO: remove, here for back-compat with QuasiArrays.jl
