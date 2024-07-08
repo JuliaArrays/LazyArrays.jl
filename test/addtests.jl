@@ -2,7 +2,7 @@ module AddTests
 
 using LazyArrays, Test
 using LinearAlgebra
-import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayout
+import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayout, simplifiable
 
 @testset "Add/Subtract" begin
     @testset "Add" begin
@@ -301,6 +301,29 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             C = BroadcastArray(-, A, 2A)
             @test B*C ≈ 3A * (-A)
             @test C*B ≈ (-A) * 3A
+        end
+
+        @testset "simplifiable" begin
+            A = randn(5,5)
+            B = BroadcastArray(+, A, 2A)
+            C = BroadcastArray(-, A, 2A)
+            @test simplifiable(*, A, B) == Val(true)
+            @test simplifiable(*, B, A) == Val(true)
+            @test simplifiable(*, A, C) == Val(true)
+            @test simplifiable(*, C, A) == Val(true)
+            @test simplifiable(*, B, C) == Val(true)
+            @test simplifiable(*, C, B) == Val(true)
+            @test simplifiable(*, B, B) == Val(true)
+            @test simplifiable(*, C, C) == Val(true)
+
+            @test A*B ≈ A * Matrix(B)
+            @test B*A ≈ Matrix(B)A
+            @test A*C ≈ A * Matrix(C)
+            @test C*A ≈ Matrix(C)A
+            @test B*C ≈ B * Matrix(C)
+            @test C*B ≈ Matrix(C)B
+            @test B*B ≈ Matrix(B)B
+            @test C*C ≈ Matrix(C)C
         end
     end
 end # testset

@@ -104,9 +104,11 @@ for op in (:+, :-)
     @eval begin
         simplifiable(M::Mul{<:BroadcastLayout{typeof($op)}}) = Val(true)
         simplifiable(M::Mul{<:Any,<:BroadcastLayout{typeof($op)}}) = Val(true)
-        simplifiable(M::Mul{<:BroadcastLayout{typeof($op)},<:BroadcastLayout{typeof($op)}}) = simplifiable(Mul{Lay,UnknownLayout}(M.A, M.B))
+        simplifiable(M::Mul{<:BroadcastLayout{typeof($op)},<:BroadcastLayout{typeof($op)}}) = simplifiable(Mul{BroadcastLayout{typeof($op)},UnknownLayout}(M.A, M.B))
         copy(M::Mul{Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(arguments(Lay(), M.A), M.B)...)
+        copy(M::Mul{Lay,<:LazyLayouts}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(arguments(Lay(), M.A), M.B)...)
         copy(M::Mul{<:Any,Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(M.A, arguments(Lay(), M.B))...)
+        copy(M::Mul{<:LazyLayouts,Lay}) where Lay<:BroadcastLayout{typeof($op)} = broadcast($op, _broadcasted_mul(M.A, arguments(Lay(), M.B))...)
         copy(M::Mul{Lay,Lay}) where Lay<:BroadcastLayout{typeof($op)} = copy(Mul{Lay,UnknownLayout}(M.A, M.B))
     end
 end

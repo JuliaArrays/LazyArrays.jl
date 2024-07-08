@@ -409,10 +409,16 @@ paddeddata(a::PaddedPadded) = a
         @test simplifiable(*, D, b) == Val(true)
 
         B = BroadcastArray(+, 1:8, (2:9)')
+        C = ApplyArray(exp, randn(8,8))
         @test B'b == Matrix(B)'b
         @test b'B == b'Matrix(B)
         @test simplifiable(*, B', b) == Val(true)
         @test simplifiable(*, b', B) == Val(true)
+        @test simplifiable(*, C', b) == Val(false)
+        @test simplifiable(*, b', C) == Val(false)
+
+        @test C'b ≈ Matrix(C)'b
+        @test b'C ≈ b'Matrix(C)
     end
 end
 
