@@ -888,6 +888,39 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A[band(1)] == [A[i, i+1] for i in 1:7]
         @test A[band(-1)] == [A[i+1, i] for i in 1:8]
     end
+
+    @testset "Banded * Padded" begin
+        n = 10
+        A = _BandedMatrix(MyLazyArray(randn(3,n)),n,1,1)
+        B = brand(n,n,1,1)
+        x = Vcat([1,2,3], Zeros(n-3))
+        y = randn(n)
+        @test A*x isa Vcat
+        @test B*x isa Vcat
+        @test simplifiable(*, A, x) == Val(true)
+        @test simplifiable(*, B, x) == Val(true)
+        @test A*y isa Vector
+        @test simplifiable(*, A, y) == Val(true)
+
+        @test x'A isa Adjoint{<:Any,<:Vcat}
+        @test x'B isa Adjoint{<:Any,<:Vcat}
+        @test transpose(x)A isa Transpose{<:Any,<:Vcat}
+        @test transpose(x)B isa Transpose{<:Any,<:Vcat}
+        @test simplifiable(*, x', A) == Val(true)
+        @test simplifiable(*, x', B) == Val(true)
+        @test simplifiable(*, transpose(x), A) == Val(true)
+        @test simplifiable(*, transpose(x), B) == Val(true)
+        @test x'A ≈ x'Matrix(A)
+        @test x'B ≈ x'Matrix(B)
+
+
+        @test y'A isa Adjoint{<:Any,<:Vector}
+        @test y'B isa Adjoint{<:Any,<:Vector}
+        @test simplifiable(*, y', A) == Val(true)
+        @test simplifiable(*, y', B) == Val(true)
+        @test y'A ≈ y'Matrix(A)
+        @test y'B ≈ y'Matrix(B)
+    end
 end
 
 end # module
