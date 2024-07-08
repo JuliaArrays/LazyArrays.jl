@@ -155,7 +155,7 @@ function similar(M::MulAdd{<:DualLayout{<:PaddedRows}, <:BandedLayouts}, ::Type{
     trans(Vcat(Vector{T}(undef, n), Zeros{T}(size(A,1)-n)))
 end
 
-function materialize!(M::MatMulVecAdd{<:BandedLayouts,<:AbstractPaddedLayout,<:AbstractPaddedLayout})
+function materialize!(M::MatMulVecAdd{<:BandedLayouts,<:Union{PaddedColumns,PaddedLayout},<:Union{PaddedColumns,PaddedLayout}})
     α,A,x,β,y = M.α,M.A,M.B,M.β,M.C
     length(y) == size(A,1) || throw(DimensionMismatch())
     length(x) == size(A,2) || throw(DimensionMismatch())
@@ -168,7 +168,7 @@ function materialize!(M::MatMulVecAdd{<:BandedLayouts,<:AbstractPaddedLayout,<:A
     y
 end
 
-function materialize!(M::MatMulMatAdd{<:BandedLayouts,<:AbstractPaddedLayout,<:AbstractPaddedLayout})
+function materialize!(M::MatMulMatAdd{<:BandedLayouts,<:Union{PaddedColumns,PaddedLayout},<:Union{PaddedColumns,PaddedLayout}})
     α,A,x,β,y = M.α,M.A,M.B,M.β,M.C
     size(y) == (size(A,1),size(x,2)) || throw(DimensionMismatch())
     size(x,1) == size(A,2) || throw(DimensionMismatch())
@@ -301,7 +301,7 @@ broadcasted(::LazyArrayStyle, ::typeof(\), c::Number, A::BandedMatrix) = _Banded
 broadcasted(::LazyArrayStyle, ::typeof(/), A::BandedMatrix, c::Number) = _BandedMatrix(A.data ./ c, A.raxis, A.l, A.u)
 
 
-copy(M::Mul{BroadcastBandedLayout{typeof(*)}, <:AbstractPaddedLayout}) = _broadcast_banded_padded_mul(arguments(BroadcastBandedLayout{typeof(*)}(), M.A), M.B)
+copy(M::Mul{BroadcastBandedLayout{typeof(*)}, <:Union{PaddedColumns,PaddedLayout}}) = _broadcast_banded_padded_mul(arguments(BroadcastBandedLayout{typeof(*)}(), M.A), M.B)
 
 
 ###
@@ -628,11 +628,12 @@ copy(M::Mul{ApplyLayout{typeof(\)}, <:BroadcastBandedLayout}) = lazymaterialize(
 copy(M::Mul{BroadcastLayout{typeof(*)}, <:BroadcastBandedLayout}) = lazymaterialize(*, M.A, M.B)
 
 ## padded copy
-mulreduce(M::Mul{<:BroadcastBandedLayout, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = MulAdd(M)
-mulreduce(M::Mul{ApplyBandedLayout{F}, D}) where {F,D<:Union{AbstractPaddedLayout,AbstractStridedLayout}} = Mul{ApplyLayout{F},D}(M.A, M.B)
+mulreduce(M::Mul{<:BroadcastBandedLayout, <:Union{PaddedColumns,PaddedLayout,AbstractStridedLayout}}) = MulAdd(M)
+mulreduce(M::Mul{ApplyBandedLayout{F}, D}) where {F,D<:Union{PaddedColumns,PaddedLayout,AbstractStridedLayout}} = Mul{ApplyLayout{F},D}(M.A, M.B)
 # need to overload copy due to above
-copy(M::Mul{<:BroadcastBandedLayout, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = copy(mulreduce(M))
-copy(M::Mul{<:AbstractInvLayout{<:BandedLazyLayouts}, <:Union{AbstractPaddedLayout,AbstractStridedLayout}}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
+copy(M::Mul{<:BroadcastBandedLayout, <:Union{PaddedColumns,PaddedLayout}}) = copy(mulreduce(M))
+copy(M::Mul{<:BroadcastBandedLayout, <:AbstractStridedLayout}) = copy(mulreduce(M))
+copy(M::Mul{<:AbstractInvLayout{<:BandedLazyLayouts}, <:Union{PaddedColumns,PaddedLayout,AbstractStridedLayout}}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 copy(M::Mul{<:BandedLayouts, <:Union{PaddedColumns,PaddedLayout}}) = copy(mulreduce(M))
 copy(M::Mul{<:BandedLazyLayouts, <:Union{PaddedColumns,PaddedLayout}}) = copy(mulreduce(M))
 copy(M::Mul{<:BandedLazyLayouts, <:AbstractStridedLayout}) = copy(mulreduce(M))

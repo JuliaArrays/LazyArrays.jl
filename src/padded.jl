@@ -505,9 +505,9 @@ function layout_replace_in_print_matrix(::AbstractPaddedLayout{Lay}, f::Abstract
 end
 
 # avoid ambiguity in LazyBandedMatrices
-copy(M::Mul{<:DiagonalLayout,<:AbstractPaddedLayout}) = copy(Lmul(M))
-copy(M::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:AbstractPaddedLayout}) = copy(Lmul(M))
-simplifiable(::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:AbstractPaddedLayout}) = Val(true)
+copy(M::Mul{<:DiagonalLayout,<:Union{PaddedColumns,PaddedLayout}}) = copy(Lmul(M))
+copy(M::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:Union{PaddedColumns,PaddedLayout}}) = copy(Lmul(M))
+simplifiable(::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
 
 
 simplifiable(::Mul{<:DualLayout{<:AbstractLazyLayout}, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
