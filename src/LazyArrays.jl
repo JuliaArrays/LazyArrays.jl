@@ -38,7 +38,7 @@ import ArrayLayouts: AbstractQLayout, Dot, Dotu, Ldiv, Lmul, MatMulMatAdd, MatMu
                      hermitianlayout, layout_getindex, layout_replace_in_print_matrix, ldivaxes, materialize,
                      materialize!, mulreduce, reshapedlayout, rowsupport, scalarone, scalarzero, sub_materialize,
                      sublayout, symmetriclayout, symtridiagonallayout, transposelayout, triangulardata,
-                     triangularlayout, tridiagonallayout, zero!
+                     triangularlayout, tridiagonallayout, zero!, transtype
 
 import FillArrays: AbstractFill, getindex_value
 

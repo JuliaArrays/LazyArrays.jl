@@ -2,7 +2,7 @@ module PaddedTests
 
 using LazyArrays, FillArrays, ArrayLayouts, Base64, Test
 using StaticArrays
-import LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, LayoutVector, MemoryLayout, paddeddata, ApplyLayout, sub_materialize, CachedVector
+import LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, LayoutVector, MemoryLayout, paddeddata, ApplyLayout, sub_materialize, CachedVector, simplifiable
 import ArrayLayouts: OnesLayout
 import Base: setindex
 using LinearAlgebra
@@ -395,6 +395,30 @@ paddeddata(a::PaddedPadded) = a
         H = Hcat(1, Zeros(1, 10))
         @test H[:,1:10] == [1 zeros(9)']
         @test H[:,2:10] == zeros(9)'
+    end
+
+    @testset "Mul simplifiable" begin
+        a = Vcat(5, 1:7)
+        b = Vcat([1,2], Zeros(6))
+        @test a'b == b'a == Vector(a)'b
+        @test simplifiable(*, a', b) == Val(true)
+        @test simplifiable(*, b', a) == Val(true)
+
+        D = Diagonal(Fill(2,8))
+        @test D*b isa Vcat
+        @test simplifiable(*, D, b) == Val(true)
+
+        B = BroadcastArray(+, 1:8, (2:9)')
+        C = ApplyArray(exp, randn(8,8))
+        @test B'b == Matrix(B)'b
+        @test b'B == b'Matrix(B)
+        @test simplifiable(*, B', b) == Val(true)
+        @test simplifiable(*, b', B) == Val(true)
+        @test simplifiable(*, C', b) == Val(false)
+        @test simplifiable(*, b', C) == Val(false)
+
+        @test C'b ≈ Matrix(C)'b
+        @test b'C ≈ b'Matrix(C)
     end
 end
 

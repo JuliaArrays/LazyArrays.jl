@@ -2,7 +2,7 @@ module AddTests
 
 using LazyArrays, Test
 using LinearAlgebra
-import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayout
+import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayout, simplifiable, simplify
 
 @testset "Add/Subtract" begin
     @testset "Add" begin
@@ -301,6 +301,34 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             C = BroadcastArray(-, A, 2A)
             @test B*C ≈ 3A * (-A)
             @test C*B ≈ (-A) * 3A
+        end
+
+        @testset "simplifiable" begin
+            A = randn(5,5)
+            B = BroadcastArray(+, A, 2A)
+            C = BroadcastArray(-, A, 2A)
+            D = ApplyArray(exp, A)
+            @test simplifiable(*, A, B) == Val(true)
+            @test simplifiable(*, B, A) == Val(true)
+            @test simplifiable(*, A, C) == Val(true)
+            @test simplifiable(*, C, A) == Val(true)
+            @test simplifiable(*, B, C) == Val(true)
+            @test simplifiable(*, C, B) == Val(true)
+            @test simplifiable(*, B, B) == Val(true)
+            @test simplifiable(*, C, C) == Val(true)
+            @test simplifiable(*, B, D) == Val(true)
+            @test simplifiable(*, D, B) == Val(true)
+
+            @test A*B ≈ simplify(Mul(A,B)) ≈ A * Matrix(B)
+            @test B*A ≈ simplify(Mul(B,A)) ≈ Matrix(B)A
+            @test A*C ≈ simplify(Mul(A,C)) ≈ A * Matrix(C)
+            @test C*A ≈ simplify(Mul(C,A)) ≈ Matrix(C)A
+            @test B*C ≈ simplify(Mul(B,C)) ≈ B * Matrix(C)
+            @test C*B ≈ simplify(Mul(C,B)) ≈ Matrix(C)B
+            @test B*B ≈ simplify(Mul(B,B)) ≈ Matrix(B)B
+            @test C*C ≈ simplify(Mul(C,C)) ≈ Matrix(C)C
+            @test B*D ≈ simplify(Mul(B,D)) ≈ Matrix(B)*D
+            @test D*B ≈ simplify(Mul(D,B)) ≈ D*Matrix(B)
         end
     end
 end # testset

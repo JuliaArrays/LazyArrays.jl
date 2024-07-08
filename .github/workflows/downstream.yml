@@ -35,6 +35,7 @@ jobs:
           - {repo: InfiniteArrays.jl, group: JuliaArrays}
           - {repo: QuasiArrays.jl, group: JuliaApproximation}
           - {repo: ContinuumArrays.jl, group: JuliaApproximation}
+          - {repo: ClassicalOrthogonalPolynomials.jl, group: JuliaApproximation}
 
     steps:
       - uses: actions/checkout@v4

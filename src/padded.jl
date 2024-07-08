@@ -505,10 +505,32 @@ function layout_replace_in_print_matrix(::AbstractPaddedLayout{Lay}, f::Abstract
 end
 
 # avoid ambiguity in LazyBandedMatrices
-copy(M::Mul{<:DiagonalLayout,<:AbstractPaddedLayout}) = copy(Lmul(M))
-copy(M::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:AbstractPaddedLayout}) = copy(Lmul(M))
-simplifiable(::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:AbstractPaddedLayout}) = Val(true)
+copy(M::Mul{<:DiagonalLayout,<:Union{PaddedColumns,PaddedLayout}}) = copy(Lmul(M))
+copy(M::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:Union{PaddedColumns,PaddedLayout}}) = copy(Lmul(M))
+simplifiable(::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
 
+
+simplifiable(::Mul{<:DualLayout{<:AbstractLazyLayout}, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
+copy(M::Mul{<:DualLayout{<:AbstractLazyLayout}, <:Union{PaddedColumns,PaddedLayout}}) = copy(mulreduce(M))
+simplifiable(::Mul{<:DiagonalLayout{<:AbstractFillLayout}, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
+
+function simplifiable(M::Mul{<:DualLayout{<:PaddedRows}, <:LazyLayouts})
+    trans = transtype(M.A)
+    simplifiable(*, trans(M.B), trans(M.A))
+end
+function copy(M::Mul{<:DualLayout{<:PaddedRows}, <:LazyLayouts})
+    trans = transtype(M.A)
+    trans(trans(M.B) * trans(M.A))
+end
+
+for op in (:+, :-)
+    @eval begin
+        simplifiable(M::Mul{<:BroadcastLayout{typeof($op)},<:Union{PaddedColumns,PaddedLayout}}) = Val(true)
+        simplifiable(M::Mul{<:DualLayout{<:PaddedRows},<:BroadcastLayout{typeof($op)}}) = Val(true)
+        copy(M::Mul{Lay,<:Union{PaddedColumns,PaddedLayout}}) where Lay<:BroadcastLayout{typeof($op)} =  copy(Mul{Lay,UnknownLayout}(M.A, M.B))
+        copy(M::Mul{<:DualLayout{<:PaddedRows},Lay}) where Lay<:BroadcastLayout{typeof($op)} =  copy(Mul{UnknownLayout,Lay}(M.A, M.B))
+    end
+end
 
 
 # Triangular columns

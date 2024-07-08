@@ -369,6 +369,11 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test (UpperTriangular(A)UpperTriangular(A)) * b isa Vector
         @test (UpperTriangular(A)UpperTriangular(A)) * b ≈UpperTriangular(A.A)^2 * b
     end
+
+    @testset "DualLayout{ApplyLayout{typeof(*)}} translayout" begin
+        @test ApplyArray(*, (1:2)', [1 2; 3 4]) * [1 2; 3 4] ≈ [37,54]'
+        @test ApplyArray(*, (1:2)', [1 2; 3 4]) * [1 2; 3 4] isa Adjoint
+    end
 end
 
 end # module
