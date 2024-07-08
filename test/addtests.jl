@@ -2,7 +2,7 @@ module AddTests
 
 using LazyArrays, Test
 using LinearAlgebra
-import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayout, simplifiable
+import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayout, simplifiable, simplify
 
 @testset "Add/Subtract" begin
     @testset "Add" begin
