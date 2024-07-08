@@ -307,6 +307,7 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             A = randn(5,5)
             B = BroadcastArray(+, A, 2A)
             C = BroadcastArray(-, A, 2A)
+            D = ApplyArray(exp, A)
             @test simplifiable(*, A, B) == Val(true)
             @test simplifiable(*, B, A) == Val(true)
             @test simplifiable(*, A, C) == Val(true)
@@ -315,6 +316,8 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             @test simplifiable(*, C, B) == Val(true)
             @test simplifiable(*, B, B) == Val(true)
             @test simplifiable(*, C, C) == Val(true)
+            @test simplifiable(*, B, D) == Val(true)
+            @test simplifiable(*, D, B) == Val(true)
 
             @test A*B ≈ A * Matrix(B)
             @test B*A ≈ Matrix(B)A
@@ -324,6 +327,8 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             @test C*B ≈ Matrix(C)B
             @test B*B ≈ Matrix(B)B
             @test C*C ≈ Matrix(C)C
+            @test B*D ≈ Matrix(B)*D
+            @test D*B ≈ D*Matrix(B)
         end
     end
 end # testset
