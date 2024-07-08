@@ -330,6 +330,19 @@ import LazyArrays: Add, AddArray, MulAdd, materialize!, MemoryLayout, ApplyLayou
             @test B*D ≈ simplify(Mul(B,D)) ≈ Matrix(B)*D
             @test D*B ≈ simplify(Mul(D,B)) ≈ D*Matrix(B)
         end
+
+        @testset "Add * Mul" begin
+            A = randn(5,5)
+            B = BroadcastArray(+, A, 2A)
+            C = BroadcastArray(-, A, 2A)
+            M = ApplyArray(*, A, A)
+            @test B*M ≈ Matrix(B)*M
+            @test C*M ≈ Matrix(C)*M
+            @test M*B ≈ M*Matrix(B)
+            @test M*C ≈ M*Matrix(C)
+            @test simplifiable(*,B,M) == simplifiable(*,C,M) == Val(true)
+            @test simplifiable(*,M,B) == simplifiable(*,M,C) == Val(true)
+        end
     end
 end # testset
 
