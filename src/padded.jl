@@ -525,10 +525,10 @@ end
 
 for op in (:+, :-)
     @eval begin
-        simplifiable(M::Mul{<:BroadcastLayout{typeof($op)},<:Union{PaddedColumns,PaddedLayout}}) = Val(true)
-        simplifiable(M::Mul{<:DualLayout{<:PaddedRows},<:BroadcastLayout{typeof($op)}}) = Val(true)
-        copy(M::Mul{Lay,<:Union{PaddedColumns,PaddedLayout}}) where Lay<:BroadcastLayout{typeof($op)} =  copy(Mul{Lay,UnknownLayout}(M.A, M.B))
-        copy(M::Mul{<:DualLayout{<:PaddedRows},Lay}) where Lay<:BroadcastLayout{typeof($op)} =  copy(Mul{UnknownLayout,Lay}(M.A, M.B))
+        simplifiable(M::Mul{BroadcastLayout{typeof($op)},<:Union{PaddedColumns,PaddedLayout}}) = Val(true)
+        simplifiable(M::Mul{<:DualLayout{<:PaddedRows},BroadcastLayout{typeof($op)}}) = Val(true)
+        copy(M::Mul{BroadcastLayout{typeof($op)},<:Union{PaddedColumns,PaddedLayout}}) =  copy(Mul{BroadcastLayout{typeof($op)},UnknownLayout}(M.A, M.B))
+        copy(M::Mul{<:DualLayout{<:PaddedRows},BroadcastLayout{typeof($op)}}) =  copy(Mul{UnknownLayout,BroadcastLayout{typeof($op)}}(M.A, M.B))
     end
 end
 
