@@ -155,7 +155,7 @@ function similar(M::MulAdd{<:DualLayout{<:PaddedRows}, <:BandedLayouts}, ::Type{
     trans(Vcat(Vector{T}(undef, n), Zeros{T}(size(A,1)-n)))
 end
 
-function materialize!(M::MatMulVecAdd{<:BandedLayouts,<:Union{PaddedColumns,PaddedLayout},<:Union{PaddedColumns,PaddedLayout}})
+function materialize!(M::MatMulVecAdd{<:BandedLayouts,<:AbstractPaddedLayout,<:AbstractPaddedLayout})
     α,A,x,β,y = M.α,M.A,M.B,M.β,M.C
     length(y) == size(A,1) || throw(DimensionMismatch())
     length(x) == size(A,2) || throw(DimensionMismatch())
