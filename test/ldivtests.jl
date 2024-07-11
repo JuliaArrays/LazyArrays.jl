@@ -187,14 +187,22 @@ end
     L = LowerTriangular(ApplyArray(inv, rand(10, 10)))
     invL = inv(L)
     @test colsupport(invU, 1) == 1:1 
-    @test colsupport(invU, 3) == 1:3 
+    @test colsupport(invU, 3) == 1:3
+    @test colsupport(invU, 1:3) == 1:3 
     @test rowsupport(invU, 1) == 1:5 
     @test rowsupport(invU, 4) == 4:5 
     @test rowsupport(invU, 5) == 5:5 
+    @test rowsupport(invU, 3:5) == 3:5
     @test colsupport(invL, 1) == 1:10 
     @test colsupport(invL, 5) == 5:10 
+    @test colsupport(invL, 2:4) == 2:10
     @test rowsupport(invL, 1) == 1:1 
     @test rowsupport(invL, 4) == 1:4 
+    @test rowsupport(invL, 2:2:4) == 1:4
+    @test colsupport(invU, ()) == 1:0
+    @test rowsupport(invU, ()) == 1:0 
+    @test colsupport(invL, ()) == 1:0 
+    @test rowsupport(invL, ()) == 1:0
 end
 
 end # module
