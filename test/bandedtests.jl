@@ -934,4 +934,21 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
     end
 end
 
+@testset "Issue #329" begin
+    # Make sure that we aren't giving the incorrect bandwidths 
+    U = UpperTriangular(ApplyArray(inv, brand(5, 5, 1, 2)))
+    invU = inv(U)
+    L = LowerTriangular(ApplyArray(inv, brand(10, 10, 3, 4)))
+    invL = inv(L)
+    @test colsupport(invU, 1) == 1:1 
+    @test colsupport(invU, 3) == 1:3 
+    @test rowsupport(invU, 1) == 1:5 
+    @test rowsupport(invU, 4) == 4:5 
+    @test rowsupport(invU, 5) == 5:5 
+    @test colsupport(invL, 1) == 1:10 
+    @test colsupport(invL, 5) == 5:10 
+    @test rowsupport(invL, 1) == 1:1 
+    @test rowsupport(invL, 4) == 1:4 
+end
+
 end # module

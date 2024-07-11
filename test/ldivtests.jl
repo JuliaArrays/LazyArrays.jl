@@ -181,4 +181,20 @@ end
     @test Z \ Y ≈ [-2.0 1.0; 1.5 -0.5]
 end
 
+@testset "Issue #329" begin
+    U = UpperTriangular(ApplyArray(inv, rand(5, 5)))
+    invU = inv(U)
+    L = LowerTriangular(ApplyArray(inv, rand(10, 10)))
+    invL = inv(L)
+    @test colsupport(invU, 1) == 1:1 
+    @test colsupport(invU, 3) == 1:3 
+    @test rowsupport(invU, 1) == 1:5 
+    @test rowsupport(invU, 4) == 4:5 
+    @test rowsupport(invU, 5) == 5:5 
+    @test colsupport(invL, 1) == 1:10 
+    @test colsupport(invL, 5) == 5:10 
+    @test rowsupport(invL, 1) == 1:1 
+    @test rowsupport(invL, 4) == 1:4 
+end
+
 end # module
