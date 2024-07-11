@@ -185,16 +185,3 @@ getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, j::Integer) = L[k,:][j]
 
 
 inv_layout(::LazyLayouts, _, A) = ApplyArray(inv, A)
-
-### 
-# row/colsupport triangular
-###
-function colsupport(lay::AbstractInvLayout{<:TriangularLayout}, A, j)
-    B, = arguments(lay, A)
-    return colsupport(B, j)
-end 
-
-function rowsupport(lay::AbstractInvLayout{<:TriangularLayout}, A, k)
-    B, = arguments(lay, A)
-    return rowsupport(B, k)
-end
