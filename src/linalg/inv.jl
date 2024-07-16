@@ -185,3 +185,22 @@ getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, j::Integer) = L[k,:][j]
 
 
 inv_layout(::LazyLayouts, _, A) = ApplyArray(inv, A)
+
+function colsupport(lay::AbstractInvLayout{TriLay}, A, j) where {S,TriLay<:TriangularLayout{S}}
+    isempty(j) && return 1:0
+    B, = arguments(lay, A)
+    if S == 'U'
+        return firstindex(B, 2):(maximum(j) - firstindex(B, 2) + 1)
+    else # S == 'L' 
+        return minimum(j):size(B, 2)
+    end 
+end 
+function rowsupport(lay::AbstractInvLayout{TriLay}, A, k) where {S,TriLay<:TriangularLayout{S}}
+    isempty(k) && return 1:0
+    B, = arguments(lay, A) 
+    if S == 'U' 
+        return minimum(k):size(B, 1) 
+    else # S == 'L'
+        return firstindex(B, 1):(maximum(k) - firstindex(B, 1) + 1)
+    end 
+end
