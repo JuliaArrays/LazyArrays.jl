@@ -24,7 +24,11 @@ module InfiniteArrays
     Base.axes(r::OneToInf) = (r,)
     Base.first(r::OneToInf{T}) where {T} = oneunit(T)
 
-    Base.oneto(::InfiniteCardinal{0}) = OneToInf()
+    if VERSION < v"1.11-"
+        Base.oneto(::InfiniteCardinal{0}) = OneToInf()
+    else
+        Base.unchecked_oneto(::InfiniteCardinal{0}) = OneToInf()
+    end
 
     Base.axes(::AbstractInfUnitRange) = (OneToInf(),)
 
