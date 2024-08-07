@@ -1193,6 +1193,8 @@ end
         @test LazyArrays.simplifiable(*, E, b) == Val(true)
         @test LazyArrays.simplifiable(*, E, D) == Val(true)
         @test LazyArrays.simplifiable(*, D, E) == Val(true)
+        @test LazyArrays.simplifiable(*, D, D) == Val(true)
+        @test LazyArrays.simplifiable(*, E, E) == Val(true)
     end
 end
 
