@@ -1,4 +1,6 @@
-using Test, LinearAlgebra, LazyArrays, StaticArrays, FillArrays, Base64, Random, BandedMatrices
+using Test, LinearAlgebra, LazyArrays, FillArrays, Base64, Random
+using BandedMatrices
+using StaticArrays
 import LazyArrays: MulAdd, MemoryLayout, DenseColumnMajor, DiagonalLayout, SymTridiagonalLayout, Add, AddArray,
                     MulStyle, MulAddStyle, Applied, ApplyStyle, Lmul, ApplyArrayBroadcastStyle, DefaultArrayApplyStyle,
                     Rmul, ApplyLayout, arguments, colsupport, rowsupport, lazymaterialize
@@ -1176,8 +1178,23 @@ end
 
     @testset "simplifiable tests" begin
         A = randn(5,5)
+        b = randn(5)
+        D = Diagonal(Fill(2,5))
+        E = Eye(5)
         @test LazyArrays.simplifiable(*, A) == Val(false)
         @test LazyArrays.simplify(Applied(*, A, A)) == A*A
+        @test LazyArrays.simplifiable(*, A, D) == Val(true)
+        @test LazyArrays.simplifiable(*, D, A) == Val(true)
+        @test LazyArrays.simplifiable(*, b', D) == Val(true)
+        @test LazyArrays.simplifiable(*, D, b) == Val(true)
+        @test LazyArrays.simplifiable(*, A, E) == Val(true)
+        @test LazyArrays.simplifiable(*, E, A) == Val(true)
+        @test LazyArrays.simplifiable(*, b', E) == Val(true)
+        @test LazyArrays.simplifiable(*, E, b) == Val(true)
+        @test LazyArrays.simplifiable(*, E, D) == Val(true)
+        @test LazyArrays.simplifiable(*, D, E) == Val(true)
+        @test LazyArrays.simplifiable(*, D, D) == Val(true)
+        @test LazyArrays.simplifiable(*, E, E) == Val(true)
     end
 end
 
