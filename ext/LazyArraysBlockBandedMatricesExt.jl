@@ -11,8 +11,8 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout,
                 islazy_layout, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
                 BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
                 AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
-                _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments,
-                CachedArray, _broadcast_sub_arguments, simplify, lazymaterialize
+                _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments, LazyBandedLayout,
+                CachedArray, _broadcast_sub_arguments, simplify, lazymaterialize, _mulbanded_copyto!
 import BlockBandedMatrices: AbstractBlockBandedLayout, AbstractBandedBlockBandedLayout, blockbandwidths, subblockbandwidths,
                             bandedblockbandedbroadcaststyle, bandedblockbandedcolumns, BandedBlockBandedColumns, BandedBlockBandedRows,
                             BlockRange1, Block1, BlockIndexRange1, BlockBandedColumns, BlockBandedRows, BandedBlockBandedLayout
@@ -21,11 +21,6 @@ import BlockBandedMatrices.BandedMatrices: resize, BandedLayout, _copy_oftype
 import Base: similar, copy, broadcasted
 import ArrayLayouts: materialize!, MatMulVecAdd, sublayout, colsupport, rowsupport, copyto!_layout, mulreduce, inv_layout,
                         OnesLayout, AbstractFillLayout
-
-const LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
-const LazyBandedLayout = LazyArraysBandedMatricesExt.LazyBandedLayout
-const _mulbanded_copyto! = LazyArraysBandedMatricesExt._mulbanded_copyto!
-
 
 abstract type AbstractLazyBlockBandedLayout <: AbstractBlockBandedLayout end
 abstract type AbstractLazyBandedBlockBandedLayout <: AbstractBandedBlockBandedLayout end
@@ -157,7 +152,8 @@ const BroadcastBlockBandedLayouts{F} = Union{BroadcastBlockBandedLayout{F},Broad
 blockbandwidths(B::BroadcastMatrix) = blockbandwidths(broadcasted(B))
 subblockbandwidths(B::BroadcastMatrix) = subblockbandwidths(broadcasted(B))
 
-for op in LazyArraysBandedMatricesExt._ZERO_OPS
+# functions that satisfy f(0,0) == 0
+for op in (:*, :-, :+, :sign, :abs)
     @eval begin
         broadcastlayout(::Type{typeof($op)}, ::BlockBandedLayouts) = BroadcastBlockBandedLayout{typeof($op)}()
         broadcastlayout(::Type{typeof($op)}, ::BandedBlockBandedLayouts) = BroadcastBandedBlockBandedLayout{typeof($op)}()

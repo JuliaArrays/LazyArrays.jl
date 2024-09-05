@@ -7,19 +7,17 @@ import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulM
                     layout_getindex, transtype
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout, transposelayout,
                    LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout, LazyLayouts,
-                   AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
+                   AbstractPaddedLayout, PaddedLayout, AbstractLazyBandedLayout, LazyBandedLayout, PaddedRows,
+                   PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul,
-                   triangularlayout, AbstractCachedMatrix
+                   triangularlayout, AbstractCachedMatrix, _mulbanded_copyto!
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
                         _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix, _banded_broadcast!,
                         resize
 import LinearAlgebra: AdjOrTrans, UpperOrLowerTriangular, kron
-
-abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
-struct LazyBandedLayout <: AbstractLazyBandedLayout end
 
 symmetriclayout(::AbstractLazyBandedLayout) = SymmetricLayout{LazyBandedLayout}()
 hermitianlayout(::Type{<:Real}, ::AbstractLazyBandedLayout) = SymmetricLayout{LazyBandedLayout}()
@@ -257,10 +255,7 @@ BroadcastLayout(::BroadcastBandedLayout{F}) where F = BroadcastLayout{F}()
 
 
 # functions that satisfy f(0,0) == 0
-
-const _ZERO_OPS = (:*, :-, :+, :sign, :abs)
-
-for op in _ZERO_OPS
+for op in (:*, :-, :+, :sign, :abs)
     @eval broadcastlayout(::Type{typeof($op)}, ::BandedLayouts) = BroadcastBandedLayout{typeof($op)}()
 end
 
