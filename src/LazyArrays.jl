@@ -71,6 +71,12 @@ map(::typeof(length), A::BroadcastVector{<:Vcat,Type{Vcat}}) = broadcast(+,map.(
 broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{OneTo{Int},Type{OneTo}}) = A.args[1]
 broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:NTuple{2,Any}}) = A.args[2]
 
+# types for use by extensions
+function _mulbanded_copyto! end
+
+abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
+struct LazyBandedLayout <: AbstractLazyBandedLayout end
+
 if !isdefined(Base, :get_extension)
     include("../ext/LazyArraysStaticArraysExt.jl")
     include("../ext/LazyArraysBandedMatricesExt.jl")
