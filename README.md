@@ -116,6 +116,7 @@ julia> E = ApplyArray(exp, [1 2; 3 4])
   51.969   74.7366
  112.105  164.074 
 ```
+
 A lazy matrix exponential is useful for, say, in-place matrix-exponential*vector:
 ```julia
 julia> b = Vector{Float64}(undef, 2); b .= @~ E*[4,4]
@@ -123,10 +124,9 @@ julia> b = Vector{Float64}(undef, 2); b .= @~ E*[4,4]
   506.8220830628333
  1104.7145995988594
 ```
- While this works, it is not actually optimised (yet). 
+While this works, it is not actually optimised (yet). 
 
- Other options do have special implementations that make them fast. We
- now give some examples. 
+Other options do have special implementations that make them fast. We now give some examples. 
 
 
 ### Concatenation
