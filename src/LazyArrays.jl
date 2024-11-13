@@ -77,11 +77,4 @@ function _mulbanded_copyto! end
 abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
 struct LazyBandedLayout <: AbstractLazyBandedLayout end
 
-if !isdefined(Base, :get_extension)
-    include("../ext/LazyArraysStaticArraysExt.jl")
-    include("../ext/LazyArraysBandedMatricesExt.jl")
-    include("../ext/LazyArraysBlockArraysExt.jl")
-    include("../ext/LazyArraysBlockBandedMatricesExt.jl")
-end
-
 end # module
