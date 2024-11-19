@@ -236,7 +236,7 @@ _vec_mul_view(a...) = view(a...)
 _vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
 
 # this is a vector view of a MulVector
-function _vec_mul_arguments(args, (kr,))
+function _vec_mul_arguments(args, (kr,)::Tuple{Any})
     kjr = intersect.(_mul_args_rows(kr, args...), _mul_args_cols(Base.OneTo(1), reverse(args)...))
     _vec_mul_view.(args, (kr, kjr...), (kjr..., :))
 end
