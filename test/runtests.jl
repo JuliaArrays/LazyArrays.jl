@@ -460,6 +460,9 @@ end
     @test bc.args[2] == 3
 end
 
+@testset "_vec_mul_arguments method" begin
+    @test_throws "MethodError: no method matching _vec_mul_arguments"  LazyArrays._vec_mul_arguments(2, [])
+end
 
 include("blocktests.jl")
 include("bandedtests.jl")
