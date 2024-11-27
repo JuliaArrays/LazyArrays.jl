@@ -11,7 +11,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
                    PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul,
-                   triangularlayout, AbstractCachedMatrix, _mulbanded_copyto!
+                   triangularlayout, AbstractCachedMatrix, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
@@ -215,9 +215,6 @@ isbanded(M::MulMatrix) = isbanded(Applied(M))
 ###
 # ApplyBanded
 ###
-
-struct ApplyBandedLayout{F} <: AbstractLazyBandedLayout end
-struct BroadcastBandedLayout{F} <: AbstractLazyBandedLayout end
 
 
 bandedlayout(::LazyLayout) = LazyBandedLayout()

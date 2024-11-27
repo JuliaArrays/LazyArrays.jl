@@ -76,5 +76,8 @@ function _mulbanded_copyto! end
 
 abstract type AbstractLazyBandedLayout <: AbstractBandedLayout end
 struct LazyBandedLayout <: AbstractLazyBandedLayout end
+struct ApplyBandedLayout{F} <: AbstractLazyBandedLayout end
+struct BroadcastBandedLayout{F} <: AbstractLazyBandedLayout end
+
 
 end # module
