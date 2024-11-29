@@ -420,6 +420,12 @@ paddeddata(a::PaddedPadded) = a
         @test C'b ≈ Matrix(C)'b
         @test b'C ≈ b'Matrix(C)
     end
+
+    @testset "Bidiagonal" begin
+        B = Bidiagonal(1:5, 1:4, :L)
+        b = Vcat(randn(5), Zeros(0))
+        @test ArrayLayouts.ldiv!(B, deepcopy(b)) ≈ B\b
+    end
 end
 
 end # module
