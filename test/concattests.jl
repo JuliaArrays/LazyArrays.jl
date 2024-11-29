@@ -647,6 +647,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         A = Applied(hvcat, 2, A, B, C, D)
         @test A[1,2] == M[1,2]
     end
+
+    @testset "1 arg Vcat/Hcat" begin
+        @test Array(Hcat()) == Array{Any}(undef,0,0)
+        @test rowsupport(Hcat(Vcat(Zeros(3,1))),1:2) == colsupport(Vcat(Hcat(Zeros(1,3))),1:2)
+    end
 end
 
 end # module

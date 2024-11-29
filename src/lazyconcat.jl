@@ -129,11 +129,13 @@ reverse(f::Vcat{<:Any,1}) = Vcat((reverse(itr) for itr in reverse(f.args))...)
 const Hcat{T,I<:Tuple} = ApplyArray{T,2,typeof(hcat),I}
 
 Hcat(A...) = ApplyArray(hcat, A...)
+Hcat() = Hcat{Any}()
 Hcat{T}(A...) where T = ApplyArray{T}(hcat, A...)
 
 @inline applied_eltype(::typeof(hcat), args...) = promote_type(map(eltype,args)...)
 @inline applied_ndims(::typeof(hcat), args...) = 2
 @inline applied_size(::typeof(hcat), args...) = (size(args[1],1), +(map(a -> size(a,2), args)...))
+@inline applied_size(::typeof(hcat)) = (0,0)
 
 @inline hcat_getindex(f, k, j::Integer) = hcat_getindex_recursive(f, (k, j), f.args...)
 
