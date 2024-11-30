@@ -431,7 +431,7 @@ paddeddata(a::PaddedPadded) = a
         c = cache(Zeros(5)); c[1:2] = [1,2];
         @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(0:4, 1:4, :L), c)
         @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(-1:3, 1:4, :L), c)
-        @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(-4:1, 1:4, :L), c)
+        @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(-4:0, 1:4, :L), c)
     end
 end
 end # module
