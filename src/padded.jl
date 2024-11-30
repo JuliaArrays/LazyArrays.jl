@@ -592,7 +592,7 @@ BroadcastStyle(::Type{<:PaddedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 
 
 
-function ArrayLayouts._bidiag_forwardsub!(M::Ldiv{<:Any,<:PaddedColumns})
+function ArrayLayouts._bidiag_forwardsub!(M::Ldiv{<:Any,<:PaddedColumns,<:AbstractMatrix,<:AbstractVector})
     A, b_in = M.A, M.B
     dv = diagonaldata(A)
     ev = subdiagonaldata(A)
