@@ -598,14 +598,14 @@ function ArrayLayouts._bidiag_forwardsub!(M::Ldiv{<:Any,<:PaddedColumns,<:Abstra
     ev = subdiagonaldata(A)
     b = paddeddata(b_in)
     N = length(b)
-    b[1] = bj1 = dv[1]\b[1]
+    dvj = dv[1]
+    iszero(dvj) && throw(SingularException(1))
+    b[1] = bj1 = dvj\b[1]
     @inbounds for j = 2:N
         bj  = b[j]
         bj -= ev[j - 1] * bj1
         dvj = dv[j]
-        if iszero(dvj)
-            throw(SingularEbception(j))
-        end
+        iszero(dvj) && throw(SingularException(j))
         bj   = dvj\bj
         b[j] = bj1 = bj
     end
@@ -614,9 +614,7 @@ function ArrayLayouts._bidiag_forwardsub!(M::Ldiv{<:Any,<:PaddedColumns,<:Abstra
         iszero(bj1) && break
         bj = -ev[j - 1] * bj1
         dvj = dv[j]
-        if iszero(dvj)
-            throw(SingularException(j))
-        end
+        iszero(dvj) && throw(SingularException(j))
         bj   = dvj\bj
         b_in[j] = bj1 = bj
     end

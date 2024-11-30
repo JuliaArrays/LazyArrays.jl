@@ -427,6 +427,11 @@ paddeddata(a::PaddedPadded) = a
         @test ArrayLayouts.ldiv!(B, deepcopy(b)) ≈ B\b
         c = cache(Zeros(5)); c[1] = 2;
         @test ArrayLayouts.ldiv!(B, c) ≈ B\[2; zeros(4)]
+
+        c = cache(Zeros(5)); c[1:2] = [1,2];
+        @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(0:4, 1:4, :L), c)
+        @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(-1:3, 1:4, :L), c)
+        @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(-4:1, 1:4, :L), c)
     end
 end
 end # module
