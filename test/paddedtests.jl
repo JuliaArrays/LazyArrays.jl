@@ -425,7 +425,8 @@ paddeddata(a::PaddedPadded) = a
         B = Bidiagonal(1:5, 1:4, :L)
         b = Vcat(randn(5), Zeros(0))
         @test ArrayLayouts.ldiv!(B, deepcopy(b)) ≈ B\b
+        c = cache(Zeros(5)); c[1] = 2;
+        @test ArrayLayouts.ldiv!(B, c) ≈ B\[2; zeros(4)]
     end
 end
-
 end # module
