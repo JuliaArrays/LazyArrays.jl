@@ -420,6 +420,18 @@ paddeddata(a::PaddedPadded) = a
         @test C'b ≈ Matrix(C)'b
         @test b'C ≈ b'Matrix(C)
     end
-end
 
+    @testset "Bidiagonal" begin
+        B = Bidiagonal(1:5, 1:4, :L)
+        b = Vcat(randn(5), Zeros(0))
+        @test ArrayLayouts.ldiv!(B, deepcopy(b)) ≈ B\b
+        c = cache(Zeros(5)); c[1] = 2;
+        @test ArrayLayouts.ldiv!(B, c) ≈ B\[2; zeros(4)]
+
+        c = cache(Zeros(5)); c[1:2] = [1,2];
+        @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(0:4, 1:4, :L), c)
+        @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(-1:3, 1:4, :L), c)
+        @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(-4:0, 1:4, :L), c)
+    end
+end
 end # module
