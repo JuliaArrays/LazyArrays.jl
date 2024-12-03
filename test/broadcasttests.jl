@@ -4,8 +4,7 @@ using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Tracker
 import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize
 import Base: broadcasted
 
-include("infinitearrays.jl")
-using .InfiniteArrays
+using ..InfiniteArrays
 using Infinities
 
 @testset "Broadcasting" begin
