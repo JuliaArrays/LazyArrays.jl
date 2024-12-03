@@ -24,12 +24,6 @@ module InfiniteArrays
     Base.axes(r::OneToInf) = (r,)
     Base.first(r::OneToInf{T}) where {T} = oneunit(T)
 
-    if VERSION < v"1.11-"
-        Base.oneto(::InfiniteCardinal{0}) = OneToInf()
-    else
-        Base.unchecked_oneto(::InfiniteCardinal{0}) = OneToInf()
-    end
-
     Base.axes(::AbstractInfUnitRange) = (OneToInf(),)
 
     struct InfUnitRange{T<:Real} <: AbstractInfUnitRange{T}
