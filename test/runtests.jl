@@ -11,6 +11,10 @@ downstream_test = "--downstream_integration_test" in ARGS
         stale_deps=!downstream_test)
 end
 
+# this should only be included once to avoid method overwritten warnings, as this commites type-piracy
+# we include this at the top-level, so that other sub-modules may reuse the module instead of having to include the file
+include("infinitearrays.jl")
+
 @testset "Lazy MemoryLayout" begin
     @testset "ApplyArray" begin
         A = [1.0 2; 3 4]

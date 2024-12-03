@@ -6,8 +6,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
                     PaddedColumns
 
-include("infinitearrays.jl")
-using .InfiniteArrays
+using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
 using Infinities
 
