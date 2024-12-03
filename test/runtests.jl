@@ -5,8 +5,10 @@ import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcas
 import ArrayLayouts: OnesLayout
 
 using Aqua
+downstream_test = "--downstream_integration_test" in ARGS
 @testset "Project quality" begin
-    Aqua.test_all(LazyArrays, ambiguities=false, piracies=false)
+    Aqua.test_all(LazyArrays, ambiguities=false, piracies=false,
+        stale_deps=!downstream_test)
 end
 
 @testset "Lazy MemoryLayout" begin
