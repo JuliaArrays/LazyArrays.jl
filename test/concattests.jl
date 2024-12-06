@@ -652,6 +652,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test Array(Hcat()) == Array{Any}(undef,0,0)
         @test rowsupport(Hcat(Vcat(Zeros(3,1))),1:2) == colsupport(Vcat(Hcat(Zeros(1,3))),1:2)
     end
+
+    @testset "reverse Vcat" begin
+        A = Vcat([1 2 3], [4 5 6])
+        @test A[2:-1:1,1:-1:1] == [4; 1 ;;]
+    end
 end
 
 end # module

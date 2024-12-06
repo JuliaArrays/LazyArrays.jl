@@ -786,10 +786,10 @@ end
 # subarrays
 ###
 
-sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{Vararg{Union{AbstractVector{Int},Int}}}}) = ApplyLayout{typeof(vcat)}()
-sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Vararg{Union{AbstractVector{Int},Int}}}}) = ApplyLayout{typeof(hcat)}()
+sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{Vararg{Union{AbstractUnitRange{Int},Int}}}}) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Vararg{Union{AbstractUnitRange{Int},Int}}}}) = ApplyLayout{typeof(hcat)}()
 # a row-slice of an Hcat is equivalent to a Vcat
-sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Int,AbstractVector{Int}}}) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Int,AbstractUnitRange{Int}}}) = ApplyLayout{typeof(vcat)}()
 
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
 _vcat_firstinds(sz) = (1, (1 .+ Base.front(_vcat_lastinds(sz)))...)
@@ -867,11 +867,11 @@ arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice
 arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) =
     __view_hcat(arguments(parent(V)), parentindices(V)[1], :)
 
-function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
+function sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret = similar(V)
     n = 0
     _,jr = parentindices(V)
-    for a in arguments(V)
+    for a in arguments(lay, V)
         m = size(a,1)
         copyto!(view(ret,n+1:n+m,:), a)
         n += m
