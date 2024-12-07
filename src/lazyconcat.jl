@@ -928,7 +928,7 @@ _replace_in_print_matrix(_, k, j, s) = s
 function layout_replace_in_print_matrix(LAY::ApplyLayout{typeof(vcat)}, f::AbstractVecOrMat, k, j, s)
     κ = k
     for A in arguments(LAY, f)
-        n = _vcat_size(A,1)
+        n = _cat_size(A,1)
         κ ≤ n && return _replace_in_print_matrix(A, κ, j, s)
         κ -= n
     end
