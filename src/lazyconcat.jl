@@ -42,7 +42,7 @@ _cat_length(a::AbstractArray) = length(a)
 _cat_getindex(a, k...) = a
 _cat_getindex(a::AbstractArray, k...) = a[k...]
 _cat_colsupport(a, k...) = 1
-_cat_colsupport(a::AbstractArray, k...) = colsupport(a, k)
+_cat_colsupport(a::AbstractArray, k...) = colsupport(a, k...)
 
 
 @inline applied_eltype(::typeof(vcat)) = Any
