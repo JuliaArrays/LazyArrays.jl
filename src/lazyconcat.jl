@@ -21,21 +21,37 @@ Vcat() = Vcat{Any}()
 @inline function applied_instantiate(::typeof(vcat), args...)
     iargs = map(instantiate, args)
     if !isempty(iargs)
-        m = size(iargs[1],2)
+        m = _cat_size(iargs[1],2)
         for k=2:length(iargs)
-            size(iargs[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), args)))"))
+            _cat_size(iargs[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->_cat_size(x,2), args)))"))
         end
     end
     vcat, iargs
 end
 
+_cat_axes(a, k) = Base.OneTo(1)
+_cat_axes(a::AbstractArray, k) = axes(a, k)
+_cat_size(a, k) = 1
+_cat_size(a::AbstractArray, k) = size(a, k)
+_cat_ndims(a) = 1
+_cat_ndims(a::AbstractArray) = ndims(a)
+_cat_eltype(a) = typeof(a)
+_cat_eltype(a::AbstractArray) = eltype(a)
+_cat_length(a) = 1
+_cat_length(a::AbstractArray) = length(a)
+_cat_getindex(a, k...) = a
+_cat_getindex(a::AbstractArray, k...) = a[k...]
+_cat_colsupport(a, k...) = 1
+_cat_colsupport(a::AbstractArray, k...) = colsupport(a, k...)
+
+
 @inline applied_eltype(::typeof(vcat)) = Any
-@inline applied_eltype(::typeof(vcat), args...) = promote_type(map(eltype, args)...)
-@inline applied_ndims(::typeof(vcat), args...) = max(1,maximum(map(ndims,args)))
+@inline applied_eltype(::typeof(vcat), args...) = promote_type(map(_cat_eltype, args)...)
+@inline applied_ndims(::typeof(vcat), args...) = max(1,maximum(map(_cat_ndims,args)))
 @inline applied_ndims(::typeof(vcat)) = 1
 @inline axes(f::Vcat{<:Any,1,Tuple{}}) = (OneTo(0),)
-@inline axes(f::Vcat{<:Any,1}) = tuple(oneto(+(map(length,f.args)...)))
-@inline axes(f::Vcat{<:Any,2}) = (oneto(+(map(a -> size(a,1), f.args)...)), axes(f.args[1],2))
+@inline axes(f::Vcat{<:Any,1}) = tuple(oneto(+(map(_cat_length,f.args)...)))
+@inline axes(f::Vcat{<:Any,2}) = (oneto(+(map(a -> _cat_size(a,1), f.args)...)), _cat_axes(f.args[1],2))
 @inline size(f::Vcat) = map(length, axes(f))
 
 
@@ -57,8 +73,8 @@ end
         f, idx::Tuple{Integer}, A, args...)
     k, = idx
     T = eltype(f)
-    n = length(A)
-    k ≤ n && return convert(T, A[k])::T
+    n = _cat_length(A)
+    k ≤ n && return convert(T, _cat_getindex(A,k))::T
     vcat_getindex_recursive(f, (k - n, ), args...)
 end
 
@@ -66,8 +82,8 @@ end
         f, idx::Tuple{Integer,Integer}, A, args...)
     k, j = idx
     T = eltype(f)
-    n = size(A, 1)
-    k ≤ n && return convert(T, A[k, j])::T
+    n = _cat_size(A, 1)
+    k ≤ n && return convert(T, _cat_getindex(A, k, j))::T
     vcat_getindex_recursive(f, (k - n, j), args...)
 end
 
@@ -132,9 +148,9 @@ Hcat(A...) = ApplyArray(hcat, A...)
 Hcat() = Hcat{Any}()
 Hcat{T}(A...) where T = ApplyArray{T}(hcat, A...)
 
-@inline applied_eltype(::typeof(hcat), args...) = promote_type(map(eltype,args)...)
+@inline applied_eltype(::typeof(hcat), args...) = promote_type(map(_cat_eltype,args)...)
 @inline applied_ndims(::typeof(hcat), args...) = 2
-@inline applied_size(::typeof(hcat), args...) = (size(args[1],1), +(map(a -> size(a,2), args)...))
+@inline applied_size(::typeof(hcat), args...) = (_cat_size(args[1],1), +(map(a -> _cat_size(a,2), args)...))
 @inline applied_size(::typeof(hcat)) = (0,0)
 
 @inline hcat_getindex(f, k, j::Integer) = hcat_getindex_recursive(f, (k, j), f.args...)
@@ -142,16 +158,16 @@ Hcat{T}(A...) where T = ApplyArray{T}(hcat, A...)
 @inline function hcat_getindex_recursive(f, idx::Tuple{Integer,Integer}, A, args...)
     k, j = idx
     T = eltype(f)
-    n = size(A, 2)
-    j ≤ n && return convert(T, A[k, j])::T
+    n = _cat_size(A, 2)
+    j ≤ n && return convert(T, _cat_getindex(A,k, j))::T
     hcat_getindex_recursive(f, (k, j - n), args...)
 end
 
 @inline function hcat_getindex_recursive(f, idx::Tuple{Union{Colon,AbstractVector},Integer}, A, args...)
     kr, j = idx
     T = eltype(f)
-    n = size(A, 2)
-    j ≤ n && return convert(AbstractVector{T}, A[kr, j])
+    n = _cat_size(A, 2)
+    j ≤ n && return convert(AbstractVector{T}, _cat_getindex(A, kr, j))
     hcat_getindex_recursive(f, (kr, j - n), args...)
 end
 
@@ -183,27 +199,27 @@ end
 # Hvcat
 ####
 
-@inline applied_eltype(::typeof(hvcat), a, b...) = promote_type(map(eltype, b)...)
+@inline applied_eltype(::typeof(hvcat), a, b...) = promote_type(map(_cat_eltype, b)...)
 @inline applied_ndims(::typeof(hvcat), args...) = 2
-@inline applied_size(::typeof(hvcat), n::Int, b...) = sum(size.(b[1:n:end],1)),sum(size.(b[1:n],2))
+@inline applied_size(::typeof(hvcat), n::Int, b...) = sum(_cat_size.(b[1:n:end],1)),sum(_cat_size.(b[1:n],2))
 
 @inline function applied_size(::typeof(hvcat), n::NTuple{N,Int}, b...) where N
     as = tuple(2, (2 .+ cumsum(Base.front(n)))...)
-    sum(size.(getindex.(Ref((n, b...)), as),1)),sum(size.(b[1:n[1]],2))
+    sum(_cat_size.(getindex.(Ref((n, b...)), as),1)),sum(_cat_size.(b[1:n[1]],2))
 end
 
 
 @inline hvcat_getindex(f, k, j::Integer) = hvcat_getindex_recursive(f, (k, j), f.args...)
 
-@inline _hvcat_size(A) = size(A)
-@inline _hvcat_size(A::Number) = (1,1)
+@inline _hvcat_size(A::AbstractArray) = size(A)
+@inline _hvcat_size(A) = (1,1)
 @inline _hvcat_size(A::AbstractVector) = (size(A,1),1)
 
 @inline function hvcat_getindex_recursive(f, (k,j)::Tuple{Integer,Integer}, N::Int, A, args...)
     T = eltype(f)
     m,n = _hvcat_size(A)
     N ≤ 0 && throw(BoundsError(f, (k,j))) # ran out of arrays
-    k ≤ m && j ≤ n && return convert(T, A[k, j])::T
+    k ≤ m && j ≤ n && return convert(T, _cat_getindex(A, k, j))::T
     k ≤ m && return hvcat_getindex_recursive(f, (k, j - n), N-1, args...)
     hvcat_getindex_recursive(f, (k - m, j), N, args[N:end]...)
 end
@@ -755,8 +771,8 @@ end
 function colsupport(lay::ApplyLayout{typeof(hcat)}, H::AbstractArray, j::Integer)
     ξ = j
     for A in arguments(lay,H)
-        n = size(A,2)
-        ξ ≤ n && return colsupport(A, ξ)
+        n = _cat_size(A,2)
+        ξ ≤ n && return _cat_colsupport(A, ξ)
         ξ -= n
     end
     return 1:0
@@ -912,7 +928,7 @@ _replace_in_print_matrix(_, k, j, s) = s
 function layout_replace_in_print_matrix(LAY::ApplyLayout{typeof(vcat)}, f::AbstractVecOrMat, k, j, s)
     κ = k
     for A in arguments(LAY, f)
-        n = size(A,1)
+        n = _cat_size(A,1)
         κ ≤ n && return _replace_in_print_matrix(A, κ, j, s)
         κ -= n
     end
