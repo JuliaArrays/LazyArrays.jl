@@ -311,8 +311,8 @@ _broadcast_BandedMatrix(a) = a
 for op in (:+, :-, :*)
     @eval begin
         @inline _BandedMatrix(::BroadcastBandedLayout{typeof($op)}, V::AbstractMatrix)::BandedMatrix = broadcast($op, map(_broadcast_BandedMatrix,arguments(V))...)
-        copyto!_layout(::AbstractBandedLayout, ::BroadcastBandedLayout{typeof($op)}, dest::AbstractMatrix, src::AbstractMatrix) =
-            broadcast!($op, dest, map(_broadcast_BandedMatrix, arguments(src))...)
+        copyto!_layout(::AbstractBandedLayout, srclay::BroadcastBandedLayout{typeof($op)}, dest::AbstractMatrix, src::AbstractMatrix) =
+            broadcast!($op, dest, map(_broadcast_BandedMatrix, arguments(srclay, src))...)
     end
 end
 
@@ -325,8 +325,8 @@ _mulbanded_BandedMatrix(A, _) = A
 _mulbanded_BandedMatrix(A, ::NTuple{2,OneTo{Int}}) = BandedMatrix(A)
 _mulbanded_BandedMatrix(A) = _mulbanded_BandedMatrix(A, axes(A))
 
-copyto!_layout(::AbstractBandedLayout, ::ApplyBandedLayout{typeof(*)}, dest::AbstractMatrix, src::AbstractMatrix) =
-    _mulbanded_copyto!(dest, map(_mulbanded_BandedMatrix,arguments(src))...)
+copyto!_layout(::AbstractBandedLayout, srclay::ApplyBandedLayout{typeof(*)}, dest::AbstractMatrix, src::AbstractMatrix) =
+    _mulbanded_copyto!(dest, map(_mulbanded_BandedMatrix,arguments(srclay,src))...)
 
 arguments(::BroadcastBandedLayout{F}, V::SubArray) where F = _broadcast_sub_arguments(V)
 

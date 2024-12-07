@@ -786,10 +786,10 @@ end
 # subarrays
 ###
 
-sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{Vararg{Union{AbstractVector{Int},Int}}}}) = ApplyLayout{typeof(vcat)}()
-sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Vararg{Union{AbstractVector{Int},Int}}}}) = ApplyLayout{typeof(hcat)}()
+sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{Vararg{Union{AbstractRange{Int},Int}}}}) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Vararg{Union{AbstractRange{Int},Int}}}}) = ApplyLayout{typeof(hcat)}()
 # a row-slice of an Hcat is equivalent to a Vcat
-sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Int,AbstractVector{Int}}}) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Int,AbstractRange{Int}}}) = ApplyLayout{typeof(vcat)}()
 
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
 _vcat_firstinds(sz) = (1, (1 .+ Base.front(_vcat_lastinds(sz)))...)
@@ -800,18 +800,21 @@ _view_vcat(a::Number, kr) = Fill(a,length(kr))
 _view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
 _view_vcat(a, kr...) = _viewifmutable(a, kr...)
 
-function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr)
-    sz = size.(arguments(A),1)
+_reverse_if_neg_step(args, kr::AbstractUnitRange) = args
+_reverse_if_neg_step(args, kr::AbstractRange) = step(kr) ≥ 0 ? args : reverse(args)
+
+function _vcat_sub_arguments(lay::ApplyLayout{typeof(vcat)}, A, V, kr)
+    sz = size.(arguments(lay, A),1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
-    map(_view_vcat, arguments(A), skr2)
+    _reverse_if_neg_step(map(_view_vcat, arguments(lay, A), skr2), kr)
 end
 
 function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr, jr)
     sz = size.(arguments(A),1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
-    _view_vcat.(arguments(A), skr2, Ref(jr))
+    _reverse_if_neg_step(_view_vcat.(arguments(A), skr2, Ref(jr)), kr)
 end
 
 _vcat_sub_arguments(LAY::ApplyLayout{typeof(vcat)}, A, V) = _vcat_sub_arguments(LAY, A, V, parentindices(V)...)
@@ -824,12 +827,14 @@ function _vcat_sub_arguments(L::ApplyLayout{typeof(hcat)}, A, V)
     sz = size.(args,2)
     sjr = intersect.(_argsindices(sz), Ref(jr))
     sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
-    _view_hcat.(args, k, sjr2)
+    _view_hcat.(_reverse_if_neg_step(args, jr), k, sjr2)
 end
 
 _vcat_sub_arguments(::DualLayout{ML}, A, V) where ML = _vcat_sub_arguments(ML(), A, V)
 _vcat_sub_arguments(A, V) = _vcat_sub_arguments(MemoryLayout(typeof(A)), A, V)
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,1}) = _vcat_sub_arguments(parent(V), V)
+
+
 
 function arguments(L::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
     A = parent(V)
@@ -838,7 +843,7 @@ function arguments(L::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
     sz = size.(args,1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
-    _view_vcat.(args, skr2, Ref(jr))
+    _view_vcat.(_reverse_if_neg_step(args, kr), skr2, Ref(jr))
 end
 
 @inline _view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
@@ -867,11 +872,11 @@ arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice
 arguments(::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) =
     __view_hcat(arguments(parent(V)), parentindices(V)[1], :)
 
-function sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
+function sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret = similar(V)
     n = 0
     _,jr = parentindices(V)
-    for a in arguments(V)
+    for a in arguments(lay, V)
         m = size(a,1)
         copyto!(view(ret,n+1:n+m,:), a)
         n += m
