@@ -662,6 +662,8 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test Vcat("hi", "bye") == ["hi", "bye"]
         @test Vcat(["hi" "bye"], [2 3]) == ["hi" "bye"; 2 3]
         @test Vcat("hi", [2;;]) == ["hi"; 2 ;;]
+        @test Hcat("hi", "bye") == ["hi" "bye"]
+        @test ApplyArray(hvcat, 2, "hi", 2, 3, "bye") == ApplyArray(hvcat, (2,1), "hi", 2, [3 "bye"]) ==  ["hi" 2; 3 "bye"]
     end
 end
 
