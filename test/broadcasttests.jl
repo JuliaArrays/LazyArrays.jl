@@ -1,6 +1,7 @@
 module BroadcastTests
 
-using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, StaticArrays, Tracker, Base64, Test
+using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, Base64, Test
+using StaticArrays, Tracker
 import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize
 import Base: broadcasted
 
@@ -414,6 +415,11 @@ using Infinities
         @test transpose(a)[1:5] == a'[1:5] == 1:5
         @test transpose(b)[1:5] == exp.((1:5) .+ im)
         @test b'[1:5] == exp.((1:5) .- im)
+    end
+
+    @testset "BroadcastVector last" begin
+        a = BroadcastArray(Base.literal_pow, ^, 1:5, Val(2))
+        @test last(a) == 25
     end
 end
 
