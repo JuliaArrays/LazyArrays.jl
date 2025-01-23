@@ -401,12 +401,24 @@ end
 # Mul
 ###
 
-_broadcast_mul_mul(A, B) = simplify(Mul(broadcast(*, A...), B))
-_broadcast_mul_mul((a,B)::Tuple{AbstractVector,AbstractMatrix}, C) = a .* (B*C)
-_broadcast_mul_mul((A,b)::Tuple{AbstractMatrix,AbstractVector}, C) = b .* (A*C)
-@inline copy(M::Mul{BroadcastLayout{typeof(*)}}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
-@inline copy(M::Mul{BroadcastLayout{typeof(*)},<:AbstractLazyLayout}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
-@inline copy(M::Mul{BroadcastLayout{typeof(*)},ApplyLayout{typeof(*)}}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
+_broadcast_mul_mul(op, A, B) = simplify(Mul(broadcast(op, A...), B))
+
+for op in (:*, :\)
+    @eval _broadcast_mul_mul(::typeof($op), (a,B)::Tuple{AbstractVector,AbstractMatrix}, C) = broadcast($op, a, (B*C))
+end
+
+for op in (:*, :/)
+    @eval _broadcast_mul_mul(::typeof($op), (A,b)::Tuple{AbstractMatrix,AbstractVector}, C) = broadcast($op, (A*C), b)
+end
+
+for op in (:*, :/, :\)
+    @eval begin
+        @inline copy(M::Mul{BroadcastLayout{typeof($op)}}) = _broadcast_mul_mul($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+        @inline copy(M::Mul{BroadcastLayout{typeof($op)},<:LazyLayouts}) = _broadcast_mul_mul($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+        @inline copy(M::Mul{BroadcastLayout{typeof($op)},ApplyLayout{typeof(*)}}) = _broadcast_mul_mul($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+    end
+end
+
 
 for op in (:*, :\, :/)
     @eval begin
