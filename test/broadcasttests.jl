@@ -396,7 +396,7 @@ using Infinities
         @test a[:,1:3] isa Adjoint{Int,Vector{Int}}
     end
 
-    @testset "broadcast with adjtrans" begin
+    @testset "broadcast with adjtrans/triangular/hermsym" begin
         a = BroadcastArray(real, ((1:5) .+ im))
         b = BroadcastArray(exp, ((1:5) .+ im))
         @test exp.(transpose(a)) isa Transpose{<:Any,<:BroadcastVector}
@@ -407,7 +407,16 @@ using Infinities
         @test exp.(b') isa BroadcastMatrix
         @test exp.(transpose(b)) == transpose(exp.(b))
         @test exp.(b') == exp.(b)'
+
+        A = BroadcastArray(*, ((1:5) .+ im), (1:5)')
+        @test exp.(UpperTriangular(A)) isa BroadcastArray
+        @test exp.(Symmetric(A)) isa BroadcastArray
+        @test exp.(Hermitian(A)) isa BroadcastArray
+        @test exp.(UpperTriangular(A)) == exp.(UpperTriangular(Matrix(A)))
+        @test exp.(Symmetric(A)) == exp.(Symmetric(Matrix(A)))
+        @test exp.(Hermitian(A)) == exp.(Hermitian(Matrix(A)))
     end
+
 
     @testset "linear indexing" begin
         a = BroadcastArray(real, ((1:5) .+ im))
