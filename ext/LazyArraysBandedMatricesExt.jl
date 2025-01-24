@@ -552,7 +552,10 @@ copy(M::Mul{<:Any, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts, <:AbstractLazyLayout}) = simplify(M)
 copy(M::Mul{<:AbstractLazyLayout, <:BandedLazyLayouts}) = simplify(M)
 for op in (:*, :/, :\)
-    @eval copy(M::Mul{BroadcastLayout{typeof($op)}, <:BandedLazyLayouts}) = _broadcast_mul_mul($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+    @eval begin
+        simplifiable(M::Mul{BroadcastLayout{typeof($op)}, <:BandedLazyLayouts}) = _broadcast_mul_simplifiable($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+        copy(M::Mul{BroadcastLayout{typeof($op)}, <:BandedLazyLayouts}) = _broadcast_mul_mul($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+    end
 end
 copy(M::Mul{<:BandedLazyLayouts, <:DiagonalLayout}) = simplify(M)
 copy(M::Mul{<:DiagonalLayout, <:BandedLazyLayouts}) = simplify(M)

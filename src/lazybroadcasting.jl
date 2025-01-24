@@ -403,18 +403,30 @@ end
 
 _broadcast_mul_mul(A, B) = simplify(Mul(broadcast(*, A...), B))
 _broadcast_mul_mul(::typeof(*), A, B) = _broadcast_mul_mul(A, B) # maintain back-compatibility with Quasi/ContiuumArrays.jl
+_broadcast_mul_simplifiable(::typeof(*), A, B) = Val(false)
 _broadcast_mul_mul(op, A, B) = simplify(Mul(broadcast(op, A...), B))
 
 for op in (:*, :\)
-    @eval _broadcast_mul_mul(::typeof($op), (a,B)::Tuple{AbstractVector,AbstractMatrix}, C) = broadcast($op, a, (B*C))
+    @eval begin
+        _broadcast_mul_simplifiable(::typeof($op), (a,B)::Tuple{Union{AbstractVector,Number},AbstractMatrix}, C) = simplifiable(*, B, C)
+        _broadcast_mul_mul(::typeof($op), (a,B)::Tuple{Union{AbstractVector,Number},AbstractMatrix}, C) = broadcast($op, a, (B*C))
+    end
 end
 
 for op in (:*, :/)
-    @eval _broadcast_mul_mul(::typeof($op), (A,b)::Tuple{AbstractMatrix,AbstractVector}, C) = broadcast($op, (A*C), b)
+    @eval begin
+        _broadcast_mul_simplifiable(::typeof($op), (A,b)::Tuple{AbstractMatrix,Union{AbstractVector,Number}}, C) = simplifiable(*, A, C)
+        _broadcast_mul_mul(::typeof($op), (A,b)::Tuple{AbstractMatrix,Union{AbstractVector,Number}}, C) = broadcast($op, (A*C), b)
+    end
 end
+
+
 
 for op in (:*, :/, :\)
     @eval begin
+        @inline simplifiable(M::Mul{BroadcastLayout{typeof($op)}}) = _broadcast_mul_simplifiable($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+        @inline simplifiable(M::Mul{BroadcastLayout{typeof($op)},<:LazyLayouts}) = _broadcast_mul_simplifiable($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+        @inline simplifiable(M::Mul{BroadcastLayout{typeof($op)},ApplyLayout{typeof(*)}}) = _broadcast_mul_simplifiable($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
         @inline copy(M::Mul{BroadcastLayout{typeof($op)}}) = _broadcast_mul_mul($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
         @inline copy(M::Mul{BroadcastLayout{typeof($op)},<:LazyLayouts}) = _broadcast_mul_mul($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
         @inline copy(M::Mul{BroadcastLayout{typeof($op)},ApplyLayout{typeof(*)}}) = _broadcast_mul_mul($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
