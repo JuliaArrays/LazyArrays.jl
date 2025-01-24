@@ -430,5 +430,12 @@ paddeddata(a::PaddedPadded) = a
         @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(-1:3, 1:4, :L), c)
         @test_throws SingularException ArrayLayouts.ldiv!(Bidiagonal(-4:0, 1:4, :L), c)
     end
+
+    @testset "Broadcast * Padded" begin
+        B = BroadcastArray(*, 1:8, (2:9)')
+        p = Vcat(1:2, Zeros(6))
+        @test B*p == Matrix(B)*p
+        @test simplifiable(*,B,p) == Val(true)
+    end
 end
 end # module

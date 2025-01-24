@@ -205,4 +205,12 @@ end
     @test rowsupport(invL, ()) == 1:0
 end
 
+@testset "Inv \\ Lazy" begin
+    A = randn(5,5)
+    Ai = InvMatrix(A)
+    @test Ai \ Ai ≈ I
+    @test Ai \ BroadcastArray(exp, A) ≈ Ai \ exp.(A) ≈ A*exp.(A)
+    @test Ai \ ApplyArray(*, A, A) ≈ A^3
+end
+
 end # module
