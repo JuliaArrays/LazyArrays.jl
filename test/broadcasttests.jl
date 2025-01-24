@@ -2,7 +2,7 @@ module BroadcastTests
 
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, Base64, Test
 using StaticArrays, Tracker
-import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize
+import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize, simplifiable
 import Base: broadcasted
 
 using ..InfiniteArrays
