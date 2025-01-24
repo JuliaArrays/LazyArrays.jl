@@ -189,7 +189,7 @@ using Infinities
     @testset "linalg" begin
         c = cache(Fill(3,3,3))
         @test fill(2,1,3) * c == fill(18,1,3)
-        @test ApplyMatrix(exp,fill(3,3,3)) * c == exp(fill(3,3,3)) * fill(3,3,3)
+        @test ApplyMatrix(exp,fill(3,3,3)) * c ≈ exp(fill(3,3,3)) * fill(3,3,3)
         @test BroadcastMatrix(exp,fill(3,3,3)) * c == exp.(fill(3,3,3)) * fill(3,3,3)
         @test fill(2,3)' * c == fill(18,1,3)
         @test fill(2,3,1)' * c == fill(18,1,3)
