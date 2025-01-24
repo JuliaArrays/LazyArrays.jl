@@ -425,6 +425,13 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
                 @test MemoryLayout(BroadcastMatrix(cos, A)) isa BroadcastLayout
             end
         end
+
+        @testset "broadcast_mul_mul" begin
+            A = BroadcastMatrix(*, randn(5,5), randn(5,5))
+            B = ApplyArray(*, brand(5,5,1,2), brand(5,5,2,1))
+            @test A * UpperTriangular(B) ≈ Matrix(A) * UpperTriangular(B)
+            @test simplifiable(*, A, UpperTriangular(B)) == Val(false) # TODO: probably should be true
+        end
     end
 
     @testset "Cache" begin

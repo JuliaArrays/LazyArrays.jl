@@ -539,6 +539,7 @@ bandeddata(R::ApplyMatrix{<:Any,typeof(rot180)}) = @view(bandeddata(arguments(R)
 const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{LazyLayout}, BandedRows{LazyLayout},
     TriangularLayout{UPLO,UNIT,BandedRows{LazyLayout}} where {UPLO,UNIT},
     TriangularLayout{UPLO,UNIT,BandedColumns{LazyLayout}} where {UPLO,UNIT},
+    TriangularLayout{UPLO,UNIT,LazyBandedLayout} where {UPLO,UNIT},
     SymTridiagonalLayout{LazyLayout}, BidiagonalLayout{LazyLayout}, TridiagonalLayout{LazyLayout},
     SymmetricLayout{BandedColumns{LazyLayout}}, HermitianLayout{BandedColumns{LazyLayout}}}
 

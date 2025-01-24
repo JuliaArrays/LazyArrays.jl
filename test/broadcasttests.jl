@@ -224,6 +224,9 @@ using Infinities
         @test A[:,2] ≈ Ã[:,2] ≈ Matrix(A)[:,2]
         @test C*b ≈ Matrix(C)*b
 
+        @test simplifiable(*, A, B) == Val(true)
+        @test simplifiable(*, Ã, B) == Val(true)
+
         D = Diagonal(Fill(2,4))
         @test A*D ≈ Matrix(A)*D
     end
