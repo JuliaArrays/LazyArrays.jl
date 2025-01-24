@@ -401,7 +401,7 @@ end
 # Mul
 ###
 
-_broadcast_mul_mul(A, B) = simplify(Mul(broadcast(op, A...), B))
+_broadcast_mul_mul(A, B) = simplify(Mul(broadcast(*, A...), B))
 _broadcast_mul_mul(::typeof(*), A, B) = _broadcast_mul_mul(A, B) # maintain back-compatibility with Quasi/ContiuumArrays.jl
 _broadcast_mul_mul(op, A, B) = simplify(Mul(broadcast(op, A...), B))
 
