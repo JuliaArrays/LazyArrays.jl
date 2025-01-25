@@ -88,10 +88,13 @@ applylayout(::Type{typeof(pinv)}, ::A) where A = PInvLayout{A}()
 simplifiable(::Mul{<:AbstractInvLayout}) = Val(true)
 
 copy(M::Mul{<:AbstractInvLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
-copy(M::Mul{<:AbstractInvLayout,<:AbstractLazyLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
-@inline copy(M::Mul{<:AbstractInvLayout,<:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
-@inline copy(M::Mul{<:AbstractInvLayout,ApplyLayout{typeof(*)}}) = simplify(M)
+copy(M::Mul{<:AbstractInvLayout, <:AbstractLazyLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
+@inline copy(M::Mul{<:AbstractInvLayout, <:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
+@inline copy(M::Mul{<:AbstractInvLayout, ApplyLayout{typeof(*)}}) = simplify(M)
 copy(L::Ldiv{<:AbstractInvLayout}) = pinv(L.A) * L.B
+copy(L::Ldiv{<:AbstractInvLayout, <:AbstractLazyLayout}) = pinv(L.A) * L.B
+copy(L::Ldiv{<:AbstractInvLayout, <:AbstractInvLayout}) = pinv(L.A) * L.B
+copy(L::Ldiv{<:AbstractInvLayout, ApplyLayout{typeof(*)}}) = pinv(L.A) * L.B
 Ldiv(A::Applied{<:Any,typeof(\)}) = Ldiv(A.args...)
 
 

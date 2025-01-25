@@ -2,7 +2,7 @@ module BroadcastTests
 
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, Base64, Test
 using StaticArrays, Tracker
-import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize
+import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize, simplifiable
 import Base: broadcasted
 
 using ..InfiniteArrays
@@ -224,6 +224,9 @@ using Infinities
         @test A[:,2] ≈ Ã[:,2] ≈ Matrix(A)[:,2]
         @test C*b ≈ Matrix(C)*b
 
+        @test simplifiable(*, A, B) == Val(true)
+        @test simplifiable(*, Ã, B) == Val(true)
+
         D = Diagonal(Fill(2,4))
         @test A*D ≈ Matrix(A)*D
     end
@@ -396,7 +399,7 @@ using Infinities
         @test a[:,1:3] isa Adjoint{Int,Vector{Int}}
     end
 
-    @testset "broadcast with adjtrans" begin
+    @testset "broadcast with adjtrans/triangular/hermsym" begin
         a = BroadcastArray(real, ((1:5) .+ im))
         b = BroadcastArray(exp, ((1:5) .+ im))
         @test exp.(transpose(a)) isa Transpose{<:Any,<:BroadcastVector}
@@ -407,7 +410,16 @@ using Infinities
         @test exp.(b') isa BroadcastMatrix
         @test exp.(transpose(b)) == transpose(exp.(b))
         @test exp.(b') == exp.(b)'
+
+        A = BroadcastArray(*, ((1:5) .+ im), (1:5)')
+        @test exp.(UpperTriangular(A)) isa BroadcastArray
+        @test exp.(Symmetric(A)) isa BroadcastArray
+        @test exp.(Hermitian(A)) isa BroadcastArray
+        @test exp.(UpperTriangular(A)) == exp.(UpperTriangular(Matrix(A)))
+        @test exp.(Symmetric(A)) == exp.(Symmetric(Matrix(A)))
+        @test exp.(Hermitian(A)) == exp.(Hermitian(Matrix(A)))
     end
+
 
     @testset "linear indexing" begin
         a = BroadcastArray(real, ((1:5) .+ im))
@@ -420,6 +432,22 @@ using Infinities
     @testset "BroadcastVector last" begin
         a = BroadcastArray(Base.literal_pow, ^, 1:5, Val(2))
         @test last(a) == 25
+    end
+
+    @testset "BroadcastArray(*) * MulArray" begin
+        A = BroadcastArray(*, 1:3, randn(3,4))
+        B = ApplyArray(*, randn(4,3), randn(3,4))
+        @test A*B ≈ Matrix(A)*Matrix(B)
+        @test A*UpperTriangular(B) ≈ Matrix(A)*UpperTriangular(Matrix(B))
+        @test simplifiable(*,A,B) == Val(false) # TODO: Why False?
+        @test simplifiable(*,A,UpperTriangular(B)) == Val(false) # TODO: Why False?
+    end
+
+    @testset "/" begin
+        A = BroadcastArray(/, randn(3,4), randn(3,4))
+        B = randn(4,3)
+        @test A*B ≈ Matrix(A)*Matrix(B)
+        @test simplifiable(*,A,B) == Val(false) # TODO: Why False?
     end
 end
 

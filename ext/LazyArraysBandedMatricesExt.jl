@@ -10,7 +10,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
                    AbstractPaddedLayout, PaddedLayout, AbstractLazyBandedLayout, LazyBandedLayout, PaddedRows,
                    PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
-                   arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul,
+                   arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul, _broadcast_mul_simplifiable,
                    triangularlayout, AbstractCachedMatrix, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
@@ -539,6 +539,7 @@ bandeddata(R::ApplyMatrix{<:Any,typeof(rot180)}) = @view(bandeddata(arguments(R)
 const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{LazyLayout}, BandedRows{LazyLayout},
     TriangularLayout{UPLO,UNIT,BandedRows{LazyLayout}} where {UPLO,UNIT},
     TriangularLayout{UPLO,UNIT,BandedColumns{LazyLayout}} where {UPLO,UNIT},
+    TriangularLayout{UPLO,UNIT,LazyBandedLayout} where {UPLO,UNIT},
     SymTridiagonalLayout{LazyLayout}, BidiagonalLayout{LazyLayout}, TridiagonalLayout{LazyLayout},
     SymmetricLayout{BandedColumns{LazyLayout}}, HermitianLayout{BandedColumns{LazyLayout}}}
 
@@ -551,7 +552,12 @@ copy(M::Mul{<:LazyLayouts, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:Any, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:BandedLazyLayouts, <:AbstractLazyLayout}) = simplify(M)
 copy(M::Mul{<:AbstractLazyLayout, <:BandedLazyLayouts}) = simplify(M)
-copy(M::Mul{BroadcastLayout{typeof(*)}, <:BandedLazyLayouts}) = _broadcast_mul_mul(arguments(BroadcastLayout{typeof(*)}(), M.A), M.B)
+for op in (:*, :/, :\)
+    @eval begin
+        simplifiable(M::Mul{BroadcastLayout{typeof($op)}, <:BandedLazyLayouts}) = _broadcast_mul_simplifiable($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+        copy(M::Mul{BroadcastLayout{typeof($op)}, <:BandedLazyLayouts}) = _broadcast_mul_mul($op, arguments(BroadcastLayout{typeof($op)}(), M.A), M.B)
+    end
+end
 copy(M::Mul{<:BandedLazyLayouts, <:DiagonalLayout}) = simplify(M)
 copy(M::Mul{<:DiagonalLayout, <:BandedLazyLayouts}) = simplify(M)
 

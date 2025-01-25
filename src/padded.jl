@@ -510,6 +510,9 @@ copy(M::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, Triangular
 simplifiable(::Mul{<:Union{TriangularLayout{'U', 'N', <:AbstractLazyLayout}, TriangularLayout{'U', 'U', <:AbstractLazyLayout}}, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
 
 
+@inline simplifiable(M::Mul{BroadcastLayout{typeof(*)},<:Union{PaddedColumns,PaddedLayout}}) = simplifiable(Mul{BroadcastLayout{typeof(*)},UnknownLayout}(M.A,M.B))
+@inline copy(M::Mul{BroadcastLayout{typeof(*)},<:Union{PaddedColumns,PaddedLayout}}) = copy(Mul{BroadcastLayout{typeof(*)},UnknownLayout}(M.A,M.B))
+
 simplifiable(::Mul{<:DualLayout{<:AbstractLazyLayout}, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
 copy(M::Mul{<:DualLayout{<:AbstractLazyLayout}, <:Union{PaddedColumns,PaddedLayout}}) = copy(mulreduce(M))
 simplifiable(::Mul{<:DiagonalLayout{<:AbstractFillLayout}, <:Union{PaddedColumns,PaddedLayout}}) = Val(true)
