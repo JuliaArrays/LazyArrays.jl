@@ -433,6 +433,22 @@ using Infinities
         a = BroadcastArray(Base.literal_pow, ^, 1:5, Val(2))
         @test last(a) == 25
     end
+
+    @testset "BroadcastArray(*) * MulArray" begin
+        A = BroadcastArray(*, 1:3, randn(3,4))
+        B = ApplyArray(*, randn(4,3), randn(3,4))
+        @test A*B ≈ Matrix(A)*Matrix(B)
+        @test A*UpperTriangular(B) ≈ Matrix(A)*UpperTriangular(Matrix(B))
+        @test simplifiable(*,A,B) == Val(false) # TODO: Why False?
+        @test simplifiable(*,A,UpperTriangular(B)) == Val(false) # TODO: Why False?
+    end
+
+    @testset "/" begin
+        A = BroadcastArray(/, randn(3,4), randn(3,4))
+        B = randn(4,3)
+        @test A*B ≈ Matrix(A)*Matrix(B)
+        @test simplifiable(*,A,B) == Val(false) # TODO: Why False?
+    end
 end
 
 end #module
