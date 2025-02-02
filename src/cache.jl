@@ -48,11 +48,14 @@ CachedArray(array::AbstractArray{T,N}) where {T,N} = CachedArray(similar(array, 
 Caches the entries of an array.
 """
 cache(::Type{MT}, O::AbstractArray) where {MT<:AbstractArray} = CachedArray(MT,O)
-cache(A::AbstractArray) = _cache(MemoryLayout(A), A)
-_cache(_, O::AbstractArray) = CachedArray(O)
-_cache(_, O::CachedArray) = CachedArray(copy(O.data), O.array, O.datasize)
-_cache(::AbstractStridedLayout, O::AbstractArray) = copy(O)
 
+
+cache(A::AbstractArray) = cache_layout(MemoryLayout(A), A)
+cache_layout(_, O::AbstractArray) = CachedArray(O)
+cache_layout(_, O::CachedArray) = CachedArray(copy(O.data), O.array, O.datasize)
+cache_layout(::AbstractStridedLayout, O::AbstractArray) = copy(O)
+
+const _cache = cache_layout # TODO: deprecate
 cacheddata(A::AbstractCachedArray) = view(A.data,OneTo.(A.datasize)...)
 
 convert(::Type{AbstractArray{T}}, S::CachedArray{T}) where T = S
@@ -565,7 +568,7 @@ end
 # AbstractQ
 ##
 cache(A::AbstractQ) = _cache(MemoryLayout(A), A)
-_cache(_, O::AbstractQ) = CachedArray(O)
+cache_layout(_, O::AbstractQ) = CachedArray(O)
 CachedArray(array::AbstractQ{T}) where T = CachedArray(similar(Matrix{T}, (0,0)), array)
 CachedArray(data::AbstractMatrix, array::AbstractQ) = CachedArray(data, array, size(data))
 CachedArray(data::AbstractMatrix{T}, array::AbstractQ{T}, datasize::NTuple{2,Int}) where T =

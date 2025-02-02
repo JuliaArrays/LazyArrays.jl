@@ -11,7 +11,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
                    PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul, _broadcast_mul_simplifiable,
-                   triangularlayout, AbstractCachedMatrix, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout
+                   triangularlayout, AbstractCachedMatrix, cache_layout, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
@@ -450,9 +450,10 @@ LazyArrays._vcat_sub_arguments(lay::ApplyBandedLayout{typeof(hcat)}, A, V) = Laz
 
 CachedArray(::Type{BandedMatrix}, matrix::AbstractMatrix{T}) where T = CachedArray(BandedMatrix{T}(undef, (0,0), bandwidths(matrix)), matrix)
 
-cachedlayout(::BandedColumns{DenseColumnMajor}, ::AbstractBandedLayout) = BandedColumns{DenseColumnMajor}()
 bandwidths(B::CachedMatrix) = bandwidths(B.data)
 isbanded(B::CachedMatrix) = isbanded(B.data)
+
+cache_layout(::BandedLayouts, A::AbstractMatrix{T}) where T = CachedArray(BandedMatrix{T}(undef, (0,0), bandwidths(A)), A)
 
 function bandeddata(A::CachedMatrix)
     resizedata!(A, size(A)...)

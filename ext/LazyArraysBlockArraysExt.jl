@@ -7,7 +7,7 @@ using LazyArrays.FillArrays
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
                     AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle,
-                    ApplyLayout, _cache
+                    ApplyLayout, cache_layout
 import ArrayLayouts: sub_materialize
 import Base: getindex, BroadcastStyle, broadcasted, OneTo
 import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout

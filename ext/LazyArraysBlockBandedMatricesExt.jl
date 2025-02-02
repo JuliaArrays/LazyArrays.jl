@@ -193,7 +193,7 @@ sublayout(LAY::BroadcastBandedBlockBandedLayout, ::Type{<:Tuple{BlockSlice{<:Blo
 _broadcastarray2broadcasted(::BroadcastBlockBandedLayouts{F}, A) where F = _broadcastarray2broadcasted(BroadcastLayout{F}(), A)
 _broadcastarray2broadcasted(::BroadcastBlockBandedLayouts{F}, A::BroadcastArray) where F = _broadcastarray2broadcasted(BroadcastLayout{F}(), A)
 
-function _cache(::BlockBandedLayouts, A::AbstractMatrix{T}) where T
+function cache_layout(::BlockBandedLayouts, A::AbstractMatrix{T}) where T
     kr,jr = axes(A)
     CachedArray(BlockBandedMatrix{T}(undef, (kr[Block.(1:0)], jr[Block.(1:0)]), blockbandwidths(A)), A)
 end
