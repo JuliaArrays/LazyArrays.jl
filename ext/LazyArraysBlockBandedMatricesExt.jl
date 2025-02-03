@@ -9,7 +9,7 @@ using LazyArrays.ArrayLayouts
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout, conjlayout,
                 PaddedLayout, PaddedColumns, AbstractPaddedLayout, PaddedRows, paddeddata,
                 islazy_layout, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
-                BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
+                BroadcastMatrix, _broadcastarray2broadcasted, cache_layout, resizedata!, simplifiable,
                 AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
                 _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments, LazyBandedLayout,
                 CachedArray, _broadcast_sub_arguments, simplify, lazymaterialize, _mulbanded_copyto!
