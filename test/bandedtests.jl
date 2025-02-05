@@ -773,7 +773,7 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
     @testset "cache" begin
         B = brand(10,10,2,1)
         A = ApplyArray(*, B, B)
-        @test_broken cache(A).data isa BandedMatrix
+        @test cache(A).data isa BandedMatrix
         C = cache(BandedMatrix,A)
         @test isbanded(C)
         @test bandwidths(C) == (4,2)

@@ -9,7 +9,7 @@ using LazyArrays.ArrayLayouts
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout, conjlayout,
                 PaddedLayout, PaddedColumns, AbstractPaddedLayout, PaddedRows, paddeddata,
                 islazy_layout, arguments, call, applylayout, broadcastlayout, applybroadcaststyle,
-                BroadcastMatrix, _broadcastarray2broadcasted, _cache, resizedata!, simplifiable,
+                BroadcastMatrix, _broadcastarray2broadcasted, cache_layout, resizedata!, simplifiable,
                 AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
                 _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments, LazyBandedLayout,
                 CachedArray, _broadcast_sub_arguments, simplify, lazymaterialize, _mulbanded_copyto!
@@ -193,7 +193,7 @@ sublayout(LAY::BroadcastBandedBlockBandedLayout, ::Type{<:Tuple{BlockSlice{<:Blo
 _broadcastarray2broadcasted(::BroadcastBlockBandedLayouts{F}, A) where F = _broadcastarray2broadcasted(BroadcastLayout{F}(), A)
 _broadcastarray2broadcasted(::BroadcastBlockBandedLayouts{F}, A::BroadcastArray) where F = _broadcastarray2broadcasted(BroadcastLayout{F}(), A)
 
-function _cache(::BlockBandedLayouts, A::AbstractMatrix{T}) where T
+function cache_layout(::BlockBandedLayouts, A::AbstractMatrix{T}) where T
     kr,jr = axes(A)
     CachedArray(BlockBandedMatrix{T}(undef, (kr[Block.(1:0)], jr[Block.(1:0)]), blockbandwidths(A)), A)
 end
