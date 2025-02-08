@@ -538,11 +538,10 @@ bandeddata(R::ApplyMatrix{<:Any,typeof(rot180)}) = @view(bandeddata(arguments(R)
 # Should probably be redesigned in a trait-based way, but hard to see how to do this
 
 const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{<:AbstractLazyLayout}, BandedRows{<:AbstractLazyLayout},
-    TriangularLayout{UPLO,UNIT,BandedRows{<:AbstractLazyLayout}} where {UPLO,UNIT},
-    TriangularLayout{UPLO,UNIT,BandedColumns{<:AbstractLazyLayout}} where {UPLO,UNIT},
-    TriangularLayout{UPLO,UNIT,LazyBandedLayout} where {UPLO,UNIT},
-    SymTridiagonalLayout{<:AbstractLazyLayout}, BidiagonalLayout{<:AbstractLazyLayout}, TridiagonalLayout{<:AbstractLazyLayout},
-    SymmetricLayout{<:BandedColumns{<:AbstractLazyLayout}}, HermitianLayout{<:BandedColumns{<:AbstractLazyLayout}}}
+    StructuredLayoutTypes{<:AbstractLazyBandedLayout},
+    StructuredLayoutTypes{<:BandedColumns{<:AbstractLazyLayout}},
+    StructuredLayoutTypes{<:BandedRows{<:AbstractLazyLayout}},
+    SymTridiagonalLayout{<:AbstractLazyLayout}, BidiagonalLayout{<:AbstractLazyLayout}, TridiagonalLayout{<:AbstractLazyLayout}}
 
 @inline islazy_layout(::BandedLazyLayouts) = Val(true)
 
