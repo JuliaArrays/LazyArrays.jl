@@ -453,7 +453,7 @@ CachedArray(::Type{BandedMatrix}, matrix::AbstractMatrix{T}) where T = CachedArr
 bandwidths(B::CachedMatrix) = bandwidths(B.data)
 isbanded(B::CachedMatrix) = isbanded(B.data)
 
-cache_layout(::BandedLayouts, A::AbstractMatrix{T}) where T = CachedArray(BandedMatrix{T}(undef, (0,0), bandwidths(A)), A)
+cache_layout(::BandedLayouts, A::AbstractMatrix) = CachedArray(BandedMatrix{eltype(A)}(undef, (0,0), bandwidths(A)), A)
 
 function bandeddata(A::CachedMatrix)
     resizedata!(A, size(A)...)
