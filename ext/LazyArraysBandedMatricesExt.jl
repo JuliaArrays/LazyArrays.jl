@@ -537,12 +537,12 @@ bandeddata(R::ApplyMatrix{<:Any,typeof(rot180)}) = @view(bandeddata(arguments(R)
 # overload copy as overloading `mulreduce` requires `copyto!` overloads
 # Should probably be redesigned in a trait-based way, but hard to see how to do this
 
-const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{LazyLayout}, BandedRows{LazyLayout},
-    TriangularLayout{UPLO,UNIT,BandedRows{LazyLayout}} where {UPLO,UNIT},
-    TriangularLayout{UPLO,UNIT,BandedColumns{LazyLayout}} where {UPLO,UNIT},
+const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{<:AbstractLazyLayout}, BandedRows{<:AbstractLazyLayout},
+    TriangularLayout{UPLO,UNIT,BandedRows{<:AbstractLazyLayout}} where {UPLO,UNIT},
+    TriangularLayout{UPLO,UNIT,BandedColumns{<:AbstractLazyLayout}} where {UPLO,UNIT},
     TriangularLayout{UPLO,UNIT,LazyBandedLayout} where {UPLO,UNIT},
-    SymTridiagonalLayout{LazyLayout}, BidiagonalLayout{LazyLayout}, TridiagonalLayout{LazyLayout},
-    SymmetricLayout{BandedColumns{LazyLayout}}, HermitianLayout{BandedColumns{LazyLayout}}}
+    SymTridiagonalLayout{<:AbstractLazyLayout}, BidiagonalLayout{<:AbstractLazyLayout}, TridiagonalLayout{<:AbstractLazyLayout},
+    SymmetricLayout{<:BandedColumns{<:AbstractLazyLayout}}, HermitianLayout{<:BandedColumns{<:AbstractLazyLayout}}}
 
 @inline islazy_layout(::BandedLazyLayouts) = Val(true)
 
