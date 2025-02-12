@@ -116,6 +116,8 @@ function _vcat_resizedata!(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows
     B
 end
 
+_vcat_resizedata!(_, B, m...) = B # by default we can't resize
+
 resizedata!(B::Vcat, m...) = _vcat_resizedata!(MemoryLayout(B), B, m...)
 
 function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
