@@ -5,6 +5,7 @@ module LazyArrays
 
 using Base.Broadcast, LinearAlgebra, FillArrays, ArrayLayouts, SparseArrays
 import LinearAlgebra.BLAS
+import ArrayLayouts.MemoryLayout
 
 import Base: *, +, -, /, <, ==, >, \, ≤, ≥, (:), @_gc_preserve_begin, @_gc_preserve_end, @propagate_inbounds,
              AbstractArray, AbstractMatrix, AbstractVector, BroadcastStyle, IndexLinear, IndexStyle, OneTo, Slice,
