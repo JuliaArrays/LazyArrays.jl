@@ -161,6 +161,8 @@ function copy(M::Mul{ApplyLayout{typeof(kron)}})
     return shuffle_algorithm(algo_type, M.A, M.B, eltype(M))
 end
 
+my_issparse(A) = false
+my_nnz(A) = prod(size(A))
 
 function shuffle_algorithm(
     ::ModifiedShuffle, K::Kron{T,2} where T, p::AbstractVecOrMat, OT::Type{<:Number}
@@ -184,11 +186,11 @@ function shuffle_algorithm(
     R_H::Vector{Vector{Int}} = []
     C_H::Vector{Vector{Int}} = []
 
-    is_dense = !any(issparse, K.args)
+    is_dense = !any(my_issparse, K.args)
 
     # note: the following computation costs are for multiplication against
     #       a single vector.
-    nnz_ = [issparse(X_h) ? nnz(X_h) : prod(size(X_h)) for X_h in K.args]
+    nnz_ = [my_issparse(X_h) ? my_nnz(X_h) : prod(size(X_h)) for X_h in K.args]
     trad_cost = 2*sum([
         prod(size.(K.args[1:h-1], 2)) * nnz_[h] * prod(size.(K.args[h+1:end], 1))
         for (h, X_h) in enumerate(K.args)
@@ -226,7 +228,7 @@ function shuffle_algorithm(
         return shuffle_algorithm(Shuffle(), K, p, OT)
     end
 
-    nnz_m = [issparse(X_h) ? nnz(X_h) : prod(size(X_h)) for X_h in K_shrunk_factors]
+    nnz_m = [my_issparse(X_h) ? my_nnz(X_h) : prod(size(X_h)) for X_h in K_shrunk_factors]
     modified_cost = 2*sum([
         prod(length.(C_H[1:h-1])) * nnz_m[h] * prod(length.(R_H[h+1:end]))
         for (h, X_h) in enumerate(K.args)
