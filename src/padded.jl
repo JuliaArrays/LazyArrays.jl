@@ -595,6 +595,12 @@ PaddedArray(A::T, n::Vararg{Integer,N}) where {T<:Number,N} = ApplyArray{T,N}(se
 
 BroadcastStyle(::Type{<:PaddedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 
+broadcasted(::LazyArrayStyle, op, A::ApplyArray{T,N,typeof(setindex)}) where {T,N} = ApplyArray(setindex, broadcast(op, A.args[1]), broadcast(op, A.args[2]), A.args[3])
+broadcasted(::LazyArrayStyle, op, A::PaddedArray, c::Number) = ApplyArray(setindex, broadcast(op, A.args[1], c), broadcast(op, A.args[2], c), A.args[3])
+broadcasted(::LazyArrayStyle, op, c::Number, A::PaddedArray) = ApplyArray(setindex, broadcast(op, c, A.args[1]), broadcast(op, c, A.args[2]), A.args[3])
+broadcasted(::LazyArrayStyle, op, A::PaddedArray, c::Ref) = ApplyArray(setindex, broadcast(op, A.args[1], c), broadcast(op, A.args[2], c), A.args[3])
+broadcasted(::LazyArrayStyle, op, c::Ref, A::PaddedArray) = ApplyArray(setindex, broadcast(op, c, A.args[1]), broadcast(op, c, A.args[2]), A.args[3])
+
 
 
 function ArrayLayouts._bidiag_forwardsub!(M::Ldiv{<:Any,<:PaddedColumns,<:AbstractMatrix,<:AbstractVector})
