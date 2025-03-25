@@ -476,6 +476,7 @@ function resizedata!(::BandedColumns{DenseColumnMajor}, _, B::AbstractMatrix{T},
     olddata = B.data
     ν,μ = B.datasize
     n,m = max(ν,n), max(μ,m)
+    resizedata!(B.array, n,m) # B.array might be cached too
 
     if (ν,μ) ≠ (n,m)
         l,u = bandwidths(B.array)
