@@ -325,6 +325,8 @@ paddeddata(a::PaddedPadded) = a
 
         @test PaddedArray(1, 3) == PaddedVector(1,3) == [1; zeros(2)]
         @test PaddedArray(1, 3, 3) == PaddedMatrix(1, 3, 3) == [1 zeros(1,2); zeros(2,3)]
+        @test PaddedVector([1, 2, 3], 3:5)[3:5] == [3; 0; 0]
+        @test PaddedMatrix([1 2; 3 4], (1:3, 1:3)) == [1 2 0; 3 4 0; 0 0 0]
     end
 
     @testset "adjtrans" begin
