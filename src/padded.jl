@@ -591,7 +591,8 @@ PaddedArray(A::AbstractArray{T,N}, n::Vararg{Integer,N}) where {T,N} = PaddedArr
 PaddedArray(A::AbstractArray{T,N}, ax::NTuple{N,Any}) where {T,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(ax), A, axes(A)...)
 PaddedArray(A::T, n::Vararg{Integer,N}) where {T<:Number,N} = ApplyArray{T,N}(setindex, Zeros{T,N}(n...), A, ntuple(_ -> OneTo(1),N)...)
 (PaddedArray{T,N} where T)(A, n::Vararg{Integer,N}) where N = PaddedArray(A, n...)
-
+PaddedVector(A::AbstractVector{T}, ax::AbstractUnitRange) where T = ApplyArray{T, 1}(setindex, Zeros{T, 1}((ax, )), A, axes(A)...)
+PaddedMatrix(A::AbstractMatrix{T}, ax::NTuple{2, Any}) where T = PaddedArray(A, ax)
 
 BroadcastStyle(::Type{<:PaddedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 
