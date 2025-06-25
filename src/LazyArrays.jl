@@ -58,8 +58,11 @@ include("lazysetoperations.jl")
 include("lazyoperations.jl")
 include("lazymacro.jl")
 
-# support x^2
-Base.to_power_type(x::LazyArray) = x
+if isdefined(Base, :to_power_type)
+    # Gone in Julia 1.12-rc1
+    # support x^2
+    Base.to_power_type(x::LazyArray) = x
+end
 
 # Special broadcasting for BlockArrays.jl
 map(::typeof(length), A::BroadcastVector{OneTo{Int},Type{OneTo}}) = A.args[1]
