@@ -27,14 +27,13 @@ using BlockArrays: blockcolsupport, blockrowsupport
         @test axes(n,1) ≡ axes(k,1) ≡ axes(bc)[1] ≡ blockedrange(Base.OneTo(N))
         u = (k .* (k .- n .- a) ./ (2k .+ (b+c-1)))
         @test u == (Vector(k) .* (Vector(k) .- Vector(n) .- a) ./ (2Vector(k) .+ (b+c-1)))
-        @test copyto!(u, bc) == (k .* (k .- n .- a) ./ (2k .+ (b+c-1)))
-        @test @allocated(copyto!(u, bc)) ≤ 1000
-        # not clear why allocatinos so high: all allocations are coming from checking
-        # axes
-
+        v = similar(u)
+        @test copyto!(v, bc) == (k .* (k .- n .- a) ./ (2k .+ (b+c-1)))
+        @test @allocated(copyto!(v, bc)) == 0
+        
         u = BlockedArray{Float64}(undef, collect(1:N))
         @test copyto!(u, bc) == (k .* (k .- n .- a) ./ (2k .+ (b+c-1)))
-        @test @allocated(copyto!(u, bc)) ≤ 1000
+        @test @allocated(copyto!(u, bc)) == 0
     end
 
     @testset "padded" begin
