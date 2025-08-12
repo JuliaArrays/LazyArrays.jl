@@ -861,6 +861,9 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
 
         @test A \ A ≈ I
         @test A \ A isa ApplyArray
+        
+        M = ApplyArray(*, randn(n,n), b)
+        @test A \ M ≈ Matrix(A) \ M
     end
     
     @testset "copyto! broadcast view" begin
