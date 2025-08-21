@@ -170,7 +170,7 @@ end
 # triggering the SparseArrays extension of LinearSolve.
 #
 local_issparse(A) = false
-local_nnz(A) = prod(size(A))
+local_nnz(A) = length(A)
 
 function shuffle_algorithm(
     ::ModifiedShuffle, K::Kron{T,2} where T, p::AbstractVecOrMat, OT::Type{<:Number}
