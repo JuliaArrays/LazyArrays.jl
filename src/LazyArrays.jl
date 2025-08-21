@@ -3,7 +3,7 @@ module LazyArrays
 # Use README as the docstring of the module:
 @doc read(joinpath(dirname(@__DIR__), "README.md"), String) LazyArrays
 
-using Base.Broadcast, LinearAlgebra, FillArrays, ArrayLayouts, SparseArrays
+using Base.Broadcast, LinearAlgebra, FillArrays, ArrayLayouts
 import LinearAlgebra.BLAS
 
 import Base: *, +, -, /, <, ==, >, \, ≤, ≥, (:), @_gc_preserve_begin, @_gc_preserve_end, @propagate_inbounds,
