@@ -657,6 +657,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         A = Vcat([1 2 3], [4 5 6])
         @test A[2:-1:1,1:-1:1] == [4; 1 ;;]
     end
+
+    @testset "resizedata! for non-cached" begin
+        A = @inferred(Vcat(1:10, 1:20))
+        @test resizedata!(A, 3) ≡ A
+    end
 end
 
 end # module

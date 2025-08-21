@@ -453,7 +453,7 @@ CachedArray(::Type{BandedMatrix}, matrix::AbstractMatrix{T}) where T = CachedArr
 bandwidths(B::CachedMatrix) = bandwidths(B.data)
 isbanded(B::CachedMatrix) = isbanded(B.data)
 
-cache_layout(::BandedLayouts, A::AbstractMatrix{T}) where T = CachedArray(BandedMatrix{T}(undef, (0,0), bandwidths(A)), A)
+cache_layout(::BandedLayouts, A::AbstractMatrix) = CachedArray(BandedMatrix{eltype(A)}(undef, (0,0), bandwidths(A)), A)
 
 function bandeddata(A::CachedMatrix)
     resizedata!(A, size(A)...)
@@ -537,12 +537,11 @@ bandeddata(R::ApplyMatrix{<:Any,typeof(rot180)}) = @view(bandeddata(arguments(R)
 # overload copy as overloading `mulreduce` requires `copyto!` overloads
 # Should probably be redesigned in a trait-based way, but hard to see how to do this
 
-const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{LazyLayout}, BandedRows{LazyLayout},
-    TriangularLayout{UPLO,UNIT,BandedRows{LazyLayout}} where {UPLO,UNIT},
-    TriangularLayout{UPLO,UNIT,BandedColumns{LazyLayout}} where {UPLO,UNIT},
-    TriangularLayout{UPLO,UNIT,LazyBandedLayout} where {UPLO,UNIT},
-    SymTridiagonalLayout{LazyLayout}, BidiagonalLayout{LazyLayout}, TridiagonalLayout{LazyLayout},
-    SymmetricLayout{BandedColumns{LazyLayout}}, HermitianLayout{BandedColumns{LazyLayout}}}
+const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{<:AbstractLazyLayout}, BandedRows{<:AbstractLazyLayout},
+    StructuredLayoutTypes{<:AbstractLazyBandedLayout},
+    StructuredLayoutTypes{<:BandedColumns{<:AbstractLazyLayout}},
+    StructuredLayoutTypes{<:BandedRows{<:AbstractLazyLayout}},
+    SymTridiagonalLayout{<:AbstractLazyLayout}, BidiagonalLayout{<:AbstractLazyLayout}, TridiagonalLayout{<:AbstractLazyLayout}}
 
 @inline islazy_layout(::BandedLazyLayouts) = Val(true)
 
@@ -595,6 +594,7 @@ copy(M::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = simplify(M)
 
 copy(L::Ldiv{<:BandedLazyLayouts}) = lazymaterialize(\, L.A, L.B)
 copy(L::Ldiv{<:BandedLazyLayouts,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
+copy(L::Ldiv{<:BandedLazyLayouts, ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
 copy(L::Ldiv{<:BandedLazyLayouts, Blay}) where Blay<:Union{AbstractStridedLayout,PaddedColumns} = copy(Ldiv{UnknownLayout,Blay}(L.A, L.B))
 
 ## The following needs more thought but for now it fixes a bug downstream.
