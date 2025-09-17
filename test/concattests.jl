@@ -663,8 +663,10 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test resizedata!(A, 3) ≡ A
     end
 
-    @testset "copy hcat bug" begin
+    @testset "copy hcat bug (#378)" begin
+        V = ApplyArray(vcat, 1, Fill(2,10,1))
         H = ApplyArray(hcat, 1, Fill(2,1,10))
+        @test copy(view(V,2:-1:1,1:-1:1)) == [2 ; 1 ;;]
         @test copy(view(H,1:-1:1,2:-1:1)) == [2 1]
     end
 end

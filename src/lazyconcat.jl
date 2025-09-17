@@ -864,7 +864,7 @@ function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     sz = size.(args,2)
     sjr = intersect.(_argsindices(sz), Ref(jr))
     sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
-    __view_hcat(args, kr, sjr2)
+    __view_hcat(_reverse_if_neg_step(args, jr), kr, sjr2)
 end
 
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) =
@@ -886,11 +886,11 @@ end
 
 sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector, _) = ApplyVector(V)
 
-function sub_materialize(::ApplyLayout{typeof(hcat)}, V, _)
+function sub_materialize(lay::ApplyLayout{typeof(hcat)}, V, _)
     ret = similar(V)
     n = 0
     kr,_ = parentindices(V)
-    for a in arguments(V)
+    for a in arguments(lay, V)
         m = size(a,2)
         copyto!(view(ret,:,n+1:n+m), a)
         n += m
