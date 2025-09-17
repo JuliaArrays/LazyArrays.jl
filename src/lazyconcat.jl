@@ -800,6 +800,7 @@ _view_vcat(a::Number, kr) = Fill(a,length(kr))
 _view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
 _view_vcat(a, kr...) = _viewifmutable(a, kr...)
 
+_reverse_if_neg_step(args, kr::Int) = args
 _reverse_if_neg_step(args, kr::AbstractUnitRange) = args
 _reverse_if_neg_step(args, kr::AbstractRange) = step(kr) ≥ 0 ? args : reverse(args)
 
@@ -825,7 +826,7 @@ function _vcat_sub_arguments(L::ApplyLayout{typeof(hcat)}, A, V)
     args = arguments(L, A)
     k,jr = parentindices(V)
     sz = size.(args,2)
-    sjr = intersect.(_argsindices(sz), Ref(jr))
+    sjr = intersect.(Ref(jr), _argsindices(sz))
     sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
     _view_hcat.(_reverse_if_neg_step(args, jr), k, sjr2)
 end
@@ -841,9 +842,9 @@ function arguments(L::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2})
     args = arguments(L, A)
     kr,jr = parentindices(V)
     sz = size.(args,1)
-    skr = intersect.(_argsindices(sz), Ref(kr))
+    skr = intersect.(Ref(kr), _argsindices(sz))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
-    _view_vcat.(_reverse_if_neg_step(args, kr), skr2, Ref(jr))
+    _view_vcat.(_reverse_if_neg_step(args, kr), _reverse_if_neg_step(skr2, kr), Ref(jr))
 end
 
 @inline _view_hcat(a::Number, kr, jr) = Fill(a,length(kr),length(jr))
@@ -864,7 +865,7 @@ function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray)
     sz = size.(args,2)
     sjr = intersect.(_argsindices(sz), Ref(jr))
     sjr2 = broadcast((a,b) -> a .- b .+ 1, sjr, _vcat_firstinds(sz))
-    __view_hcat(args, kr, sjr2)
+    __view_hcat(_reverse_if_neg_step(args, jr), kr, _reverse_if_neg_step(sjr2, jr))
 end
 
 arguments(::ApplyLayout{typeof(vcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{<:Slice,<:Any}}) =
@@ -886,11 +887,11 @@ end
 
 sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector, _) = ApplyVector(V)
 
-function sub_materialize(::ApplyLayout{typeof(hcat)}, V, _)
+function sub_materialize(lay::ApplyLayout{typeof(hcat)}, V, _)
     ret = similar(V)
     n = 0
     kr,_ = parentindices(V)
-    for a in arguments(V)
+    for a in arguments(lay, V)
         m = size(a,2)
         copyto!(view(ret,:,n+1:n+m), a)
         n += m
