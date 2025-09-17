@@ -662,6 +662,11 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         A = @inferred(Vcat(1:10, 1:20))
         @test resizedata!(A, 3) ≡ A
     end
+
+    @testset "copy hcat bug" begin
+        H = ApplyArray(hcat, 1, Fill(2,1,10))
+        @test copy(view(H,1:-1:1,2:-1:1)) == [2 1]
+    end
 end
 
 end # module
