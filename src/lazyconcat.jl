@@ -800,6 +800,7 @@ _view_vcat(a::Number, kr) = Fill(a,length(kr))
 _view_vcat(a::Number, kr, jr) = Fill(a,length(kr), length(jr))
 _view_vcat(a, kr...) = _viewifmutable(a, kr...)
 
+_reverse_if_neg_step(args, kr::Int) = args
 _reverse_if_neg_step(args, kr::AbstractUnitRange) = args
 _reverse_if_neg_step(args, kr::AbstractRange) = step(kr) ≥ 0 ? args : reverse(args)
 
