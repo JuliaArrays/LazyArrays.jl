@@ -235,6 +235,20 @@ layout_broadcasted(::AbstractPaddedLayout, ::AbstractPaddedLayout, ::typeof(*), 
 layout_broadcasted(::AbstractPaddedLayout, ::AbstractPaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1}) =
     _paddedpadded_broadcasted(*, A, B)
 
+function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::Union{Ref,Number}, B::AbstractArray)
+    b = paddeddata(B)
+    m = length(b)
+    zB = Zeros{eltype(B)}(size(B)...)
+    CachedArray(convert(Array,broadcast(op, A, b)), broadcast(op, A, zB))
+end
+
+function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractArray, B::Union{Ref,Number})
+    a = paddeddata(A)
+    n = length(a)
+    zA = Zeros{eltype(A)}(size(A)...)
+    CachedArray(convert(Array,broadcast(op, a, B)), broadcast(op, zA, B))
+end
+
 function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::AbstractVector, B::AbstractVector)
     b = paddeddata(B)
     m = length(b)
@@ -248,6 +262,21 @@ function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractVector, B:
     zA = Zeros{eltype(A)}(size(A)...)
     CachedArray(convert(Array,broadcast(op, a, view(B,1:n))), broadcast(op, zA, B))
 end
+
+function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::AbstractVector, B::AbstractMatrix)
+    b = paddeddata(B)
+    m = size(b,1)
+    zB = Zeros{eltype(B)}(size(B)...)
+    CachedArray(convert(Array,broadcast(op, view(A,1:m), b)), broadcast(op, A, zB))
+end
+
+function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractMatrix, B::AbstractVector)
+    a = paddeddata(A)
+    n = size(a,1)
+    zA = Zeros{eltype(A)}(size(A)...)
+    CachedArray(convert(Array,broadcast(op, a, view(B,1:n))), broadcast(op, zA, B))
+end
+
 
 function layout_broadcasted(::AbstractPaddedLayout, ::CachedLayout, op, A::AbstractVector, B::AbstractVector)
     a = paddeddata(A)

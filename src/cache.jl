@@ -336,10 +336,10 @@ MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayo
 BroadcastStyle(::Type{<:CachedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 
 broadcasted(::LazyArrayStyle, op, A::CachedArray) = CachedArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
-broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Number) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
-broadcasted(::LazyArrayStyle, op, c::Number, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
-broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Ref) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
-broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
+layout_broadcasted(::CachedLayout, _, op, A::AbstractVector, c::Number) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+layout_broadcasted(_, ::CachedLayout, op, c::Number, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
+layout_broadcasted(::CachedLayout, _, A::CachedArray, c::Ref) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+layout_broadcasted(_, ::CachedLayout, c::Ref, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 
 
 function layout_broadcasted(::CachedLayout, _, op, A::AbstractVector, B::AbstractVector)

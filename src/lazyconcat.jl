@@ -455,12 +455,24 @@ broadcasted(::LazyArrayStyle, op, A::Transpose{<:Any,<:Vcat}) = transpose(broadc
 broadcasted(::LazyArrayStyle, op, A::Adjoint{<:Real,<:Vcat}) = broadcast(op, parent(A))'
 
 
-for Cat in (:Vcat, :Hcat)
+for Cat in (:vcat, :hcat)
      @eval begin
-        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Number) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, x, y), A.args, c))...)
-        broadcasted(::LazyArrayStyle, op, c::Number, A::$Cat) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, x, y), c, A.args))...)
-        broadcasted(::LazyArrayStyle, op, A::$Cat, c::Ref) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, x, Ref(y)), A.args, c))...)
-        broadcasted(::LazyArrayStyle, op, c::Ref, A::$Cat) = $Cat(_flatten_nums(A.args, broadcast((x,y) -> broadcast(op, Ref(x), y), c, A.args))...)
+        function layout_broadcasted(Alay::ApplyLayout{typeof($Cat)}, _, op, A::AbstractArray, c::Number)
+            Aargs = arguments(Alay, A)
+            ApplyArray($Cat, _flatten_nums(Aargs, broadcast((x,y) -> broadcast(op, x, y), Aargs, c))...)
+        end
+        function layout_broadcasted(_, Alay::ApplyLayout{typeof($Cat)}, op, c::Number, A::AbstractArray)
+            Aargs = arguments(Alay, A)
+            ApplyArray($Cat, _flatten_nums(Aargs, broadcast((x,y) -> broadcast(op, x, y), c, Aargs))...)
+        end
+        function layout_broadcasted(Alay::ApplyLayout{typeof($Cat)}, _, op, A::AbstractArray, c::Ref)
+            Aargs = arguments(Alay, A)
+            ApplyArray($Cat, _flatten_nums(Aargs, broadcast((x,y) -> broadcast(op, x, Ref(y)), Aargs, c))...)
+        end
+        function layout_broadcasted(_, Alay::ApplyLayout{typeof($Cat)}, op, c::Ref, A::AbstractArray)
+            Aargs = arguments(Alay, A)
+            ApplyArray($Cat, _flatten_nums(Aargs, broadcast((x,y) -> broadcast(op, Ref(x), y), c, Aargs))...)
+        end
      end
  end
 
@@ -554,24 +566,6 @@ function _vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail
 end
 
 _vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail)::Tuple{Number,Any}, op, A, B) = Vcat(op.(Ahead,Bhead), op.(Atail,Btail))
-
-
-broadcasted(::LazyArrayStyle, op, a::Vcat{<:Any,N}, b::AbstractArray{<:Any,N}) where N = layout_broadcasted(op, a, b)
-broadcasted(::LazyArrayStyle, op, a::AbstractArray{<:Any,N}, b::Vcat{<:Any,N}) where N = layout_broadcasted(op, a, b)
-broadcasted(::LazyArrayStyle{1}, op, a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), op, a, b)
-broadcasted(::LazyArrayStyle{1}, op, a::Zeros{<:Any,1}, b::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), op, a, b)
-broadcasted(::LazyArrayStyle{1}, ::typeof(\), a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), \, a, b)
-broadcasted(::LazyArrayStyle{1}, ::typeof(/), a::Zeros{<:Any,1}, b::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), /, a, b)
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Vcat{<:Any,1}, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::Vcat{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
-
-
-# Cannot broadcast Vcat's in a lazy way so stick to BroadcastArray
-broadcasted(::LazyArrayStyle, op, A::Vcat, B::Vcat) = layout_broadcasted(op, A, B)
-
-# ambiguities
-broadcasted(::LazyArrayStyle, op, A::Vcat{<:Any,1}, B::CachedVector) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::CachedVector, B::Vcat{<:Any,1}) = layout_broadcasted(op, A, B)
 
 
 

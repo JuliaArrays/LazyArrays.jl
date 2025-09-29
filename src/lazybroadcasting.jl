@@ -7,6 +7,10 @@ LazyArrayStyle{M}(::Val{N}) where {N,M} = LazyArrayStyle{N}()
 layout_broadcasted(_, _, op, A, B) = Base.Broadcast.Broadcasted(Base.Broadcast.combine_styles(A,B), op, (A, B))
 layout_broadcasted(op, A, B) = layout_broadcasted(MemoryLayout(A), MemoryLayout(B), op, A, B)
 
+DefaultArrayStyle(::LazyArrayStyle{N}) where N = DefaultArrayStyle{N}()
+
+layout_broadcasted(_, ::ZerosLayout, op, a, b) = broadcasted(DefaultArrayStyle(Base.Broadcast.combine_styles(a,b)), op, a, b)
+layout_broadcasted(::ZerosLayout, _, op, a, b) = broadcasted(DefaultArrayStyle(Base.Broadcast.combine_styles(a,b)), op, a, b)
 broadcasted(::LazyArrayStyle, op, A, B) = layout_broadcasted(op, A, B)
 
 """
