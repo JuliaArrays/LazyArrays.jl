@@ -1,6 +1,14 @@
 struct LazyArrayStyle{N} <: AbstractArrayStyle{N} end
 LazyArrayStyle(::Val{N}) where N = LazyArrayStyle{N}()
 LazyArrayStyle{M}(::Val{N}) where {N,M} = LazyArrayStyle{N}()
+
+
+
+layout_broadcasted(_, _, op, A, B) = Base.Broadcast.Broadcasted(Base.Broadcast.combine_styles(A,B), op, (A, B))
+layout_broadcasted(op, A, B) = layout_broadcasted(MemoryLayout(A), MemoryLayout(B), op, A, B)
+
+broadcasted(::LazyArrayStyle, op, A, B) = layout_broadcasted(op, A, B)
+
 """
     BroadcastLayout{F}()
 

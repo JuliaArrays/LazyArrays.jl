@@ -50,6 +50,21 @@ export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         PaddedArray, PaddedVector, PaddedMatrix
 
 
+
+"""
+    LazyArray(x::Applied) :: ApplyArray
+    LazyArray(x::Broadcasted) :: BroadcastArray
+
+Wrap a lazy object that wraps a computation producing an array to an
+array.
+"""
+abstract type LazyArray{T,N} <: LayoutArray{T,N} end
+
+const LazyMatrix{T} = LazyArray{T,2}
+const LazyVector{T} = LazyArray{T,1}
+
+
+
 include("lazyapplying.jl")
 include("lazybroadcasting.jl")
 include("linalg/linalg.jl")

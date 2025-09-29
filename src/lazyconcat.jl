@@ -483,16 +483,18 @@ layout_broadcasted(::AbstractLazyLayout, ::ApplyLayout{typeof(vcat)}, op, A::Abs
 layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::CachedLayout, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(UnknownLayout(), lay, op, A, B)
 layout_broadcasted(lay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(lay, UnknownLayout(), op, A, B)
 
-function layout_broadcasted(::ApplyLayout{typeof(vcat)}, _, op, A::AbstractVector, B::AbstractVector)
-    kr = _vcat_axes(map(axes,A.args)...)  # determine how to break up B
+function layout_broadcasted(Alay::ApplyLayout{typeof(vcat)}, _, op, A::AbstractVector, B::AbstractVector)
+    Aargs = arguments(Alay, A)
+    kr = _vcat_axes(map(axes, Aargs)...)  # determine how to break up B
     B_arrays = _vcat_getindex_eval(B,kr...)    # evaluate B at same chunks as A
-    ApplyVector(vcat, broadcast((a,b) -> broadcast(op,a,b), A.args, B_arrays)...)
+    ApplyVector(vcat, broadcast((a,b) -> broadcast(op,a,b), Aargs, B_arrays)...)
 end
 
-function layout_broadcasted(_, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector)
-    kr = _vcat_axes(axes.(B.args)...)
+function layout_broadcasted(_, Blay::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector)
+    Bargs = arguments(Blay, B)
+    kr = _vcat_axes(axes.(Bargs)...)
     A_arrays = _vcat_getindex_eval(A,kr...)
-    Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.args)...)
+    Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, Bargs)...)
 end
 
 

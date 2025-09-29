@@ -354,7 +354,7 @@ layout_broadcasted(::AbstractPaddedLayout, lay::ApplyLayout{typeof(vcat)}, ::typ
 layout_broadcasted(lay::ApplyLayout{typeof(vcat)}, ::AbstractPaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcasted(lay, lay, *, A, B)
 
 
-layout_broadcasted(_, _, op, A, B) = Base.Broadcast.Broadcasted{typeof(Base.BroadcastStyle(Base.BroadcastStyle(typeof(A)),Base.BroadcastStyle(typeof(B))))}(op, (A, B))
+
 
 ###
 # Dot/Axpy
