@@ -439,5 +439,15 @@ paddeddata(a::PaddedPadded) = a
         @test B*p == Matrix(B)*p
         @test simplifiable(*,B,p) == Val(true)
     end
+
+    @testset "QR" begin
+        A = Vcat(randn(5,5), Zeros(4,5))
+        F = qr!(copy(A))
+        F̃ = qr!(Matrix(A))
+        @test F.R ≈ F̃.R
+        b = Vcat([1,2], Zeros(7))
+        @test F.Q'b ≈ F̃.Q'b
+        @test ldiv!(F,cache(b)) ≈ ldiv!(F̃,Vector(b))
+    end
 end
 end # module

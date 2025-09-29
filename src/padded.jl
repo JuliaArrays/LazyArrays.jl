@@ -83,6 +83,17 @@ paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 
 
 
+#####
+# conversion
+#####
+
+cache_layout(::AbstractPaddedLayout, O::AbstractArray) = CachedArray(copy(paddeddata(O)), Zeros{eltype(O)}(axes(O)))
+
+
+#####
+# col/rowsupport
+#####
+
 function colsupport(lay::PaddedColumns{Lay}, A, j) where Lay
     P = paddeddata(A)
     MemoryLayout(P) == lay && return colsupport(UnknownLayout, P, j)
@@ -573,9 +584,29 @@ function getindex(A::ApplyVector{T,typeof(setindex)}, k::Integer) where T
     convert(T, k in kr ? v[something(findlast(isequal(k),kr))] : P[k])::T
 end
 
+function setindex!(A::ApplyVector{T,typeof(setindex)}, c, k::Integer) where T
+    P,v,kr = A.args
+    if k in kr
+        v[something(findlast(isequal(k),kr))] = c
+    else
+        P[k] = c
+    end
+    A
+end
+
 function getindex(A::ApplyMatrix{T,typeof(setindex)}, k::Integer, j::Integer) where T
     P,v,kr,jr = A.args
     convert(T, k in kr && j in jr ? v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] : P[k,j])::T
+end
+
+function setindex!(A::ApplyMatrix{T,typeof(setindex)}, c, k::Integer, j::Integer) where T
+    P,v,kr,jr = A.args
+    if k in kr && j in jr
+        v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] = c
+    else
+        P[k,j] = c
+    end
+    A
 end
 
 const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{Any,N}}}
@@ -626,4 +657,44 @@ function ArrayLayouts._bidiag_forwardsub!(M::Ldiv{<:Any,<:PaddedColumns,<:Abstra
     end
 
     b_in
+end
+
+
+
+#####
+# qr!
+####
+
+pad(A, a, ::Colon) = Vcat(A, Zeros{eltype(A)}(length(a)-size(A,1), size(A,2)))
+
+function padqr(F::LinearAlgebra.QRCompactWY, (a,b))
+    LinearAlgebra.QRCompactWY(pad(F.factors, a, :), F.T)
+end
+
+function ArrayLayouts.qr!_layout(::AbstractPaddedLayout, ax, A)
+    F = qr!(paddeddata(A))
+    padqr(F, ax)
+end
+
+similar(M::Lmul{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
+
+function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:AbstractStridedLayout})
+    Q,b = L.A',L.B
+    F = paddeddata(Q.factors)
+    m = size(F,1)
+    resizedata!(b, m)
+    Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
+    lmul!(Q̃', view(b,oneto(m)))
+    b
+end
+
+function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns})
+    Q,b = L.A',L.B
+    F = paddeddata(Q.factors)
+    m = size(F,1)
+    resizedata!(b, m)
+    Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
+    p_b = paddeddata(b)
+    lmul!(Q̃', view(p_b,oneto(m)))
+    b
 end
