@@ -404,7 +404,7 @@ paddeddata(a::PaddedPadded) = a
         @test simplifiable(*, b', a) == Val(true)
 
         D = Diagonal(Fill(2,8))
-        @test D*b isa Vcat
+        @test MemoryLayout(D*b) isa PaddedColumns
         @test simplifiable(*, D, b) == Val(true)
 
         B = BroadcastArray(+, 1:8, (2:9)')

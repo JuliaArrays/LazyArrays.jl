@@ -235,6 +235,11 @@ layout_broadcasted(::AbstractPaddedLayout, ::AbstractPaddedLayout, ::typeof(*), 
 layout_broadcasted(::AbstractPaddedLayout, ::AbstractPaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1}) =
     _paddedpadded_broadcasted(*, A, B)
 
+# ambiguity
+layout_broadcasted(::AbstractPaddedLayout, ::ZerosLayout, op, a::AbstractVector, b::AbstractVector) = layout_broadcasted(ZerosLayout(), UnknownLayout(), op, a, b)
+layout_broadcasted(::ZerosLayout, ::AbstractPaddedLayout, op, a::AbstractVector, b::AbstractVector) = layout_broadcasted(UnknownLayout(), ZerosLayout(), op, a, b)
+
+
 function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::Union{Ref,Number}, B::AbstractArray)
     b = paddeddata(B)
     m = length(b)
