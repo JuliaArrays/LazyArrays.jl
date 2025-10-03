@@ -83,6 +83,17 @@ paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 
 
 
+#####
+# conversion
+#####
+
+cache_layout(::AbstractPaddedLayout, O::AbstractArray) = CachedArray(copy(paddeddata(O)), Zeros{eltype(O)}(axes(O)))
+
+
+#####
+# col/rowsupport
+#####
+
 function colsupport(lay::PaddedColumns{Lay}, A, j) where Lay
     P = paddeddata(A)
     MemoryLayout(P) == lay && return colsupport(UnknownLayout, P, j)
@@ -224,19 +235,67 @@ layout_broadcasted(::AbstractPaddedLayout, ::AbstractPaddedLayout, ::typeof(*), 
 layout_broadcasted(::AbstractPaddedLayout, ::AbstractPaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1}) =
     _paddedpadded_broadcasted(*, A, B)
 
+# ambiguity
+for op in (:*, :/, :+, :-)
+    @eval begin
+        layout_broadcasted(::ZerosLayout, ::AbstractPaddedLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = layout_broadcasted(ZerosLayout(), UnknownLayout(), $op, a, b)
+        layout_broadcasted(::ZerosLayout, ::AbstractPaddedLayout, ::typeof($op), a::AbstractVector, b::Vcat{<:Any,1}) = layout_broadcasted(ZerosLayout(), UnknownLayout(), $op, a, b)
+    end
+end
+
+for op in (:*, :\, :+, :-)
+    @eval begin
+        layout_broadcasted(::AbstractPaddedLayout, ::ZerosLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = layout_broadcasted(UnknownLayout(), ZerosLayout(), $op, a, b)
+        layout_broadcasted(::AbstractPaddedLayout, ::ZerosLayout, ::typeof($op), a::Vcat{<:Any,1}, b::AbstractVector) = layout_broadcasted(UnknownLayout(), ZerosLayout(), $op, a, b)
+    end
+end
+
+makearray(a::Number, ::Tuple{Any}) = [a]
+makearray(a::Number, ::Tuple{Any,Any}) = [a ;;]
+makearray(a, _) = convert(Array, a)
+
+function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::Union{Ref,Number}, B::AbstractArray)
+    b = paddeddata(B)
+    m = length(b)
+    zB = Zeros{eltype(B)}(size(B)...)
+    CachedArray(makearray(broadcast(op, A, b), size(B)), broadcast(op, A, zB))
+end
+
+function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractArray, B::Union{Ref,Number})
+    a = paddeddata(A)
+    n = length(a)
+    zA = Zeros{eltype(A)}(size(A)...)
+    CachedArray(makearray(broadcast(op, a, B), size(A)), broadcast(op, zA, B))
+end
+
 function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::AbstractVector, B::AbstractVector)
     b = paddeddata(B)
     m = length(b)
     zB = Zeros{eltype(B)}(size(B)...)
-    CachedArray(convert(Array,broadcast(op, view(A,1:m), b)), broadcast(op, A, zB))
+    CachedArray(makearray(broadcast(op, view(A,1:m), b), size(B)), broadcast(op, A, zB))
 end
 
 function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractVector, B::AbstractVector)
     a = paddeddata(A)
     n = length(a)
     zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray(convert(Array,broadcast(op, a, view(B,1:n))), broadcast(op, zA, B))
+    CachedArray(makearray(broadcast(op, a, view(B,1:n)), size(A)), broadcast(op, zA, B))
 end
+
+function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::AbstractVector, B::AbstractMatrix)
+    b = paddeddata(B)
+    m = size(b,1)
+    zB = Zeros{eltype(B)}(size(B)...)
+    CachedArray(makearray(broadcast(op, view(A,1:m), b), size(B)), broadcast(op, A, zB))
+end
+
+function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractMatrix, B::AbstractVector)
+    a = paddeddata(A)
+    n = size(a,1)
+    zA = Zeros{eltype(A)}(size(A)...)
+    CachedArray(makearray(broadcast(op, a, view(B,1:n)), size(A)), broadcast(op, zA, B))
+end
+
 
 function layout_broadcasted(::AbstractPaddedLayout, ::CachedLayout, op, A::AbstractVector, B::AbstractVector)
     a = paddeddata(A)
@@ -343,7 +402,7 @@ layout_broadcasted(::AbstractPaddedLayout, lay::ApplyLayout{typeof(vcat)}, ::typ
 layout_broadcasted(lay::ApplyLayout{typeof(vcat)}, ::AbstractPaddedLayout, ::typeof(*), A::AbstractVector, B::Vcat{<:Any,1}) = layout_broadcasted(lay, lay, *, A, B)
 
 
-layout_broadcasted(_, _, op, A, B) = Base.Broadcast.Broadcasted{typeof(Base.BroadcastStyle(Base.BroadcastStyle(typeof(A)),Base.BroadcastStyle(typeof(B))))}(op, (A, B))
+
 
 ###
 # Dot/Axpy
@@ -573,9 +632,29 @@ function getindex(A::ApplyVector{T,typeof(setindex)}, k::Integer) where T
     convert(T, k in kr ? v[something(findlast(isequal(k),kr))] : P[k])::T
 end
 
+function setindex!(A::ApplyVector{T,typeof(setindex)}, c, k::Integer) where T
+    P,v,kr = A.args
+    if k in kr
+        v[something(findlast(isequal(k),kr))] = c
+    else
+        P[k] = c
+    end
+    A
+end
+
 function getindex(A::ApplyMatrix{T,typeof(setindex)}, k::Integer, j::Integer) where T
     P,v,kr,jr = A.args
     convert(T, k in kr && j in jr ? v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] : P[k,j])::T
+end
+
+function setindex!(A::ApplyMatrix{T,typeof(setindex)}, c, k::Integer, j::Integer) where T
+    P,v,kr,jr = A.args
+    if k in kr && j in jr
+        v[something(findlast(isequal(k),kr)),something(findlast(isequal(j),jr))] = c
+    else
+        P[k,j] = c
+    end
+    A
 end
 
 const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{Any,N}}}
@@ -626,4 +705,35 @@ function ArrayLayouts._bidiag_forwardsub!(M::Ldiv{<:Any,<:PaddedColumns,<:Abstra
     end
 
     b_in
+end
+
+
+
+#####
+# qr!
+####
+
+pad(A, a, ::Colon) = Vcat(A, Zeros{eltype(A)}(length(a)-size(A,1), size(A,2)))
+
+function padqr(F::LinearAlgebra.QRCompactWY, (a,b))
+    LinearAlgebra.QRCompactWY(pad(F.factors, a, :), F.T)
+end
+
+function ArrayLayouts.qr!_layout(::AbstractPaddedLayout, ax, A)
+    F = qr!(paddeddata(A))
+    padqr(F, ax)
+end
+
+similar(M::Lmul{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
+
+
+function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns})
+    Q,b = L.A',L.B
+    F = paddeddata(Q.factors)
+    m = size(F,1)
+    resizedata!(b, m)
+    Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
+    p_b = paddeddata(b)
+    lmul!(Q̃', view(p_b,oneto(m)))
+    b
 end

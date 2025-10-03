@@ -180,17 +180,6 @@ eltype(A::Applied{<:MatrixFunctionStyle}) = float(eltype(first(A.args)))
 
 getindex(A::Applied, kj...) = materialize(A)[kj...]
 
-"""
-    LazyArray(x::Applied) :: ApplyArray
-    LazyArray(x::Broadcasted) :: BroadcastArray
-
-Wrap a lazy object that wraps a computation producing an array to an
-array.
-"""
-abstract type LazyArray{T,N} <: LayoutArray{T,N} end
-
-const LazyMatrix{T} = LazyArray{T,2}
-const LazyVector{T} = LazyArray{T,1}
 
 struct ApplyArray{T, N, F, Args<:Tuple} <: LazyArray{T,N}
     f::F

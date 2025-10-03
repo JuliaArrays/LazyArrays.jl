@@ -237,6 +237,7 @@ paddeddata(a::PaddedPadded) = a
             @test n .+ b == b .+ n
             @test n .+ a == a .+ n
             @test n .+ c == c .+ n
+            @test 1 .+ n == 1 .+ Vector(n)
             @test c.datasize == (0,)
 
             @test @inferred(n .* n) ≡ @inferred(n .* n) ≡ n
@@ -249,10 +250,13 @@ paddeddata(a::PaddedPadded) = a
         @testset "matrix" begin
             a = Vcat([1 2], Zeros(3,2))
             b = Vcat([1 2; 3 4], Zeros(2,2))
+            h = Hcat(1, Zeros(1,3))
             @test MemoryLayout(a + a) isa PaddedColumns
             @test a + a isa Vcat
             @test a + a == 2a
             @test a + b == b + a
+
+            @test 1 .+ h == h .+ 1 == 1 .+ Matrix(h)
 
             c = PaddedArray(randn(2,2), 4, 2)
             d = PaddedArray(randn(1,2), 4, 2)
@@ -267,6 +271,8 @@ paddeddata(a::PaddedPadded) = a
             @test e + b == b + e
             @test e + c == c + e
             @test e + d == d + e
+
+            @test (1:4) .* a == a .* (1:4) == (1:4) .* Matrix(a)
         end
     end
 
@@ -296,6 +302,7 @@ paddeddata(a::PaddedPadded) = a
         a = ApplyArray(setindex, 1:6, 5, 2)
         @test a == [1; 5; 3:6]
         @test_throws BoundsError a[7]
+
         a = ApplyArray(setindex, 1:6, [9,8,7], 1:3)
         @test a == [9; 8; 7; 4:6]
         @test_throws BoundsError a[7]
@@ -303,6 +310,7 @@ paddeddata(a::PaddedPadded) = a
         a = ApplyArray(setindex, Zeros(5,5), 2, 2, 3)
         @test a[2,3] === 2.0
         @test a == setindex!(zeros(5,5),2,2,3)
+        @test_broken 2 in colsupport(a,3)
 
         a = ApplyArray(setindex, Zeros(5,5), [4,5], 2:3, 3)
         @test a == setindex!(zeros(5,5),[4,5], 2:3, 3)
@@ -315,10 +323,20 @@ paddeddata(a::PaddedPadded) = a
         @test MemoryLayout(a) isa PaddedColumns{DenseColumnMajor}
         @test paddeddata(a) == 1:2
 
+        a[1] = 3
+        a[3] = 0
+        @test a[1] == 3
+        @test a[3] == 0
+
         a = ApplyArray(setindex, Zeros(5,5), [1 2 3; 4 5 6], Base.OneTo(2), Base.OneTo(3))
         @test a == setindex!(zeros(5,5),[1 2 3; 4 5 6], 1:2, 1:3)
         @test MemoryLayout(a) isa PaddedLayout{DenseColumnMajor}
         @test paddeddata(a) == [1 2 3; 4 5 6]
+
+        a[1,1] = 5
+        a[3,1] = 0
+        @test a[1,1] == 5
+        @test a[3,1] == 0
 
         # need to add bounds checking
         @test_broken (try ApplyArray(setindex, Zeros(5,5), [1 2; 4 5], 2:3, 3:6) catch e; e; end) isa BoundsError
@@ -438,6 +456,23 @@ paddeddata(a::PaddedPadded) = a
         p = Vcat(1:2, Zeros(6))
         @test B*p == Matrix(B)*p
         @test simplifiable(*,B,p) == Val(true)
+    end
+
+    @testset "QR" begin
+        A = Vcat(randn(5,5), Zeros(4,5))
+        F = qr!(copy(A))
+        F̃ = qr!(Matrix(A))
+        @test F.R ≈ F̃.R
+        b = Vcat([1,2], Zeros(7))
+        @test F.Q'b ≈ F̃.Q'b
+        @test ldiv!(F,cache(b)) ≈ ldiv!(F̃,Vector(b))
+    end
+
+    @testset "cached broadcasted" begin
+        z = Zeros(5)
+        a = cache(z); a[1] = 3;
+        
+        @test z ./ a ≡ a .\ z ≡ z
     end
 end
 end # module
