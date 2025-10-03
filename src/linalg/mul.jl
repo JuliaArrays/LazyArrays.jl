@@ -228,7 +228,7 @@ sublayout(::ApplyLayout{typeof(*)}, ::Type{<:Tuple{AbstractVector{<:CartesianInd
 call(::ApplyLayout{typeof(*)}, V::SubArray) = *
 
 function _mat_mul_arguments(args, (kr,jr)::Tuple{Any,Any})
-    kjr = intersect.(_mul_args_rows(kr, args...), _mul_args_cols(jr, reverse(args)...))
+    kjr = map(intersect, _mul_args_rows(kr, args...), _mul_args_cols(jr, reverse(args)...))
     map(view, args, (kr, kjr...), (kjr..., jr))
 end
 
@@ -237,8 +237,8 @@ _vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
 
 # this is a vector view of a MulVector
 function _vec_mul_arguments(::Type{Tuple{I}}, args, (kr,)::Tuple{Any}) where I
-    kjr = intersect.(_mul_args_rows(kr, args...), _mul_args_cols(Base.OneTo(1), reverse(args)...))
-    _vec_mul_view.(args, (kr, kjr...), (kjr..., :))
+    kjr = map(intersect, _mul_args_rows(kr, args...), _mul_args_cols(Base.OneTo(1), reverse(args)...))
+    map(_vec_mul_view, args, (kr, kjr...), (kjr..., :))
 end
 
 # this is a vector view of a MulMatrix
