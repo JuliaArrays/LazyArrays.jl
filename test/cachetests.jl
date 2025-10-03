@@ -122,6 +122,8 @@ using Infinities
         @test (x + y).array isa AbstractRange
         @test (x + y) == Vector(x) + Vector(y)
 
+        @test Zeros(8) .* x ≡ x .* Zeros(8) ≡ Zeros(8)
+
         @testset "Padded" begin
             z = CachedArray([1,4],Zeros{Int}(8));
             @test (x .+ z) isa CachedArray

@@ -715,15 +715,6 @@ end
 
 similar(M::Lmul{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
 
-function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:AbstractStridedLayout})
-    Q,b = L.A',L.B
-    F = paddeddata(Q.factors)
-    m = size(F,1)
-    resizedata!(b, m)
-    Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
-    lmul!(Q̃', view(b,oneto(m)))
-    b
-end
 
 function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns})
     Q,b = L.A',L.B

@@ -187,21 +187,17 @@ broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::AbstractRang
 broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::AbstractRange, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 
 for op in (:*, :/, :\)
-    @eval broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::Zeros{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
+    @eval layout_broadcasted(::ZerosLayout, ::ZerosLayout, ::typeof($op), a::AbstractArray{<:Any,N}, b::AbstractArray{<:Any,N}) where N = broadcast(DefaultArrayStyle{N}(), $op, a, b)
 end
 
 for op in (:*, :/)
-    @eval begin
-        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::AbstractArray{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
-        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Zeros{T,N}, b::Broadcasted) where {T,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
-    end
+    @eval layout_broadcasted(_, ::ZerosLayout, ::typeof($op), a::AbstractArray{<:Any,N}, b::Union{AbstractArray{<:Any,N},Broadcasted}) where N = broadcast(DefaultArrayStyle{N}(), $op, a, b)
 end
+
 for op in (:*, :\)
-    @eval begin
-        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::AbstractArray{T,N}, b::Zeros{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
-        broadcasted(::LazyArrayStyle{N}, ::typeof($op), a::Broadcasted, b::Zeros{V,N}) where {V,N} = broadcast(DefaultArrayStyle{N}(), $op, a, b)
-    end
+    @eval layout_broadcasted(::ZerosLayout, _, ::typeof($op), a::Union{AbstractArray{<:Any,N},Broadcasted}, b::AbstractArray{<:Any,N}) where N = broadcast(DefaultArrayStyle{N}(), $op, a, b)
 end
+
 
 ###
 # support
