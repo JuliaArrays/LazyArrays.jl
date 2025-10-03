@@ -39,7 +39,8 @@ import ArrayLayouts: AbstractQLayout, Dot, Dotu, Ldiv, Lmul, MatMulMatAdd, MatMu
                      materialize!, mulreduce, reshapedlayout, rowsupport, scalarone, scalarzero, sub_materialize,
                      sublayout, symmetriclayout, symtridiagonallayout, transposelayout, triangulardata,
                      triangularlayout, tridiagonallayout, zero!, transtype, OnesLayout,
-                     diagonaldata, subdiagonaldata, supdiagonaldata, MemoryLayout
+                     diagonaldata, subdiagonaldata, supdiagonaldata, MemoryLayout, MatLmulVec, MatLmulMat,
+                     AdjQRCompactWYQLayout
 
 import FillArrays: AbstractFill, getindex_value
 
@@ -47,6 +48,21 @@ export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum, Accumulate,
         applied, materialize, materialize!, ApplyArray, ApplyMatrix, ApplyVector, apply, @~, LazyArray,
         PaddedArray, PaddedVector, PaddedMatrix
+
+
+
+"""
+    LazyArray(x::Applied) :: ApplyArray
+    LazyArray(x::Broadcasted) :: BroadcastArray
+
+Wrap a lazy object that wraps a computation producing an array to an
+array.
+"""
+abstract type LazyArray{T,N} <: LayoutArray{T,N} end
+
+const LazyMatrix{T} = LazyArray{T,2}
+const LazyVector{T} = LazyArray{T,1}
+
 
 
 include("lazyapplying.jl")

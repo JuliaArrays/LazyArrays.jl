@@ -336,10 +336,10 @@ MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayo
 BroadcastStyle(::Type{<:CachedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
 
 broadcasted(::LazyArrayStyle, op, A::CachedArray) = CachedArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
-broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Number) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
-broadcasted(::LazyArrayStyle, op, c::Number, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
-broadcasted(::LazyArrayStyle, op, A::CachedArray, c::Ref) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
-broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
+layout_broadcasted(::CachedLayout, _, op, A::AbstractArray, c::Number) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+layout_broadcasted(_, ::CachedLayout, op, c::Number, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
+layout_broadcasted(::CachedLayout, _, op, A::CachedArray, c::Ref) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+layout_broadcasted(_, ::CachedLayout, op, c::Ref, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 
 
 function layout_broadcasted(::CachedLayout, _, op, A::AbstractVector, B::AbstractVector)
@@ -365,28 +365,16 @@ function layout_broadcasted(::CachedLayout, ::CachedLayout, op, A::AbstractVecto
     CachedArray(convert(Array, broadcast(op, Adat, Bdat)), broadcast(op, A.array, B.array))
 end
 
-function layout_broadcasted(op, A, B)
-    if axes(A) ≠ axes(B)
-        (size(A,1) == 1 || size(B,1) == 1) && error("Internal error: Scalar-like broadcasting not yet supported.")
-        throw(DimensionMismatch("arrays could not be broadcast to a common size; got a dimension with lengths $(length(A)) and $(length(B))"))
-    end
-    layout_broadcasted(MemoryLayout(A), MemoryLayout(B), op, A, B)
+
+
+
+for op in (:*, :/, :+, :-)
+    @eval layout_broadcasted(::CachedLayout, ::ZerosLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = broadcast(DefaultArrayStyle{1}(), $op, a, b)
 end
 
-broadcasted(::LazyArrayStyle, op, A::CachedVector, B::AbstractVector) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::CachedVector) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::CachedVector, B::CachedVector) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::Broadcasted, B::CachedVector) = broadcast(op, materialize(A), B)
-
-broadcasted(::LazyArrayStyle, op, A::SubArray{<:Any,1,<:CachedMatrix}, B::CachedVector) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::SubArray{<:Any,1,<:CachedMatrix}, B::AbstractVector) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::CachedVector, B::SubArray{<:Any,1,<:CachedMatrix}) = layout_broadcasted(op, A, B)
-broadcasted(::LazyArrayStyle, op, A::AbstractVector, B::SubArray{<:Any,1,<:CachedMatrix}) = layout_broadcasted(op, A, B)
-
-broadcasted(::LazyArrayStyle{1}, op, a::CachedVector, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), op, a, b)
-broadcasted(::LazyArrayStyle{1}, op, a::Zeros{<:Any,1}, b::CachedVector) = broadcast(DefaultArrayStyle{1}(), op, a, b)
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::CachedVector, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
-broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::CachedVector) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+for op in (:*, :\, :+, :-)
+    @eval layout_broadcasted(::ZerosLayout, ::CachedLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = broadcast(DefaultArrayStyle{1}(), $op, a, b)
+end
 
 
 
