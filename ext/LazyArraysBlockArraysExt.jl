@@ -13,6 +13,8 @@ import Base: getindex, BroadcastStyle, broadcasted, OneTo
 import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout
 
 BlockArrays._broadcaststyle(S::LazyArrays.LazyArrayStyle{1}) = S
+BlockArrays.blockbroadcaststyle(S::LazyArrays.LazyArrayStyle) = S
+BlockArrays.blockedbroadcaststyle(S::LazyArrays.LazyArrayStyle) = S
 
 BroadcastStyle(::LazyArrayStyle{N}, ::AbstractBlockStyle{N}) where N = LazyArrayStyle{N}()
 BroadcastStyle(::AbstractBlockStyle{N}, ::LazyArrayStyle{N}) where N = LazyArrayStyle{N}()

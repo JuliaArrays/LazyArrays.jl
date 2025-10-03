@@ -236,24 +236,24 @@ _vec_mul_view(a...) = view(a...)
 _vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
 
 # this is a vector view of a MulVector
-function _vec_mul_arguments(args, (kr,)::Tuple{Any})
+function _vec_mul_arguments(::Type{Tuple{I}}, args, (kr,)::Tuple{Any}) where I
     kjr = map(intersect, _mul_args_rows(kr, args...), _mul_args_cols(Base.OneTo(1), reverse(args)...))
     map(_vec_mul_view, args, (kr, kjr...), (kjr..., :))
 end
 
 # this is a vector view of a MulMatrix
-_vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) =
+_vec_mul_arguments(::Type{Tuple{I,J}}, args, (kr,jr)::Tuple{AbstractVector{I},J}) where {I,J} =
     _mat_mul_arguments(args, (kr,jr))
 
 # this is a row-vector view
 _transposeifnumber(a::AbstractArray{<:Number}) = transpose(a)
 _transposeifnumber(a) = permutedims(a)
 
-_vec_mul_arguments(args, (kr,jr)::Tuple{Number,AbstractVector}) =
-    _vec_mul_arguments(reverse(map(_transposeifnumber, args)), (jr,kr))
+_vec_mul_arguments(::Type{Tuple{I,J}}, args, (kr,jr)::Tuple{I,AbstractVector{J}}) where {I,J} =
+    _vec_mul_arguments(Tuple{J,I}, reverse(map(_transposeifnumber, args)), (jr,kr))
 
 _mat_mul_arguments(V) = _mat_mul_arguments(arguments(parent(V)), parentindices(V))
-_vec_mul_arguments(V) = _vec_mul_arguments(arguments(parent(V)), parentindices(V))
+_vec_mul_arguments(V) = _vec_mul_arguments(indextype(parent(V)), arguments(parent(V)), parentindices(V))
 
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V)
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
