@@ -467,5 +467,12 @@ paddeddata(a::PaddedPadded) = a
         @test F.Q'b ≈ F̃.Q'b
         @test ldiv!(F,cache(b)) ≈ ldiv!(F̃,Vector(b))
     end
+
+    @testset "cached broadcasted" begin
+        z = Zeros(5)
+        a = cache(z); a[1] = 3;
+        
+        @test z ./ a ≡ a .\ z ≡ z
+    end
 end
 end # module
