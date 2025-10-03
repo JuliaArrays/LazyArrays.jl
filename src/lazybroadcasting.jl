@@ -8,10 +8,15 @@ layout_broadcasted(_, _, op, A, B) = Base.Broadcast.Broadcasted(Base.Broadcast.c
 layout_broadcasted(op, A, B) = layout_broadcasted(MemoryLayout(A), MemoryLayout(B), op, A, B)
 
 DefaultArrayStyle(::LazyArrayStyle{N}) where N = DefaultArrayStyle{N}()
-
-layout_broadcasted(_, ::ZerosLayout, op, a, b) = broadcasted(DefaultArrayStyle(Base.Broadcast.combine_styles(a,b)), op, a, b)
-layout_broadcasted(::ZerosLayout, _, op, a, b) = broadcasted(DefaultArrayStyle(Base.Broadcast.combine_styles(a,b)), op, a, b)
 broadcasted(::LazyArrayStyle, op, A, B) = layout_broadcasted(op, A, B)
+
+for op in (:*, :/, :+, :-)
+    @eval layout_broadcasted(::ZerosLayout, _, ::typeof($op), a, b) = broadcasted(DefaultArrayStyle(Base.Broadcast.combine_styles(a,b)), $op, a, b)
+end
+
+for op in (:*, :\, :+, :-)
+    @eval layout_broadcasted(_, ::ZerosLayout, ::typeof($op), a, b) = broadcasted(DefaultArrayStyle(Base.Broadcast.combine_styles(a,b)), $op, a, b)
+end
 
 """
     BroadcastLayout{F}()
@@ -185,18 +190,6 @@ broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::AbstractFill, b::AbstractRange)
 broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::AbstractRange, b::AbstractFill) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::AbstractRange) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 broadcasted(::LazyArrayStyle{1}, ::typeof(*), a::AbstractRange, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
-
-for op in (:*, :/, :\)
-    @eval layout_broadcasted(::ZerosLayout, ::ZerosLayout, ::typeof($op), a::AbstractArray{<:Any,N}, b::AbstractArray{<:Any,N}) where N = broadcast(DefaultArrayStyle{N}(), $op, a, b)
-end
-
-for op in (:*, :/)
-    @eval layout_broadcasted(_, ::ZerosLayout, ::typeof($op), a::AbstractArray{<:Any,N}, b::Union{AbstractArray{<:Any,N},Broadcasted}) where N = broadcast(DefaultArrayStyle{N}(), $op, a, b)
-end
-
-for op in (:*, :\)
-    @eval layout_broadcasted(::ZerosLayout, _, ::typeof($op), a::Union{AbstractArray{<:Any,N},Broadcasted}, b::AbstractArray{<:Any,N}) where N = broadcast(DefaultArrayStyle{N}(), $op, a, b)
-end
 
 
 ###

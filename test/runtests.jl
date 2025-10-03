@@ -464,10 +464,10 @@ end
 
     bc = BroadcastArray(broadcasted(+,1:10,broadcasted(+,1,2)))
     @test bc.args[2] == 3
-end
-
-@testset "_vec_mul_arguments method" begin
-    @test_throws "MethodError: no method matching _vec_mul_arguments"  LazyArrays._vec_mul_arguments(2, [])
+    
+    @testset "_vec_mul_arguments method" begin
+        @test_throws "MethodError: no method matching _vec_mul_arguments"  LazyArrays._vec_mul_arguments(2, [])
+    end
 end
 
 include("blocktests.jl")

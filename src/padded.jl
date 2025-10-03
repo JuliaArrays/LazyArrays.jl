@@ -236,8 +236,19 @@ layout_broadcasted(::AbstractPaddedLayout, ::AbstractPaddedLayout, ::typeof(*), 
     _paddedpadded_broadcasted(*, A, B)
 
 # ambiguity
-layout_broadcasted(::AbstractPaddedLayout, ::ZerosLayout, op, a::AbstractVector, b::AbstractVector) = layout_broadcasted(ZerosLayout(), UnknownLayout(), op, a, b)
-layout_broadcasted(::ZerosLayout, ::AbstractPaddedLayout, op, a::AbstractVector, b::AbstractVector) = layout_broadcasted(UnknownLayout(), ZerosLayout(), op, a, b)
+for op in (:*, :/, :+, :-)
+    @eval begin
+        layout_broadcasted(::ZerosLayout, ::AbstractPaddedLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = layout_broadcasted(ZerosLayout(), UnknownLayout(), $op, a, b)
+        layout_broadcasted(::ZerosLayout, ::AbstractPaddedLayout, ::typeof($op), a::AbstractVector, b::Vcat{<:Any,1}) = layout_broadcasted(ZerosLayout(), UnknownLayout(), $op, a, b)
+    end
+end
+
+for op in (:*, :\, :+, :-)
+    @eval begin
+        layout_broadcasted(::AbstractPaddedLayout, ::ZerosLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = layout_broadcasted(UnknownLayout(), ZerosLayout(), $op, a, b)
+        layout_broadcasted(::AbstractPaddedLayout, ::ZerosLayout, ::typeof($op), a::Vcat{<:Any,1}, b::AbstractVector) = layout_broadcasted(UnknownLayout(), ZerosLayout(), $op, a, b)
+    end
+end
 
 makearray(a::Number, ::Tuple{Any}) = [a]
 makearray(a::Number, ::Tuple{Any,Any}) = [a ;;]

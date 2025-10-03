@@ -495,8 +495,13 @@ layout_broadcasted(::AbstractLazyLayout, ::ApplyLayout{typeof(vcat)}, op, A::Abs
 layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::CachedLayout, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(UnknownLayout(), lay, op, A, B)
 layout_broadcasted(lay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(lay, UnknownLayout(), op, A, B)
 
-layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ZerosLayout, op, a::AbstractVector, b::AbstractVector) = layout_broadcasted(ZerosLayout(), UnknownLayout(), op, a, b)
-layout_broadcasted(::ZerosLayout, ::ApplyLayout{typeof(vcat)}, op, a::AbstractVector, b::AbstractVector) = layout_broadcasted(UnknownLayout(), ZerosLayout(), op, a, b)
+for op in (:*, :/, :+, :-)
+    @eval layout_broadcasted(::ZerosLayout, ::ApplyLayout{typeof(vcat)}, ::typeof($op), a::AbstractVector, b::AbstractVector) = layout_broadcasted(ZerosLayout(), UnknownLayout(), $op, a, b)
+end
+for op in (:*, :\, :+, :-)
+    @eval layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ZerosLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = layout_broadcasted(UnknownLayout(), ZerosLayout(), $op, a, b)
+end
+
 
 
 function layout_broadcasted(Alay::ApplyLayout{typeof(vcat)}, _, op, A::AbstractVector, B::AbstractVector)
