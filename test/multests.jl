@@ -1051,17 +1051,16 @@ end
         M = ApplyArray(*,A,b)
 
         V = view(M,2:300)
+        c = similar(V)
         @test MemoryLayout(typeof(V)) isa ApplyLayout{typeof(*)}
         @test arguments(V) == (view(A,2:300,Base.OneTo(500)),view(b, Base.OneTo(500)))
         @test Applied(V) isa Applied{MulStyle}
         @test ApplyArray(V) ≈ (A*b)[2:300]
-        c = similar(V)
         copyto!(c,Applied(V))
         @test @allocated(copyto!(c,Applied(V))) ≤ 200
         copyto!(c, V)
 
-        # This test fails intermittently on GitHub Actions
-        #     @test @allocated(copyto!(c, V)) ≤ 500
+        @test @allocated(copyto!(c, V)) == 0
 
         @test all(c .=== apply(*, arguments(V)...))
 
