@@ -247,6 +247,7 @@ _vec_mul_arguments(args, (kr,jr)::Tuple{AbstractVector,Number}) =
 
 # this is a row-vector view
 _transposeifnumber(a::AbstractArray{<:Number}) = transpose(a)
+_transposeifnumber(a::AbstractQ{<:Number}) = transpose(a)
 _transposeifnumber(a) = permutedims(a)
 
 _vec_mul_arguments(args, (kr,jr)::Tuple{Number,AbstractVector}) =
