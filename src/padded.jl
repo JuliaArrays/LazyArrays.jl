@@ -724,10 +724,10 @@ function ArrayLayouts.qr!_layout(::AbstractPaddedLayout, ax, A)
     padqr(F, ax)
 end
 
-colsupport(::QRCompactWYQLayout, Q, k) = colsupport(paddeddata(Q.factors), k)
-rowsupport(::QRCompactWYQLayout, Q, k) = colsupport(paddeddata(Q.factors), k)
-colsupport(::AdjQRCompactWYQLayout, Q, k) = colsupport(paddeddata(Q'.factors), k)
-rowsupport(::AdjQRCompactWYQLayout, Q, k) = colsupport(paddeddata(Q'.factors), k)
+colsupport(::QRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q.factors), k)
+rowsupport(::QRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q.factors), k)
+colsupport(::AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q'.factors), k)
+rowsupport(::AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q'.factors), k)
 
 similar(M::Lmul{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
 

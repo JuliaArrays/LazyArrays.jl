@@ -1,7 +1,8 @@
 module LazyArraysBlockArraysTest
 using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, Test
-using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata
-using BlockArrays: blockcolsupport, blockrowsupport
+using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata, ApplyLayout
+using BlockArrays: blockcolsupport, blockrowsupport, blockvec
+const BlockVec{T, M<:AbstractMatrix{T}} = ApplyVector{T, typeof(blockvec), <:Tuple{M}}
 
 @testset "Lazy BlockArrays" begin
     @testset "LazyBlock" begin

@@ -8,9 +8,9 @@ using LazyArrays.LinearAlgebra
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
                     AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle,
-                    ApplyLayout, cache_layout, applied_eltype
+                    ApplyLayout, cache_layout, applied_eltype, applylayout
 import ArrayLayouts: sub_materialize
-import Base: getindex, BroadcastStyle, broadcasted, OneTo
+import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!
 import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout, blockvec
 
 BlockArrays._broadcaststyle(S::LazyArrays.LazyArrayStyle{1}) = S
