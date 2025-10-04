@@ -174,6 +174,14 @@ const BlockVec{T, M<:AbstractMatrix{T}} = ApplyVector{T, typeof(blockvec), <:Tup
         @test MemoryLayout(c) isa PaddedColumns
         @test paddeddata(c) isa BlockVec
         @test paddeddata(c) == [2]
+
+        a = ApplyArray(blockvec, (1:5)')
+        b = BlockedArray(Vcat([1,2], Zeros(3)), (axes(a,1),))
+        
+        @test a + b == b + a
+        @test a - b == -(b-a)
+        @test a + a == 2a
+        @test b + b == 2b
     end
 end
 end
