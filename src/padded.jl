@@ -289,14 +289,14 @@ function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::AbstractVector, B:
     b = paddeddata(B)
     m = size(b,1)
     zB = Zeros{eltype(B)}(size(B)...)
-    CachedArray(makearray(broadcast_deblock(op, view(A,1:(m == 1 ? size(A,1) : m)), b), size(B)), broadcast(op, A, zB))
+    CachedArray(makearray(broadcast_deblock(op, view(A,1:(size(B,1) == 1 ? size(A,1) : m)), b), size(B)), broadcast(op, A, zB))
 end
 
 function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractMatrix, B::AbstractVector)
     a = paddeddata(A)
     n = size(a,1)
     zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray(makearray(broadcast_deblock(op, a, view(B,1:(n == 1 ? size(B,1) : n))), size(A)), broadcast(op, zA, B))
+    CachedArray(makearray(broadcast_deblock(op, a, view(B,1:(size(A,1) == 1 ? size(B,1) : n))), size(A)), broadcast(op, zA, B))
 end
 
 
