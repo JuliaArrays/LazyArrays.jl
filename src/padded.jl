@@ -89,6 +89,7 @@ paddeddata(A::Array) = A # support padded interface for strided arrays
 #####
 
 cache_layout(::AbstractPaddedLayout, O::AbstractArray) = CachedArray(copy(paddeddata(O)), Zeros{eltype(O)}(axes(O)))
+cache_layout(::AbstractPaddedLayout, O::CachedArray) = CachedArray(copy(O.data), O.array, O.datasize)
 
 
 #####
