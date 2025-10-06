@@ -475,15 +475,34 @@ paddeddata(a::PaddedPadded) = a
         F = qr!(copy(A))
         F̃ = qr!(Matrix(A))
         @test F.R ≈ F̃.R
-        b = Vcat([1,2], Zeros(7))
-        @test F.Q'b ≈ F̃.Q'b
+
+        Q = F.Q
+        Q̃ = F̃.Q
+
+        b = cache(Vcat([1,2], Zeros(7)));
+        B = cache(Vcat([1 2;3 4], Zeros(7,2)));
+
+        @test Q'b ≈ Q̃'b
         @test ldiv!(F,cache(b)) ≈ ldiv!(F̃,Vector(b))
+        @test lmul!(Q, deepcopy(b)) ≈ lmul!(Q, Vector(b)) ≈ Q*b
+        @test lmul!(Q', deepcopy(b)) ≈ lmul!(Q', Vector(b)) ≈ Q'b
 
-        @test Matrix(F.Q) ≈ [F.Q[k,j] for k in axes(A,1), j in axes(A,2)] ≈ Matrix(F̃.Q)
-        @test colsupport(F.Q,3) == rowsupport(F.Q,3) == colsupport(F.Q',3) == rowsupport(F.Q',3) == Base.OneTo(5)
 
-        @test F.Q'A ≈ [F.R; zeros(4,5)]
-        @test A'*F.Q ≈ [F.R; zeros(4,5)]'
+        @test lmul!(Q, deepcopy(B)) ≈ lmul!(Q, Matrix(B)) ≈ Q*B
+        @test lmul!(Q', deepcopy(B)) ≈ lmul!(Q', Matrix(B)) ≈ Q'B
+
+        @test Matrix(Q) ≈ [Q[k,j] for k in axes(A,1), j in axes(A,2)] ≈ Matrix(Q̃)
+        @test colsupport(Q,3) == rowsupport(Q,3) == colsupport(Q',3) == rowsupport(Q',3) == Base.OneTo(5)
+
+        @test Q'A ≈ [F.R; zeros(4,5)]
+        @test A'*Q ≈ [F.R; zeros(4,5)]'
+
+        M = ApplyArray(*, Q, b)
+        @test colsupport(M) == Base.OneTo(5)
+
+        M = ApplyArray(*, Q, B)
+        @test colsupport(M) == Base.OneTo(5)
+        @test M[1,:] ≈ (Q*B)[1,:]
     end
 end
 end # module

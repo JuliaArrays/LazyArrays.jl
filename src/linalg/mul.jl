@@ -162,6 +162,7 @@ _mul(A,B,C...) = lazymaterialize(*,A,B,C...)
 _mul_colsupport(j) = j
 _mul_colsupport(j, Z::Number, Y...) = _mul_colsupport(j, Y...) # scalar mul doesn't do anything
 _mul_colsupport(j, Z::AbstractArray, Y...) = _mul_colsupport(colsupport(Z,j), Y...)
+_mul_colsupport(j, Z::AbstractQ, Y...) = _mul_colsupport(colsupport(Z,j), Y...)
 
 colsupport(B::Applied{<:Any,typeof(*)}, j) = _mul_colsupport(j, reverse(B.args)...)
 colsupport(B::MulArray, j) = _mul_colsupport(j, reverse(B.args)...)

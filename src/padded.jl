@@ -736,7 +736,7 @@ rowsupport(::AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(p
 similar(M::Lmul{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
 
 
-function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns})
+function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,PaddedColumns}})
     Q,b = L.A',L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -747,11 +747,11 @@ function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:
     b
 end
 
-function materialize!(L::MatLmulMat{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:AbstractPaddedLayout})
+function materialize!(L::MatLmulMat{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
     Q,b = L.A',L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
-    resizedata!(b, m, :)
+    resizedata!(b, m, size(b,2))
     Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
     p_b = paddeddata(b)
     lmul!(Q̃', view(p_b,oneto(m),:))
@@ -775,7 +775,7 @@ function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:PaddedColumns}, <:Uni
     Q,b = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
-    resizedata!(b, m, :)
+    resizedata!(b, m, size(b,2))
     Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
     p_b = paddeddata(b)
     lmul!(Q̃, view(p_b,oneto(m),:))
@@ -786,7 +786,7 @@ function materialize!(L::MatRmulMat{<:Union{AbstractStridedLayout,AbstractPadded
     A,Q = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
-    resizedata!(A, :, m)
+    resizedata!(A, size(A,1), m)
     Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
     p_A = paddeddata(A)
     rmul!(view(p_A,:, oneto(m)), Q̃)
