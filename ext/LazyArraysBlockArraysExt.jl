@@ -4,13 +4,14 @@ using BlockArrays
 using LazyArrays
 using LazyArrays.ArrayLayouts
 using LazyArrays.FillArrays
+using LazyArrays.LinearAlgebra
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
                     AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle,
-                    ApplyLayout, cache_layout
+                    ApplyLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
 import ArrayLayouts: sub_materialize
-import Base: getindex, BroadcastStyle, broadcasted, OneTo
-import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout
+import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!
+import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout, blockvec
 
 BlockArrays._broadcaststyle(S::LazyArrays.LazyArrayStyle{1}) = S
 
@@ -233,5 +234,33 @@ function arguments(lay::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:T
 end
 
 
+####
+# BlockVec
+####
+const BlockVec{T, M<:AbstractMatrix{T}} = ApplyVector{T, typeof(blockvec), <:Tuple{M}}
+
+BlockVec{T}(M::AbstractMatrix{T}) where T = ApplyVector{T}(blockvec, M)
+BlockVec(M::AbstractMatrix{T}) where T = BlockVec{T}(M)
+axes(b::BlockVec) = (blockedrange(Fill(size(b.args[1])...)),)
+size(b::BlockVec) = (length(b.args[1]),)
+applied_eltype(::typeof(blockvec), A) = eltype(A)
+applied_ndims(::typeof(blockvec), A) = 1
+
+view(b::BlockVec, K::Block{1}) = view(b.args[1], :, Int(K))
+Base.@propagate_inbounds getindex(b::BlockVec, k::Int) = b.args[1][k]
+Base.@propagate_inbounds setindex!(b::BlockVec, v, k::Int) = setindex!(b.args[1], v, k)
+
+_resize!(A::AbstractMatrix, m, n) = A[1:m, 1:n]
+_resize!(At::Transpose, m, n) = transpose(transpose(At)[1:n, 1:m])
+_resize!(Ac::Adjoint, m, n) = (Ac')[1:n, 1:m]'
+resize!(b::BlockVec, K::Block{1}) = BlockVec(_resize!(b.args[1], size(b.args[1],1), Int(K)))
+
+applylayout(::Type{typeof(blockvec)}, ::AbstractPaddedLayout) = PaddedColumns{ApplyLayout{typeof(blockvec)}}()
+paddeddata(b::BlockVec) = BlockVec(paddeddata(b.args[1]))
+
+# work around case where padded data is blocked
+broadcast_deblock(op, A, B::BlockedArray) = broadcast(op, A, B.blocks)
+broadcast_deblock(op, A::BlockedArray, B) = broadcast(op, A.blocks, B)
+broadcast_deblock(op, A::BlockedArray, B::BlockedArray) = broadcast(op, A.blocks, B.blocks)
 
 end

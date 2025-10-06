@@ -457,22 +457,52 @@ paddeddata(a::PaddedPadded) = a
         @test B*p == Matrix(B)*p
         @test simplifiable(*,B,p) == Val(true)
     end
+    
+    @testset "cached broadcasted" begin
+        z = Zeros(5)
+        a = cache(z); a[1] = 3;
+        
+        @test z ./ a ≡ a .\ z ≡ z
+    end
+
+    @testset "Number * padded matrix - of - vector" begin
+        A = Vcat([1,2], Zeros(3,1))
+        @test 2 * A == A * 2 == 2 * Matrix(A)
+    end
 
     @testset "QR" begin
         A = Vcat(randn(5,5), Zeros(4,5))
         F = qr!(copy(A))
         F̃ = qr!(Matrix(A))
         @test F.R ≈ F̃.R
-        b = Vcat([1,2], Zeros(7))
-        @test F.Q'b ≈ F̃.Q'b
-        @test ldiv!(F,cache(b)) ≈ ldiv!(F̃,Vector(b))
-    end
 
-    @testset "cached broadcasted" begin
-        z = Zeros(5)
-        a = cache(z); a[1] = 3;
-        
-        @test z ./ a ≡ a .\ z ≡ z
+        Q = F.Q
+        Q̃ = F̃.Q
+
+        b = cache(Vcat([1,2], Zeros(7)));
+        B = cache(Vcat([1 2;3 4], Zeros(7,2)));
+
+        @test Q'b ≈ Q̃'b
+        @test ldiv!(F,cache(b)) ≈ ldiv!(F̃,Vector(b))
+        @test lmul!(Q, deepcopy(b)) ≈ lmul!(Q, Vector(b)) ≈ Q*b
+        @test lmul!(Q', deepcopy(b)) ≈ lmul!(Q', Vector(b)) ≈ Q'b
+
+
+        @test lmul!(Q, deepcopy(B)) ≈ lmul!(Q, Matrix(B)) ≈ Q*B
+        @test lmul!(Q', deepcopy(B)) ≈ lmul!(Q', Matrix(B)) ≈ Q'B
+
+        @test Matrix(Q) ≈ [Q[k,j] for k in axes(A,1), j in axes(A,2)] ≈ Matrix(Q̃)
+        @test colsupport(Q,3) == rowsupport(Q,3) == colsupport(Q',3) == rowsupport(Q',3) == Base.OneTo(5)
+
+        @test Q'A ≈ [F.R; zeros(4,5)]
+        @test A'*Q ≈ [F.R; zeros(4,5)]'
+
+        M = ApplyArray(*, Q, b)
+        @test colsupport(M) == Base.OneTo(5)
+
+        M = ApplyArray(*, Q, B)
+        @test colsupport(M) == Base.OneTo(5)
+        @test M[1,:] ≈ (Q*B)[1,:]
     end
 end
 end # module

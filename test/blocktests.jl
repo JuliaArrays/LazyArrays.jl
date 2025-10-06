@@ -1,7 +1,8 @@
 module LazyArraysBlockArraysTest
 using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, Test
-using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata
-using BlockArrays: blockcolsupport, blockrowsupport
+using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata, ApplyLayout
+using BlockArrays: blockcolsupport, blockrowsupport, blockvec
+const BlockVec{T, M<:AbstractMatrix{T}} = ApplyVector{T, typeof(blockvec), <:Tuple{M}}
 
 @testset "Lazy BlockArrays" begin
     @testset "LazyBlock" begin
@@ -142,6 +143,45 @@ using BlockArrays: blockcolsupport, blockrowsupport
 
         B = BlockedArray(Vcat([1 2 3; 4 5 6], Ones(3,3), fill(4, 2, 3))', [3], [2,3,2])
         @test ApplyArray(view(B, Block.(1:1), Block(1))) == [1 4; 2 5; 3 6]
+    end
+
+    @testset "BlockVec" begin
+        X = randn(5,4)
+        b = BlockVec(X)
+        @test size(b) == (20,)
+        @test length(b) == 20
+        @test MemoryLayout(b) isa ApplyLayout{typeof(blockvec)}
+        @test b == vec(X)
+        @test view(b, Block(3)) ≡ view(X, :, 3)
+        @test b[Block(3)] isa Vector
+        b[5] = 6
+        @test X[5] == 6
+        @test resize!(b, Block(2)) == b[Block.(1:2)]
+
+        c = BlockVec(X')
+        @test c == vec(X')
+        @test view(c, Block(3)) ≡ view(X', :, 3)
+        @test resize!(c, Block(2)) == c[Block.(1:2)]
+
+        c = BlockVec(transpose(X))
+        @test c == vec(transpose(X))
+        @test view(c, Block(3)) ≡ view(transpose(X), :, 3)
+        @test resize!(c, Block(2)) == c[Block.(1:2)]
+
+        X = cache(Zeros(5,6));
+        X[1,1] = 2
+        c = BlockVec(X);
+        @test MemoryLayout(c) isa PaddedColumns
+        @test paddeddata(c) isa BlockVec
+        @test paddeddata(c) == [2]
+
+        a = ApplyArray(blockvec, (1:5)')
+        b = BlockedArray(Vcat([1,2], Zeros(3)), (axes(a,1),))
+        
+        @test a + b == b + a
+        @test a - b == -(b-a)
+        @test a + a == 2a
+        @test b + b == 2b
     end
 end
 end

@@ -81,6 +81,7 @@ _hvcat_paddeddata(N, A, B::Zeros...) = A
 paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 
 
+paddeddata(A::Array) = A # support padded interface for strided arrays
 
 
 #####
@@ -88,6 +89,7 @@ paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 #####
 
 cache_layout(::AbstractPaddedLayout, O::AbstractArray) = CachedArray(copy(paddeddata(O)), Zeros{eltype(O)}(axes(O)))
+cache_layout(::AbstractPaddedLayout, O::CachedArray) = CachedArray(copy(O.data), O.array, O.datasize)
 
 
 #####
@@ -252,48 +254,51 @@ end
 
 makearray(a::Number, ::Tuple{Any}) = [a]
 makearray(a::Number, ::Tuple{Any,Any}) = [a ;;]
+makearray(a::AbstractVector, ::Tuple{Any,Any}) = reshape(a, :, 1)
 makearray(a, _) = convert(Array, a)
+
+broadcast_deblock(op, A, B) = broadcast(op, A, B)
 
 function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::Union{Ref,Number}, B::AbstractArray)
     b = paddeddata(B)
     m = length(b)
     zB = Zeros{eltype(B)}(size(B)...)
-    CachedArray(makearray(broadcast(op, A, b), size(B)), broadcast(op, A, zB))
+    CachedArray(makearray(broadcast_deblock(op, A, b), size(B)), broadcast(op, A, zB))
 end
 
 function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractArray, B::Union{Ref,Number})
     a = paddeddata(A)
     n = length(a)
     zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray(makearray(broadcast(op, a, B), size(A)), broadcast(op, zA, B))
+    CachedArray(makearray(broadcast_deblock(op, a, B), size(A)), broadcast(op, zA, B))
 end
 
 function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::AbstractVector, B::AbstractVector)
     b = paddeddata(B)
     m = length(b)
     zB = Zeros{eltype(B)}(size(B)...)
-    CachedArray(makearray(broadcast(op, view(A,1:m), b), size(B)), broadcast(op, A, zB))
+    CachedArray(makearray(broadcast_deblock(op, view(A,1:m), b), size(B)), broadcast(op, A, zB))
 end
 
 function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractVector, B::AbstractVector)
     a = paddeddata(A)
     n = length(a)
     zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray(makearray(broadcast(op, a, view(B,1:n)), size(A)), broadcast(op, zA, B))
+    CachedArray(makearray(broadcast_deblock(op, a, view(B,1:n)), size(A)), broadcast(op, zA, B))
 end
 
 function layout_broadcasted(_, ::AbstractPaddedLayout, op, A::AbstractVector, B::AbstractMatrix)
     b = paddeddata(B)
     m = size(b,1)
     zB = Zeros{eltype(B)}(size(B)...)
-    CachedArray(makearray(broadcast(op, view(A,1:m), b), size(B)), broadcast(op, A, zB))
+    CachedArray(makearray(broadcast_deblock(op, view(A,1:(size(B,1) == 1 ? size(A,1) : m)), b), size(B)), broadcast(op, A, zB))
 end
 
 function layout_broadcasted(::AbstractPaddedLayout, _, op, A::AbstractMatrix, B::AbstractVector)
     a = paddeddata(A)
     n = size(a,1)
     zA = Zeros{eltype(A)}(size(A)...)
-    CachedArray(makearray(broadcast(op, a, view(B,1:n)), size(A)), broadcast(op, zA, B))
+    CachedArray(makearray(broadcast_deblock(op, a, view(B,1:(size(A,1) == 1 ? size(B,1) : n))), size(A)), broadcast(op, zA, B))
 end
 
 
@@ -724,10 +729,15 @@ function ArrayLayouts.qr!_layout(::AbstractPaddedLayout, ax, A)
     padqr(F, ax)
 end
 
+colsupport(::QRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q.factors), k)
+rowsupport(::QRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q.factors), k)
+colsupport(::AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q'.factors), k)
+rowsupport(::AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q'.factors), k)
+
 similar(M::Lmul{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
 
 
-function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns})
+function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,PaddedColumns}})
     Q,b = L.A',L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -736,4 +746,50 @@ function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:
     p_b = paddeddata(b)
     lmul!(Q̃', view(p_b,oneto(m)))
     b
+end
+
+function materialize!(L::MatLmulMat{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
+    Q,b = L.A',L.B
+    F = paddeddata(Q.factors)
+    m = size(F,1)
+    resizedata!(b, m, size(b,2))
+    Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
+    p_b = paddeddata(b)
+    lmul!(Q̃', view(p_b,oneto(m),:))
+    b
+end
+
+
+
+function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,PaddedColumns}})
+    Q,b = L.A,L.B
+    F = paddeddata(Q.factors)
+    m = size(F,1)
+    resizedata!(b, m)
+    Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
+    p_b = paddeddata(b)
+    lmul!(Q̃, view(p_b,oneto(m)))
+    b
+end
+
+function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
+    Q,b = L.A,L.B
+    F = paddeddata(Q.factors)
+    m = size(F,1)
+    resizedata!(b, m, size(b,2))
+    Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
+    p_b = paddeddata(b)
+    lmul!(Q̃, view(p_b,oneto(m),:))
+    b
+end
+
+function materialize!(L::MatRmulMat{<:Union{AbstractStridedLayout,AbstractPaddedLayout}, <:QRCompactWYQLayout{<:PaddedColumns}})
+    A,Q = L.A,L.B
+    F = paddeddata(Q.factors)
+    m = size(F,1)
+    resizedata!(A, size(A,1), m)
+    Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
+    p_A = paddeddata(A)
+    rmul!(view(p_A,:, oneto(m)), Q̃)
+    A
 end
