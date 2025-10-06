@@ -475,7 +475,7 @@ paddeddata(a::PaddedPadded) = a
         @test ldiv!(F,cache(b)) ≈ ldiv!(F̃,Vector(b))
 
         @test Matrix(F.Q) ≈ [F.Q[k,j] for k in axes(A,1), j in axes(A,2)] ≈ Matrix(F̃.Q)
-        @test colsupport(F.Q,3) == rowsupport(F.Q,3) == Base.OneTo(5)
+        @test colsupport(F.Q,3) == rowsupport(F.Q,3) == colsupport(F.Q',3) == rowsupport(F.Q',3) == Base.OneTo(5)
 
         @test F.Q'A ≈ [F.R; zeros(4,5)]
         @test A'*F.Q ≈ [F.R; zeros(4,5)]'
