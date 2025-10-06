@@ -465,6 +465,11 @@ paddeddata(a::PaddedPadded) = a
         @test z ./ a ≡ a .\ z ≡ z
     end
 
+    @testset "Number * padded matrix - of - vector" begin
+        A = Vcat([1,2], Zeros(3,1))
+        @test 2 * A == A * 2 == 2 * Matrix(A)
+    end
+
     @testset "QR" begin
         A = Vcat(randn(5,5), Zeros(4,5))
         F = qr!(copy(A))
