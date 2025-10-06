@@ -81,6 +81,7 @@ _hvcat_paddeddata(N, A, B::Zeros...) = A
 paddeddata(A::ApplyMatrix{<:Any,typeof(hvcat)}) = _hvcat_paddeddata(A.args...)
 
 
+paddeddata(A::Array) = A # support padded interface for strided arrays
 
 
 #####
@@ -759,7 +760,7 @@ end
 
 
 
-function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns})
+function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,PaddedColumns}})
     Q,b = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -770,7 +771,7 @@ function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:PaddedColumns}, <:Pad
     b
 end
 
-function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:PaddedColumns}, <:AbstractPaddedLayout})
+function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
     Q,b = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -779,4 +780,15 @@ function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:PaddedColumns}, <:Abs
     p_b = paddeddata(b)
     lmul!(Q̃, view(p_b,oneto(m),:))
     b
+end
+
+function materialize!(L::MatRmulMat{<:Union{AbstractStridedLayout,AbstractPaddedLayout}, <:QRCompactWYQLayout{<:PaddedColumns}})
+    A,Q = L.A,L.B
+    F = paddeddata(Q.factors)
+    m = size(F,1)
+    resizedata!(A, :, m)
+    Q̃ = LinearAlgebra.QRCompactWYQ(F, Q.T)
+    p_A = paddeddata(A)
+    rmul!(view(p_A,:, oneto(m)), Q̃)
+    A
 end

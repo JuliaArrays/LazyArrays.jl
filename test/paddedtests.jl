@@ -457,6 +457,13 @@ paddeddata(a::PaddedPadded) = a
         @test B*p == Matrix(B)*p
         @test simplifiable(*,B,p) == Val(true)
     end
+    
+    @testset "cached broadcasted" begin
+        z = Zeros(5)
+        a = cache(z); a[1] = 3;
+        
+        @test z ./ a ≡ a .\ z ≡ z
+    end
 
     @testset "QR" begin
         A = Vcat(randn(5,5), Zeros(4,5))
@@ -466,13 +473,12 @@ paddeddata(a::PaddedPadded) = a
         b = Vcat([1,2], Zeros(7))
         @test F.Q'b ≈ F̃.Q'b
         @test ldiv!(F,cache(b)) ≈ ldiv!(F̃,Vector(b))
-    end
 
-    @testset "cached broadcasted" begin
-        z = Zeros(5)
-        a = cache(z); a[1] = 3;
-        
-        @test z ./ a ≡ a .\ z ≡ z
+        @test Matrix(F.Q) ≈ [F.Q[k,j] for k in axes(A,1), j in axes(A,2)] ≈ Matrix(F̃.Q)
+        @test colsupport(F.Q,3) == rowsupport(F.Q,3) == Base.OneTo(5)
+
+        @test F.Q'A ≈ [F.R; zeros(4,5)]
+        @test A'*F.Q ≈ [F.R; zeros(4,5)]'
     end
 end
 end # module
