@@ -58,7 +58,7 @@ implemented in `BLAS.gemv!` using a lazy applied object:
 julia> A = randn(5,5); b = randn(5); c = randn(5); d = similar(c);
 
 julia> d .= @~ 2.0 * A * b + 3.0 * c # Calls gemv!
-5-element Array{Float64,1}:
+5-element Vector{Float64}:
  -2.5366335879717514
  -5.305097174484744  
  -9.818431932350942  
@@ -66,7 +66,7 @@ julia> d .= @~ 2.0 * A * b + 3.0 * c # Calls gemv!
   0.26792916096572983
 
 julia> 2*(A*b) + 3c
-5-element Array{Float64,1}:
+5-element Vector{Float64}:
  -2.5366335879717514
  -5.305097174484744  
  -9.818431932350942  
@@ -74,13 +74,15 @@ julia> 2*(A*b) + 3c
   0.26792916096572983
 
 julia> function mymul(A, b, c, d) # need to put in function for benchmarking
-       d .= @~ 2.0 * A * b + 3.0 * c
+           d .= @~ 2.0 * A * b + 3.0 * c
        end
 mymul (generic function with 1 method)
 
+julia> using BenchmarkTools
+
 julia> @btime mymul(A, b, c, d) # calls gemv!
   77.444 ns (0 allocations: 0 bytes)
-5-element Array{Float64,1}:
+5-element Vector{Float64}:
  -2.5366335879717514
  -5.305097174484744  
  -9.818431932350942  
@@ -96,7 +98,7 @@ This also works for inverses, which lower to BLAS calls whenever possible:
 julia> A = randn(5,5); b = randn(5); c = similar(b);
 
 julia> c .= @~ A \ b
-5-element Array{Float64,1}:
+5-element Vector{Float64}:
  -2.5366335879717514
  -5.305097174484744  
  -9.818431932350942  
@@ -105,14 +107,13 @@ julia> c .= @~ A \ b
 ```
 
 
-
 ## Lazy arrays
 
 Often we want lazy realizations of matrices, which are supported via `ApplyArray`.
 For example, the following creates a lazy matrix exponential:
 ```julia
 julia> E = ApplyArray(exp, [1 2; 3 4])
-2×2 ApplyArray{Float64,2,typeof(exp),Tuple{Array{Int64,2}}}:
+exp(2×2 Matrix{Int64}):
   51.969   74.7366
  112.105  164.074 
 ```
@@ -120,7 +121,7 @@ julia> E = ApplyArray(exp, [1 2; 3 4])
 A lazy matrix exponential is useful for, say, in-place matrix-exponential*vector:
 ```julia
 julia> b = Vector{Float64}(undef, 2); b .= @~ E*[4,4]
-2-element Array{Float64,1}:
+2-element Vector{Float64}:
   506.8220830628333
  1104.7145995988594
 ```
@@ -138,7 +139,7 @@ vectors without actually allocating memory, and support a fast
 julia> using BenchmarkTools
 
 julia> A = ApplyArray(vcat,1:5,2:3) # allocation-free
-7-element ApplyArray{Int64,1,typeof(vcat),Tuple{UnitRange{Int64},UnitRange{Int64}}}:
+vcat(5-element UnitRange{Int64}, 2-element UnitRange{Int64}):
  1
  2
  3
@@ -159,7 +160,7 @@ julia> @btime vcat(1:5, 2:3); # takes twice as long due to memory creation
 Similar is the lazy analogue of `hcat`:
 ```julia
 julia> A = ApplyArray(hcat, 1:3, randn(3,10))
-3×11 ApplyArray{Float64,2,typeof(hcat),Tuple{UnitRange{Int64},Array{Float64,2}}}:
+hcat(3-element UnitRange{Int64}, 3×10 Matrix{Float64}):
  1.0   1.16561    0.224871  -1.36416   -0.30675    0.103714    0.590141   0.982382  -1.50045    0.323747  -1.28173  
  2.0   1.04648    1.35506   -0.147157   0.995657  -0.616321   -0.128672  -0.671445  -0.563587  -0.268389  -1.71004  
  3.0  -0.433093  -0.325207  -1.38496   -0.391113  -0.0568739  -1.55796   -1.00747    0.473686  -1.2113     0.0119156
@@ -185,7 +186,7 @@ array:
 julia> A = randn(2,2); B = randn(3,3);
 
 julia> K = ApplyArray(kron,A,B)
-6×6 ApplyArray{Float64,2,typeof(kron),Tuple{Array{Float64,2},Array{Float64,2}}}:
+kron(2×2 Matrix{Float64}, 3×3 Matrix{Float64}):
  -1.08736   -0.19547   -0.132824   1.60531    0.288579    0.196093 
   0.353898   0.445557  -0.257776  -0.522472  -0.657791    0.380564 
  -0.723707   0.911737  -0.710378   1.06843   -1.34603     1.04876  
