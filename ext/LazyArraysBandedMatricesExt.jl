@@ -647,6 +647,7 @@ simplifiable(M::Mul{<:Union{AbstractStridedLayout,DualLayout{<:AbstractStridedLa
 simplifiable(M::Mul{<:BandedLayouts, <:AbstractStridedLayout}) = Val(true)
 
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:DiagonalLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where {Lay<:AbstractLazyLayout} = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:BroadcastBandedLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Ldiv{ApplyBandedLayout{typeof(*)}, Lay}) where Lay<:Union{PaddedColumns,AbstractStridedLayout} = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
