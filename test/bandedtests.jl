@@ -959,6 +959,14 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test rowsupport(invL, 1) == 1:1 
         @test rowsupport(invL, 4) == 1:4 
     end
+
+    @testset "banded \\ diagonal (#384)" begin
+        B = brand(5,5,2,1)
+        A = ApplyArray(*, B, B)
+        D = Diagonal(1:5)
+        @test A\D ≈ (B*B)\D
+        @test D\A ≈ D\(B*B)
+    end
 end
 
 end # module
