@@ -74,10 +74,10 @@ _BroadcastArray(bc::Broadcasted) = BroadcastArray{combine_eltypes(bc.f, bc.args)
 BroadcastArray(bc::Broadcasted{S}) where S =
     _BroadcastArray(instantiate(Broadcasted{S}(bc.f, _broadcast2broadcastarray(bc.args...))))
 
-BroadcastArray(f, A, As...) = BroadcastArray(broadcasted(f, A, As...))
+BroadcastArray(f, A, As...) = BroadcastArray{combine_eltypes(f, (A,As...))}(f, A, As...)
 BroadcastArray{T}(f, A, As...) where T = BroadcastArray{T}(instantiate(broadcasted(f, A, As...)))
-BroadcastMatrix(f, A...) = BroadcastMatrix(broadcasted(f, A...))
-BroadcastVector(f, A...) = BroadcastVector(broadcasted(f, A...))
+BroadcastMatrix(f, A...) = BroadcastMatrix{combine_eltypes(f, A)}(f, A...)
+BroadcastVector(f, A...) = BroadcastVector{combine_eltypes(f, A)}(f, A...)
 
 BroadcastArray{T,N}(f, A...) where {T,N} = BroadcastArray{T,N,typeof(f),typeof(A)}(f, A)
 
