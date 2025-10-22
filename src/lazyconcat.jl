@@ -450,9 +450,9 @@ _flatten_nums(args::Tuple{}, bc::Tuple{}) = ()
 _flatten_nums(args::Tuple, bc::Tuple) = (bc[1], _flatten_nums(tail(args), tail(bc))...)
 _flatten_nums(args::Tuple{Number, Vararg{Any}}, bc::Tuple{AbstractArray, Vararg{Any}}) = (Fill(bc[1],1), _flatten_nums(tail(args), tail(bc))...)
 
-broadcasted(::LazyArrayStyle, op, A::Vcat) = Vcat(_flatten_nums(A.args, broadcast(x -> broadcast(op, x), A.args))...)
-broadcasted(::LazyArrayStyle, op, A::Transpose{<:Any,<:Vcat}) = transpose(broadcast(op, parent(A)))
-broadcasted(::LazyArrayStyle, op, A::Adjoint{<:Real,<:Vcat}) = broadcast(op, parent(A))'
+broadcasted(::AbstractLazyArrayStyle, op, A::Vcat) = Vcat(_flatten_nums(A.args, broadcast(x -> broadcast(op, x), A.args))...)
+broadcasted(::AbstractLazyArrayStyle, op, A::Transpose{<:Any,<:Vcat}) = transpose(broadcast(op, parent(A)))
+broadcasted(::AbstractLazyArrayStyle, op, A::Adjoint{<:Real,<:Vcat}) = broadcast(op, parent(A))'
 
 
 for Cat in (:vcat, :hcat)
