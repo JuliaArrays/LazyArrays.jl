@@ -388,7 +388,7 @@ end
 
 _bc_resizecacheddata!(_) = ()
 _bc_resizecacheddata!(n, a, b...) = __bc_resizecacheddata!(n, MemoryLayout(a), a, b...)
-__bc_resizecacheddata!(n, lay, a, b...) = (a, _bc_resizecacheddata!(n, b...)...)
+__bc_resizecacheddata!(n, _, a, b...) = (a, _bc_resizecacheddata!(n, b...)...)
 function __bc_resizecacheddata!(n, ::AbstractCachedLayout, a::AbstractVector, b...)
     resizedata!(a, n) 
     (view(cacheddata(a), 1:n), _bc_resizecacheddata!(n, b...)...)
