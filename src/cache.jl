@@ -320,14 +320,14 @@ end
 # MemoryLayout
 ####
 
-abstract type AbstractCachedLayout <: MemoryLayout end 
-struct CachedLayout{Data,Array} <: AbstractCachedLayout end
-struct GenericCachedLayout <: AbstractCachedLayout end
+# abstract type AbstractCachedLayout <: MemoryLayout end 
+struct CachedLayout{Data,Array} <: MemoryLayout end
+# struct GenericCachedLayout <: AbstractCachedLayout end
 
 cachedlayout(::Data, ::Array) where {Data,Array} = CachedLayout{Data,Array}()
 MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayout(MemoryLayout(DAT), MemoryLayout(ARR))
 
-MemoryLayout(::Type{<:AbstractCachedArray}) = GenericCachedLayout()
+# MemoryLayout(::Type{<:AbstractCachedArray}) = GenericCachedLayout()
 
 #####
 # broadcasting
@@ -386,6 +386,7 @@ for op in (:*, :\, :+, :-)
     @eval layout_broadcasted(::ZerosLayout, ::CachedLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = broadcast(DefaultArrayStyle{1}(), $op, a, b)
 end
 
+#=
 _bc_resizecacheddata!(_) = ()
 _bc_resizecacheddata!(n, a, b...) = __bc_resizecacheddata!(n, MemoryLayout(a), a, b...)
 __bc_resizecacheddata!(n, _, a, b...) = (a, _bc_resizecacheddata!(n, b...)...)
@@ -393,6 +394,17 @@ function __bc_resizecacheddata!(n, ::AbstractCachedLayout, a::AbstractVector, b.
     resizedata!(a, n) 
     (view(cacheddata(a), 1:n), _bc_resizecacheddata!(n, b...)...)
 end
+=#
+_bc_resizecacheddata!(_) = ()
+function _bc_resizecacheddata!(n, a::AbstractVector, b...)
+    resizedata!(a, n)
+    if a isa AbstractCachedArray || (a isa SubArray && parent(a) isa AbstractCachedArray)
+        (view(cacheddata(a), 1:n), _bc_resizecacheddata!(n, b...)...)
+    else
+        (a, _bc_resizecacheddata!(n, b...)...)
+    end
+end
+_bc_resizecacheddata!(n, a, b...) = (a, _bc_resizecacheddata!(n, b...)...)
 function resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle}, dest)
     return broadcasted(bc.f, _bc_resizecacheddata!(length(dest), bc.args...)...)
 end
@@ -567,7 +579,7 @@ end
 sublayout(::CachedLayout{MLAY,ALAY}, ::Type{I}) where {MLAY,ALAY,I} =
     cachedlayout(sublayout(MLAY(),I), sublayout(ALAY,I))
 
-sublayout(::GenericCachedLayout, ::Type{I}) where I = GenericCachedLayout()
+# sublayout(::GenericCachedLayout, ::Type{I}) where I = GenericCachedLayout()
 
 function resizedata!(V::SubArray, n::Integer...)
     resizedata!(parent(V), getindex.(parentindices(V), max.(1,n))...)
