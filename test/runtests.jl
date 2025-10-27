@@ -379,27 +379,6 @@ end
         @test a[end] ≈ prod(1 .+ (1:10_000_000).^(-2.0))
         @test LazyArrays.AccumulateAbstractVector(*, 1:5) == Accumulate(*, 1:5)
         @test LazyArrays.AccumulateAbstractVector(*, 1:5) isa LazyArrays.AccumulateAbstractVector
-
-            @testset "Broadcasted Cached" begin
-                a = Accumulate(*, 1:5)
-                b = BroadcastVector(*, 2, a);
-
-                dest = Vector{Int}(undef, 3)
-                copyto!(dest, view(b,1:3))
-
-                # lets step through the copyto! to reduce to MWE
-                bc = LazyArrays._broadcastarray2broadcasted(view(b,1:3))
-                # this is equivalent to
-                v = view(a,1:3)
-                bc = broadcasted(*, 2, v)
-
-                copyto!(dest, bc)
-
-
-                # what we want:
-                resizedata!(v, length(dest)) 
-                copyto!(dest, broadcasted(*, 2,  LazyArrays.cacheddata(v)))
-            end
     end
 end
 

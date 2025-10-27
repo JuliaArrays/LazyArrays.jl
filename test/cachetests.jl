@@ -459,7 +459,6 @@ using Infinities
         @test a[1:5] == zeros(5)
     end
 
-    
     @testset "Issue #327" begin
         A = cache(Zeros((1:5, OneToInf())))
         B = cache(Zeros((1:5, OneToInf())))
@@ -486,6 +485,40 @@ using Infinities
         @test A ≠ B 
         B[5, 7] = 3.4
         @test A == B
+    end
+
+    @testset "copyto! with CachedArrayStyle" begin
+        a = Accumulate(*, 1:5);
+        b = BroadcastVector(*, 2, a);
+        dest = Vector{Int}(undef, 3)
+        src = view(b, 1:3)
+        bc = LazyArrays._broadcastarray2broadcasted(src);
+        @test similar(bc, Float32) == cache(zeros(Float32, 3)) && similar(bc, Float32) isa CachedArray{Float32}
+        @test a.datasize == (1,)
+        @inferred LazyArrays.resize_bcargs(bc, dest);
+        @test a.datasize == (3,)
+        dest = Vector{Int}(undef, 1)
+        src = view(b, 5:5);
+        bc = LazyArrays._broadcastarray2broadcasted(src);
+        @inferred LazyArrays.resize_bcargs(bc, dest);
+        @test a.datasize == (5,)
+
+        a = Accumulate(*, 1:5); # reset to test different resizing
+        b = BroadcastVector(*, 2, a); 
+        dest = Vector{Int}(undef, 4)
+        src = view(b,2:5)
+        bc = LazyArrays._broadcastarray2broadcasted(src);
+        rbc = LazyArrays.resize_bcargs(bc, dest);
+        @test Base.Broadcast.BroadcastStyle(typeof(rbc)) == Base.Broadcast.DefaultArrayStyle{1}() 
+        @test rbc.f === bc.f 
+        @test rbc.args == (2, a[2:5])
+
+        a = Accumulate(*, 1:5); # reset to ensure copyto! is working as intended
+        b = BroadcastVector(*, 2, a);
+        dest = Vector{Int}(undef, 3);
+        src = view(b,2:4);
+        copyto!(dest, src)
+        @test dest == [4,12,48]
     end
 end
 

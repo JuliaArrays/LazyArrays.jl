@@ -334,6 +334,8 @@ MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayo
 ######
 
 struct CachedArrayStyle{N} <: AbstractLazyArrayStyle{N} end
+CachedArrayStyle(::Val{N}) where N = CachedArrayStyle{N}()
+CachedArrayStyle{M}(::Val{N}) where {N,M} = CachedArrayStyle{N}()
 
 BroadcastStyle(::Type{<:AbstractCachedArray{<:Any,N}}) where N = CachedArrayStyle{N}()
 BroadcastStyle(::Type{<:SubArray{<:Any,N,<:AbstractCachedArray{<:Any,M}}}) where {N,M} = CachedArrayStyle{M}()
@@ -381,7 +383,36 @@ for op in (:*, :\, :+, :-)
     @eval layout_broadcasted(::ZerosLayout, ::CachedLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = broadcast(DefaultArrayStyle{1}(), $op, a, b)
 end
 
+function resize_bcargs(bc::Broadcasted{<:CachedArrayStyle}, dest)
+    rsz_args = let len = length(dest)
+        map(bc.args) do arg 
+            resizedata!(arg, len) 
+            iscached = arg isa AbstractCachedArray || (arg isa SubArray && parent(arg) isa AbstractCachedArray)
+            iscached ? cacheddata(arg) : arg 
+        end
+    end
+    return broadcasted(bc.f, rsz_args...)
+end
 
+function similar(bc::Broadcasted{<:CachedArrayStyle}, ::Type{T}) where T
+    return CachedArray(zeros(T, axes(bc)))
+end
+
+function copyto!(dest::AbstractArray, bc::Broadcasted{<:CachedArrayStyle})
+    #=
+    Without flatten, we were observing some stack overflows in some cases for nested broadcasts, e.g.
+        using SemiclassicalOrthogonalPolynomials, ClassicalOrthogonalPolynomials
+        Q = Normalized(Legendre())
+        P = SemiclassicalOrthogonalPolynomials.RaisedOP(Q, 1)
+        A, = ClassicalOrthogonalPolynomials.recurrencecoefficients(Q)
+        d = -inv(A[1] * SemiclassicalOrthogonalPolynomials._p0(Q) * P.ℓ[1])
+        κ = d * SemiclassicalOrthogonalPolynomials.normalizationconstant(1, P)
+        κ[1:2]
+    leads to a stack overflow.
+    =#
+    rsz_bc = resize_bcargs(Base.Broadcast.flatten(bc), dest)
+    copyto!(dest, rsz_bc)
+end
 
 ###
 # norm
