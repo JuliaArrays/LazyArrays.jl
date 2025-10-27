@@ -320,11 +320,14 @@ end
 # MemoryLayout
 ####
 
-struct CachedLayout{Data,Array} <: MemoryLayout end
+abstract type AbstractCachedLayout <: MemoryLayout end 
+struct CachedLayout{Data,Array} <: AbstractCachedLayout end
+struct GenericCachedLayout <: AbstractCachedLayout end
 
 cachedlayout(::Data, ::Array) where {Data,Array} = CachedLayout{Data,Array}()
 MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayout(MemoryLayout(DAT), MemoryLayout(ARR))
 
+MemoryLayout(::Type{<:AbstractCachedArray}) = GenericCachedLayout()
 
 #####
 # broadcasting
@@ -383,15 +386,15 @@ for op in (:*, :\, :+, :-)
     @eval layout_broadcasted(::ZerosLayout, ::CachedLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = broadcast(DefaultArrayStyle{1}(), $op, a, b)
 end
 
-function resize_bcargs(bc::Broadcasted{<:CachedArrayStyle}, dest)
-    rsz_args = let len = length(dest)
-        map(bc.args) do arg 
-            resizedata!(arg, len) 
-            iscached = arg isa AbstractCachedArray || (arg isa SubArray && parent(arg) isa AbstractCachedArray)
-            iscached ? cacheddata(arg) : arg 
-        end
-    end
-    return broadcasted(bc.f, rsz_args...)
+_bc_resizecacheddata!(_) = ()
+_bc_resizecacheddata!(n, a, b...) = __bc_resizecacheddata!(n, MemoryLayout(a), a, b...)
+__bc_resizecacheddata!(n, lay, a, b...) = (a, _bc_resizecacheddata!(n, b...)...)
+function __bc_resizecacheddata!(n, ::AbstractCachedLayout, a::AbstractVector, b...)
+    resizedata!(a, n) 
+    (view(cacheddata(a), 1:n), _bc_resizecacheddata!(n, b...)...)
+end
+function resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle}, dest)
+    return broadcasted(bc.f, _bc_resizecacheddata!(length(dest), bc.args...)...)
 end
 
 function similar(bc::Broadcasted{<:CachedArrayStyle}, ::Type{T}) where T
@@ -410,7 +413,7 @@ function copyto!(dest::AbstractArray, bc::Broadcasted{<:CachedArrayStyle})
         κ[1:2]
     leads to a stack overflow.
     =#
-    rsz_bc = resize_bcargs(Base.Broadcast.flatten(bc), dest)
+    rsz_bc = resize_bcargs!(Base.Broadcast.flatten(bc), dest)
     copyto!(dest, rsz_bc)
 end
 
@@ -563,6 +566,8 @@ end
 
 sublayout(::CachedLayout{MLAY,ALAY}, ::Type{I}) where {MLAY,ALAY,I} =
     cachedlayout(sublayout(MLAY(),I), sublayout(ALAY,I))
+
+sublayout(::GenericCachedLayout, ::Type{I}) where I = GenericCachedLayout()
 
 function resizedata!(V::SubArray, n::Integer...)
     resizedata!(parent(V), getindex.(parentindices(V), max.(1,n))...)

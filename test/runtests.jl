@@ -379,6 +379,9 @@ end
         @test a[end] ≈ prod(1 .+ (1:10_000_000).^(-2.0))
         @test LazyArrays.AccumulateAbstractVector(*, 1:5) == Accumulate(*, 1:5)
         @test LazyArrays.AccumulateAbstractVector(*, 1:5) isa LazyArrays.AccumulateAbstractVector
+
+        @test MemoryLayout(a) == LazyArrays.GenericCachedLayout()
+        @test MemoryLayout(view(a, 1:1)) == LazyArrays.GenericCachedLayout()
     end
 end
 
