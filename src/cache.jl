@@ -395,18 +395,17 @@ function __bc_resizecacheddata!(n, ::AbstractCachedLayout, a::AbstractVector, b.
     (view(cacheddata(a), 1:n), _bc_resizecacheddata!(n, b...)...)
 end
 =#
-_bc_resizecacheddata!(_) = ()
-function _bc_resizecacheddata!(n, a::AbstractVector, b...)
-    resizedata!(a, n)
+_bc_resizecacheddata!() = ()
+function _bc_resizecacheddata!(a, b...)
+    resizedata!(a, size(a)...)
     if a isa AbstractCachedArray || (a isa SubArray && parent(a) isa AbstractCachedArray)
-        (view(cacheddata(a), 1:n), _bc_resizecacheddata!(n, b...)...)
+        (view(cacheddata(a), axes(a)...), _bc_resizecacheddata!(b...)...)
     else
-        (a, _bc_resizecacheddata!(n, b...)...)
-    end
+        (a, _bc_resizecacheddata!(b...)...)
+    end 
 end
-_bc_resizecacheddata!(n, a, b...) = (a, _bc_resizecacheddata!(n, b...)...)
-function resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle}, dest)
-    return broadcasted(bc.f, _bc_resizecacheddata!(length(dest), bc.args...)...)
+function resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle})
+    return broadcasted(bc.f, _bc_resizecacheddata!(bc.args...)...)
 end
 
 function similar(bc::Broadcasted{<:CachedArrayStyle}, ::Type{T}) where T
@@ -425,7 +424,7 @@ function copyto!(dest::AbstractArray, bc::Broadcasted{<:CachedArrayStyle})
         κ[1:2]
     leads to a stack overflow.
     =#
-    rsz_bc = resize_bcargs!(Base.Broadcast.flatten(bc), dest)
+    rsz_bc = resize_bcargs!(Base.Broadcast.flatten(bc))
     copyto!(dest, rsz_bc)
 end
 

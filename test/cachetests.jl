@@ -495,12 +495,12 @@ using Infinities
         bc = LazyArrays._broadcastarray2broadcasted(src);
         @test similar(bc, Float32) == cache(zeros(Float32, 3)) && similar(bc, Float32) isa CachedArray{Float32}
         @test a.datasize == (1,);
-        @inferred LazyArrays.resize_bcargs!(bc, dest);
+        @inferred LazyArrays.resize_bcargs!(bc);
         @test a.datasize == (3,)
         dest = Vector{Int}(undef, 1)
         src = view(b, 5:5);
         bc = LazyArrays._broadcastarray2broadcasted(src);
-        @inferred LazyArrays.resize_bcargs!(bc, dest);
+        @inferred LazyArrays.resize_bcargs!(bc);
         @test a.datasize == (5,)
 
         a = Accumulate(*, 1:5); # reset to test different resizing
@@ -508,7 +508,7 @@ using Infinities
         dest = Vector{Int}(undef, 4)
         src = view(b,2:5)
         bc = LazyArrays._broadcastarray2broadcasted(src);
-        rbc = LazyArrays.resize_bcargs!(bc, dest);
+        rbc = LazyArrays.resize_bcargs!(bc);
         @test Base.Broadcast.BroadcastStyle(typeof(rbc)) == Base.Broadcast.DefaultArrayStyle{1}() 
         @test rbc.f === bc.f 
         @test rbc.args == (2, a[2:5])
@@ -519,6 +519,16 @@ using Infinities
         src = view(b,2:4);
         copyto!(dest, src)
         @test dest == [4,12,48]
+
+        @testset "Matrix" begin
+            a = view(Accumulate(*, 1:10), 1:2)
+            b = rand(2, 6)
+            src = a .\ b 
+            dest = zeros(2, 6)
+            res = Vector(a) .\ b 
+            copyto!(dest, src)
+            @test dest == res
+        end
     end
 end
 
