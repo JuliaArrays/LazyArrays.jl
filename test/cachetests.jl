@@ -4,7 +4,7 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, SparseArrays, Test
 using StaticArrays
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
-                    PaddedColumns
+                    PaddedColumns, cacheddata
 
 using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
@@ -486,6 +486,17 @@ using Infinities
         @test A ≠ B 
         B[5, 7] = 3.4
         @test A == B
+    end
+
+    @testset "cached vcat" begin
+        v = Vcat(1, cache(1:10));
+        resizedata!(v, 3);
+        @test v.args[2].datasize == (2,)
+        @test cacheddata(v) == [1; 1:2]
+        @test cacheddata(v) isa Vcat
+
+        p =  Vcat([1,2], Zeros(4));
+        # TODO: special behaviour?
     end
 end
 
