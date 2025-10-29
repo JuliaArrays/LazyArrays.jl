@@ -128,8 +128,12 @@ function _vcat_resizedata!(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows
     any(iszero,m) || Base.checkbounds(paddeddata(B), m...)
     B
 end
+function _vcat_resizedata!(::Union{DualLayout{<:PaddedRows}, AbstractPaddedLayout}, B::Vcat{<:Any, 1}, m) # ambiguity
+    iszero(m) || Base.checkbounds(paddeddata(B), m)
+    B
+end
 
-function __vcat_resizedata!(B::Vcat{<:Any, 1}, n)
+function _vcat_resizedata!(_, B::Vcat{<:Any, 1}, n) 
     m = n 
     for arg in arguments(B)
         m ≤ 0 && break
@@ -141,8 +145,6 @@ function __vcat_resizedata!(B::Vcat{<:Any, 1}, n)
     B
 end
 
-_vcat_resizedata!(::Union{DualLayout{<:PaddedRows}, AbstractPaddedLayout}, B::Vcat{<:Any, 1}, m) = __vcat_resizedata!(B, m) # ambiguity
-_vcat_resizedata!(_, B::Vcat{<:Any, 1}, n) = __vcat_resizedata!(B, n)
 _vcat_resizedata!(_, B, m...) = B # by default we can't resize
 
 resizedata!(B::Vcat, m...) = _vcat_resizedata!(MemoryLayout(B), B, m...)
