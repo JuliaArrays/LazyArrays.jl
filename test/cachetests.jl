@@ -4,7 +4,7 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, SparseArrays, Test
 using StaticArrays
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
-                    PaddedColumns, cacheddata
+                    PaddedColumns, cacheddata, maybe_cacheddata
 
 using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
@@ -488,15 +488,13 @@ using Infinities
         @test A == B
     end
 
-    @testset "cached vcat" begin
-        v = Vcat(1, cache(1:10));
-        resizedata!(v, 3);
-        @test v.args[2].datasize == (2,)
-        @test cacheddata(v) == [1; 1:2]
-        @test cacheddata(v) isa Vcat
-
-        p =  Vcat([1,2], Zeros(4));
-        # TODO: special behaviour?
+    @testset "maybe_cacheddata" begin
+        A = cache(1:10)
+        @test maybe_cacheddata(A) === cacheddata(A)
+        B = view(A, 1:5)
+        @test maybe_cacheddata(B) === cacheddata(B)
+        C = [1, 2, 3]
+        @test maybe_cacheddata(C) === C
     end
 end
 

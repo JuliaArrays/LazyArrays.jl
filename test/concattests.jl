@@ -4,7 +4,7 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, Test, Base64
 using StaticArrays
 import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
-                    CachedVector, ApplyLayout, arguments, BroadcastVector, LazyLayout
+                    CachedVector, ApplyLayout, arguments, BroadcastVector, LazyLayout, cacheddata
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -199,11 +199,38 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             @test A ≠ [1,2,4]
         end
 
-        @testset "resizedata!" begin
-            # allow emulating a cached Vector
-            a = Vcat([1,2], Zeros(8))
-            @test resizedata!(a, 2) ≡ a
-            @test_throws BoundsError resizedata!(a,3)
+        @testset "cached vcat" begin
+            @testset "resizedata!" begin
+                v = Vcat(1, cache(1:10));
+                resizedata!(v, 3);
+                @test v.args[2].datasize == (2,)
+                v = Vcat(1, [2, 4, 6], cache(7:10), cache(1:5), 50);
+                resizedata!(v, 1)
+                @test v.args[3].datasize == v.args[4].datasize == (0,)
+                resizedata!(v, 5)
+                @test v.args[3].datasize == (1,) 
+                @test v.args[4].datasize == (0,)
+                resizedata!(v, 10)
+                @test v.args[3].datasize == (4,)
+                @test v.args[4].datasize == (2,)
+                resizedata!(v, 14)
+                @test v.args[3].datasize == (4,)
+                @test v.args[4].datasize == (5,)
+                resizedata!(v, 50) # test it doesn't break for excess resize 
+                @test v.args[3].datasize == (4,)
+                @test v.args[4].datasize == (5,)
+            end
+
+            @testset "cacheddata" begin
+                v = Vcat(1, cache(1:2))
+                @test @inferred(cacheddata(v)) == [1]
+                resizedata!(v, 2)
+                @test @inferred(cacheddata(v)) == [1, 1]
+                @test cacheddata(v) isa Vcat
+            end
+
+            p =  Vcat([1,2], Zeros(4));
+            # TODO: special behaviour?
         end
 
         @testset "Axpy" begin
