@@ -395,22 +395,16 @@ function __bc_resizecacheddata!(n, ::AbstractCachedLayout, a::AbstractVector, b.
     (view(cacheddata(a), 1:n), _bc_resizecacheddata!(n, b...)...)
 end
 =#
-_bc_resizecacheddata!() = ()
-function _bc_resizecacheddata!(a, b...)
-    resizedata!(a, size(a)...)
-    if a isa AbstractCachedArray || (a isa SubArray && parent(a) isa AbstractCachedArray)
-        (view(cacheddata(a), axes(a)...), _bc_resizecacheddata!(b...)...)
-    else
-        (a, _bc_resizecacheddata!(b...)...)
-    end 
-end
-function resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle})
-    return broadcasted(bc.f, _bc_resizecacheddata!(bc.args...)...)
-end
 
-function similar(bc::Broadcasted{<:CachedArrayStyle}, ::Type{T}) where T
-    return CachedArray(zeros(T, axes(bc)))
+
+function _bc_resizecacheddata!(a::Union{AbstractCachedArray,SubArray{<:Any,N,<:AbstractCachedArray}}) where N
+    resizedata!(a, size(a)...)
+    view(cacheddata(a), axes(a)...)
 end
+_bc_resizecacheddata!(a) = a
+
+resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle}) = broadcasted(bc.f, map(_bc_resizecacheddata!, bc.args)...)
+similar(bc::Broadcasted{<:CachedArrayStyle}, ::Type{T}) where T = CachedArray(zeros(T, axes(bc)))
 
 function copyto!(dest::AbstractArray, bc::Broadcasted{<:CachedArrayStyle})
     #=
