@@ -4,7 +4,7 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, SparseArrays, Test
 using StaticArrays
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
-                    PaddedColumns
+                    PaddedColumns, cacheddata, maybe_cacheddata
 
 using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
@@ -529,6 +529,15 @@ using Infinities
             copyto!(dest, src)
             @test dest == res
         end
+    end
+                                            
+    @testset "maybe_cacheddata" begin
+        A = cache(1:10)
+        @test maybe_cacheddata(A) === cacheddata(A)
+        B = view(A, 1:5)
+        @test maybe_cacheddata(B) === cacheddata(B)
+        C = [1, 2, 3]
+        @test maybe_cacheddata(C) === C
     end
 end
 

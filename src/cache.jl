@@ -58,6 +58,10 @@ cache_layout(::AbstractStridedLayout, O::AbstractArray) = copy(O)
 const _cache = cache_layout # TODO: deprecate
 cacheddata(A::AbstractCachedArray) = view(A.data,OneTo.(A.datasize)...)
 
+maybe_cacheddata(A::AbstractCachedArray) = cacheddata(A)
+maybe_cacheddata(A::SubArray{<:Any,N,<:AbstractCachedArray}) where N = cacheddata(A)
+maybe_cacheddata(A) = A # no-op
+
 convert(::Type{AbstractArray{T}}, S::CachedArray{T}) where T = S
 convert(::Type{AbstractArray{T,N}}, S::CachedArray{T,N}) where {T,N} = S
 convert(::Type{AbstractArray{T}}, S::CachedArray{<:Any,N}) where {T,N} = convert(AbstractArray{T,N}, S)
