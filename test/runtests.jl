@@ -1,6 +1,6 @@
 using Test, LinearAlgebra, LazyArrays, FillArrays, ArrayLayouts, SparseArrays
 using StaticArrays
-import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted,
+import LazyArrays: CachedArray, colsupport, rowsupport, LazyArrayStyle, broadcasted, resizedata!,
             ApplyLayout, BroadcastLayout, AddArray, LazyLayout, PaddedLayout, PaddedRows, PaddedColumns
 import ArrayLayouts: OnesLayout
 
@@ -379,6 +379,9 @@ end
         @test a[end] ≈ prod(1 .+ (1:10_000_000).^(-2.0))
         @test LazyArrays.AccumulateAbstractVector(*, 1:5) == Accumulate(*, 1:5)
         @test LazyArrays.AccumulateAbstractVector(*, 1:5) isa LazyArrays.AccumulateAbstractVector
+
+        @test MemoryLayout(a) == LazyArrays.GenericCachedLayout()
+        @test MemoryLayout(view(a, 1:1)) == LazyArrays.GenericCachedLayout()
     end
 end
 
@@ -441,34 +444,6 @@ end
     @test tril(A,1) isa ApplyMatrix{Float64,typeof(tril)}
 end
 
-@testset "BroadcastArray" begin
-    bc = broadcasted(exp,[1,2,3])
-    v = BroadcastArray(exp, [1,2,3])
-    @test BroadcastArray(bc) == BroadcastVector(bc) == BroadcastVector{Float64,typeof(exp),typeof(bc.args)}(bc) ==
-        v == BroadcastVector(exp, [1,2,3]) == exp.([1,2,3])
-
-    Base.IndexStyle(typeof(BroadcastVector(exp, [1,2,3]))) == IndexLinear()
-
-    bc = broadcasted(exp,[1 2; 3 4])
-    M = BroadcastArray(exp, [1 2; 3 4])
-    @test BroadcastArray(bc) == BroadcastMatrix(bc) == BroadcastMatrix{Float64,typeof(exp),typeof(bc.args)}(bc) ==
-        M == BroadcastMatrix(BroadcastMatrix(bc)) == BroadcastMatrix(exp,[1 2; 3 4]) == exp.([1 2; 3 4])
-
-    @test exp.(v') isa Adjoint{<:Any,<:BroadcastVector}
-    @test exp.(transpose(v)) isa Transpose{<:Any,<:BroadcastVector}
-    @test exp.(M') isa Adjoint{<:Any,<:BroadcastMatrix}
-    @test exp.(transpose(M)) isa Transpose{<:Any,<:BroadcastMatrix}
-
-    bc = BroadcastArray(broadcasted(+, 1:10, broadcasted(sin, 1:10)))
-    @test bc[1:10] == (1:10) .+ sin.(1:10)
-
-    bc = BroadcastArray(broadcasted(+,1:10,broadcasted(+,1,2)))
-    @test bc.args[2] == 3
-    
-    @testset "_vec_mul_arguments method" begin
-        @test_throws "MethodError: no method matching _vec_mul_arguments"  LazyArrays._vec_mul_arguments(2, [])
-    end
-end
 
 include("blocktests.jl")
 include("bandedtests.jl")

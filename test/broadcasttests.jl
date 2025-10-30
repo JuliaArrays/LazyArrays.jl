@@ -449,6 +449,35 @@ using Infinities
         @test A*B ≈ Matrix(A)*Matrix(B)
         @test simplifiable(*,A,B) == Val(false) # TODO: Why False?
     end
+
+    @testset "misc tests" begin
+        bc = broadcasted(exp,[1,2,3])
+        v = BroadcastArray(exp, [1,2,3])
+        @test BroadcastArray(bc) == BroadcastVector(bc) == BroadcastVector{Float64,typeof(exp),typeof(bc.args)}(bc) ==
+            v == BroadcastVector(exp, [1,2,3]) == exp.([1,2,3])
+
+        @test Base.IndexStyle(typeof(BroadcastVector(exp, [1,2,3]))) == IndexCartesian()
+
+        bc = broadcasted(exp,[1 2; 3 4])
+        M = BroadcastArray(exp, [1 2; 3 4])
+        @test BroadcastArray(bc) == BroadcastMatrix(bc) == BroadcastMatrix{Float64,typeof(exp),typeof(bc.args)}(bc) ==
+            M == BroadcastMatrix(BroadcastMatrix(bc)) == BroadcastMatrix(exp,[1 2; 3 4]) == exp.([1 2; 3 4])
+
+        @test exp.(v') isa Adjoint{<:Any,<:BroadcastVector}
+        @test exp.(transpose(v)) isa Transpose{<:Any,<:BroadcastVector}
+        @test exp.(M') isa Adjoint{<:Any,<:BroadcastMatrix}
+        @test exp.(transpose(M)) isa Transpose{<:Any,<:BroadcastMatrix}
+
+        bc = BroadcastArray(broadcasted(+, 1:10, broadcasted(sin, 1:10)))
+        @test bc[1:10] == (1:10) .+ sin.(1:10)
+
+        bc = BroadcastArray(broadcasted(+,1:10,broadcasted(+,1,2)))
+        @test bc.args[2] == 3
+        
+        @testset "_vec_mul_arguments method" begin
+            @test_throws "MethodError: no method matching _vec_mul_arguments"  LazyArrays._vec_mul_arguments(2, [])
+        end
+    end
 end
 
 end #module
