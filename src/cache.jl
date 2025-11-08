@@ -324,11 +324,14 @@ end
 # MemoryLayout
 ####
 
-struct CachedLayout{Data,Array} <: MemoryLayout end
+abstract type AbstractCachedLayout <: AbstractLazyLayout end 
+struct CachedLayout{Data,Array} <: AbstractCachedLayout end
+struct GenericCachedLayout <: AbstractCachedLayout end
 
 cachedlayout(::Data, ::Array) where {Data,Array} = CachedLayout{Data,Array}()
 MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayout(MemoryLayout(DAT), MemoryLayout(ARR))
 
+MemoryLayout(::Type{<:AbstractCachedArray}) = GenericCachedLayout()
 
 #####
 # broadcasting
@@ -337,9 +340,16 @@ MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayo
 # to take advantage of special implementations of the sub-components
 ######
 
-BroadcastStyle(::Type{<:CachedArray{<:Any,N}}) where N = LazyArrayStyle{N}()
+struct CachedArrayStyle{N} <: AbstractLazyArrayStyle{N} end
+CachedArrayStyle(::Val{N}) where N = CachedArrayStyle{N}()
+CachedArrayStyle{M}(::Val{N}) where {N,M} = CachedArrayStyle{N}()
 
-broadcasted(::LazyArrayStyle, op, A::CachedArray) = CachedArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
+BroadcastStyle(::Type{<:AbstractCachedArray{<:Any,N}}) where N = CachedArrayStyle{N}()
+BroadcastStyle(::Type{<:SubArray{<:Any,N,<:AbstractCachedArray{<:Any,M}}}) where {N,M} = CachedArrayStyle{M}()
+BroadcastStyle(::CachedArrayStyle{N}, ::LazyArrayStyle{M}) where {N,M} = CachedArrayStyle{max(M, N)}()
+
+
+broadcasted(::AbstractLazyArrayStyle, op, A::CachedArray) = CachedArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
 layout_broadcasted(::CachedLayout, _, op, A::AbstractArray, c::Number) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
 layout_broadcasted(_, ::CachedLayout, op, c::Number, A::CachedArray) = CachedArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 layout_broadcasted(::CachedLayout, _, op, A::CachedArray, c::Ref) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
@@ -380,7 +390,31 @@ for op in (:*, :\, :+, :-)
     @eval layout_broadcasted(::ZerosLayout, ::CachedLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = broadcast(DefaultArrayStyle{1}(), $op, a, b)
 end
 
+function _bc_resizecacheddata!(::AbstractCachedLayout, a) 
+    resizedata!(a, size(a)...)
+    view(cacheddata(a), axes(a)...)
+end
+_bc_resizecacheddata!(_, a) = a
+_bc_resizecacheddata!(a) = _bc_resizecacheddata!(MemoryLayout(a), a)
+resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle}) = broadcasted(bc.f, map(_bc_resizecacheddata!, bc.args)...)
 
+similar(bc::Broadcasted{<:CachedArrayStyle}, ::Type{T}) where T = CachedArray(zeros(T, axes(bc)))
+
+function copyto!(dest::AbstractArray, bc::Broadcasted{<:CachedArrayStyle})
+    #=
+    Without flatten, we were observing some stack overflows in some cases for nested broadcasts, e.g.
+        using SemiclassicalOrthogonalPolynomials, ClassicalOrthogonalPolynomials
+        Q = Normalized(Legendre())
+        P = SemiclassicalOrthogonalPolynomials.RaisedOP(Q, 1)
+        A, = ClassicalOrthogonalPolynomials.recurrencecoefficients(Q)
+        d = -inv(A[1] * SemiclassicalOrthogonalPolynomials._p0(Q) * P.ℓ[1])
+        κ = d * SemiclassicalOrthogonalPolynomials.normalizationconstant(1, P)
+        κ[1:2]
+    leads to a stack overflow.
+    =#
+    rsz_bc = resize_bcargs!(Base.Broadcast.flatten(bc))
+    copyto!(dest, rsz_bc)
+end
 
 ###
 # norm
@@ -501,8 +535,8 @@ CachedAbstractVector(array::AbstractVector{T}) where T = CachedAbstractVector{T}
 CachedAbstractMatrix(array::AbstractMatrix{T}) where T = CachedAbstractMatrix{T}(array)
 
 
-broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
-function broadcasted(::LazyArrayStyle, op, A::CachedAbstractVector, B::CachedAbstractVector)
+broadcasted(::AbstractLazyArrayStyle, op, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
+function broadcasted(::AbstractLazyArrayStyle, op, A::CachedAbstractVector, B::CachedAbstractVector)
     n = max(A.datasize[1],B.datasize[1])
     resizedata!(A,n)
     resizedata!(B,n)
@@ -510,10 +544,10 @@ function broadcasted(::LazyArrayStyle, op, A::CachedAbstractVector, B::CachedAbs
     Bdat = view(cacheddata(B),1:n)
     CachedAbstractArray(broadcast(op, Adat, Bdat), broadcast(op, A.array, B.array))
 end
-broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray, c::Number) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
-broadcasted(::LazyArrayStyle, op, c::Number, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
-broadcasted(::LazyArrayStyle, op, A::CachedAbstractArray, c::Ref) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
-broadcasted(::LazyArrayStyle, op, c::Ref, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
+broadcasted(::AbstractLazyArrayStyle, op, A::CachedAbstractArray, c::Number) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+broadcasted(::AbstractLazyArrayStyle, op, c::Number, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
+broadcasted(::AbstractLazyArrayStyle, op, A::CachedAbstractArray, c::Ref) = CachedAbstractArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
+broadcasted(::AbstractLazyArrayStyle, op, c::Ref, A::CachedAbstractArray) = CachedAbstractArray(broadcast(op, c, cacheddata(A)), broadcast(op, c, A.array))
 
 
 ###
@@ -531,6 +565,8 @@ end
 
 sublayout(::CachedLayout{MLAY,ALAY}, ::Type{I}) where {MLAY,ALAY,I} =
     cachedlayout(sublayout(MLAY(),I), sublayout(ALAY,I))
+
+sublayout(::GenericCachedLayout, ::Type{I}) where I = GenericCachedLayout()
 
 function resizedata!(V::SubArray, n::Integer...)
     resizedata!(parent(V), getindex.(parentindices(V), max.(1,n))...)

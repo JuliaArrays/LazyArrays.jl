@@ -6,7 +6,7 @@ import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulM
                     OnesLayout, AbstractFillLayout, mulreduce, inv_layout, _fill_lmul!, copyto!_layout, _copy_oftype,
                     layout_getindex, transtype
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout, transposelayout,
-                   LazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout, LazyLayouts,
+                   LazyArrayStyle, AbstractLazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout, LazyLayouts,
                    AbstractPaddedLayout, PaddedLayout, AbstractLazyBandedLayout, LazyBandedLayout, PaddedRows,
                    PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
@@ -24,12 +24,12 @@ hermitianlayout(::Type{<:Real}, ::AbstractLazyBandedLayout) = SymmetricLayout{La
 hermitianlayout(::Type{<:Complex}, ::AbstractLazyBandedLayout) = HermitianLayout{LazyBandedLayout}()
 
 
-bandedbroadcaststyle(::LazyArrayStyle) = LazyArrayStyle{2}()
+bandedbroadcaststyle(::AbstractLazyArrayStyle) = LazyArrayStyle{2}()
 
-BroadcastStyle(::LazyArrayStyle{1}, ::BandedStyle) = LazyArrayStyle{2}()
-BroadcastStyle(::BandedStyle, ::LazyArrayStyle{1}) = LazyArrayStyle{2}()
-BroadcastStyle(::LazyArrayStyle{2}, ::BandedStyle) = LazyArrayStyle{2}()
-BroadcastStyle(::BandedStyle, ::LazyArrayStyle{2}) = LazyArrayStyle{2}()
+BroadcastStyle(::AbstractLazyArrayStyle{1}, ::BandedStyle) = LazyArrayStyle{2}()
+BroadcastStyle(::BandedStyle, ::AbstractLazyArrayStyle{1}) = LazyArrayStyle{2}()
+BroadcastStyle(::AbstractLazyArrayStyle{2}, ::BandedStyle) = LazyArrayStyle{2}()
+BroadcastStyle(::BandedStyle, ::AbstractLazyArrayStyle{2}) = LazyArrayStyle{2}()
 
 bandedcolumns(::AbstractLazyLayout) = BandedColumns{LazyLayout}()
 bandedcolumns(::DualLayout{<:AbstractLazyLayout}) = BandedColumns{LazyLayout}()
@@ -287,10 +287,10 @@ copyto!_layout(_, ::BroadcastBandedLayout, dest::AbstractMatrix, bc::AbstractMat
 # _banded_broadcast!(dest::AbstractMatrix, f, (A,B)::Tuple{AbstractMatrix{T},AbstractMatrix{V}}, _, ::Tuple{<:Any,ApplyBandedLayout{typeof(*)}}) where {T,V} =
 #     broadcast!(f, dest, BandedMatrix(A), BandedMatrix(B))
 
-broadcasted(::LazyArrayStyle, ::typeof(*), c::Number, A::BandedMatrix) = _BandedMatrix(c .* A.data, A.raxis, A.l, A.u)
-broadcasted(::LazyArrayStyle, ::typeof(*), A::BandedMatrix, c::Number) = _BandedMatrix(A.data .* c, A.raxis, A.l, A.u)
-broadcasted(::LazyArrayStyle, ::typeof(\), c::Number, A::BandedMatrix) = _BandedMatrix(c .\ A.data, A.raxis, A.l, A.u)
-broadcasted(::LazyArrayStyle, ::typeof(/), A::BandedMatrix, c::Number) = _BandedMatrix(A.data ./ c, A.raxis, A.l, A.u)
+broadcasted(::AbstractLazyArrayStyle, ::typeof(*), c::Number, A::BandedMatrix) = _BandedMatrix(c .* A.data, A.raxis, A.l, A.u)
+broadcasted(::AbstractLazyArrayStyle, ::typeof(*), A::BandedMatrix, c::Number) = _BandedMatrix(A.data .* c, A.raxis, A.l, A.u)
+broadcasted(::AbstractLazyArrayStyle, ::typeof(\), c::Number, A::BandedMatrix) = _BandedMatrix(c .\ A.data, A.raxis, A.l, A.u)
+broadcasted(::AbstractLazyArrayStyle, ::typeof(/), A::BandedMatrix, c::Number) = _BandedMatrix(A.data ./ c, A.raxis, A.l, A.u)
 
 
 copy(M::Mul{BroadcastBandedLayout{typeof(*)}, <:Union{PaddedColumns,PaddedLayout}}) = _broadcast_banded_padded_mul(arguments(BroadcastBandedLayout{typeof(*)}(), M.A), M.B)
