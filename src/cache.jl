@@ -57,6 +57,8 @@ cache_layout(::AbstractStridedLayout, O::AbstractArray) = copy(O)
 
 const _cache = cache_layout # TODO: deprecate
 cacheddata(A::AbstractCachedArray) = view(A.data,OneTo.(A.datasize)...)
+cacheddata(A::Adjoint{<:Any, <:AbstractCachedArray}) = adjoint(cacheddata(parent(A)))
+cacheddata(A::Transpose{<:Any, <:AbstractCachedArray}) = transpose(cacheddata(parent(A)))
 
 maybe_cacheddata(A::AbstractCachedArray) = cacheddata(A)
 maybe_cacheddata(A::SubArray{<:Any,N,<:AbstractCachedArray}) where N = cacheddata(A)
@@ -334,6 +336,7 @@ MemoryLayout(C::Type{CachedArray{T,N,DAT,ARR}}) where {T,N,DAT,ARR} = cachedlayo
 MemoryLayout(::Type{<:AbstractCachedArray}) = GenericCachedLayout()
 
 transposelayout(::GenericCachedLayout) = GenericCachedLayout()
+conjlayout(::Type{<:Complex}, ::GenericCachedLayout) = GenericCachedLayout()
 
 #####
 # broadcasting

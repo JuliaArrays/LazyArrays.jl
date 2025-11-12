@@ -540,16 +540,21 @@ using Infinities
         @test maybe_cacheddata(C) === C
     end
 
-    @testset "Missing BroadcastStyles/MemoryLayouts with CachedArrayStyles" begin
-        A = typeof(view(Accumulate(*, [1, 2, 3])', 1:1, 1:2))
-        B = typeof(view(transpose(Accumulate(*, [1, 2, 3])), 1:1, 1:2))
-        C = typeof(Accumulate(*, [1, 2, 3])')
-        @test Base.BroadcastStyle(A) == CachedArrayStyle{1}()
-        @test Base.BroadcastStyle(B) == CachedArrayStyle{1}()
-        @test Base.BroadcastStyle(C) == CachedArrayStyle{1}()
-        @test MemoryLayout(A) == GenericCachedLayout()
-        @test MemoryLayout(B) == GenericCachedLayout()
-        @test MemoryLayout(C) == DualLayout{GenericCachedLayout}()
+    @testset "Missing BroadcastStyles/MemoryLayouts/cacheddata with CachedArrayStyles" begin
+        A = view(Accumulate(*, [1, 2, 3])', 1:1, 1:2)
+        B = view(transpose(Accumulate(*, [1, 2im, 3])), 1:1, 1:2)
+        C = Accumulate(*, [1, 2im, 3])'
+        D = transpose(Accumulate(*, [1, 2im, 3]))
+        E = view(Accumulate(*, [1, 2im, 3])', 1:1, 1:2)
+        @test all(==(CachedArrayStyle{1}()), Base.BroadcastStyle.(typeof.((A, B, C, D, E))))
+        @test all(==(GenericCachedLayout()), MemoryLayout.(typeof.((A, B, E))))
+        @test MemoryLayout(typeof(C)) == DualLayout{GenericCachedLayout}()
+        @test MemoryLayout(typeof(D)) == DualLayout{GenericCachedLayout}()
+        @test cacheddata(A) === view(cacheddata(parent(parent(A)))', 1:1, 1:1)
+        @test cacheddata(B) === view(transpose(cacheddata(parent(parent(B)))), 1:1, 1:1)
+        @test cacheddata(C) === cacheddata(parent(C))'
+        @test cacheddata(D) === transpose(cacheddata(parent(D)))
+        @test cacheddata(E) === view(cacheddata(parent(parent(E)))', 1:1, 1:1)
     end
 end
 
