@@ -4,7 +4,7 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, SparseArrays, Test
 using StaticArrays
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
-                    PaddedColumns, cacheddata, maybe_cacheddata
+                    PaddedColumns, cacheddata, maybe_cacheddata, Accumulate, CachedArrayStyle, GenericCachedLayout
 
 using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
@@ -538,6 +538,18 @@ using Infinities
         @test maybe_cacheddata(B) === cacheddata(B)
         C = [1, 2, 3]
         @test maybe_cacheddata(C) === C
+    end
+
+    @testset "Missing BroadcastStyles/MemoryLayouts with CachedArrayStyles" begin
+        A = typeof(view(Accumulate(*, [1, 2, 3])', 1:1, 1:2))
+        B = typeof(view(transpose(Accumulate(*, [1, 2, 3])), 1:1, 1:2))
+        C = typeof(Accumulate(*, [1, 2, 3])')
+        @test Base.BroadcastStyle(A) == CachedArrayStyle{1}()
+        @test Base.BroadcastStyle(B) == CachedArrayStyle{1}()
+        @test Base.BroadcastStyle(C) == CachedArrayStyle{1}()
+        @test MemoryLayout(A) == GenericCachedLayout()
+        @test MemoryLayout(B) == GenericCachedLayout()
+        @test MemoryLayout(C) == DualLayout{GenericCachedLayout}()
     end
 end
 
