@@ -546,8 +546,11 @@ using Infinities
         C = Accumulate(*, [1, 2im, 3])'
         D = transpose(Accumulate(*, [1, 2im, 3]))
         E = view(Accumulate(*, [1, 2im, 3])', 1:1, 1:2)
-        @test all(==(CachedArrayStyle{1}()), Base.BroadcastStyle.(typeof.((A, B, C, D, E))))
-        @test all(==(GenericCachedLayout()), MemoryLayout.(typeof.((A, B, E))))
+        F = view(Accumulate(*, [1, 2, 3]), 1:2)'
+        G = view(Accumulate(*, [1, 2im, 3])', 1:1, 1:2)'
+        @test all(==(CachedArrayStyle{1}()), Base.BroadcastStyle.(typeof.((A, B, C, D, E, F, G))))
+        @test all(==(GenericCachedLayout()), MemoryLayout.(typeof.((A, B, E, G))))
+        @test all(==(DualLayout{GenericCachedLayout}()), MemoryLayout.(typeof.((C, D, F))))
         @test MemoryLayout(typeof(C)) == DualLayout{GenericCachedLayout}()
         @test MemoryLayout(typeof(D)) == DualLayout{GenericCachedLayout}()
         @test cacheddata(A) === view(cacheddata(parent(parent(A)))', 1:1, 1:1)
@@ -555,6 +558,8 @@ using Infinities
         @test cacheddata(C) === cacheddata(parent(C))'
         @test cacheddata(D) === transpose(cacheddata(parent(D)))
         @test cacheddata(E) === view(cacheddata(parent(parent(E)))', 1:1, 1:1)
+        @test cacheddata(F) === view(cacheddata(parent(parent(F))), 1:1)'
+        @test cacheddata(G) === adjoint(view(cacheddata(parent(G)), 1:1, 1:2))
     end
 end
 
