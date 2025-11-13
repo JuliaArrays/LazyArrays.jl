@@ -559,7 +559,7 @@ using Infinities
         @test cacheddata(D) === transpose(cacheddata(parent(D)))
         @test cacheddata(E) === view(cacheddata(parent(parent(E)))', 1:1, 1:1)
         @test cacheddata(F) === view(cacheddata(parent(parent(F))), 1:1)'
-        @test cacheddata(G) == adjoint(view(cacheddata(parent(G)), 1:1, 1:2))
+        @test cacheddata(G) === adjoint(view(cacheddata(parent(G)), 1:1, 1:1))
     end
 end
 
