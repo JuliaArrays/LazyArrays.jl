@@ -404,7 +404,7 @@ function _bc_resizecacheddata!(::AbstractCachedLayout, a)
 end
 _bc_resizecacheddata!(_, a) = a
 _bc_resizecacheddata!(a) = _bc_resizecacheddata!(MemoryLayout(a), a)
-resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle}) = broadcasted(bc.f, map(_bc_resizecacheddata!, bc.args)...)
+resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle{N}}) where {N} = Broadcasted(LazyArrayStyle{N}(), bc.f, map(_bc_resizecacheddata!, bc.args)) # not broadcasted(bc.f, map(_bc_resizecacheddata!, bc.args)...) to avoid issues with StackOverflows with CacheArrayStyles
 
 similar(bc::Broadcasted{<:CachedArrayStyle}, ::Type{T}) where T = CachedArray(zeros(T, axes(bc)))
 

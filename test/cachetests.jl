@@ -4,7 +4,7 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, SparseArrays, Test
 using StaticArrays
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
-                    PaddedColumns, cacheddata, maybe_cacheddata, Accumulate, CachedArrayStyle, GenericCachedLayout
+                    PaddedColumns, cacheddata, LazyArrayStyle, maybe_cacheddata, Accumulate, CachedArrayStyle, GenericCachedLayout
 
 using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
@@ -509,7 +509,7 @@ using Infinities
         src = view(b,2:5)
         bc = LazyArrays._broadcastarray2broadcasted(src);
         rbc = LazyArrays.resize_bcargs!(bc);
-        @test Base.Broadcast.BroadcastStyle(typeof(rbc)) == Base.Broadcast.DefaultArrayStyle{1}() 
+        @test Base.Broadcast.BroadcastStyle(typeof(rbc)) == LazyArrayStyle{1}() 
         @test rbc.f === bc.f 
         @test rbc.args == (2, a[2:5])
 
@@ -529,6 +529,8 @@ using Infinities
             copyto!(dest, src)
             @test dest == res
         end
+
+        @test Matrix(view((1:5)', :, 1:1) .* view(Accumulate(*, 1:5)', :, 1:1)) == [1;;] # used to StackOverflow
     end
                                             
     @testset "maybe_cacheddata" begin
