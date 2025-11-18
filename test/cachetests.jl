@@ -510,7 +510,7 @@ using Infinities
         src = view(b,2:5)
         bc = LazyArrays._broadcastarray2broadcasted(src);
         rbc = LazyArrays.resize_bcargs!(bc);
-        @test Base.Broadcast.BroadcastStyle(typeof(rbc)) == LazyArrayStyle{1}() 
+        @test Base.Broadcast.BroadcastStyle(typeof(rbc)) == Base.Broadcast.DefaultArrayStyle{1}() 
         @test rbc.f === bc.f 
         @test rbc.args == (2, a[2:5])
 
