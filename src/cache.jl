@@ -405,7 +405,7 @@ end
 _bc_resizecacheddata!(::DualLayout{ML}, a) where {ML<:AbstractCachedLayout} =  _bc_resizecacheddata!(ML(), a)
 _bc_resizecacheddata!(_, a) = a
 _bc_resizecacheddata!(a) = _bc_resizecacheddata!(MemoryLayout(a), a)
-resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle{N}}) where {N} = broadcasted(bc.f, map(_bc_resizecacheddata!, bc.args)...)
+resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle}) = broadcasted(bc.f, map(_bc_resizecacheddata!, bc.args)...)
 
 similar(bc::Broadcasted{<:CachedArrayStyle}, ::Type{T}) where T = CachedArray(zeros(T, axes(bc)))
 
