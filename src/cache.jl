@@ -224,10 +224,23 @@ end
 
 resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(B.data), MemoryLayout(B.array), B, mn...)
 resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(B.data), UnknownLayout(), B, mn...)
+resizedata!(B::SymTridiagonal, m, n) = error("hi $m $n")
 resizedata!(A, mn...) = A # don't do anything
 function resizedata!(A::AdjOrTrans, m, n)
-    m ≤ 0 || resizedata!(parent(A), n)
+    resizedata!(parent(A), n, m)
     A
+end
+
+function resizedata!(A::UpperOrLowerTriangular, m, n)
+    resizedata!(parent(A), m, n)
+    A
+end
+
+function resizedata!(B::BroadcastVector, n)
+    for a in B.args
+        resizedata!(a, n)
+    end
+    B
 end
 
 function cache_filldata!(B, inds...)
