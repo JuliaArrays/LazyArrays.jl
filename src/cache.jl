@@ -402,6 +402,7 @@ function _bc_resizecacheddata!(::AbstractCachedLayout, a)
     resizedata!(a, size(a)...)
     view(cacheddata(a), axes(a)...)
 end
+_bc_resizecacheddata!(::DualLayout{ML}, a) where {ML<:AbstractCachedLayout} =  _bc_resizecacheddata!(ML(), a)
 _bc_resizecacheddata!(_, a) = a
 _bc_resizecacheddata!(a) = _bc_resizecacheddata!(MemoryLayout(a), a)
 resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle{N}}) where {N} = Broadcasted(LazyArrayStyle{N}(), bc.f, map(_bc_resizecacheddata!, bc.args)) # not broadcasted(bc.f, map(_bc_resizecacheddata!, bc.args)...) to avoid issues with StackOverflows with CacheArrayStyles

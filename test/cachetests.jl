@@ -4,7 +4,8 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, SparseArrays, Test
 using StaticArrays
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
-                    PaddedColumns, cacheddata, LazyArrayStyle, maybe_cacheddata, Accumulate, CachedArrayStyle, GenericCachedLayout
+                    PaddedColumns, cacheddata, LazyArrayStyle, maybe_cacheddata, Accumulate, CachedArrayStyle, GenericCachedLayout,
+                    AccumulateAbstractVector
 
 using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
@@ -530,7 +531,17 @@ using Infinities
             @test dest == res
         end
 
-        @test Matrix(view((1:5)', :, 1:1) .* view(Accumulate(*, 1:5)', :, 1:1)) == [1;;] # used to StackOverflow
+        @testset "Avoid StackOverflow for recursive CachedArrayStyles" begin
+            @test Matrix(view((1:5)', :, 1:1) .* view(Accumulate(*, 1:5)', :, 1:1)) == [1;;] # used to StackOverflow
+        end
+
+        @testset "DualLayout{<:AbstractCachedLayout}" begin
+            arg1 = view((1:100)', :, 1:10)
+            arg2 = view(AccumulateAbstractVector(*, 1:100)', :, 1:10)
+            bc = Base.Broadcast.Broadcasted(CachedArrayStyle{2}(), *, (arg1, arg2))
+            rsz_bc = LazyArrays.resize_bcargs!(bc);
+            @test rsz_bc.args[2] == view(arg2.parent.parent.data', :, 1:10)
+        end
     end
                                             
     @testset "maybe_cacheddata" begin
