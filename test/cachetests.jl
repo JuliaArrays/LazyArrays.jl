@@ -4,7 +4,8 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, SparseArrays, Test
 using StaticArrays
 import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, CachedLayout, resizedata!, zero!,
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
-                    PaddedColumns, cacheddata, maybe_cacheddata
+                    PaddedColumns, cacheddata, LazyArrayStyle, maybe_cacheddata, Accumulate, CachedArrayStyle, GenericCachedLayout,
+                    AccumulateAbstractVector
 
 using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
@@ -529,6 +530,18 @@ using Infinities
             copyto!(dest, src)
             @test dest == res
         end
+
+        @testset "Avoid StackOverflow for recursive CachedArrayStyles" begin
+            @test Matrix(view((1:5)', :, 1:1) .* view(Accumulate(*, 1:5)', :, 1:1)) == [1;;] # used to StackOverflow
+        end
+
+        @testset "DualLayout{<:AbstractCachedLayout}" begin
+            arg1 = view((1:100)', :, 1:10)
+            arg2 = view(AccumulateAbstractVector(*, 1:100)', :, 1:10)
+            bc = Base.Broadcast.Broadcasted(CachedArrayStyle{2}(), *, (arg1, arg2))
+            rsz_bc = LazyArrays.resize_bcargs!(bc);
+            @test rsz_bc.args[2] == view(arg2.parent.parent.data', :, 1:10)
+        end
     end
                                             
     @testset "maybe_cacheddata" begin
@@ -538,6 +551,28 @@ using Infinities
         @test maybe_cacheddata(B) === cacheddata(B)
         C = [1, 2, 3]
         @test maybe_cacheddata(C) === C
+    end
+
+    @testset "Missing BroadcastStyles/MemoryLayouts/cacheddata with CachedArrayStyles" begin
+        A = view(Accumulate(*, [1, 2, 3])', 1:1, 1:2)
+        B = view(transpose(Accumulate(*, [1, 2im, 3])), 1:1, 1:2)
+        C = Accumulate(*, [1, 2im, 3])'
+        D = transpose(Accumulate(*, [1, 2im, 3]))
+        E = view(Accumulate(*, [1, 2im, 3])', 1:1, 1:2)
+        F = view(Accumulate(*, [1, 2, 3]), 1:2)'
+        G = view(Accumulate(*, [1, 2im, 3])', 1:1, 1:2)'
+        @test all(==(CachedArrayStyle{1}()), Base.BroadcastStyle.(typeof.((A, B, C, D, E, F, G))))
+        @test all(==(GenericCachedLayout()), MemoryLayout.(typeof.((A, B, E, G))))
+        @test all(==(DualLayout{GenericCachedLayout}()), MemoryLayout.(typeof.((C, D, F))))
+        @test MemoryLayout(typeof(C)) == DualLayout{GenericCachedLayout}()
+        @test MemoryLayout(typeof(D)) == DualLayout{GenericCachedLayout}()
+        @test cacheddata(A) === view(cacheddata(parent(parent(A)))', 1:1, 1:1)
+        @test cacheddata(B) === view(transpose(cacheddata(parent(parent(B)))), 1:1, 1:1)
+        @test cacheddata(C) === cacheddata(parent(C))'
+        @test cacheddata(D) === transpose(cacheddata(parent(D)))
+        @test cacheddata(E) === view(cacheddata(parent(parent(E)))', 1:1, 1:1)
+        @test cacheddata(F) === view(cacheddata(parent(parent(F))), 1:1)'
+        @test cacheddata(G) === adjoint(view(cacheddata(parent(G)), 1:1, 1:1))
     end
 end
 
