@@ -791,10 +791,16 @@ end
 # subarrays
 ###
 
-sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{Vararg{Union{AbstractRange{Int},Int}}}}) = ApplyLayout{typeof(vcat)}()
-sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Vararg{Union{AbstractRange{Int},Int}}}}) = ApplyLayout{typeof(hcat)}()
+sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{AbstractRange{Int}}}) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{AbstractRange{Int},Int}}) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{AbstractRange{Int},AbstractRange{Int}}}) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(vcat)}, ::Type{<:Tuple{Int,AbstractRange{Int}}}) = ApplyLayout{typeof(vcat)}() # a Vcat but with only 1 argument
+
+
 # a row-slice of an Hcat is equivalent to a Vcat
 sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{Int,AbstractRange{Int}}}) = ApplyLayout{typeof(vcat)}()
+sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{AbstractRange{Int},Int}}) = ApplyLayout{typeof(hcat)}()
+sublayout(::ApplyLayout{typeof(hcat)}, ::Type{<:Tuple{AbstractRange{Int},AbstractRange{Int}}}) = ApplyLayout{typeof(hcat)}()
 
 _vcat_lastinds(sz) = _vcat_cumsum(sz...)
 _vcat_firstinds(sz) = (1, (1 .+ Base.front(_vcat_lastinds(sz)))...)
