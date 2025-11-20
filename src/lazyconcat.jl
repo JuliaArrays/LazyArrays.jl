@@ -822,11 +822,23 @@ function _vcat_sub_arguments(lay::ApplyLayout{typeof(vcat)}, A, V, kr)
     _reverse_if_neg_step(map(_view_vcat, arguments(lay, A), skr2), kr)
 end
 
-function _vcat_sub_arguments(::ApplyLayout{typeof(vcat)}, A, V, kr, jr)
-    sz = size.(arguments(A),1)
+function _vcat_sub_arguments(lay::ApplyLayout{typeof(vcat)}, A, V, kr, jr)
+    sz = size.(arguments(lay, A),1)
     skr = intersect.(_argsindices(sz), Ref(kr))
     skr2 = broadcast((a,b) -> a .- b .+ 1, skr, _vcat_firstinds(sz))
     _reverse_if_neg_step(_view_vcat.(arguments(A), skr2, Ref(jr)), kr)
+end
+
+function _vcat_sub_arguments(lay::ApplyLayout{typeof(vcat)}, A, V, k::Int, jr)
+    args = arguments(lay, A)
+    sz = size.(args,1)
+    for (a,inds, firstind) in zip(args, _argsindices(sz), _vcat_firstinds(sz))
+        if k in inds
+            return (_view_vcat(a, k - firstind + 1, jr),)
+        end
+    end
+
+    () # no args
 end
 
 _vcat_sub_arguments(LAY::ApplyLayout{typeof(vcat)}, A, V) = _vcat_sub_arguments(LAY, A, V, parentindices(V)...)
