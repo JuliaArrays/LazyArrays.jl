@@ -706,6 +706,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test length(args) == 1 
         @test args[1] == [1, 2, 3] 
         @test args[1] isa SubArray{Int, 1, Vector{Int}}
+
+        args = LazyArrays._vcat_sub_arguments(MemoryLayout(V), V, (), 0, 1:3)
+        @test args == ()
     end
 end
 
