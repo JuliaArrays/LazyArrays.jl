@@ -37,6 +37,7 @@ jobs:
           - {repo: ContinuumArrays.jl, group: JuliaApproximation}
           - {repo: ClassicalOrthogonalPolynomials.jl, group: JuliaApproximation}
           - {repo: SemiclassicalOrthogonalPolynomials.jl, group: JuliaApproximation}
+          - {repo: SingularIntegrals.jl, group: JuliaApproximation}
 
     steps:
       - uses: actions/checkout@v6
