@@ -18,7 +18,7 @@ import Base: *, +, -, /, <, ==, >, \, ≤, ≥, (:), @_gc_preserve_begin, @_gc_p
              oneto, add_sum, promote_op
 
 import Base.Broadcast: AbstractArrayStyle, BroadcastStyle, Broadcasted, DefaultArrayStyle, broadcasted, combine_eltypes,
-                       instantiate
+                       instantiate, result_style, Unknown
 
 import LinearAlgebra: AbstractQ, AdjOrTrans, StructuredMatrixStyle, checksquare, det, diag, dot, lmul!, logabsdet,
                       norm1, norm2, normInf, normp, pinv, rmul!, tr, tril, triu

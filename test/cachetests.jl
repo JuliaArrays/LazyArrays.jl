@@ -6,6 +6,7 @@ import LazyArrays: CachedArray, CachedMatrix, CachedVector, PaddedLayout, Cached
                     CachedAbstractArray, CachedAbstractVector, CachedAbstractMatrix, AbstractCachedArray, AbstractCachedMatrix,
                     PaddedColumns, cacheddata, LazyArrayStyle, maybe_cacheddata, Accumulate, CachedArrayStyle, GenericCachedLayout,
                     AccumulateAbstractVector
+import Base.Broadcast: BroadcastStyle
 
 using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
@@ -573,6 +574,18 @@ using Infinities
         @test cacheddata(E) === view(cacheddata(parent(parent(E)))', 1:1, 1:1)
         @test cacheddata(F) === view(cacheddata(parent(parent(F))), 1:1)'
         @test cacheddata(G) === adjoint(view(cacheddata(parent(G)), 1:1, 1:1))
+    end
+
+    @testset "BroadcastStyle for Vcat/Hcat of CachedArrayStyles" begin
+        @test BroadcastStyle(typeof(Vcat(cache(1:3), cache(4:6)))) == CachedArrayStyle{1}()
+        d = Accumulate(*, 1:10)
+        @test BroadcastStyle(typeof(Vcat(d, d))) == CachedArrayStyle{1}()
+        @test BroadcastStyle(typeof(Vcat(d', d'))) == CachedArrayStyle{2}()
+        @test BroadcastStyle(typeof(Hcat(d, d))) == CachedArrayStyle{2}()
+        @test BroadcastStyle(typeof(Vcat(d', (1:10)'))) == CachedArrayStyle{2}()
+        @test BroadcastStyle(typeof(Vcat((1:10)', d'))) == CachedArrayStyle{2}()
+        @test BroadcastStyle(typeof(Hcat(d, (1:10)))) == CachedArrayStyle{2}()
+        @test BroadcastStyle(typeof(Hcat((1:10), d))) == CachedArrayStyle{2}()
     end
 end
 

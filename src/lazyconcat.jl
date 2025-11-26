@@ -439,8 +439,16 @@ end
 # to take advantage of special implementations of the sub-components
 ######
 
-BroadcastStyle(::Type{<:Vcat{<:Any,N}}) where N = LazyArrayStyle{N}()
-BroadcastStyle(::Type{<:Hcat{<:Any}}) = LazyArrayStyle{2}()
+@inline tuple_type_broadcastlayout(::Type{I}) where {I<:Tuple} = result_style(BroadcastStyle(Base.tuple_type_head(I)), tuple_type_broadcastlayout(Base.tuple_type_tail(I)))
+@inline tuple_type_broadcastlayout(::Type{Tuple{}}) = Unknown()
+@inline tuple_type_broadcastlayout(::Type{Tuple{A}}) where {A} = BroadcastStyle(A)
+@inline tuple_type_broadcastlayout(::Type{Tuple{A,B}}) where {A,B} = result_style(BroadcastStyle(A), BroadcastStyle(B))
+@inline tuple_type_broadcastlayout(::Type{Tuple{A,B,C}}) where {A,B,C} = result_style(BroadcastStyle(A), tuple_type_broadcastlayout(Tuple{B,C}))
+@inline tuple_type_broadcastlayout(::Type{Tuple{A,B,C,D}}) where {A,B,C,D} = result_style(BroadcastStyle(A), tuple_type_broadcastlayout(Tuple{B,C,D}))
+@inline tuple_type_broadcastlayout(::Type{Tuple{A,B,C,D,E}}) where {A,B,C,D,E} = result_style(BroadcastStyle(A), tuple_type_broadcastlayout(Tuple{B,C,D,E}))
+
+BroadcastStyle(::Type{<:Vcat{<:Any,N,I}}) where {N,I<:Tuple} = result_style(LazyArrayStyle{N}(), tuple_type_broadcastlayout(I)) # the <:Tuple is to avoid ambiguity 
+BroadcastStyle(::Type{<:Hcat{<:Any,I}}) where {I<:Tuple} = result_style(LazyArrayStyle{2}(), tuple_type_broadcastlayout(I))
 
 # This is if we broadcast a function on a mixed concat f.([1; [2,3]])
 # such that f returns a vector, e.g., f(1) == [1,2], we don't want
