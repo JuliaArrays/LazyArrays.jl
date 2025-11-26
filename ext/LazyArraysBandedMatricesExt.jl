@@ -428,6 +428,7 @@ isbanded(::AbstractPaddedLayout, A) = true # always treat as banded
 const HcatBandedMatrix{T,N} = Hcat{T,NTuple{N,BandedMatrix{T,Matrix{T},OneTo{Int}}}}
 const VcatBandedMatrix{T,N} = Vcat{T,2,NTuple{N,BandedMatrix{T,Matrix{T},OneTo{Int}}}}
 
+BroadcastStyle(::Type{HcatBandedMatrix{T,0}}) where {T} = LazyArrayStyle{2}() # This method is needed for e.g. Hcat(), which would otherwise get recognised as a BandedStyle, giving different behaviour before-and-after loading BandedMatrices
 BroadcastStyle(::Type{HcatBandedMatrix{T,N}}) where {T,N} = BandedStyle()
 BroadcastStyle(::Type{VcatBandedMatrix{T,N}}) where {T,N} = BandedStyle()
 

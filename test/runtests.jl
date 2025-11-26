@@ -15,6 +15,13 @@ end
 # we include this at the top-level, so that other sub-modules may reuse the module instead of having to include the file
 include("infinitearrays.jl")
 
+@testset "Avoiding unwanted behaviour from BandedMatrices extension" begin
+    # This test needs to be included before BandedMatrices is loaded 
+    @test Base.Broadcast.BroadcastStyle(typeof(Hcat())) == LazyArrayStyle{2}()
+    using BandedMatrices 
+    @test Base.Broadcast.BroadcastStyle(typeof(Hcat())) == LazyArrayStyle{2}()
+end
+
 @testset "Lazy MemoryLayout" begin
     @testset "ApplyArray" begin
         A = [1.0 2; 3 4]
