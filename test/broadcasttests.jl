@@ -393,10 +393,12 @@ using Infinities
         a = BroadcastArray(real, ((1:5) .+ im)')
         @test a[:,1:3] == (1:3)'
         @test a[:,1:3] isa Adjoint{Int,Vector{Int}}
+        @test a[1,1:3] == 1:3
 
         a = BroadcastArray(real, transpose((1:5) .+ im))
         @test a[:,1:3] == (1:3)'
         @test a[:,1:3] isa Adjoint{Int,Vector{Int}}
+        @test a[1,1:3] == 1:3
     end
 
     @testset "broadcast with adjtrans/triangular/hermsym" begin
