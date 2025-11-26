@@ -698,6 +698,18 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test copy(view(V,2:-1:1,1:-1:1)) == [2 ; 1 ;;]
         @test copy(view(H,1:-1:1,2:-1:1)) == [2 1]
     end
+
+    @testset "Vcat arguments with integer-range view" begin
+        A = Vcat([1, 2, 3, 4, 5]', [6, 7, 8, 9, 10]')
+        V = view(A, 1, 1:3)
+        args = arguments(V)
+        @test length(args) == 1 
+        @test args[1] == [1, 2, 3] 
+        @test args[1] isa SubArray{Int, 1, Vector{Int}}
+
+        args = LazyArrays._vcat_sub_arguments(MemoryLayout(V), V, (), 0, 1:3)
+        @test args == ()
+    end
 end
 
 end # module
