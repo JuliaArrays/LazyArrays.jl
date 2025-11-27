@@ -729,6 +729,15 @@ import Base.Broadcast: BroadcastStyle
         @test BroadcastStyle(typeof(Vcat())) == LazyArrayStyle{1}() 
         @test BroadcastStyle(typeof(Hcat())) == LazyArrayStyle{2}()
     end
+
+    @testset "Previously broken case with cacheddata storing a Vcat" begin
+        v = Accumulate(*, Vcat(cache(1:3), 5));
+        resizedata!(v, 4)
+        @test v.datasize == (4,)
+        @test v == [1, 2, 6, 30]
+        @test v[4] == 30 
+        @test Base.isassigned(v, 4)
+    end
 end
 
 end # module

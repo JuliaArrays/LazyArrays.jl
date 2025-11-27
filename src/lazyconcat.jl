@@ -256,7 +256,7 @@ function vcat_copyto!(arr::AbstractVector, arrays...)
     i = firstindex(arr)
     for a in arrays
         m = length(a)
-        copyto!(view(arr, range(i, length=m)), a)
+        m > 0 && copyto!(view(arr, range(i, length=m)), a)
         i += m
     end
     arr
