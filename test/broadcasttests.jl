@@ -2,8 +2,9 @@ module BroadcastTests
 
 using LazyArrays, ArrayLayouts, LinearAlgebra, FillArrays, Base64, Test
 using StaticArrays, Tracker
-import LazyArrays: BroadcastLayout, arguments, LazyArrayStyle, sub_materialize, simplifiable
+import LazyArrays: BroadcastLayout, CachedArrayStyle, arguments, LazyArrayStyle, sub_materialize, simplifiable
 import Base: broadcasted
+import Base.Broadcast: BroadcastStyle
 
 using ..InfiniteArrays
 using Infinities
@@ -477,6 +478,13 @@ using Infinities
         @testset "_vec_mul_arguments method" begin
             @test_throws "MethodError: no method matching _vec_mul_arguments"  LazyArrays._vec_mul_arguments(2, [])
         end
+    end
+
+    @testset "BroadcastStyle" begin
+        @test BroadcastStyle(typeof(BroadcastVector(exp, 1:10))) == LazyArrayStyle{1}()
+        @test BroadcastStyle(typeof(BroadcastVector(+, 1:10, cache(1:10)))) == CachedArrayStyle{1}()
+        @test BroadcastStyle(typeof(BroadcastMatrix(*, Accumulate(*, 1:10)', rand(10)'))) == CachedArrayStyle{2}()
+        @test BroadcastStyle(typeof(BroadcastMatrix(*, rand(5, 5)', LazyArrays.CachedArray(rand(5, 5))))) == CachedArrayStyle{2}()
     end
 end
 

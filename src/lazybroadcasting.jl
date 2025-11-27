@@ -52,6 +52,8 @@ end
 const BroadcastVector{T,F,Args} = BroadcastArray{T,1,F,Args}
 const BroadcastMatrix{T,F,Args} = BroadcastArray{T,2,F,Args}
 
+BroadcastStyle(::Type{<:BroadcastArray{<:Any,N,<:Any,Args}}) where {N,Args<:Tuple} = result_style(LazyArrayStyle{N}(), tuple_type_broadcastlayout(Args))
+
 LazyArray(bc::Broadcasted) = BroadcastArray(bc)
 
 BroadcastArray{T,N,F,Args}(bc::Broadcasted) where {T,N,F,Args} = BroadcastArray{T,N,F,Args}(bc.f,bc.args)
