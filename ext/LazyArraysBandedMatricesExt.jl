@@ -11,7 +11,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
                    PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul, _broadcast_mul_simplifiable,
-                   triangularlayout, AbstractCachedMatrix, cache_layout, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout
+                   triangularlayout, AbstractCachedMatrix, cache_layout, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout, CachedArrayStyle
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
@@ -25,6 +25,7 @@ hermitianlayout(::Type{<:Complex}, ::AbstractLazyBandedLayout) = HermitianLayout
 
 
 bandedbroadcaststyle(::AbstractLazyArrayStyle) = LazyArrayStyle{2}()
+bandedbroadcaststyle(::CachedArrayStyle) = CachedArrayStyle{2}()
 
 BroadcastStyle(::AbstractLazyArrayStyle{1}, ::BandedStyle) = LazyArrayStyle{2}()
 BroadcastStyle(::BandedStyle, ::AbstractLazyArrayStyle{1}) = LazyArrayStyle{2}()

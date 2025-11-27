@@ -1,7 +1,7 @@
 module LazyBandedTests
 using ArrayLayouts, LazyArrays, BandedMatrices, LinearAlgebra, Test
 using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize, bandeddata
-using LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout, BroadcastLayout
+using LazyArrays: PaddedLayout, PaddedRows, Accumulate, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout, BroadcastLayout, CachedArrayStyle
 using ArrayLayouts: OnesLayout, StridedLayout
 LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
 BroadcastBandedLayout = LazyArraysBandedMatricesExt.BroadcastBandedLayout
@@ -966,6 +966,12 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         D = Diagonal(1:5)
         @test A\D ≈ (B*B)\D
         @test D\A ≈ D\(B*B)
+    end
+
+    @testset "BroadcastStyle with cached data" begin
+        A = _BandedMatrix(Accumulate(*, 1:10)', 1:10, 0, 0)
+        @test Base.BroadcastStyle(typeof(A)) == CachedArrayStyle{2}()
+        @test Base.BroadcastStyle(typeof(A')) == CachedArrayStyle{2}()
     end
 end
 
