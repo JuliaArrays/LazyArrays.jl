@@ -331,6 +331,8 @@ end
 
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, _2) where N = DefaultArrayStyle{N}()
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::AbstractLazyLayout) where N = LazyArrayStyle{N}()
+applybroadcaststyle(::Type{<:ApplyArray{<:Any,N,<:Any,Args}}, ::AbstractLazyLayout) where {N,Args<:Tuple} = result_style(LazyArrayStyle{N}(), tuple_type_broadcastlayout(Args))
+applybroadcaststyle(::Type{<:SubArray{<:Any,<:Any,P}}, lay::AbstractLazyLayout) where {P} = applybroadcaststyle(P, lay)
 BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
 BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray}}) where N = applybroadcaststyle(M, MemoryLayout(M))
 
