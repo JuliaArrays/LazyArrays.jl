@@ -32,6 +32,11 @@ BroadcastStyle(::BandedStyle, ::AbstractLazyArrayStyle{1}) = LazyArrayStyle{2}()
 BroadcastStyle(::AbstractLazyArrayStyle{2}, ::BandedStyle) = LazyArrayStyle{2}()
 BroadcastStyle(::BandedStyle, ::AbstractLazyArrayStyle{2}) = LazyArrayStyle{2}()
 
+BroadcastStyle(::CachedArrayStyle{1}, ::BandedStyle) = CachedArrayStyle{2}()
+BroadcastStyle(::BandedStyle, ::CachedArrayStyle{1}) = CachedArrayStyle{2}()
+BroadcastStyle(::CachedArrayStyle{2}, ::BandedStyle) = CachedArrayStyle{2}()
+BroadcastStyle(::BandedStyle, ::CachedArrayStyle{2}) = CachedArrayStyle{2}()
+
 bandedcolumns(::AbstractLazyLayout) = BandedColumns{LazyLayout}()
 bandedcolumns(::DualLayout{<:AbstractLazyLayout}) = BandedColumns{LazyLayout}()
 

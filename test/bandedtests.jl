@@ -3,6 +3,7 @@ using ArrayLayouts, LazyArrays, BandedMatrices, LinearAlgebra, Test
 using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize, bandeddata
 using LazyArrays: PaddedLayout, PaddedRows, Accumulate, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout, BroadcastLayout, CachedArrayStyle
 using ArrayLayouts: OnesLayout, StridedLayout
+import Base.Broadcast: BroadcastStyle
 LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
 BroadcastBandedLayout = LazyArraysBandedMatricesExt.BroadcastBandedLayout
 ApplyBandedLayout = LazyArraysBandedMatricesExt.ApplyBandedLayout
@@ -970,8 +971,15 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
 
     @testset "BroadcastStyle with cached data" begin
         A = _BandedMatrix(Accumulate(*, 1:10)', 1:10, 0, 0)
-        @test Base.BroadcastStyle(typeof(A)) == CachedArrayStyle{2}()
-        @test Base.BroadcastStyle(typeof(A')) == CachedArrayStyle{2}()
+        @test BroadcastStyle(typeof(A)) == CachedArrayStyle{2}()
+        @test BroadcastStyle(typeof(A')) == CachedArrayStyle{2}()
+    end
+
+    @testset "Combining BandedStyle with CachedArrayStyle" begin
+        @test BroadcastStyle(CachedArrayStyle{1}(), BandedStyle()) == CachedArrayStyle{2}()
+        @test BroadcastStyle(BandedStyle(), CachedArrayStyle{1}()) == CachedArrayStyle{2}()
+        @test BroadcastStyle(CachedArrayStyle{2}(), BandedStyle()) == CachedArrayStyle{2}()
+        @test BroadcastStyle(BandedStyle(), CachedArrayStyle{2}()) == CachedArrayStyle{2}()
     end
 end
 
