@@ -149,8 +149,6 @@ _vcat_resizedata!(_, B, m...) = B # by default we can't resize
 
 resizedata!(B::Vcat, m...) = _vcat_resizedata!(MemoryLayout(B), B, m...)
 
-cacheddata(B::Vcat) = Vcat(map(maybe_cacheddata, arguments(B))...)
-
 function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
     length(A) == length(B) || return false
     n = max(A.datasize[1], B.datasize[1])

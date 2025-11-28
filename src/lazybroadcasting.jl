@@ -52,6 +52,8 @@ end
 const BroadcastVector{T,F,Args} = BroadcastArray{T,1,F,Args}
 const BroadcastMatrix{T,F,Args} = BroadcastArray{T,2,F,Args}
 
+BroadcastStyle(::Type{<:BroadcastArray{<:Any,N,<:Any,Args}}) where {N,Args<:Tuple} = result_style(LazyArrayStyle{N}(), tuple_type_broadcastlayout(Args))
+
 LazyArray(bc::Broadcasted) = BroadcastArray(bc)
 
 BroadcastArray{T,N,F,Args}(bc::Broadcasted) where {T,N,F,Args} = BroadcastArray{T,N,F,Args}(bc.f,bc.args)
@@ -119,6 +121,12 @@ converteltype(::Type{T}, A) where T = convert(T, A)
 sub_materialize(::BroadcastLayout, A) = converteltype(eltype(A), sub_materialize(_broadcasted(A)))
 
 copy(bc::Broadcasted{<:AbstractLazyArrayStyle}) = BroadcastArray(bc)
+
+function cacheddata(A::BroadcastArray{T, N, F}) where {T, N, F}
+    args = arguments(A) 
+    conforming_resize!(args)
+    BroadcastArray{T, N}(A.f, map(maybe_cacheddata, args)...)
+end
 
 # BroadcastArray are immutable
 copy(bc::BroadcastArray) = bc

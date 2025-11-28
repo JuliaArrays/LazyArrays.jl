@@ -228,7 +228,11 @@ AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, ma
 
 @inline applied_axes(f, args...) = map(oneto, applied_size(f, args...))
 
-
+function cacheddata(A::ApplyArray{T, N, F}) where {T, N, F}
+    args = arguments(A) 
+    conforming_resize!(args)
+    ApplyArray{T, N}(A.f, map(maybe_cacheddata, args)...)
+end
 
 # immutable arrays don't need to copy.
 # Some special cases like vcat overload setindex! and therefore
@@ -329,8 +333,13 @@ function show(io::IO, A::Applied)
     print(io, ')')
 end
 
+_BroadcastStyle(x...) = BroadcastStyle(x...)
+_BroadcastStyle(::Type{<:AbstractQ}) = DefaultArrayStyle{2}()
+
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, _2) where N = DefaultArrayStyle{N}()
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::AbstractLazyLayout) where N = LazyArrayStyle{N}()
+applybroadcaststyle(::Type{<:ApplyArray{<:Any,N,<:Any,Args}}, ::AbstractLazyLayout) where {N,Args<:Tuple} = result_style(LazyArrayStyle{N}(), tuple_type_broadcastlayout(Args))
+applybroadcaststyle(::Type{<:SubArray{<:Any,<:Any,P}}, lay::AbstractLazyLayout) where {P} = applybroadcaststyle(P, lay)
 BroadcastStyle(M::Type{<:ApplyArray}) = applybroadcaststyle(M, MemoryLayout(M))
 BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray}}) where N = applybroadcaststyle(M, MemoryLayout(M))
 

@@ -11,7 +11,7 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
                    PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul, _broadcast_mul_simplifiable,
-                   triangularlayout, AbstractCachedMatrix, cache_layout, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout
+                   triangularlayout, AbstractCachedMatrix, cache_layout, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout, CachedArrayStyle
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
@@ -25,11 +25,17 @@ hermitianlayout(::Type{<:Complex}, ::AbstractLazyBandedLayout) = HermitianLayout
 
 
 bandedbroadcaststyle(::AbstractLazyArrayStyle) = LazyArrayStyle{2}()
+bandedbroadcaststyle(::CachedArrayStyle) = CachedArrayStyle{2}()
 
 BroadcastStyle(::AbstractLazyArrayStyle{1}, ::BandedStyle) = LazyArrayStyle{2}()
 BroadcastStyle(::BandedStyle, ::AbstractLazyArrayStyle{1}) = LazyArrayStyle{2}()
 BroadcastStyle(::AbstractLazyArrayStyle{2}, ::BandedStyle) = LazyArrayStyle{2}()
 BroadcastStyle(::BandedStyle, ::AbstractLazyArrayStyle{2}) = LazyArrayStyle{2}()
+
+BroadcastStyle(::CachedArrayStyle{1}, ::BandedStyle) = CachedArrayStyle{2}()
+BroadcastStyle(::BandedStyle, ::CachedArrayStyle{1}) = CachedArrayStyle{2}()
+BroadcastStyle(::CachedArrayStyle{2}, ::BandedStyle) = CachedArrayStyle{2}()
+BroadcastStyle(::BandedStyle, ::CachedArrayStyle{2}) = CachedArrayStyle{2}()
 
 bandedcolumns(::AbstractLazyLayout) = BandedColumns{LazyLayout}()
 bandedcolumns(::DualLayout{<:AbstractLazyLayout}) = BandedColumns{LazyLayout}()
@@ -428,6 +434,7 @@ isbanded(::AbstractPaddedLayout, A) = true # always treat as banded
 const HcatBandedMatrix{T,N} = Hcat{T,NTuple{N,BandedMatrix{T,Matrix{T},OneTo{Int}}}}
 const VcatBandedMatrix{T,N} = Vcat{T,2,NTuple{N,BandedMatrix{T,Matrix{T},OneTo{Int}}}}
 
+BroadcastStyle(::Type{HcatBandedMatrix{T,0}}) where {T} = LazyArrayStyle{2}() # This method is needed for e.g. Hcat(), which would otherwise get recognised as a BandedStyle, giving different behaviour before-and-after loading BandedMatrices
 BroadcastStyle(::Type{HcatBandedMatrix{T,N}}) where {T,N} = BandedStyle()
 BroadcastStyle(::Type{VcatBandedMatrix{T,N}}) where {T,N} = BandedStyle()
 

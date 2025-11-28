@@ -4,7 +4,9 @@ using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, Test, Base64
 using StaticArrays
 import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
-                    CachedVector, ApplyLayout, arguments, BroadcastVector, LazyLayout, cacheddata
+                    CachedVector, ApplyLayout, arguments, BroadcastVector, LazyLayout, cacheddata,
+                    LazyArrayStyle, CachedArrayStyle, Accumulate
+import Base.Broadcast: BroadcastStyle
 
 @testset "concat" begin
     @testset "Vcat" begin
@@ -222,11 +224,14 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             end
 
             @testset "cacheddata" begin
-                v = Vcat(1, cache(1:2))
-                @test @inferred(cacheddata(v)) == [1]
-                resizedata!(v, 2)
+                v = Vcat(1, cache(1:2));
                 @test @inferred(cacheddata(v)) == [1, 1]
+                resizedata!(v, 3)
+                @test @inferred(cacheddata(v)) == [1, 1, 2]
                 @test cacheddata(v) isa Vcat
+
+                v = Vcat((1:10)', cache(11:20)');
+                @test @inferred(cacheddata(v)) == Vcat((1:10)', (11:20)')
             end
 
             p =  Vcat([1,2], Zeros(4));
@@ -709,6 +714,32 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
 
         args = LazyArrays._vcat_sub_arguments(MemoryLayout(V), V, (), 0, 1:3)
         @test args == ()
+    end
+
+    @testset "BroadcastStyle" begin
+        args = (1:10, Accumulate(*, 1:10), BroadcastVector(exp, 1:10), BroadcastMatrix(exp, rand(10, 2)), Vcat(Accumulate(*, 1:10)', (1:10)')', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        for i in 1:6 
+            @test @inferred(LazyArrays.tuple_type_broadcastlayout(typeof(args[1:i]))) == Base.Broadcast.combine_styles(args[1:i]...)
+        end
+        @test @inferred(LazyArrays.tuple_type_broadcastlayout(typeof(args))) == Base.Broadcast.combine_styles(args...) == CachedArrayStyle{2}()
+        @test @inferred(LazyArrays.tuple_type_broadcastlayout(Tuple{})) == Base.Broadcast.Unknown()
+        @test BroadcastStyle(typeof(Vcat(adjoint.(args)...))) == BroadcastStyle(typeof(Vcat(transpose.(args)...))) == CachedArrayStyle{2}()
+        @test BroadcastStyle(typeof(Hcat(args...))) == CachedArrayStyle{2}()
+        
+        @test BroadcastStyle(typeof(Vcat((1:10)'))) == LazyArrayStyle{2}() # make sure we preserve Lazy even without lazy args  
+        @test BroadcastStyle(typeof(Hcat((1:10)'))) == LazyArrayStyle{2}()
+        
+        @test BroadcastStyle(typeof(Vcat())) == LazyArrayStyle{1}() 
+        @test BroadcastStyle(typeof(Hcat())) == LazyArrayStyle{2}()
+    end
+
+    @testset "Previously broken case with cacheddata storing a Vcat" begin
+        v = Accumulate(*, Vcat(cache(1:3), 5));
+        resizedata!(v, 4)
+        @test v.datasize == (4,)
+        @test v == [1, 2, 6, 30]
+        @test v[4] == 30 
+        @test Base.isassigned(v, 4)
     end
 end
 

@@ -1,10 +1,12 @@
 module ApplyTests
 
-using LazyArrays, FillArrays, ArrayLayouts, Test
-import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied, arguments,
-            ApplyArray, ApplyMatrix, ApplyVector, LazyArrayApplyStyle, ApplyLayout, call
-import ArrayLayouts: StridedLayout
-using LinearAlgebra
+    using LazyArrays, FillArrays, ArrayLayouts, Test
+    import LazyArrays: materialize, broadcasted, DefaultApplyStyle, Applied, arguments,
+                ApplyArray, ApplyMatrix, ApplyVector, LazyArrayApplyStyle, ApplyLayout, call,
+                CachedArrayStyle, CachedArray, LazyArrayStyle
+    import ArrayLayouts: StridedLayout
+    import Base.Broadcast: BroadcastStyle
+    using LinearAlgebra
 
 @testset "Applying" begin
     @testset "Applied" begin
@@ -120,6 +122,13 @@ using LinearAlgebra
             @test M[k,j] ≈ A[k,j]
         end
         @test colsupport(M,1) == 1:5
+    end
+
+    @testset "BroadcastStyle with a cached argument" begin
+        A = ApplyArray(*, rand(10, 2), rand(2, 2))
+        @test BroadcastStyle(typeof(A)) == BroadcastStyle(typeof(A')) == BroadcastStyle(typeof(view(A, 1:2, 1:2))) == LazyArrayStyle{2}()
+        A = ApplyArray(*, CachedArray(rand(10, 2)), rand(2, 2))
+        @test BroadcastStyle(typeof(A)) == BroadcastStyle(typeof(A')) == BroadcastStyle(typeof(view(A, 1:2, 1:2))) == CachedArrayStyle{2}()
     end
 end # testset
 

@@ -438,23 +438,33 @@ copy(Q::Accumulate) = Accumulate(Q.op, copy(Q.data), copy(Q.v), Q.dims, Q.datasi
 copyto!(x::AbstractArray{<:Any,N}, C::Cumsum{<:Any,N}) where N = cumsum!(x, C.v)
 
 # How we populate the data
-function cache_filldata!(K::Accumulate{<:Any,1}, inds)
-    copyto!(view(K.data,inds), view(K.v,inds))
+function _accumulate_cache_filldata_1d!(data, v, op::F, inds) where {F}
+    copyto!(view(data,inds), view(v,inds))
     @inbounds for k in inds
-        K.data[k] = K.op(K.data[k-1], K.data[k])
+        data[k] = op(data[k-1], v[k])
+    end
+end
+
+function cache_filldata!(K::Accumulate{<:Any,1}, inds)
+    _accumulate_cache_filldata_1d!(K.data, K.v, K.op, inds)
+end
+
+function _accumulate_cache_filldata_2d!(data, v, op::F, kr, jr, dims) where {F}
+    if dims == 1
+        copyto!(view(data, kr, jr), view(v, kr, jr))
+        @inbounds for j in jr, k in kr
+            data[k,j] = op(data[k-1,j], v[k,j])
+        end
+    else # dims == 2
+        copyto!(view(data, kr, jr), view(v, kr, jr))
+        @inbounds for j in jr, k in kr
+            data[k,j] = op(data[k,j-1], v[k,j])
+        end
     end
 end
 
 function cache_filldata!(K::Accumulate{<:Any,2}, kr, jr)
-    if K.dims == 1
-        @inbounds for j in jr, k in kr
-            K.data[k,j] = K.op(K.data[k-1,j], K.v[k,j])
-        end
-    else # K.dims == 2
-        @inbounds for j in jr, k in kr
-            K.data[k,j] = K.op(K.data[k,j-1], K.v[k,j])
-        end
-    end
+    _accumulate_cache_filldata_2d!(K.data, K.v, K.op, kr, jr, K.dims)
 end
 
 
