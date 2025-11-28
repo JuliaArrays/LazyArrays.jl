@@ -538,7 +538,7 @@ using Infinities
         @testset "DualLayout{<:AbstractCachedLayout}" begin
             arg1 = view((1:100)', :, 1:10)
             arg2 = view(AccumulateAbstractVector(*, 1:100)', :, 1:10)
-            bc = Base.Broadcast.Broadcasted(CachedArrayStyle{2}(), *, (arg1, arg2))
+            bc = Base.Broadcast.Broadcasted(CachedArrayStyle{2}(), *, (arg1, arg2));
             rsz_bc = LazyArrays.resize_bcargs!(bc);
             @test rsz_bc.args[2] == view(arg2.parent.parent.data', :, 1:10)
         end
@@ -573,6 +573,13 @@ using Infinities
         @test cacheddata(E) === view(cacheddata(parent(parent(E)))', 1:1, 1:1)
         @test cacheddata(F) === view(cacheddata(parent(parent(F))), 1:1)'
         @test cacheddata(G) === adjoint(view(cacheddata(parent(G)), 1:1, 1:1))
+    end
+
+    @testset "resizedata! for AdjTrans array" begin
+        x = LazyArrays.CachedArray(rand(1, 10))';
+        @test parent(x).datasize == (0, 0)
+        LazyArrays.resizedata!(x, 4, 1)
+        @test parent(x).datasize == (1, 4)
     end
 end
 
