@@ -439,13 +439,13 @@ end
 # to take advantage of special implementations of the sub-components
 ######
 
-@inline tuple_type_broadcastlayout(::Type{I}) where {I<:Tuple} = result_style(BroadcastStyle(Base.tuple_type_head(I)), tuple_type_broadcastlayout(Base.tuple_type_tail(I)))
+@inline tuple_type_broadcastlayout(::Type{I}) where {I<:Tuple} = result_style(_BroadcastStyle(Base.tuple_type_head(I)), tuple_type_broadcastlayout(Base.tuple_type_tail(I)))
 @inline tuple_type_broadcastlayout(::Type{Tuple{}}) = Unknown()
-@inline tuple_type_broadcastlayout(::Type{Tuple{A}}) where {A} = BroadcastStyle(A)
-@inline tuple_type_broadcastlayout(::Type{Tuple{A,B}}) where {A,B} = result_style(BroadcastStyle(A), BroadcastStyle(B))
-@inline tuple_type_broadcastlayout(::Type{Tuple{A,B,C}}) where {A,B,C} = result_style(BroadcastStyle(A), tuple_type_broadcastlayout(Tuple{B,C}))
-@inline tuple_type_broadcastlayout(::Type{Tuple{A,B,C,D}}) where {A,B,C,D} = result_style(BroadcastStyle(A), tuple_type_broadcastlayout(Tuple{B,C,D}))
-@inline tuple_type_broadcastlayout(::Type{Tuple{A,B,C,D,E}}) where {A,B,C,D,E} = result_style(BroadcastStyle(A), tuple_type_broadcastlayout(Tuple{B,C,D,E}))
+@inline tuple_type_broadcastlayout(::Type{Tuple{A}}) where {A} = _BroadcastStyle(A)
+@inline tuple_type_broadcastlayout(::Type{Tuple{A,B}}) where {A,B} = result_style(_BroadcastStyle(A), _BroadcastStyle(B))
+@inline tuple_type_broadcastlayout(::Type{Tuple{A,B,C}}) where {A,B,C} = result_style(_BroadcastStyle(A), tuple_type_broadcastlayout(Tuple{B,C}))
+@inline tuple_type_broadcastlayout(::Type{Tuple{A,B,C,D}}) where {A,B,C,D} = result_style(_BroadcastStyle(A), tuple_type_broadcastlayout(Tuple{B,C,D}))
+@inline tuple_type_broadcastlayout(::Type{Tuple{A,B,C,D,E}}) where {A,B,C,D,E} = result_style(_BroadcastStyle(A), tuple_type_broadcastlayout(Tuple{B,C,D,E}))
 
 BroadcastStyle(::Type{<:Vcat{<:Any,N,I}}) where {N,I<:Tuple} = result_style(LazyArrayStyle{N}(), tuple_type_broadcastlayout(I)) # the <:Tuple is to avoid ambiguity 
 BroadcastStyle(::Type{<:Hcat{<:Any,I}}) where {I<:Tuple} = result_style(LazyArrayStyle{2}(), tuple_type_broadcastlayout(I))

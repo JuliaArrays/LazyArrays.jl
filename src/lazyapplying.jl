@@ -333,6 +333,9 @@ function show(io::IO, A::Applied)
     print(io, ')')
 end
 
+_BroadcastStyle(x...) = BroadcastStyle(x...)
+_BroadcastStyle(::Type{<:AbstractQ}) = DefaultArrayStyle{2}()
+
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, _2) where N = DefaultArrayStyle{N}()
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::AbstractLazyLayout) where N = LazyArrayStyle{N}()
 applybroadcaststyle(::Type{<:ApplyArray{<:Any,N,<:Any,Args}}, ::AbstractLazyLayout) where {N,Args<:Tuple} = result_style(LazyArrayStyle{N}(), tuple_type_broadcastlayout(Args))
