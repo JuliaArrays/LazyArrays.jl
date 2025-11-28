@@ -62,6 +62,8 @@ cacheddata(A::Transpose) = transpose(cacheddata(parent(A)))
 
 maybe_cacheddata(A::AbstractCachedArray) = cacheddata(A)
 maybe_cacheddata(A::SubArray{<:Any,N,<:AbstractCachedArray}) where N = cacheddata(A)
+maybe_cacheddata(A::Adjoint) = adjoint(maybe_cacheddata(parent(A)))
+maybe_cacheddata(A::Transpose) = transpose(maybe_cacheddata(parent(A)))
 maybe_cacheddata(A) = A # no-op
 
 convert(::Type{AbstractArray{T}}, S::CachedArray{T}) where T = S
@@ -228,9 +230,13 @@ resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(B.data), MemoryLay
 resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(B.data), UnknownLayout(), B, mn...)
 resizedata!(A, mn...) = A # don't do anything
 function resizedata!(A::AdjOrTrans, m, n)
-    m ≤ 0 || resizedata!(parent(A), n)
+    resizedata!(parent(A), n, m)
     A
 end
+function resizedata!(A::AdjOrTrans{<:Any, <:AbstractVector}, m, n)
+    resizedata!(parent(A), n)
+    A
+end 
 
 function cache_filldata!(B, inds...)
     B.data[inds...] .= view(B.array,inds...)
@@ -612,3 +618,84 @@ CachedArray(data::AbstractMatrix{T}, array::AbstractQ{T}, datasize::NTuple{2,Int
     CachedMatrix{T,typeof(data),typeof(array)}(data, array, datasize)
 
 length(A::CachedMatrix{<:T,<:AbstractMatrix{T},<:AbstractQ{T}}) where T = prod(size(A.array))
+
+##
+# Tuples of potential cached arrays
+# Assumes that the Tuples contain arrays of the same shape
+# Some of the complication here is in making sure that we can handle things like mixing vectors and matrices that have one column
+##
+@inline _tuple_wrap(x::Int) = (x,) # Some CachedArrays mistakenly use Int instead of Tuple for vector sizes (e.g. https://github.com/JuliaApproximation/SemiclassicalOrthogonalPolynomials.jl/blob/a29007f2815134180b8433fdab46a23acfcdcd01/src/neg1c.jl#L19 and https://github.com/DanielVandH/InfiniteRandomArrays.jl/blob/a859d565f5bd8278d3f3499cd26b62916b4867e0/src/vector.jl#L18, to name a couple)
+@inline _tuple_wrap(x::Tuple) = x
+@inline _datasize(x) = size(x)
+@inline _datasize(::Number) = (1,) # Numbers have size (), but we treat them as size (1,) for resizing purposes
+@inline _datasize(x::AbstractCachedArray) = x.datasize
+@inline _datasize(x::SubArray) = _datasize(parent(x))
+@inline _datasize(x::AdjOrTrans) = reverse(_datasize(parent(x)))
+@inline _datasize(x::AdjOrTrans{<:Any, <:AbstractVector}) = (sz = only(_datasize(parent(x))); (min(1, sz), sz))
+@inline _datasizes(::Tuple{}) = ()
+@inline _datasizes(t::Tuple) = (_datasize(first(t)), _datasizes(Base.tail(t))...) # equivalent to _datasize.(t)
+
+@inline _has_vector(::Tuple{}) = false # Numbers have size () 
+@inline _has_vector(::Tuple{Any}) = true
+@inline _has_vector(::Tuple{Any, Vararg}) = false
+@inline has_vector(::Tuple{}) = false
+@inline has_vector(t::Tuple) = _has_vector(first(t)) || has_vector(Base.tail(t))
+@inline to_vector_size(sz::Tuple{Any}) = sz  # Already 1-tuple
+@inline to_vector_size(sz::Tuple{Any, Vararg}) = (prod(sz),)  # Multi-tuple -> 1-tuple
+
+function max_datasize(sizes::Tuple)
+    if has_vector(sizes)
+        normalized = map(to_vector_size, sizes)
+        return reduce(@inline((a, b) -> max.(a, b)), normalized)
+    else
+        return reduce(@inline((a, b) -> max.(a, b)), sizes)
+    end
+end
+
+@inline _expand_size(sz::Tuple{Any}, ::Tuple{Any}) = sz
+@inline _expand_size(sz::Tuple{Any}, ::Tuple{Any, Vararg}) = (only(sz), 1)
+@inline _expand_size(sz::Tuple{Any, Vararg}, ::Tuple{Any, Vararg}) = sz
+
+@inline _effective_ndims(sz::Int) = 1 
+@inline function _effective_ndims(sz::Tuple)
+    length(sz) == 1 && return 1
+    length(sz) == 2 && minimum(sz) <= 1 && return 1
+    return length(sz)
+end
+
+@inline _all_same_ndims(::Tuple{}) = true
+@inline _all_same_ndims(t::Tuple{Any}) = true
+@inline function _all_same_ndims(t::Tuple)
+    first_sz = _arraysize(first(t))
+    first_ndim = _effective_ndims(first_sz)
+    _check_same_ndims_args(first_ndim, Base.tail(t))
+end
+
+@inline _check_same_ndims_args(::Int, ::Tuple{}) = true
+@inline function _check_same_ndims_args(expected_ndim::Int, t::Tuple)
+    sz = _arraysize(first(t))
+    _effective_ndims(sz) == expected_ndim && _check_same_ndims_args(expected_ndim, Base.tail(t))
+end
+
+@inline _arraysize(x::Number) = (1,)
+@inline _arraysize(x) = size(x)
+
+function conforming_resize!(args::Tuple)
+    isempty(args) && return args
+    if !_all_same_ndims(args)
+        throw(ArgumentError("Cannot conform arrays with incompatible dimensions: $(map(_arraysize, args))"))
+    end
+    sizes = _datasizes(args)
+    sz = max_datasize(sizes)
+    _resize_each!(args, sizes, sz)
+    return args
+end  
+
+@inline _resize_each!(::Tuple{}, ::Tuple{}, sz) = nothing
+@inline function _resize_each!(args::Tuple, sizes::Tuple, sz)
+    arg = first(args)
+    orig_sz = first(sizes)
+    target_sz = _expand_size(sz, orig_sz)
+    resizedata!(arg, target_sz...)
+    _resize_each!(Base.tail(args), Base.tail(sizes), sz)
+end

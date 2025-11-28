@@ -122,6 +122,12 @@ sub_materialize(::BroadcastLayout, A) = converteltype(eltype(A), sub_materialize
 
 copy(bc::Broadcasted{<:AbstractLazyArrayStyle}) = BroadcastArray(bc)
 
+function cacheddata(A::BroadcastArray{T, N, F}) where {T, N, F}
+    args = arguments(A) 
+    conforming_resize!(args)
+    BroadcastArray{T, N}(A.f, map(maybe_cacheddata, args)...)
+end
+
 # BroadcastArray are immutable
 copy(bc::BroadcastArray) = bc
 map(::typeof(copy), bc::BroadcastArray) = bc

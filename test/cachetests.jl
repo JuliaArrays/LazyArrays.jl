@@ -552,6 +552,11 @@ using Infinities
         @test maybe_cacheddata(B) === cacheddata(B)
         C = [1, 2, 3]
         @test maybe_cacheddata(C) === C
+
+        v = cache(1:10)'
+        @test maybe_cacheddata(v) === cacheddata(parent(v))'
+        v = transpose(cache(1:10))
+        @test maybe_cacheddata(v) === transpose(cacheddata(parent(v)))
     end
 
     @testset "Missing BroadcastStyles/MemoryLayouts/cacheddata with CachedArrayStyles" begin
@@ -587,6 +592,149 @@ using Infinities
         @test BroadcastStyle(typeof(Hcat(d, (1:10)))) == CachedArrayStyle{2}()
         @test BroadcastStyle(typeof(Hcat((1:10), d))) == CachedArrayStyle{2}()
     end
-end
+
+    @testset "Enforce same-size arguments for cacheddata" begin
+        @testset "max_datasize" begin
+            @test LazyArrays._datasize(1:10) == (10,)
+            x = cache(1:10)
+            @test LazyArrays._datasize(x) == (0,)
+            resizedata!(x, 3)
+            @test LazyArrays._datasize(x) == (3,)
+            @test LazyArrays._datasize(view(x, 3:5)) == (3,)
+            @test LazyArrays._datasize(transpose(x)) == (1, 3)
+            
+            arr = (1:10, cache(1:10))
+            @test LazyArrays.max_datasize(LazyArrays._datasizes(arr)) == (10,)
+            
+            arr = (cache(1:10), cache(1:10))
+            resizedata!(arr[1], 3)
+            @test LazyArrays.max_datasize(LazyArrays._datasizes(arr)) == (3,)
+            resizedata!(arr[2], 7)
+            @test LazyArrays.max_datasize(LazyArrays._datasizes(arr)) == (7,)
+            
+            arr = (rand(10, 5), LazyArrays.CachedArray(rand(10, 5)))
+            @test LazyArrays.max_datasize(LazyArrays._datasizes(arr)) == (10, 5)
+            
+            arr = (LazyArrays.CachedArray(rand(10, 5)), LazyArrays.CachedArray(rand(10, 5)))
+            @test LazyArrays.max_datasize(LazyArrays._datasizes(arr)) == (0, 0)
+            resizedata!(arr[1], 3, 4)
+            @test LazyArrays.max_datasize(LazyArrays._datasizes(arr)) == (3, 4)
+            resizedata!(arr[2], 2, 5);
+            @test LazyArrays.max_datasize(LazyArrays._datasizes(arr)) == (3, 5) 
+
+            arr = (1, [1, 2])
+            @test LazyArrays._datasize(1) == (1, )
+            @test LazyArrays.max_datasize(LazyArrays._datasizes(arr)) == (2,)
+        end
+
+        @testset "conforming_resize!" begin
+            args = (cache(1:10), cache(1:10));
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((0,), (0,));
+            LazyArrays.resizedata!(args[2], 4);
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((4,), (4,));
+            
+            args = (1:10, cache(1:10));
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((10,), (10,));
+            
+            args = (cache(1:10)', cache(1:10)');
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((0, 0), (0, 0));
+            LazyArrays.resizedata!(args[1], 1, 3);
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((1, 3), (1, 3));
+            
+            args = (cache(1:10)', LazyArrays.CachedArray(rand(1, 10)));
+            @test LazyArrays._datasizes(args) == ((0, 0), (0, 0));
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((0, 0), (0, 0));
+            LazyArrays.resizedata!(args[1], 1, 4);
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((1, 4), (1, 4));
+            LazyArrays.resizedata!(args[2], 1, 6)
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((1, 6), (1, 6));
+            
+            args = (cache(1:10), LazyArrays.CachedArray(rand(1, 10))');
+            LazyArrays.resizedata!(args[1], 4);
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((4,), (4, 1));
+            
+            args = (cache(1:10), LazyArrays.CachedArray(rand(1, 10))', 1:10);
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((10,), (10, 1), (10,));
+
+            args = (1, cache(1:2));
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((1,), (1,)) # because scalars are treated as size (1,)
+
+            args = (rand(10, 10), LazyArrays.CachedArray(rand(10, 10)));
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((10, 10), (10, 10));
+
+            args = (LazyArrays.CachedArray(rand(10, 10)), LazyArrays.CachedArray(rand(10, 10)));
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((0, 0), (0, 0));
+            LazyArrays.resizedata!(args[1], 3, 4);
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((3, 4), (3, 4));
+            LazyArrays.resizedata!(args[2], 5, 6);
+            LazyArrays.conforming_resize!(args);
+            @test LazyArrays._datasizes(args) == ((5, 6), (5, 6));
+
+            @testset "conforming_resize! dimension mismatch" begin
+                args = (cache(1:10), cache(1:10))
+                @test LazyArrays.conforming_resize!(args) === args  
+                
+                args = (cache(1:10), LazyArrays.CachedArray(rand(10, 5)))
+                @test_throws ArgumentError LazyArrays.conforming_resize!(args)
+                
+                args = (LazyArrays.CachedArray(rand(3, 4)), LazyArrays.CachedArray(rand(5, 2)))
+                @test LazyArrays.conforming_resize!(args) === args  
+                
+                args = (1, cache(1:10))
+                @test LazyArrays.conforming_resize!(args) === args 
+                
+                args = (cache(1:10), LazyArrays.CachedArray(rand(2, 3)), reshape(cache(1:8), 2, 2, 2))
+                @test_throws ArgumentError LazyArrays.conforming_resize!(args)
+                
+                args = (reshape(cache(1:8), 2, 2, 2), reshape(cache(1:27), 3, 3, 3))
+                @test LazyArrays.conforming_resize!(args) === args  
+                
+                args = ()
+                @test LazyArrays.conforming_resize!(args) === args
+                
+                args = (cache(1:10),)
+                @test LazyArrays.conforming_resize!(args) === args
+            end
+        end
+    end
+
+    @testset "cacheddata for ApplyArray and BroadcastArray" begin
+        x = ApplyArray(+, 1:10, cache(11:20));
+        @test cacheddata(x) == ApplyArray(+, 1:10, 11:20) 
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+
+        x = BroadcastVector(*, 1:10, cache(1:10));
+        @test cacheddata(x) == BroadcastVector(*, 1:10, 1:10)
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+
+        x = ApplyArray(+, cache(1:10), cache(11:20));
+        @test cacheddata(x) == ApplyArray(+, 1:0, 1:0)
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+        LazyArrays.resizedata!(x.args[1], 3)
+        @test cacheddata(x) == ApplyArray(+, 1:3, 11:13)
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+
+        x = BroadcastVector(*, cache(1:10), cache(11:20));
+        @test cacheddata(x) == BroadcastVector(*, 1:0, 1:0)
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+        LazyArrays.resizedata!(x.args[1], 4)
+        @test cacheddata(x) == BroadcastVector(*, 1:4, 11:14)
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+    end
+end 
 
 end # module

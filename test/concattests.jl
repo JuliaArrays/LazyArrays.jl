@@ -224,11 +224,14 @@ import Base.Broadcast: BroadcastStyle
             end
 
             @testset "cacheddata" begin
-                v = Vcat(1, cache(1:2))
-                @test @inferred(cacheddata(v)) == [1]
-                resizedata!(v, 2)
+                v = Vcat(1, cache(1:2));
                 @test @inferred(cacheddata(v)) == [1, 1]
+                resizedata!(v, 3)
+                @test @inferred(cacheddata(v)) == [1, 1, 2]
                 @test cacheddata(v) isa Vcat
+
+                v = Vcat((1:10)', cache(11:20)');
+                @test @inferred(cacheddata(v)) == Vcat((1:10)', (11:20)')
             end
 
             p =  Vcat([1,2], Zeros(4));

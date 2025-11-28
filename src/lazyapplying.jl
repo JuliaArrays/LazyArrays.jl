@@ -228,7 +228,11 @@ AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, ma
 
 @inline applied_axes(f, args...) = map(oneto, applied_size(f, args...))
 
-
+function cacheddata(A::ApplyArray{T, N, F}) where {T, N, F}
+    args = arguments(A) 
+    conforming_resize!(args)
+    ApplyArray{T, N}(A.f, map(maybe_cacheddata, args)...)
+end
 
 # immutable arrays don't need to copy.
 # Some special cases like vcat overload setindex! and therefore
@@ -328,9 +332,6 @@ function show(io::IO, A::Applied)
     end
     print(io, ')')
 end
-
-# BroadcastStyle(::Type{<:LinearAlgebra.QRCompactWYQ}) = DefaultArrayStyle{2}()
-# BroadcastStyle(::Type{<:LinearAlgebra.AdjointQ}) = DefaultArrayStyle{2}()
 
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, _2) where N = DefaultArrayStyle{N}()
 applybroadcaststyle(::Type{<:AbstractArray{<:Any,N}}, ::AbstractLazyLayout) where N = LazyArrayStyle{N}()
