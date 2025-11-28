@@ -466,3 +466,4 @@ permutedims(A::BroadcastArray{T}) where T = BroadcastArray{T}(A.f, map(_permuted
 _adjortrans(A::SubArray{<:Any,2, <:Any, <:Tuple{Slice,Any}}) = view(_adjortrans(parent(A)), parentindices(A)[2])
 _adjortrans(A::Adjoint) = A'
 _adjortrans(A::Transpose) = transpose(A)
+_adjortrans(A::BroadcastArray{T}) where T = BroadcastArray{T}(A.f, map(_adjortrans, A.args)...)
