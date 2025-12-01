@@ -234,6 +234,8 @@ function cacheddata(A::ApplyArray{T, N, F}) where {T, N, F}
     ApplyArray{T, N}(A.f, map(maybe_cacheddata, args)...)
 end
 
+maybe_cacheddata(A::ApplyArray) = cacheddata(A)
+
 # immutable arrays don't need to copy.
 # Some special cases like vcat overload setindex! and therefore
 # need to also overload copy

@@ -404,13 +404,13 @@ for op in (:*, :\, :+, :-)
     @eval layout_broadcasted(::ZerosLayout, ::CachedLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = broadcast(DefaultArrayStyle{1}(), $op, a, b)
 end
 
-function _bc_resizecacheddata!(::AbstractCachedLayout, a) 
+# We use BroadcastStyle dispatch instead of MemoryLayout dispatch since it's e.g. Vcats have an ApplyLayout but they can have a BroadcastStyle of CachedArrayStyle
+function _bc_resizecacheddata!(::CachedArrayStyle, a) 
     resizedata!(a, size(a)...)
     view(cacheddata(a), axes(a)...)
 end
-_bc_resizecacheddata!(::DualLayout{ML}, a) where {ML<:AbstractCachedLayout} =  _bc_resizecacheddata!(ML(), a)
 _bc_resizecacheddata!(_, a) = a
-_bc_resizecacheddata!(a) = _bc_resizecacheddata!(MemoryLayout(a), a)
+_bc_resizecacheddata!(a) = _bc_resizecacheddata!(_BroadcastStyle(typeof(a)), a)
 resize_bcargs!(bc::Broadcasted{<:CachedArrayStyle}) = broadcasted(bc.f, map(_bc_resizecacheddata!, bc.args)...)
 
 similar(bc::Broadcasted{<:CachedArrayStyle}, ::Type{T}) where T = CachedArray(zeros(T, axes(bc)))

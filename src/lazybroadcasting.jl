@@ -128,6 +128,8 @@ function cacheddata(A::BroadcastArray{T, N, F}) where {T, N, F}
     BroadcastArray{T, N}(A.f, map(maybe_cacheddata, args)...)
 end
 
+maybe_cacheddata(A::BroadcastArray) = cacheddata(A)
+
 # BroadcastArray are immutable
 copy(bc::BroadcastArray) = bc
 map(::typeof(copy), bc::BroadcastArray) = bc
