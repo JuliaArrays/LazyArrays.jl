@@ -123,9 +123,9 @@ sub_materialize(::BroadcastLayout, A) = converteltype(eltype(A), sub_materialize
 copy(bc::Broadcasted{<:AbstractLazyArrayStyle}) = BroadcastArray(bc)
 
 function cacheddata(A::BroadcastArray{T, N, F}) where {T, N, F}
-    args = arguments(A) 
-    conforming_resize!(args)
-    BroadcastArray{T, N}(A.f, map(maybe_cacheddata, args)...)
+    args = arguments(A)
+    conformed_data = conforming_resize!(args)
+    BroadcastArray{T, N}(A.f, conformed_data...)
 end
 
 maybe_cacheddata(A::BroadcastArray) = cacheddata(A)
@@ -165,8 +165,12 @@ BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyVector}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:SubArray{<:Any,1,<:LazyVector}}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:SubArray{<:Any,1,<:LazyVector}}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Adjoint{<:Any,<:SubArray{<:Any,2,<:LazyMatrix}}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:Transpose{<:Any,<:SubArray{<:Any,2,<:LazyMatrix}}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyMatrix,<:Tuple{Slice,Any}}}) = LazyArrayStyle{1}()
-
+BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyVector}}) = LazyArrayStyle{1}()
 BroadcastStyle(::Type{<:UpperOrLowerTriangular{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:LinearAlgebra.HermOrSym{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 

@@ -229,9 +229,9 @@ AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, ma
 @inline applied_axes(f, args...) = map(oneto, applied_size(f, args...))
 
 function cacheddata(A::ApplyArray{T, N, F}) where {T, N, F}
-    args = arguments(A) 
-    conforming_resize!(args)
-    ApplyArray{T, N}(A.f, map(maybe_cacheddata, args)...)
+    args = arguments(A)
+    conformed_data = conforming_resize!(args)
+    ApplyArray{T, N}(A.f, conformed_data...)
 end
 
 maybe_cacheddata(A::ApplyArray) = cacheddata(A)

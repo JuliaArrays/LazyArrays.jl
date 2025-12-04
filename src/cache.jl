@@ -646,50 +646,37 @@ length(A::CachedMatrix{<:T,<:AbstractMatrix{T},<:AbstractQ{T}}) where T = prod(s
 function max_datasize(sizes::Tuple)
     if has_vector(sizes)
         normalized = map(to_vector_size, sizes)
-        return reduce(@inline((a, b) -> max.(a, b)), normalized)
+        return reduce(@inline((a, b) -> _finite_max.(a, b)), normalized)
     else
-        return reduce(@inline((a, b) -> max.(a, b)), sizes)
+        return reduce(@inline((a, b) -> _finite_max.(a, b)), sizes)
     end
 end
+
+@inline _finite_max(a, b) = isfinite(a) ? (isfinite(b) ? max(a, b) : a) : b
+
+@inline _normalize_size(::Tuple{}) = (1, 1)
+@inline _normalize_size(sz::Tuple{Any}) = (only(sz), 1)
+@inline _normalize_size(sz) = sz
+@inline function _all_same_shape(args)
+    isempty(args) && return true
+    first_sz = _normalize_size(size(first(args)))
+    is_vec = first_sz[2] == 1
+    return __all_same_shape(is_vec, first_sz, Base.tail(args)...)
+end
+function __all_same_shape(is_vec, first_sz, arg, args...)
+    sz = _normalize_size(size(arg))
+    if is_vec
+        sz[2] != 1 && return false
+    else
+        sz != first_sz && return false
+    end
+    return __all_same_shape(is_vec, first_sz, args...)
+end
+__all_same_shape(_, _) = true
 
 @inline _expand_size(sz::Tuple{Any}, ::Tuple{Any}) = sz
-@inline _expand_size(sz::Tuple{Any}, ::Tuple{Any, Vararg}) = (only(sz), 1)
-@inline _expand_size(sz::Tuple{Any, Vararg}, ::Tuple{Any, Vararg}) = sz
-
-@inline _effective_ndims(sz::Int) = 1 
-@inline function _effective_ndims(sz::Tuple)
-    length(sz) == 1 && return 1
-    length(sz) == 2 && minimum(sz) <= 1 && return 1
-    return length(sz)
-end
-
-@inline _all_same_ndims(::Tuple{}) = true
-@inline _all_same_ndims(t::Tuple{Any}) = true
-@inline function _all_same_ndims(t::Tuple)
-    first_sz = _arraysize(first(t))
-    first_ndim = _effective_ndims(first_sz)
-    _check_same_ndims_args(first_ndim, Base.tail(t))
-end
-
-@inline _check_same_ndims_args(::Int, ::Tuple{}) = true
-@inline function _check_same_ndims_args(expected_ndim::Int, t::Tuple)
-    sz = _arraysize(first(t))
-    _effective_ndims(sz) == expected_ndim && _check_same_ndims_args(expected_ndim, Base.tail(t))
-end
-
-@inline _arraysize(x::Number) = (1,)
-@inline _arraysize(x) = size(x)
-
-function conforming_resize!(args::Tuple)
-    isempty(args) && return args
-    if !_all_same_ndims(args)
-        throw(ArgumentError("Cannot conform arrays with incompatible dimensions: $(map(_arraysize, args))"))
-    end
-    sizes = _datasizes(args)
-    sz = max_datasize(sizes)
-    _resize_each!(args, sizes, sz)
-    return args
-end  
+@inline _expand_size(sz::Tuple{Any}, ::Tuple{Any, Any}) = (only(sz), 1)
+@inline _expand_size(sz::Tuple{Any, Any}, ::Tuple{Any, Any}) = sz
 
 @inline _resize_each!(::Tuple{}, ::Tuple{}, sz) = nothing
 @inline function _resize_each!(args::Tuple, sizes::Tuple, sz)
@@ -698,4 +685,35 @@ end
     target_sz = _expand_size(sz, orig_sz)
     resizedata!(arg, target_sz...)
     _resize_each!(Base.tail(args), Base.tail(sizes), sz)
+end
+
+function conforming_resize!(args::Tuple)
+    isempty(args) && return ()
+    if !_all_same_shape(args)
+        throw(ArgumentError("All inputs must have the same shape to conform, got $(map(size, args))"))
+    end
+    sizes = _datasizes(args)
+    sz = max_datasize(sizes)
+    _resize_each!(args, sizes, sz)
+    return _get_conformed_data(args, sz)
+end
+
+@inline _get_conformed_data(::Tuple{}, sz) = ()
+@inline function _get_conformed_data(args::Tuple, sz)
+    arg = first(args)
+    data = _conform_single(arg, sz)
+    (data, _get_conformed_data(Base.tail(args), sz)...)
+end
+
+@inline function _conform_single(arg, sz::Tuple{Any})
+    len = only(sz)
+    data = maybe_cacheddata(arg)
+    data isa Number && return data
+    return view(data, 1:len)
+end
+
+@inline function _conform_single(arg, sz::Tuple{Any, Vararg})
+    data = maybe_cacheddata(arg)
+    indices = ntuple(i -> 1:sz[i], length(sz))
+    return view(data, indices...)
 end

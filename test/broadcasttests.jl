@@ -488,6 +488,22 @@ using Infinities
         @test BroadcastStyle(typeof(BroadcastMatrix(*, Accumulate(*, 1:10)', rand(10)'))) == CachedArrayStyle{2}()
         @test BroadcastStyle(typeof(BroadcastMatrix(*, rand(5, 5)', LazyArrays.CachedArray(rand(5, 5))))) == CachedArrayStyle{2}()
     end
+
+    @testset "Preserving LazyArrayStyle with adjoints/views" begin
+        for x in (BroadcastVector(exp, 1:10), ApplyArray(+, 1:10))
+            for op in (transpose, adjoint)
+                y = op(view(x, 1:5))
+                @test BroadcastStyle(typeof(y)) == LazyArrayStyle{2}()
+            end
+        end
+        x = BroadcastMatrix(*, rand(10, 10), rand(10, 10))
+        for op in (transpose, adjoint)
+            y = op(view(x, 1:5, 1:5))
+            @test BroadcastStyle(typeof(y)) == LazyArrayStyle{2}()
+        end
+        x = view(BroadcastVector(exp, 1:10), 2:7)
+        @test BroadcastStyle(typeof(x)) == LazyArrayStyle{1}()
+    end
 end
 
 end #module

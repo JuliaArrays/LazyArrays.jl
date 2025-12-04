@@ -685,29 +685,34 @@ using Infinities
             @test LazyArrays._datasizes(args) == ((5, 6), (5, 6));
 
             @testset "conforming_resize! dimension mismatch" begin
-                args = (cache(1:10), cache(1:10))
-                @test LazyArrays.conforming_resize!(args) === args  
+                args = (cache(1:10), cache(1:10));
+                @test LazyArrays.conforming_resize!(args) == ([], [])
                 
-                args = (cache(1:10), LazyArrays.CachedArray(rand(10, 5)))
+                args = (cache(1:10), LazyArrays.CachedArray(rand(10, 5)));
                 @test_throws ArgumentError LazyArrays.conforming_resize!(args)
                 
-                args = (LazyArrays.CachedArray(rand(3, 4)), LazyArrays.CachedArray(rand(5, 2)))
-                @test LazyArrays.conforming_resize!(args) === args  
+                args = (LazyArrays.CachedArray(rand(3, 4)), LazyArrays.CachedArray(rand(4, 2)));
+                @test_throws ArgumentError LazyArrays.conforming_resize!(args)
+
+                args = (LazyArrays.CachedArray(rand(3, 4)), LazyArrays.CachedArray(rand(3, 4)));
+                @test LazyArrays.conforming_resize!(args) == ([;;], [;;])
+                LazyArrays.resizedata!(args[1], 2, 2);  
+                @test LazyArrays.conforming_resize!(args) == (view(args[1].data, 1:2, 1:2), view(args[2].data, 1:2, 1:2))
                 
-                args = (1, cache(1:10))
-                @test LazyArrays.conforming_resize!(args) === args 
+                args = (1, cache(1:10));
+                @test LazyArrays.conforming_resize!(args) == (1, [1])
                 
-                args = (cache(1:10), LazyArrays.CachedArray(rand(2, 3)), reshape(cache(1:8), 2, 2, 2))
+                args = (cache(1:10), LazyArrays.CachedArray(rand(2, 3)), reshape(cache(1:8), 2, 2, 2));
                 @test_throws ArgumentError LazyArrays.conforming_resize!(args)
                 
-                args = (reshape(cache(1:8), 2, 2, 2), reshape(cache(1:27), 3, 3, 3))
-                @test LazyArrays.conforming_resize!(args) === args  
+                args = (reshape(cache(1:8), 2, 2, 2), reshape(cache(1:27), 3, 3, 3));
+                @test_throws ArgumentError LazyArrays.conforming_resize!(args)
                 
-                args = ()
+                args = ();
                 @test LazyArrays.conforming_resize!(args) === args
                 
-                args = (cache(1:10),)
-                @test LazyArrays.conforming_resize!(args) === args
+                args = (cache(1:10),);
+                @test LazyArrays.conforming_resize!(args) == ([],)
             end
         end
     end
@@ -716,16 +721,34 @@ using Infinities
         x = ApplyArray(+, 1:10, cache(11:20));
         @test cacheddata(x) == ApplyArray(+, 1:10, 11:20) 
         @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+        x = view(x, 1:5);
+        @test cacheddata(x) == ApplyArray(+, 1:5, 11:15)
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+        x = x';
+        @test cacheddata(x) == transpose(ApplyArray(+, 1:5, 11:15))
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{2}()
 
         x = BroadcastVector(*, 1:10, cache(1:10));
         @test cacheddata(x) == BroadcastVector(*, 1:10, 1:10)
         @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+        x = view(x, 2:7);
+        @test cacheddata(x) == BroadcastVector(*, 2:7, 2:7)
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+        x = x';
+        @test cacheddata(x) == transpose(BroadcastVector(*, 2:7, 2:7))
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{2}()
 
         x = ApplyArray(+, cache(1:10), cache(11:20));
         @test cacheddata(x) == ApplyArray(+, 1:0, 1:0)
         @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
         LazyArrays.resizedata!(x.args[1], 3)
         @test cacheddata(x) == ApplyArray(+, 1:3, 11:13)
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+        x = x';
+        @test cacheddata(x) == transpose(ApplyArray(+, 1:3, 11:13))
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{2}()
+        x = view(x, 1:2);
+        @test cacheddata(x) == [12, 14]
         @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
 
         x = BroadcastVector(*, cache(1:10), cache(11:20));
@@ -734,6 +757,9 @@ using Infinities
         LazyArrays.resizedata!(x.args[1], 4)
         @test cacheddata(x) == BroadcastVector(*, 1:4, 11:14)
         @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{1}()
+        x = x';
+        @test cacheddata(x) == transpose(BroadcastVector(*, 1:4, 11:14))
+        @test Base.Broadcast.BroadcastStyle(typeof(cacheddata(x))) == LazyArrays.LazyArrayStyle{2}()
     end
                                                                 
     @testset "resizedata! for AdjTrans array" begin
