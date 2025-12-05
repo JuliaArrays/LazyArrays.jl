@@ -124,11 +124,7 @@ function rowsupport(lay::Union{PaddedColumns{Lay}, PaddedLayout{Lay}}, A, k) whe
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
 end
 
-function resizedata!_layout(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows}}, B, m...)
-    any(iszero,m) || Base.checkbounds(paddeddata(B), m...)
-    B
-end
-
+resizedata!_layout(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows}}, B, m...) = B
 function resizedata!_layout(::ApplyLayout{typeof(vcat)}, B::AbstractVector, n) 
     m = n 
     for arg in arguments(B)
