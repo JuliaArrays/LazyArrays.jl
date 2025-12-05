@@ -226,7 +226,7 @@ end
 
 resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(B.data), MemoryLayout(B.array), B, mn...)
 resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(B.data), UnknownLayout(), B, mn...)
-resizedata!_layout(A, mn...) = A # don't do anything
+resizedata!_layout(_, A, mn...) = A # don't do anything
 
 
 resizedata!(A, mn...) = resizedata!_layout(MemoryLayout(A), A, mn...)
