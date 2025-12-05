@@ -124,16 +124,12 @@ function rowsupport(lay::Union{PaddedColumns{Lay}, PaddedLayout{Lay}}, A, k) whe
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
 end
 
-function _vcat_resizedata!(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows}}, B, m...)
+function resizedata!_layout(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows}}, B, m...)
     any(iszero,m) || Base.checkbounds(paddeddata(B), m...)
     B
 end
-function _vcat_resizedata!(::Union{DualLayout{<:PaddedRows}, AbstractPaddedLayout}, B::Vcat{<:Any, 1}, m) # ambiguity
-    iszero(m) || Base.checkbounds(paddeddata(B), m)
-    B
-end
 
-function _vcat_resizedata!(_, B::Vcat{<:Any, 1}, n) 
+function resizedata!_layout(::ApplyLayout{typeof(vcat)}, B::AbstractVector, n) 
     m = n 
     for arg in arguments(B)
         m ≤ 0 && break
@@ -145,9 +141,6 @@ function _vcat_resizedata!(_, B::Vcat{<:Any, 1}, n)
     B
 end
 
-_vcat_resizedata!(_, B, m...) = B # by default we can't resize
-
-resizedata!(B::Vcat, m...) = _vcat_resizedata!(MemoryLayout(B), B, m...)
 
 cacheddata(B::Vcat) = Vcat(map(maybe_cacheddata, arguments(B))...)
 

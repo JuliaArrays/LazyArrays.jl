@@ -226,7 +226,10 @@ end
 
 resizedata!(B::CachedArray, mn...) = resizedata!(MemoryLayout(B.data), MemoryLayout(B.array), B, mn...)
 resizedata!(B::AbstractCachedArray, mn...) = resizedata!(MemoryLayout(B.data), UnknownLayout(), B, mn...)
-resizedata!(A, mn...) = A # don't do anything
+resizedata!_layout(A, mn...) = A # don't do anything
+
+
+resizedata!(A, mn...) = resizedata!_layout(MemoryLayout(A), A, mn...)
 function resizedata!(A::AdjOrTrans, m, n)
     resizedata!(parent(A), n, m)
     A
@@ -616,3 +619,12 @@ CachedArray(data::AbstractMatrix{T}, array::AbstractQ{T}, datasize::NTuple{2,Int
     CachedMatrix{T,typeof(data),typeof(array)}(data, array, datasize)
 
 length(A::CachedMatrix{<:T,<:AbstractMatrix{T},<:AbstractQ{T}}) where T = prod(size(A.array))
+
+
+
+###
+# resizedata! for types
+###
+
+
+resizedata!_layout(lay::BroadcastLayout, b, m...) = resizedata!.(arguments(lay, b), m...)
