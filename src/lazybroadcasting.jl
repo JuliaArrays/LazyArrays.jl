@@ -124,8 +124,7 @@ copy(bc::Broadcasted{<:AbstractLazyArrayStyle}) = BroadcastArray(bc)
 
 function cacheddata(A::BroadcastArray{T, N, F}) where {T, N, F}
     args = arguments(A)
-    conformed_data = conforming_resize!(args)
-    BroadcastArray{T, N}(A.f, conformed_data...)
+    BroadcastArray{T, N}(A.f, map(maybe_cacheddata, args)...)
 end
 
 maybe_cacheddata(A::BroadcastArray) = cacheddata(A)
