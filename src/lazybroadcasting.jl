@@ -165,12 +165,8 @@ BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyVector}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyVector}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Adjoint{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:SubArray{<:Any,1,<:LazyVector}}}) = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:SubArray{<:Any,1,<:LazyVector}}}) = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Adjoint{<:Any,<:SubArray{<:Any,2,<:LazyMatrix}}}) = LazyArrayStyle{2}()
-BroadcastStyle(::Type{<:Transpose{<:Any,<:SubArray{<:Any,2,<:LazyMatrix}}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyMatrix,<:Tuple{Slice,Any}}}) = LazyArrayStyle{1}()
-BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyVector}}) = LazyArrayStyle{1}()
+
 BroadcastStyle(::Type{<:UpperOrLowerTriangular{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:LinearAlgebra.HermOrSym{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 
