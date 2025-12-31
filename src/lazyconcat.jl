@@ -708,6 +708,7 @@ end
 # *
 ###
 
+copy(M::Mul{ApplyLayout{typeof(vcat)}}) = vcat((arguments(vcat, M.A) .* Ref(M.B))...)
 copy(M::Mul{ApplyLayout{typeof(vcat)},<:AbstractLazyLayout}) = vcat((arguments(vcat, M.A) .* Ref(M.B))...)
 
 _all_prods(a::Tuple{}, ::Tuple) = ()
