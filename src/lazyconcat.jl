@@ -578,20 +578,6 @@ _vcat_layout_broadcasted((Ahead,Atail)::Tuple{Number,Any}, (Bhead,Btail)::Tuple{
 
 
 
-function +(A::Vcat, B::Vcat)
-    size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
-    A .+ B
-end
-function +(A::Vcat, B::AbstractArray)
-    size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
-    A .+ B
-end
-function +(A::AbstractArray, B::Vcat)
-    size(A) == size(B) || throw(DimensionMismatch("dimensions must match."))
-    A .+ B
-end
-
-
 ####
 # Cumsum
 ####
