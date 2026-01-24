@@ -42,7 +42,7 @@ import ArrayLayouts: AbstractQLayout, Dot, Dotu, Ldiv, Lmul, MatMulMatAdd, MatMu
                      diagonaldata, subdiagonaldata, supdiagonaldata, MemoryLayout, MatLmulVec, MatLmulMat,
                      AdjQRCompactWYQLayout, QRCompactWYQLayout, MatLmulMat, MatRmulMat
 
-import FillArrays: AbstractFill, getindex_value
+import FillArrays: AbstractFill, AbstractZeros, getindex_value
 
 export Mul, Applied, MulArray, MulVector, MulMatrix, InvMatrix, PInvMatrix,
         Hcat, Vcat, Kron, BroadcastArray, BroadcastMatrix, BroadcastVector, cache, Ldiv, Inv, PInv, Diff, Cumsum, Accumulate,
@@ -62,6 +62,9 @@ abstract type LazyArray{T,N} <: LayoutArray{T,N} end
 
 const LazyMatrix{T} = LazyArray{T,2}
 const LazyVector{T} = LazyArray{T,1}
+
+# work around infinite bug.
+FillArrays.elconvert(::Type{T}, A::LazyArray) where T = copy(convert(AbstractArray{T}, A))
 
 
 

@@ -710,6 +710,12 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         args = LazyArrays._vcat_sub_arguments(MemoryLayout(V), V, (), 0, 1:3)
         @test args == ()
     end
+
+    @testset "concat + Zeros" begin
+        v = Vcat(1,2:3)
+        @test v + Zeros(3) == Zeros(3) + v == v
+        @test v - Zeros(3) == -(Zeros(3) - v) == v
+    end
 end
 
 end # module
