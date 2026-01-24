@@ -64,7 +64,7 @@ const LazyMatrix{T} = LazyArray{T,2}
 const LazyVector{T} = LazyArray{T,1}
 
 # work around infinite bug.
-FillArrays.elconvert(::Type{T}, A::LazyArray) where T = convert(AbstractArray{T}, A)
+FillArrays.elconvert(::Type{T}, A::LazyArray) where T = copy(convert(AbstractArray{T}, A))
 
 
 
