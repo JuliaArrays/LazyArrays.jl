@@ -70,6 +70,8 @@ convert(::Type{AbstractArray{T}}, S::CachedArray{<:Any,N}) where {T,N} = convert
 convert(::Type{AbstractArray{T,N}}, S::CachedArray{<:Any,N}) where {T,N} =
     CachedArray(convert(AbstractArray{T}, S.data), convert(AbstractArray{T}, S.array), S.datasize)
 
+FillArrays.elconvert(::Type{T}, A::LazyArray) where T = copy(convert(AbstractArray{T}, A))
+
 axes(A::CachedArray) = axes(A.array)
 size(A::CachedArray) = size(A.array)
 length(A::CachedArray) = length(A.array)
