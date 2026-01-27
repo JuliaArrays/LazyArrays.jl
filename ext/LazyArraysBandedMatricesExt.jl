@@ -159,8 +159,10 @@ function materialize!(M::MatMulVecAdd{<:BandedLayouts,<:AbstractPaddedLayout,<:A
     length(x) == size(A,2) || throw(DimensionMismatch())
 
     x̃ = paddeddata(x)
-    resizedata!(y, min(length(M),length(x̃)+bandwidth(A,1)))
+    m = min(length(M),length(x̃)+bandwidth(A,1))
+    resizedata!(y, m)
     ỹ = paddeddata(y)
+    Base.checkbounds(ỹ, m)
 
     muladd!(α, view(A, axes(ỹ,1), axes(x̃,1)) , x̃, β, ỹ)
     y
