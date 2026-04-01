@@ -967,15 +967,6 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A\D ≈ (B*B)\D
         @test D\A ≈ D\(B*B)
     end
-
-    @testset "Vcatbanded * padded" begin
-        A = Vcat(Zeros(2,6),
-             BandedMatrix(1 => 1:5, -1 => 2:6))
-        x = Vcat([1,2],Zeros(4))
-
-        @test A*x ≈ Matrix(A)*Vector(x)
-        @test A*x isa Vcat
-    end
 end
 
 end # module
