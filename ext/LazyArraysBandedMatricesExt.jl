@@ -629,6 +629,7 @@ copy(M::Mul{BroadcastLayout{typeof(*)}, <:BroadcastBandedLayout}) = lazymaterial
 ## padded copy
 mulreduce(M::Mul{<:BroadcastBandedLayout, <:Union{PaddedColumns,PaddedLayout,AbstractStridedLayout}}) = MulAdd(M)
 mulreduce(M::Mul{ApplyBandedLayout{F}, D}) where {F,D<:Union{PaddedColumns,PaddedLayout,AbstractStridedLayout}} = Mul{ApplyLayout{F},D}(M.A, M.B)
+mulreduce(M::Mul{<:ApplyBandedLayout{typeof(vcat)}, <:Union{PaddedColumns,PaddedLayout}}) = MulAdd(M)
 # need to overload copy due to above
 copy(M::Mul{<:BroadcastBandedLayout, <:Union{PaddedColumns,PaddedLayout}}) = copy(mulreduce(M))
 copy(M::Mul{<:BroadcastBandedLayout, <:AbstractStridedLayout}) = copy(mulreduce(M))
