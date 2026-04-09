@@ -736,7 +736,22 @@ end
 # qr!
 ####
 
-pad(A, a, ::Colon) = Vcat(A, Zeros{eltype(A)}(length(a)-size(A,1), size(A,2)))
+_colon2axes(::Tuple{}, bx::Tuple{}) = ()
+_colon2axes(ax::Tuple, bx::Tuple{Colon, Vararg{Any}}) = (first(ax), _colon2axes(tail(ax), tail(bx))...)
+_colon2axes(ax::Tuple, bx::Tuple{Integer, Vararg{Any}}) = (oneto(first(bx)), _colon2axes(tail(ax), tail(bx))...)
+_colon2axes(ax::Tuple, bx::Tuple) = (first(bx), _colon2axes(tail(ax), tail(bx))...)
+pad(c, ax...) = PaddedArray(c, _colon2axes(axes(c), ax))
+pad(c, ax::Colon...) = c
+
+pad(c::Transpose, ax, bx) = transpose(pad(parent(c), bx, ax))
+pad(c::Adjoint, ax, bx) = adjoint(pad(parent(c), bx, ax))
+
+pad(c::AbstractVector{T}, n::Int) where T = Vcat(c, Zeros{T}(n-length(c)))
+pad(c::AbstractVector{T}, ax::OneTo) where T = pad(c, length(ax))
+pad(A::AbstractMatrix{T}, n::Int, ::Colon) where T = Vcat(A, Zeros{T}(length(a)-size(A,1), size(A,2)))
+pad(A::AbstractMatrix{T}, a::OneTo, ::Colon) where T = pad(A, length(a), :)
+
+
 
 function padqr(F::LinearAlgebra.QRCompactWY, (a,b))
     LinearAlgebra.QRCompactWY(pad(F.factors, a, :), F.T)
