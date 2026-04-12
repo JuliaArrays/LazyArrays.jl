@@ -748,7 +748,7 @@ pad(c::Adjoint, ax, bx) = adjoint(pad(parent(c), bx, ax))
 
 pad(c::AbstractVector{T}, n::Int) where T = Vcat(c, Zeros{T}(n-length(c)))
 pad(c::AbstractVector{T}, ax::OneTo) where T = pad(c, length(ax))
-pad(A::AbstractMatrix{T}, n::Int, ::Colon) where T = Vcat(A, Zeros{T}(length(a)-size(A,1), size(A,2)))
+pad(A::AbstractMatrix{T}, n::Int, ::Colon) where T = Vcat(A, Zeros{T}(n-size(A,1), size(A,2)))
 pad(A::AbstractMatrix{T}, a::OneTo, ::Colon) where T = pad(A, length(a), :)
 
 
