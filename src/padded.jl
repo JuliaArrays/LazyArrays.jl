@@ -746,10 +746,10 @@ pad(c, ax::Colon...) = c
 pad(c::Transpose, ax, bx) = transpose(pad(parent(c), bx, ax))
 pad(c::Adjoint, ax, bx) = adjoint(pad(parent(c), bx, ax))
 
-pad(c::AbstractVector{T}, n::Int) where T = Vcat(c, Zeros{T}(n-length(c)))
-pad(c::AbstractVector{T}, ax::OneTo) where T = pad(c, length(ax))
-pad(A::AbstractMatrix{T}, n::Int, ::Colon) where T = Vcat(A, Zeros{T}(n-size(A,1), size(A,2)))
-pad(A::AbstractMatrix{T}, a::OneTo, ::Colon) where T = pad(A, length(a), :)
+pad(c::AbstractVector{T}, n::Integer) where T = Vcat(c, Zeros{T}(n-length(c)))
+pad(c::AbstractVector{T}, ax::AbstractUnitRange) where T = pad(c, length(ax))
+pad(A::AbstractMatrix{T}, n::Integer, ::Colon) where T = Vcat(A, Zeros{T}(n-size(A,1), size(A,2)))
+pad(A::AbstractMatrix{T}, a::AbstractUnitRange, ::Colon) where T = pad(A, length(a), :)
 
 
 
