@@ -2,7 +2,7 @@ module PaddedTests
 
 using LazyArrays, FillArrays, ArrayLayouts, Base64, Test
 using StaticArrays
-import LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, LayoutVector, MemoryLayout, paddeddata, ApplyLayout, sub_materialize, CachedVector, simplifiable
+import LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, LayoutVector, MemoryLayout, paddeddata, ApplyLayout, sub_materialize, CachedVector, simplifiable, pad
 import ArrayLayouts: OnesLayout
 import Base: setindex
 using LinearAlgebra
@@ -503,6 +503,19 @@ paddeddata(a::PaddedPadded) = a
         M = ApplyArray(*, Q, B)
         @test colsupport(M) == Base.OneTo(5)
         @test M[1,:] ≈ (Q*B)[1,:]
+    end
+
+    @testset "pad" begin
+        @test pad(1:3, 10) ≡ pad(1:3, Base.OneTo(10)) ≡ Vcat(1:3, Zeros{Int}(7))
+        @test pad(1:3, :) ≡ 1:3
+
+        A = [1 2 3; 4 5 6]
+        @test pad(A, 5, :) isa Vcat
+        @test pad(A, 5, 10) isa ApplyArray
+        @test pad(A, 5, :) == pad(A, Base.OneTo(5), :) == [A; zeros(3,3)]
+        @test pad(A, :, 5) == pad(A, :, Base.OneTo(5)) == [A zeros(2,2)]
+        @test pad(A, :, :) ≡ A
+        @test pad(A, 5, 10) == [A zeros(2,7); zeros(3,3) zeros(3,7)]
     end
 end
 end # module
