@@ -516,6 +516,9 @@ paddeddata(a::PaddedPadded) = a
         @test pad(A, :, 5) == pad(A, :, Base.OneTo(5)) == [A zeros(2,2)]
         @test pad(A, :, :) ≡ A
         @test pad(A, 5, 10) == [A zeros(2,7); zeros(3,3) zeros(3,7)]
+
+        @test pad(A', 5, 10) == pad(transpose(A), 5, 10) == pad(A, 10, 5)'
+        @test pad(A', 5, :) == pad(A', Base.OneTo(5), :) == pad(A,:,5)'
     end
 end
 end # module

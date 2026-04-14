@@ -743,8 +743,13 @@ _colon2axes(ax::Tuple, bx::Tuple) = (first(bx), _colon2axes(tail(ax), tail(bx)).
 pad(c, ax...) = PaddedArray(c, _colon2axes(axes(c), ax))
 pad(c, ax::Colon...) = c
 
-pad(c::Transpose, ax, bx) = transpose(pad(parent(c), bx, ax))
-pad(c::Adjoint, ax, bx) = adjoint(pad(parent(c), bx, ax))
+for (Trans, trans) in ((:Transpose, :transpose), (:Adjoint, :adjoint))
+    @eval begin
+        pad(c::$Trans, ax, bx) = $trans(pad(parent(c), bx, ax))
+        pad(c::$Trans, a::AbstractUnitRange, ::Colon) = $trans(pad(parent(c), :, a))
+        pad(c::$Trans, a::Integer, ::Colon) = $trans(pad(parent(c), :, a))
+    end
+end
 
 pad(c::AbstractVector{T}, n::Integer) where T = Vcat(c, Zeros{T}(n-length(c)))
 pad(c::AbstractVector{T}, ax::AbstractUnitRange) where T = pad(c, length(ax))
