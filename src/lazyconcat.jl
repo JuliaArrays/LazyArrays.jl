@@ -414,6 +414,8 @@ copy(f::Transpose{<:Any,<:Union{Vcat,Hcat}}) = transpose(copy(parent(f)))
 
 _permutedims(a) = a
 _permutedims(a::AbstractArray) = permutedims(a)
+_permutedims(a::Transpose{<:Number}) = parent(a)
+_permutedims(a::Adjoint{<:Real}) = parent(a)
 
 permutedims(A::Hcat{T}) where T = Vcat{T}(map(_permutedims,A.args)...)
 permutedims(A::Vcat{T}) where T = Hcat{T}(map(_permutedims,A.args)...)
@@ -759,7 +761,7 @@ function rowsupport(lay::ApplyLayout{typeof(hcat)}, M::AbstractArray, k)
 end
 
 include("padded.jl")
-
+include("interlace.jl")
 
 
 ###
