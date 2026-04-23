@@ -158,6 +158,7 @@ BroadcastStyle(::Type{<:Transpose{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:SubArray{<:Any,1,<:LazyMatrix,<:Tuple{Slice,Any}}}) = LazyArrayStyle{1}()
 
 BroadcastStyle(::Type{<:UpperOrLowerTriangular{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
+BroadcastStyle(::Type{<:UpperOrLowerTriangular{<:Any,<:AdjOrTrans{<:Any,<:LazyMatrix}}}) = LazyArrayStyle{2}()
 BroadcastStyle(::Type{<:LinearAlgebra.HermOrSym{<:Any,<:LazyMatrix}}) = LazyArrayStyle{2}()
 
 
