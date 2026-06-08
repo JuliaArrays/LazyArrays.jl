@@ -482,17 +482,17 @@ for (Dt, dt) in ((:Dot, :dot), (:Dotu, :dotu))
             if MemoryLayout(a) isa layA && MemoryLayout(b) isa layB
                 return convert(T, $dt(Array(a),Array(b)))
             end
-            length(a) == length(b) && return convert(T, $dt(a,b))
+            size(a) == size(b) && return convert(T, $dt(a,b))
             # following handles scalars
             ((length(a) == 1) || (length(b) == 1)) && return convert(T, a[1] * b[1])
-            m = min(length(a), length(b))
-            convert(T, $dt(view(a, 1:m), view(b, 1:m)))
+            m = min.(size(a), size(b))
+            convert(T, $dt(view(a, OneTo.(m)...), view(b, OneTo.(m)...)))
         end
 
         function copy(D::$Dt{<:AbstractPaddedLayout})
             a = paddeddata(D.A)
-            m = length(a)
-            v = view(D.B, 1:m)
+            m = size(a)
+            v = view(D.B, OneTo.(m)...)
             if MemoryLayout(a) isa AbstractPaddedLayout
                 convert(eltype(D), $dt(Array(a), v))
             else
@@ -503,8 +503,8 @@ for (Dt, dt) in ((:Dot, :dot), (:Dotu, :dotu))
 
         function copy(D::$Dt{<:Any, <:AbstractPaddedLayout})
             b = paddeddata(D.B)
-            m = length(b)
-            v = view(D.A, 1:m)
+            m = size(b)
+            v = view(D.A, OneTo.(m)...)
             if MemoryLayout(b) isa AbstractPaddedLayout
                 convert(eltype(D), $dt(v, Array(b)))
             else
