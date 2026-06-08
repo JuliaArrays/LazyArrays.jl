@@ -520,5 +520,11 @@ paddeddata(a::PaddedPadded) = a
         @test pad(A', 5, 10) == pad(transpose(A), 5, 10) == pad(A, 10, 5)'
         @test pad(A', 5, :) == pad(A', Base.OneTo(5), :) == pad(A,:,5)'
     end
+
+    @testset "padded matrix Dot" begin
+        a = Vcat(randn(2,3), Zeros(3,3))
+        b = Vcat(randn(3,3), Zeros(2,3))
+        @test dot(a,b) ≈ dot(Matrix(a), Matrix(b))
+    end
 end
 end # module
