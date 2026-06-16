@@ -680,6 +680,9 @@ function setindex!(A::ApplyMatrix{T,typeof(setindex)}, c, k::Integer, j::Integer
     A
 end
 
+# since we allow mutation we need to overload copy
+copy(A::ApplyArray{T,N,typeof(setindex)}) where {T,N} = ApplyArray{T,N}(setindex, copy(A.args[1]), tail(A.args)...)
+
 const PaddedArray{T,N,M} = ApplyArray{T,N,typeof(setindex),<:Tuple{Zeros,M,Vararg{Any,N}}}
 const PaddedVector{T,M} = PaddedArray{T,1,M}
 const PaddedMatrix{T,M} = PaddedArray{T,2,M}
