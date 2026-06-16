@@ -356,8 +356,8 @@ end
 # on the memory layout
 ###
 
-function copyto!_layout(::LAY, ::LAY, dest::AbstractArray{<:Any,N}, src::AbstractArray{<:Any,N}) where {LAY<:ApplyLayout,N}
-    map(copyto!, arguments(dest), arguments(src))
+function copyto!_layout(layd::LAY, lays::LAY, dest::AbstractArray{<:Any,N}, src::AbstractArray{<:Any,N}) where {LAY<:ApplyLayout,N}
+    map(copyto!, arguments(layd, dest), arguments(lays, src))
     dest
 end
 
