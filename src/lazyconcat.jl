@@ -227,6 +227,10 @@ getindex(f::Applied{<:Any,typeof(hvcat)}, k::Integer, j::Integer)= hvcat_getinde
 # based on Base/array.jl, Base/abstractarray.jl
 copyto!_layout(_, LAY::ApplyLayout{typeof(vcat)}, dest::AbstractArray{<:Any,N}, V::AbstractArray{<:Any,N}) where N =
     vcat_copyto!(dest, arguments(LAY, V)...)
+
+copyto!_layout(LAY::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, dest::AbstractArray{<:Any,N}, V::AbstractArray{<:Any,N}) where N =
+    vcat_copyto!(dest, arguments(LAY, V)...)
+
 function vcat_copyto!(dest::AbstractMatrix, arrays...)
     nargs = length(arrays)
     nrows = size(dest,1)

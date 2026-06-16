@@ -716,6 +716,13 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
         @test v + Zeros(3) == Zeros(3) + v == v
         @test v - Zeros(3) == -(Zeros(3) - v) == v
     end
+
+    @testset "vcat copyto! vcat (#407)" begin
+        a = ApplyArray(vcat, [1, 2], [3, 4])
+        b = ApplyArray(vcat, [0, 0], [0, 0])
+        copyto!(b, a)
+        @test a == b
+    end
 end
 
 end # module
