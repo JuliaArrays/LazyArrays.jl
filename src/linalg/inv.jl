@@ -143,11 +143,17 @@ end
     lazymaterialize(*, reverse(A₀)..., A₁B)
 end
 @inline copy(L::Rdiv{ApplyLayout{typeof(*)}}) = _copy_rdiv_mul(L.B, reverse(arguments(ApplyLayout{typeof(*)}(), L.A))...)
+@inline copy(L::Rdiv{ApplyLayout{typeof(*)}, <:AbstractLazyLayout}) = _copy_rdiv_mul(L.B, reverse(arguments(ApplyLayout{typeof(*)}(), L.A))...)
 @inline copy(L::Rdiv{ApplyLayout{typeof(*)}, ApplyLayout{typeof(*)}}) = _copy_rdiv_mul(L.B, reverse(arguments(ApplyLayout{typeof(*)}(), L.A))...)
+@inline copy(L::Rdiv{ApplyLayout{typeof(*)}, <:DiagonalLayout}) = _copy_rdiv_mul(L.B, reverse(arguments(ApplyLayout{typeof(*)}(), L.A))...)
 
 @inline _copy_rdiv_rdiv(A, B₁) = A / B₁
 @inline _copy_rdiv_rdiv(A, B₁, B₀...) = _copy_rdiv_rdiv(A / B₁, B₀...)
 @inline copy(L::Rdiv{<:Any, ApplyLayout{typeof(*)}}) = _copy_rdiv_rdiv(L.A, reverse(arguments(ApplyLayout{typeof(*)}(), L.B))...)
+@inline copy(L::Rdiv{<:AbstractLazyLayout, ApplyLayout{typeof(*)}}) = _copy_rdiv_rdiv(L.A, reverse(arguments(ApplyLayout{typeof(*)}(), L.B))...)
+
+@inline copy(L::Rdiv{<:AbstractLazyLayout,D}) where D<:DiagonalLayout = copy(Rdiv{UnknownLayout,D}(L.A,L.B))
+@inline copy(L::Rdiv{<:AbstractLazyLayout,D}) where {D<:DiagonalLayout{<:AbstractFillLayout}} = copy(Rdiv{UnknownLayout,D}(L.A, L.B))
 
 
 @inline simplifiable(L::Ldiv) = _not(_or(islazy(L.A), islazy(L.B)))

@@ -167,6 +167,13 @@ LinearAlgebra.factorize(A::MyLazyArray) = factorize(A.data)
         @test MemoryLayout(typeof(transpose(A))) isa LazyLayout
         @test MemoryLayout(typeof(view(A,1:2,1:2))) isa LazyLayout
         @test MemoryLayout(typeof(reshape(A,4))) isa LazyLayout
+
+        @test (A*B) / B ≈ Matrix(A*B) / Matrix(B)
+        @test (A*B) / (A*B) ≈ I
+        @test A / (A*B) ≈ A / Matrix(A*B)
+        D = Diagonal(1:2)
+        @test (A*B) / D ≈ Matrix(A*B) / D
+        @test D / (A*B) ≈ D / Matrix(A*B)
     end
 
     @testset "QR" begin
