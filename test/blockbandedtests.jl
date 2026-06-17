@@ -288,6 +288,15 @@ LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
         A = _BandedBlockBandedMatrix(BroadcastArray(exp,randn(9,10)), rows,cols, (l,u), (λ,μ))
         @test MemoryLayout(A) isa BandedBlockBandedColumns{LazyLayout}
     end
+
+    @testset "lazy blockbanded * lazy banded" begin
+        B = BandedBlockBandedMatrix(randn(6,6),1:3,1:3,(1,1),(1,1))
+        C = brandn(6,6,1,1)
+        A = BroadcastArray(+, B, B)
+        D = ApplyArray(*, C, C)
+        @test A*D == A*C*C
+        @test D*A == C*C*A
+    end
 end
 
 end # module
