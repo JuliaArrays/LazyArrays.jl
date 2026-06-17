@@ -114,6 +114,14 @@ import Base.Broadcast: materialize
         @test M \ b isa Vector
         @test M\M isa Matrix
 
+        @test simplifiable(/, M, M) == simplifiable(/, M, B) == simplifiable(/, A, M) == Val(true)
+        @test simplifiable(\, M, M) == simplifiable(\, M, B) == simplifiable(\, A, M) == Val(true)
+
+        @test b' / M ≈ b' / (A*B) ≈ (b' / B) /A
+        @test B / M ≈ B / (A*B)
+        @test M / B ≈ (A*B)/B ≈ A
+        @test M/M ≈ I
+
         @testset "Inv of Mul" begin
             @test inv(M) ≈ inv(A*B)
             @test_throws DimensionMismatch inv(ApplyArray(*,randn(5,6), rand(6,5)))
@@ -156,6 +164,8 @@ import Base.Broadcast: materialize
         @test simplifiable(\, A, b) isa Val{true}
         B = ApplyArray(*, randn(5,5), b)
         @test simplifiable(\, A, B) isa Val{true}
+        @test simplifiable(/, b', A) isa Val{true}
+        @test simplifiable(/, B, A) isa Val{true}
     end
 end
 
