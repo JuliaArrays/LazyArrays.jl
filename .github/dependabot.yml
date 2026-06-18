@@ -7,7 +7,7 @@ updates:
   - package-ecosystem: "julia"
     directories: # Location of Julia projects
       - "/"
-      - "/docs
+      - "/docs"
     schedule:
       interval: "weekly"
     # groups: # uncomment to group all julia package updates into a single PR
