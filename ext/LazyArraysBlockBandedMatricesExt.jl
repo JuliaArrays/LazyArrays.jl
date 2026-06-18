@@ -12,15 +12,23 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, transposelayout,
                 BroadcastMatrix, _broadcastarray2broadcasted, cache_layout, resizedata!, simplifiable,
                 AbstractLazyLayout, LazyArrayStyle, LazyLayout, ApplyLayout, BroadcastLayout, AbstractInvLayout,
                 _mul_args_colsupport, _mul_args_rowsupport, _mat_mul_arguments, LazyBandedLayout,
-                CachedArray, _broadcast_sub_arguments, simplify, lazymaterialize, _mulbanded_copyto!
+                CachedArray, _broadcast_sub_arguments, simplify, lazymaterialize, _mulbanded_copyto!, AbstractLazyBandedLayout
 import BlockBandedMatrices: AbstractBlockBandedLayout, AbstractBandedBlockBandedLayout, blockbandwidths, subblockbandwidths,
                             bandedblockbandedbroadcaststyle, bandedblockbandedcolumns, BandedBlockBandedColumns, BandedBlockBandedRows,
                             BlockRange1, Block1, BlockIndexRange1, BlockBandedColumns, BlockBandedRows, BandedBlockBandedLayout
 import BlockBandedMatrices.BlockArrays: BlockLayout, AbstractBlockLayout, BlockSlice, blockcolsupport, blockrowsupport
-import BlockBandedMatrices.BandedMatrices: resize, BandedLayout, _copy_oftype
+import BlockBandedMatrices.BandedMatrices: resize, BandedLayout, _copy_oftype, BandedColumns, BandedRows
 import Base: similar, copy, broadcasted
 import ArrayLayouts: materialize!, MatMulVecAdd, sublayout, colsupport, rowsupport, copyto!_layout, mulreduce, inv_layout,
                         OnesLayout, AbstractFillLayout
+
+const StructuredLayoutTypes{Lay} = Union{SymmetricLayout{Lay}, HermitianLayout{Lay}, TriangularLayout{'L','N',Lay}, TriangularLayout{'U','N',Lay}, TriangularLayout{'L','U',Lay}, TriangularLayout{'U','U',Lay}}
+const BandedLazyLayouts = Union{AbstractLazyBandedLayout, BandedColumns{<:AbstractLazyLayout}, BandedRows{<:AbstractLazyLayout},
+    StructuredLayoutTypes{<:AbstractLazyBandedLayout},
+    StructuredLayoutTypes{<:BandedColumns{<:AbstractLazyLayout}},
+    StructuredLayoutTypes{<:BandedRows{<:AbstractLazyLayout}},
+    SymTridiagonalLayout{<:AbstractLazyLayout}, BidiagonalLayout{<:AbstractLazyLayout}, TridiagonalLayout{<:AbstractLazyLayout}}
+
 
 abstract type AbstractLazyBlockBandedLayout <: AbstractBlockBandedLayout end
 abstract type AbstractLazyBandedBlockBandedLayout <: AbstractBandedBlockBandedLayout end
@@ -297,6 +305,8 @@ const LazyBlockBandedLayouts = Union{
 copy(M::Mul{<:LazyBlockBandedLayouts, <:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:Any, <:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:BandedLazyLayouts, <:LazyBlockBandedLayouts}) = simplify(M)
+copy(M::Mul{<:LazyBlockBandedLayouts, <:BandedLazyLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts, <:AbstractLazyLayout}) = simplify(M)
 copy(M::Mul{<:AbstractLazyLayout, <:LazyBlockBandedLayouts}) = simplify(M)
 copy(M::Mul{<:LazyBlockBandedLayouts, <:DiagonalLayout}) = simplify(M)

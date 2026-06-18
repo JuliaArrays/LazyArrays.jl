@@ -561,6 +561,8 @@ end
 copy(M::Mul{<:BandedLazyLayouts, <:DiagonalLayout}) = simplify(M)
 copy(M::Mul{<:DiagonalLayout, <:BandedLazyLayouts}) = simplify(M)
 
+copy(M::Mul{ApplyLayout{typeof(\)}, <:BandedLazyLayouts}) = copy(Mul{ApplyLayout{typeof(\)},UnknownLayout}(M.A, M.B))
+
 
 copy(M::Mul{<:Union{ZerosLayout,DualLayout{ZerosLayout}}, <:BandedLazyLayouts}) = copy(mulreduce(M))
 copy(M::Mul{<:BandedLazyLayouts, <:Union{ZerosLayout,DualLayout{ZerosLayout}}}) = copy(mulreduce(M))

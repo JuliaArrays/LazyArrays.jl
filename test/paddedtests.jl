@@ -526,5 +526,16 @@ paddeddata(a::PaddedPadded) = a
         b = Vcat(randn(3,3), Zeros(2,3))
         @test dot(a,b) ≈ dot(Matrix(a), Matrix(b))
     end
+
+    @testset "adjtrans copy" begin
+        a = ApplyArray(setindex, zeros(6), 5, 2)
+        b = copy(a')
+        c = copy(transpose(a))
+        b[3] = 2
+        c[3] = 3
+        @test a == [0;5;zeros(4)]
+        @test b == [0 5 2 zeros(1,3)]
+        @test c == [0 5 3 zeros(1,3)]
+    end
 end
 end # module

@@ -236,6 +236,9 @@ AbstractArray{T,N}(A::ApplyArray{<:Any,N}) where {T,N} = ApplyArray{T,N}(A.f, ma
 @inline copy(A::ApplyArray{T,N}) where {T,N} = A
 map(::typeof(copy), A::ApplyArray) = A
 
+copy(A::Adjoint{<:Any,<:ApplyArray}) = copy(A')'
+copy(A::Transpose{<:Any,<:ApplyArray}) = transpose(copy(transpose(A)))
+
 
 struct LazyArrayApplyStyle <: AbstractArrayApplyStyle end
 copy(A::Applied{LazyArrayApplyStyle}) = ApplyArray(A)
