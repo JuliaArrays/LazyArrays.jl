@@ -976,6 +976,14 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test A*x ≈ Matrix(A)*Vector(x)
         @test A*x isa Vcat
     end
+
+    @testset "Lazy \\ * Banded" begin
+        B = brand(5,5,1,1)
+        D = ApplyArray(\, B, B)
+        M = ApplyArray(*, B, B)
+        @test D*B ≈ B*D ≈ B
+        @test D*M ≈ M*D ≈ B^2
+    end 
 end
 
 end # module

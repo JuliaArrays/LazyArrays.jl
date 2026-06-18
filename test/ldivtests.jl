@@ -144,6 +144,12 @@ import Base.Broadcast: materialize
         D = Diagonal(randn(5))
         A = ApplyArray(*, randn(5,5), randn(5))
         @test D \ A ≈ D \ Vector(A)
+
+        M = ApplyArray(*, randn(5,5), randn(5,5))
+        @test D \ M ≈ D \ Matrix(M)
+        @test M \ D ≈ Matrix(M) \ D
+        @test D/M ≈ D/Matrix(M)
+        @test M/D ≈ Matrix(M)/D
     end
 
     @testset "LdivArray Mul" begin
@@ -188,7 +194,8 @@ end
     X = [1.0 2.0; 3.0 4.0]
     Y = ApplyArray(inv, ApplyArray(*, X, [1.0 0.0; 0.0 1.0]))
     Z = Diagonal(Ones(2))
-    @test Z \ Y ≈ [-2.0 1.0; 1.5 -0.5]
+    @test Z \ Y ≈ Y / Z ≈ [-2.0 1.0; 1.5 -0.5]
+    @test Y \ Z ≈ Z / Y ≈ inv(Y)
 end
 
 @testset "Issue #329" begin
