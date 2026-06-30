@@ -7,7 +7,7 @@ using LazyArrays.FillArrays
 using LazyArrays.LinearAlgebra
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
-                    AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle,
+                    AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle, _argsindices, _vcat_firstinds, __view_hcat,
                     ApplyLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
 import ArrayLayouts: sub_materialize
 import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!
@@ -263,4 +263,21 @@ broadcast_deblock(op, A, B::BlockedArray) = broadcast(op, A, B.blocks)
 broadcast_deblock(op, A::BlockedArray, B) = broadcast(op, A.blocks, B)
 broadcast_deblock(op, A::BlockedArray, B::BlockedArray) = broadcast(op, A.blocks, B.blocks)
 
+_reverse_if_neg_step(args, kr::Block{1}) = args
+_reverse_if_neg_step(args, kr::AbstractBlockedUnitRange) = args
+_reverse_if_neg_step(args, kr::BlockRange{1}) = step(Int.(kr)) ≥ 0 ? args : reverse(args)
+
+function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{Any,BlockSlice}})
+    A = parent(V)
+    args = arguments(L, A)
+    kr,jr = parentindices(V)
+    JR = jr.block
+    sz = blocksize.(args,2)
+    sJR = map(BlockRange, tuple.(intersect.(_argsindices(sz), Ref(Int.(JR)))))
+    sJR2 = broadcast((a,b) -> a .- b .+ 1, sJR, _vcat_firstinds(sz))
+    __view_hcat(_reverse_if_neg_step(args, JR), kr, _reverse_if_neg_step(sJR2, JR))
 end
+
+
+end
+

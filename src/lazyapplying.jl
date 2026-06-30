@@ -364,7 +364,7 @@ function copyto!_layout(layd::LAY, lays::LAY, dest::AbstractArray{<:Any,N}, src:
     dest
 end
 
-@inline copyto!_layout(_, ::ApplyLayout, dest::AbstractArray, src::AbstractArray) = copyto!(dest, Applied(src))
+@inline copyto!_layout(layd, ::ApplyLayout, dest::AbstractArray, src::AbstractArray) = copyto!_layout(layd, UnknownLayout(), dest, src)
 
 # avoid infinite-loop
 _base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)

@@ -133,8 +133,8 @@ ApplyStyle(::typeof(*), ::Type{<:AbstractArray}, ::Type{<:AbstractQ}) = MulStyle
 
 
 # arguments for something that is a *
-@inline _mul_arguments(::ApplyLayout{typeof(*)}, A) = arguments(A)
-@inline _mul_arguments(::DualLayout{ApplyLayout{typeof(*)}}, A) = arguments(A)
+@inline _mul_arguments(lay::ApplyLayout{typeof(*)}, A) = arguments(lay, A)
+@inline _mul_arguments(lay::DualLayout{ApplyLayout{typeof(*)}}, A) = arguments(lay, A)
 @inline _mul_arguments(_, A) = (A,)
 @inline _mul_arguments(A) = _mul_arguments(MemoryLayout(A), A)
 
