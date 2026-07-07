@@ -27,9 +27,7 @@ hermitianlayout(::Type{<:Complex}, ::AbstractLazyBandedLayout) = HermitianLayout
 bandedbroadcaststyle(::AbstractLazyArrayStyle) = LazyArrayStyle{2}()
 
 BroadcastStyle(::AbstractLazyArrayStyle{1}, ::BandedStyle) = LazyArrayStyle{2}()
-BroadcastStyle(::BandedStyle, ::AbstractLazyArrayStyle{1}) = LazyArrayStyle{2}()
 BroadcastStyle(::AbstractLazyArrayStyle{2}, ::BandedStyle) = LazyArrayStyle{2}()
-BroadcastStyle(::BandedStyle, ::AbstractLazyArrayStyle{2}) = LazyArrayStyle{2}()
 
 bandedcolumns(::AbstractLazyLayout) = BandedColumns{LazyLayout}()
 bandedcolumns(::DualLayout{<:AbstractLazyLayout}) = BandedColumns{LazyLayout}()
@@ -39,7 +37,6 @@ const StructuredLayoutTypes{Lay} = Union{SymmetricLayout{Lay}, HermitianLayout{L
 const BandedLayouts = Union{AbstractBandedLayout, StructuredLayoutTypes{<:AbstractBandedLayout}}
 
 BroadcastStyle(M::ApplyArrayBroadcastStyle{2}, ::BandedStyle) = M
-BroadcastStyle(::BandedStyle, M::ApplyArrayBroadcastStyle{2}) = M
 
 bandwidths(M::Applied{<:Any,typeof(*)}) = min.(_bnds(M), prodbandwidths(M.args...))
 
