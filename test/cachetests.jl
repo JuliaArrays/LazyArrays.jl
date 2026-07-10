@@ -575,6 +575,20 @@ using Infinities
         @test cacheddata(G) === adjoint(view(cacheddata(parent(G)), 1:1, 1:1))
     end
 
+    @testset "CachedArrayStyle is symmetric with LazyArrayStyle" begin
+        A = cache(1:3)
+        B = Vcat(4:6)
+        cachedstyle = Base.BroadcastStyle(typeof(A))
+        lazystyle = Base.BroadcastStyle(typeof(B))
+
+        @test Base.BroadcastStyle(cachedstyle, lazystyle) == CachedArrayStyle{1}()
+        @test Base.BroadcastStyle(lazystyle, cachedstyle) == CachedArrayStyle{1}()
+
+        C = A .+ B
+        @test C isa CachedArray
+        @test collect(C) == [5, 7, 9]
+    end
+
     @testset "resizedata! for AdjTrans array" begin
         x = LazyArrays.CachedArray(rand(1, 10))';
         @test parent(x).datasize == (0, 0)
