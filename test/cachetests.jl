@@ -587,6 +587,24 @@ using Infinities
         C = A .+ B
         @test C isa CachedArray
         @test collect(C) == [5, 7, 9]
+
+        D = cache(reshape(1:4, 2, 2))
+        E = Vcat(reshape(5:6, 1, 2), reshape(7:8, 1, 2))
+        cachedmatrixstyle = Base.BroadcastStyle(typeof(D))
+        lazymatrixstyle = Base.BroadcastStyle(typeof(E))
+
+        @test Base.BroadcastStyle(cachedmatrixstyle, lazymatrixstyle) == CachedArrayStyle{2}()
+        @test Base.BroadcastStyle(lazymatrixstyle, cachedmatrixstyle) == CachedArrayStyle{2}()
+        @test collect(E .+ D) == [6 9; 9 12]
+
+        F = transpose(cache(1:3))
+        G = transpose(Vcat(4:6))
+        cachedtransposestyle = Base.BroadcastStyle(typeof(F))
+        lazytransposestyle = Base.BroadcastStyle(typeof(G))
+
+        @test Base.BroadcastStyle(cachedtransposestyle, lazytransposestyle) == CachedArrayStyle{2}()
+        @test Base.BroadcastStyle(lazytransposestyle, cachedtransposestyle) == CachedArrayStyle{2}()
+        @test collect(G .+ F) == [5 7 9]
     end
 
     @testset "resizedata! for AdjTrans array" begin
