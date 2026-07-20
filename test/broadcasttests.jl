@@ -480,6 +480,14 @@ using Infinities
             @test_throws "MethodError: no method matching _vec_mul_arguments"  LazyArrays._vec_mul_arguments(2, [])
         end
     end
+
+    @testset "LazyBroadcastStyle" begin
+        v = BroadcastArray(exp, [1,2,3])
+        s = SVector(1,2,3)
+        @test v .+ s isa BroadcastArray
+        @test s .+ v isa BroadcastArray
+        @test v .+ s == s .+ v == Vector(v) .+ s
+    end
 end
 
 end #module

@@ -6,16 +6,16 @@ using LazyArrays.ArrayLayouts
 using LazyArrays.FillArrays
 using LazyArrays.LinearAlgebra
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
-                    LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
+                    AbstractLazyArrayStyle, LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
                     AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle,
                     ApplyLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
 import ArrayLayouts: sub_materialize
 import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!
 import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout, blockvec
 
-BlockArrays._broadcaststyle(S::LazyArrays.LazyArrayStyle{1}) = S
+BlockArrays._broadcaststyle(S::AbstractLazyArrayStyle{1}) = S
 
-BroadcastStyle(::LazyArrayStyle{N}, ::AbstractBlockStyle{N}) where N = LazyArrayStyle{N}()
+BroadcastStyle(::AbstractLazyArrayStyle{N}, ::AbstractBlockStyle{N}) where N = LazyArrayStyle{N}()
 
 BroadcastStyle(::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{BlockSlice{<:Any,<:Any,<:AbstractBlockedUnitRange},Vararg{Any}}} = LazyArrayStyle{N}()
 BroadcastStyle(::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{BlockSlice{<:Any,<:Any,<:AbstractBlockedUnitRange},BlockSlice{<:Any,<:Any,<:AbstractBlockedUnitRange},Vararg{Any}}} = LazyArrayStyle{N}()
@@ -158,9 +158,9 @@ LazyArrays._lazy_getindex(dat::BlockedArray, kr::OneTo) = view(dat.blocks,kr)
 
 ##
 # support Inf Block ranges
-broadcasted(::LazyArrayStyle{1}, ::Type{Block}, r::AbstractUnitRange) = Block(first(r)):Block(last(r))
-broadcasted(::LazyArrayStyle{1}, ::Type{Int}, block_range::BlockRange{1}) = first(block_range.indices)
-broadcasted(::LazyArrayStyle{0}, ::Type{Int}, block::Block{1}) = Int(block)
+broadcasted(::AbstractLazyArrayStyle{1}, ::Type{Block}, r::AbstractUnitRange) = Block(first(r)):Block(last(r))
+broadcasted(::AbstractLazyArrayStyle{1}, ::Type{Int}, block_range::BlockRange{1}) = first(block_range.indices)
+broadcasted(::AbstractLazyArrayStyle{0}, ::Type{Int}, block::Block{1}) = Int(block)
 
 
 Base.in(K::Block, B::BroadcastVector{<:Block,Type{Block}}) = Int(K) in B.args[1]
