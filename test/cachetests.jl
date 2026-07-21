@@ -582,7 +582,6 @@ using Infinities
         lazystyle = Base.BroadcastStyle(typeof(B))
 
         @test Base.BroadcastStyle(cachedstyle, lazystyle) == CachedArrayStyle{1}()
-        @test Base.BroadcastStyle(lazystyle, cachedstyle) == CachedArrayStyle{1}()
 
         C = A .+ B
         @test C isa CachedArray
@@ -594,7 +593,6 @@ using Infinities
         lazymatrixstyle = Base.BroadcastStyle(typeof(E))
 
         @test Base.BroadcastStyle(cachedmatrixstyle, lazymatrixstyle) == CachedArrayStyle{2}()
-        @test Base.BroadcastStyle(lazymatrixstyle, cachedmatrixstyle) == CachedArrayStyle{2}()
         @test collect(E .+ D) == [6 9; 9 12]
 
         F = transpose(cache(1:3))
@@ -603,7 +601,6 @@ using Infinities
         lazytransposestyle = Base.BroadcastStyle(typeof(G))
 
         @test Base.BroadcastStyle(cachedtransposestyle, lazytransposestyle) == CachedArrayStyle{2}()
-        @test Base.BroadcastStyle(lazytransposestyle, cachedtransposestyle) == CachedArrayStyle{2}()
         @test collect(G .+ F) == [5 7 9]
     end
 

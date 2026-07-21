@@ -6,7 +6,6 @@ LazyArrayStyle{M}(::Val{N}) where {N,M} = LazyArrayStyle{N}()
 
 
 # default is always lazy
-Base.BroadcastStyle(L::AbstractLazyArrayStyle{N}, ::AbstractArrayStyle{N}) where N = L
 Base.BroadcastStyle(L::AbstractLazyArrayStyle{N}, ::DefaultArrayStyle{N}) where N = L
 
 

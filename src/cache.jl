@@ -360,7 +360,6 @@ BroadcastStyle(::Type{<:SubArray{<:Any,N,<:AbstractCachedArray{<:Any,M}}}) where
 BroadcastStyle(::Type{<:SubArray{<:Any,N,<:AdjOrTrans{<:Any, <:AbstractCachedArray{<:Any,M}}}}) where {N,M} = CachedArrayStyle{M}()
 BroadcastStyle(::Type{<:AdjOrTrans{<:Any, <:SubArray{<:Any,N,<:AdjOrTrans{<:Any,<:AbstractCachedArray{<:Any,M}}}}}) where {N,M} = CachedArrayStyle{M}()
 BroadcastStyle(::CachedArrayStyle{N}, ::AbstractLazyArrayStyle{M}) where {N,M} = CachedArrayStyle{max(M, N)}()
-BroadcastStyle(::AbstractLazyArrayStyle{M}, ::CachedArrayStyle{N}) where {N,M} = CachedArrayStyle{max(M, N)}()
 
 broadcasted(::AbstractLazyArrayStyle, op, A::CachedArray) = CachedArray(broadcast(op, cacheddata(A)), broadcast(op, A.array))
 layout_broadcasted(::CachedLayout, _, op, A::AbstractArray, c::Number) = CachedArray(broadcast(op, cacheddata(A), c), broadcast(op, A.array, c))
