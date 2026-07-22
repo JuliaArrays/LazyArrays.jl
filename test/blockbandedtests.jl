@@ -18,8 +18,12 @@ BroadcastBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.BroadcastBan
 LazyBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBandedBlockBandedLayout
 LazyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.LazyBlockBandedLayout
 
+struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
+
 @testset "Block" begin
     @testset "BlockBanded and padded" begin
+        @test LazyArraysBlockBandedMatricesExt.bandedblockbandedbroadcaststyle(TestLazyStyle{2}()) == LazyArrayStyle{2}()
+
         A = BlockBandedMatrix{Float64}(undef, 1:4, 1:4, (1,0)); A.data .= randn.();
         D = mortar(Diagonal([randn(k,k) for k=1:4]))
         c = Vcat(randn(3), Zeros(7))
