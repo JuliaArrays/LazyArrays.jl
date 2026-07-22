@@ -8,6 +8,8 @@ import Base: broadcasted
 using ..InfiniteArrays
 using Infinities
 
+struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
+
 @testset "Broadcasting" begin
     @testset "BroadcastArray" begin
         a = randn(6)
@@ -487,6 +489,9 @@ using Infinities
         @test v .+ s isa BroadcastArray
         @test s .+ v isa BroadcastArray
         @test v .+ s == s .+ v == Vector(v) .+ s
+
+        style = TestLazyStyle{1}()
+        @test Base.BroadcastStyle(style, Base.Broadcast.DefaultArrayStyle{1}()) isa TestLazyStyle{1}
     end
 end
 

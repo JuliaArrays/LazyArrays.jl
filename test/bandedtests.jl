@@ -11,6 +11,8 @@ VcatBandedMatrix = LazyArraysBandedMatricesExt.VcatBandedMatrix
 
 include("mylazyarray.jl")
 
+struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
+
 struct PseudoBandedMatrix{T} <: AbstractMatrix{T}
     data::Array{T}
     l::Int
@@ -49,6 +51,10 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
 
 @testset "Lazy Banded" begin
     @testset "Banded padded" begin
+        @test Base.BroadcastStyle(TestLazyStyle{1}(), BandedStyle()) == LazyArrayStyle{2}()
+        @test Base.BroadcastStyle(TestLazyStyle{2}(), BandedStyle()) == LazyArrayStyle{2}()
+        @test Base.BroadcastStyle(LazyArrays.ApplyArrayBroadcastStyle{2}(), BandedStyle()) == LazyArrays.ApplyArrayBroadcastStyle{2}()
+
         A = _BandedMatrix((1:10)', 10, -1,1)
         x = Vcat(1:3, Zeros(10-3))
         @test MemoryLayout(x) isa PaddedColumns

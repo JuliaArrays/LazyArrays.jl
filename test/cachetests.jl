@@ -11,6 +11,8 @@ using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
 using Infinities
 
+struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
+
 @testset "Cache" begin
     @testset "basics" begin
         A = 1:10
@@ -582,6 +584,7 @@ using Infinities
         lazystyle = Base.BroadcastStyle(typeof(B))
 
         @test Base.BroadcastStyle(cachedstyle, lazystyle) == CachedArrayStyle{1}()
+        @test Base.BroadcastStyle(cachedstyle, TestLazyStyle{1}()) == CachedArrayStyle{1}()
 
         C = A .+ B
         @test C isa CachedArray
