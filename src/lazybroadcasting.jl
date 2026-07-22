@@ -5,6 +5,9 @@ LazyArrayStyle(::Val{N}) where N = LazyArrayStyle{N}()
 LazyArrayStyle{M}(::Val{N}) where {N,M} = LazyArrayStyle{N}()
 
 
+# default is always lazy
+Base.BroadcastStyle(L::AbstractLazyArrayStyle{N}, ::DefaultArrayStyle{N}) where N = L
+
 
 layout_broadcasted(_, _, op, A, B) = Base.Broadcast.Broadcasted(Base.Broadcast.combine_styles(A,B), op, (A, B))
 layout_broadcasted(op, A, B) = layout_broadcasted(MemoryLayout(A), MemoryLayout(B), op, A, B)

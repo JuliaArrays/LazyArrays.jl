@@ -8,6 +8,8 @@ import Base: broadcasted
 using ..InfiniteArrays
 using Infinities
 
+struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
+
 @testset "Broadcasting" begin
     @testset "BroadcastArray" begin
         a = randn(6)
@@ -479,6 +481,17 @@ using Infinities
         @testset "_vec_mul_arguments method" begin
             @test_throws "MethodError: no method matching _vec_mul_arguments"  LazyArrays._vec_mul_arguments(2, [])
         end
+    end
+
+    @testset "LazyBroadcastStyle" begin
+        v = BroadcastArray(exp, [1,2,3])
+        s = SVector(1,2,3)
+        @test v .+ s isa BroadcastArray
+        @test s .+ v isa BroadcastArray
+        @test v .+ s == s .+ v == Vector(v) .+ s
+
+        style = TestLazyStyle{1}()
+        @test Base.BroadcastStyle(style, Base.Broadcast.DefaultArrayStyle{1}()) isa TestLazyStyle{1}
     end
 end
 

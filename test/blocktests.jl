@@ -4,12 +4,21 @@ using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, padde
 using BlockArrays: blockcolsupport, blockrowsupport, blockvec
 const BlockVec{T, M<:AbstractMatrix{T}} = ApplyVector{T, typeof(blockvec), <:Tuple{M}}
 
+struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
+
 @testset "Lazy BlockArrays" begin
     @testset "LazyBlock" begin
         @test Block(5) in BroadcastVector(Block, [1,3,5])
         @test Base.broadcasted(LazyArrayStyle{1}(), Block, 1:5) ≡ Block.(1:5)
         @test Base.broadcasted(LazyArrayStyle{1}(), Int, Block.(1:5)) ≡ 1:5
         @test Base.broadcasted(LazyArrayStyle{0}(), Int, Block(1)) ≡ 1
+        @test BlockArrays._broadcaststyle(TestLazyStyle{1}()) isa TestLazyStyle{1}
+        @test Base.broadcasted(TestLazyStyle{1}(), Block, 1:5) ≡ Block.(1:5)
+        @test Base.broadcasted(TestLazyStyle{1}(), Int, Block.(1:5)) ≡ 1:5
+        @test Base.broadcasted(TestLazyStyle{0}(), Int, Block(1)) ≡ 1
+
+        b = BlockedVector(randn(5), [2,3])
+        @test Base.BroadcastStyle(TestLazyStyle{1}(), Base.BroadcastStyle(typeof(b))) == LazyArrayStyle{1}()
     end
 
     @testset "LazyBlockArray Triangle Recurrences" begin

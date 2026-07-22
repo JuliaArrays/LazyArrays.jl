@@ -11,6 +11,8 @@ using ..InfiniteArrays
 using .InfiniteArrays: OneToInf
 using Infinities
 
+struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
+
 @testset "Cache" begin
     @testset "basics" begin
         A = 1:10
@@ -573,6 +575,36 @@ using Infinities
         @test cacheddata(E) === view(cacheddata(parent(parent(E)))', 1:1, 1:1)
         @test cacheddata(F) === view(cacheddata(parent(parent(F))), 1:1)'
         @test cacheddata(G) === adjoint(view(cacheddata(parent(G)), 1:1, 1:1))
+    end
+
+    @testset "CachedArrayStyle is symmetric with LazyArrayStyle" begin
+        A = cache(1:3)
+        B = Vcat(4:6)
+        cachedstyle = Base.BroadcastStyle(typeof(A))
+        lazystyle = Base.BroadcastStyle(typeof(B))
+
+        @test Base.BroadcastStyle(cachedstyle, lazystyle) == CachedArrayStyle{1}()
+        @test Base.BroadcastStyle(cachedstyle, TestLazyStyle{1}()) == CachedArrayStyle{1}()
+
+        C = A .+ B
+        @test C isa CachedArray
+        @test collect(C) == [5, 7, 9]
+
+        D = cache(reshape(1:4, 2, 2))
+        E = Vcat(reshape(5:6, 1, 2), reshape(7:8, 1, 2))
+        cachedmatrixstyle = Base.BroadcastStyle(typeof(D))
+        lazymatrixstyle = Base.BroadcastStyle(typeof(E))
+
+        @test Base.BroadcastStyle(cachedmatrixstyle, lazymatrixstyle) == CachedArrayStyle{2}()
+        @test collect(E .+ D) == [6 9; 9 12]
+
+        F = transpose(cache(1:3))
+        G = transpose(Vcat(4:6))
+        cachedtransposestyle = Base.BroadcastStyle(typeof(F))
+        lazytransposestyle = Base.BroadcastStyle(typeof(G))
+
+        @test Base.BroadcastStyle(cachedtransposestyle, lazytransposestyle) == CachedArrayStyle{2}()
+        @test collect(G .+ F) == [5 7 9]
     end
 
     @testset "resizedata! for AdjTrans array" begin

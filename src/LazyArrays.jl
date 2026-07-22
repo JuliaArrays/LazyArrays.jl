@@ -91,8 +91,8 @@ map(::typeof(length), A::BroadcastVector{<:OneElement,Type{OneElement},<:Tuple{A
 map(::typeof(length), A::BroadcastVector{<:OneElement,Type{OneElement},<:Tuple{AbstractVector,Number}}) = Fill(A.args[2],length(A.args[1]))
 map(::typeof(length), A::BroadcastVector{<:Zeros,Type{Zeros}}) = A.args[1]
 map(::typeof(length), A::BroadcastVector{<:Vcat,Type{Vcat}}) = broadcast(+,map.(length,A.args)...)
-broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{OneTo{Int},Type{OneTo}}) = A.args[1]
-broadcasted(::LazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:NTuple{2,Any}}) = A.args[2]
+broadcasted(::AbstractLazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{OneTo{Int},Type{OneTo}}) = A.args[1]
+broadcasted(::AbstractLazyArrayStyle{1}, ::typeof(length), A::BroadcastVector{<:Fill,Type{Fill},<:NTuple{2,Any}}) = A.args[2]
 
 # types for use by extensions
 function _mulbanded_copyto! end
