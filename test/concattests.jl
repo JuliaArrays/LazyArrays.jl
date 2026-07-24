@@ -727,7 +727,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
     @testset "empty arg max" begin
         @test maximum(Vcat(1, 2:0, 3)) == 3
         @test maximum(Vcat(1:0, 2:0); init = 2) == 2
-        @test_throws ArgumentError maximum(Vcat(1:0, 2:0))
+        if VERSION ≥ v"1.12" # broken on LTS v1.11
+            @test_throws ArgumentError maximum(Vcat(1:0, 2:0))
+        end
     end
 end
 
