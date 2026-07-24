@@ -192,5 +192,12 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test a + a == 2a
         @test b + b == 2b
     end
+
+    @testset "BlockHcat" begin
+        H = BlockedArray(Hcat(randn(2,2), randn(2,3)), [1,1], [2,3]) 
+        @test H == H[1:2,:] == H[1:2,Block.(1:2)]
+        V = view(H,1:2,Block.(1:2))
+        @test rowsupport(V)  == 1:5
+    end
 end
 end
