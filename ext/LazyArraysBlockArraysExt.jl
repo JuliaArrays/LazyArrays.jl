@@ -262,9 +262,9 @@ broadcast_deblock(op, A, B::BlockedArray) = broadcast(op, A, B.blocks)
 broadcast_deblock(op, A::BlockedArray, B) = broadcast(op, A.blocks, B)
 broadcast_deblock(op, A::BlockedArray, B::BlockedArray) = broadcast(op, A.blocks, B.blocks)
 
-_reverse_if_neg_step(args, kr::Block{1}) = args
-_reverse_if_neg_step(args, kr::AbstractBlockedUnitRange) = args
-_reverse_if_neg_step(args, kr::BlockRange{1}) = step(Int.(kr)) ≥ 0 ? args : reverse(args)
+# _reverse_if_neg_step(args, kr::Block{1}) = args
+# _reverse_if_neg_step(args, kr::AbstractBlockedUnitRange) = args
+# _reverse_if_neg_step(args, kr::BlockRange{1}) = step(Int.(kr)) ≥ 0 ? args : reverse(args)
 
 # function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{Any,BlockSlice}})
 #     A = parent(V)
