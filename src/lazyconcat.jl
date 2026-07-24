@@ -667,14 +667,7 @@ _vcat_diff(a, b, c...) = (diff(a), first(b)-last(a), _vcat_diff(b,c...)...)
 ####
 # maximum/minimum
 ####
-
-sum(v::Vcat{<:Any,1}) = sum(map(sum,v.args))
-
-for op in (:maximum, :minimum)
-    @eval $op(V::Vcat; kwds...) = $op(map(a -> $op(a; kwds...), V.args); kwds...)
-end
-
-mapreduce(f, op, V::Vcat; kwds...) = mapreduce(a -> mapreduce(f, op, a; kwds...), op, V.args; kwds...)
+mapreduce(f, op, V::Vcat; kwds...) = mapreduce(a -> mapreduce(f, op, a; kwds...), op, filter(!isempty, V.args); kwds...)
 
 function in(x, V::Vcat)
     for a in V.args

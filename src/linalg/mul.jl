@@ -233,6 +233,9 @@ function _mat_mul_arguments(_, args, (kr,jr)::Tuple{Any,Any})
     map(view, args, (kr, kjr...), (kjr..., jr))
 end
 
+# back compat
+_mat_mul_arguments(args, inds) = _mat_mul_arguments(Tuple{indextype(first(args)).parameters[1], indextype(last(args)).parameters[2]}, args, inds)
+
 _vec_mul_view(a...) = view(a...)
 _vec_mul_view(a::AbstractVector, kr, ::Colon) = view(a, kr)
 
