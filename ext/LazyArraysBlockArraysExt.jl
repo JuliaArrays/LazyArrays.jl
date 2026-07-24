@@ -266,16 +266,16 @@ _reverse_if_neg_step(args, kr::Block{1}) = args
 _reverse_if_neg_step(args, kr::AbstractBlockedUnitRange) = args
 _reverse_if_neg_step(args, kr::BlockRange{1}) = step(Int.(kr)) ≥ 0 ? args : reverse(args)
 
-function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{Any,BlockSlice}})
-    A = parent(V)
-    args = arguments(L, A)
-    kr,jr = parentindices(V)
-    JR = jr.block
-    sz = blocksize.(args,2)
-    sJR = map(BlockRange, tuple.(intersect.(_argsindices(sz), Ref(Int.(JR)))))
-    sJR2 = broadcast((a,b) -> a .- b .+ 1, sJR, _vcat_firstinds(sz))
-    __view_hcat(_reverse_if_neg_step(args, JR), kr, _reverse_if_neg_step(sJR2, JR))
-end
+# function arguments(L::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:Tuple{Any,BlockSlice}})
+#     A = parent(V)
+#     args = arguments(L, A)
+#     kr,jr = parentindices(V)
+#     JR = jr.block
+#     sz = blocksize.(args,2)
+#     sJR = map(BlockRange, tuple.(intersect.(_argsindices(sz), Ref(Int.(JR)))))
+#     sJR2 = broadcast((a,b) -> a .- b .+ 1, sJR, _vcat_firstinds(sz))
+#     __view_hcat(_reverse_if_neg_step(args, JR), kr, _reverse_if_neg_step(sJR2, JR))
+# end
 
 
 end
