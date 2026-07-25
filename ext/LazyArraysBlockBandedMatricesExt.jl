@@ -98,7 +98,7 @@ _mul_args_colsupport(a, kr::BlockRange) = blockcolsupport(a, kr)
 _mul_args_rowsupport(a, kr::BlockRange) = blockrowsupport(a, kr)
 _mul_args_colsupport(a, kr::Block) = blockcolsupport(a, kr)
 _mul_args_rowsupport(a, kr::Block) = blockrowsupport(a, kr)
-_mat_mul_arguments(args, (kr,jr)::Tuple{BlockSlice,BlockSlice}) = _mat_mul_arguments(args, (kr.block, jr.block))
+_mat_mul_arguments(inds, args, (kr,jr)::Tuple{BlockSlice,BlockSlice}) = _mat_mul_arguments(inds, args, (kr.block, jr.block))
 
 arguments(::ApplyBlockBandedLayout{F}, A) where F = arguments(ApplyLayout{F}(), A)
 arguments(::ApplyBandedBlockBandedLayout{F}, A) where F = arguments(ApplyLayout{F}(), A)
