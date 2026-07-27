@@ -144,6 +144,12 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test broadcasted(LazyArrayStyle{1}(), +, 1, Fill(2,5)) ≡ Fill(3,5)
         @test broadcasted(LazyArrayStyle{1}(), +, Fill(2,5), Fill(3,5)) ≡ Fill(5,5)
 
+        @test broadcasted(LazyArrayStyle{1}(), Base.literal_pow, Ref(^), Fill(2,5), Ref(Val(2))) ≡ Fill(4,5)
+        @test broadcasted(LazyArrayStyle{1}(), Base.literal_pow, Ref(^), Ones(5), Ref(Val(2))) ≡ Ones(5)
+        @test broadcasted(LazyArrayStyle{1}(), Base.literal_pow, Ref(^), Zeros(5), Ref(Val(2))) ≡ Zeros(5)
+        @test broadcasted(LazyArrayStyle{1}(), Base.literal_pow, Ref(^), Zeros(5), Ref(Val(0))) ≡ Ones(5)
+        @test broadcasted(LazyArrayStyle{2}(), Base.literal_pow, Ref(^), Fill(2,5,3), Ref(Val(2))) ≡ Fill(4,5,3)
+
         @test broadcasted(LazyArrayStyle{1}(), *, Zeros(5), Zeros(5)) ≡ Zeros(5)
         @test broadcasted(LazyArrayStyle{1}(), *, Fill(2,5), 1:5) ≡ broadcasted(LazyArrayStyle{1}(), *, 1:5, Fill(2,5)) ≡ 2 * (1:5)
         @test broadcasted(LazyArrayStyle{1}(), *, Zeros(5), 1:5) ≡ broadcasted(LazyArrayStyle{1}(), *, 1:5, Zeros(5)) ≡ Zeros(5)
