@@ -191,12 +191,13 @@ broadcasted(::AbstractLazyArrayStyle{N}, op, x::Number, r::AbstractFill{T,N}) wh
 broadcasted(::AbstractLazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Ref) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, r, x)
 broadcasted(::AbstractLazyArrayStyle{N}, op, x::Ref, r::AbstractFill{T,N}) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, x, r)
 broadcasted(::AbstractLazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), op, r1, r2)
-# FillArrays attaches its `literal_pow` rules to the operation instead of to a style, and its
-# `DefaultArrayStyle` shims only cover the one- and two-argument forms, so we unwrap the `Ref`s
-# and dispatch on the arguments to obtain a fill
+# The forwards above only cover the one- and two-argument forms, but `x .^ k` lowers to the
+# three-argument `literal_pow` broadcast, so forward that explicitly to retain the FillArrays
+# simplification. This has to be op-specific: FillArrays has no generic three-argument fill rule,
+# so a generic forward would materialize densely instead.
 broadcasted(::AbstractLazyArrayStyle{N}, op::typeof(Base.literal_pow), x::Base.RefValue{typeof(^)},
         r::AbstractFill{T,N}, y::Base.RefValue{<:Val}) where {T,N} =
-    broadcasted(op, x[], r, y[])
+    broadcast(DefaultArrayStyle{N}(), op, x, r, y)
 broadcasted(::AbstractLazyArrayStyle{1}, ::typeof(*), a::AbstractFill, b::AbstractRange) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 broadcasted(::AbstractLazyArrayStyle{1}, ::typeof(*), a::AbstractRange, b::AbstractFill) = broadcast(DefaultArrayStyle{1}(), *, a, b)
 broadcasted(::AbstractLazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::AbstractRange) = broadcast(DefaultArrayStyle{1}(), *, a, b)
