@@ -207,6 +207,12 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test BlockArrays.sortedunion(A, 1:12) ≡ BlockArrays.sortedunion(1:12, A) ≡ 1:12
         @test BlockArrays.sortedunion(A, B) ≡ BlockArrays.sortedunion(B, A) ≡ Vcat(1, 2, 3:10)
         @test BlockArrays.sortedunion(A, A) ≡ A
+        # c ∈ r branch: c=4 is inside sortedunion(3:10, 6:10)=3:10
+        @test BlockArrays.sortedunion(A, Vcat(4, 6:10)) ≡ Vcat(1, 3:10)
+        # AbstractVector (non-range) dispatch
+        C = Vcat(1, collect(3:10))
+        D = Vcat(2, collect(4:10))
+        @test BlockArrays.sortedunion(C, D) == Vcat(1, 2, collect(3:10))
     end
 end
 end
