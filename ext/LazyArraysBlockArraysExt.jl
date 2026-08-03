@@ -277,7 +277,7 @@ broadcast_deblock(op, A::BlockedArray, B::BlockedArray) = broadcast(op, A.blocks
 #     __view_hcat(_reverse_if_neg_step(args, JR), kr, _reverse_if_neg_step(sJR2, JR))
 # end
 
-function sortedunion(A::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}}, B::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}})
+function _sortedunion_int_vcat(A, B)
     a,b = A.args
     c,d = B.args
     r = sortedunion(b, d)
@@ -294,6 +294,11 @@ function sortedunion(A::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}}, B::Vcat{In
         Vcat(min(a,c), max(a,c), r)
     end
 end
+
+sortedunion(A::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}}, B::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}}) = _sortedunion_int_vcat(A, B)
+
+# needed temporarily to avoid ambiguity from type piracy.
+sortedunion(A::Vcat{Int,1,<:Tuple{Int,AbstractRange{Int}}}, B::Vcat{Int,1,<:Tuple{Int,AbstractRange{Int}}}) = _sortedunion_int_vcat(A, B)
 
 function sortedunion(A::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}}, B::AbstractVector{Int})
     a,b = A.args
