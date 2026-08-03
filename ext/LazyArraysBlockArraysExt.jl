@@ -11,7 +11,7 @@ import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     ApplyLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
 import ArrayLayouts: sub_materialize
 import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!
-import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout, blockvec
+import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout, blockvec, sortedunion
 
 BlockArrays._broadcaststyle(S::AbstractLazyArrayStyle{1}) = S
 
@@ -277,6 +277,40 @@ broadcast_deblock(op, A::BlockedArray, B::BlockedArray) = broadcast(op, A.blocks
 #     __view_hcat(_reverse_if_neg_step(args, JR), kr, _reverse_if_neg_step(sJR2, JR))
 # end
 
+function _sortedunion_int_vcat(A, B)
+    a,b = A.args
+    c,d = B.args
+    r = sortedunion(b, d)
+
+    # following not possible since A and B are assumed to be sorted
+    # if a ∈ r && c ∈ r
+    #     r
+    # else
+    if a ∈ r || a == c
+        Vcat(c, r)
+    elseif c ∈ r
+        Vcat(a, r)
+    else
+        Vcat(min(a,c), max(a,c), r)
+    end
+end
+
+sortedunion(A::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}}, B::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}}) = _sortedunion_int_vcat(A, B)
+
+# needed temporarily to avoid ambiguity from type piracy.
+sortedunion(A::Vcat{Int,1,<:Tuple{Int,AbstractRange{Int}}}, B::Vcat{Int,1,<:Tuple{Int,AbstractRange{Int}}}) = _sortedunion_int_vcat(A, B)
+
+function sortedunion(A::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}}, B::AbstractVector{Int})
+    a,b = A.args
+    r = sortedunion(b, B)
+    if a ∈ r
+        r
+    else
+        Vcat(a, r)
+    end
+end
+
+sortedunion(B::AbstractVector{Int}, A::Vcat{Int,1,<:Tuple{Int,AbstractVector{Int}}}) = sortedunion(A, B)
 
 end
 
