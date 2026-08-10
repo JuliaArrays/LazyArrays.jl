@@ -15,13 +15,11 @@ layout_broadcasted(op, A, B) = layout_broadcasted(MemoryLayout(A), MemoryLayout(
 DefaultArrayStyle(::AbstractLazyArrayStyle{N}) where N = DefaultArrayStyle{N}()
 broadcasted(::AbstractLazyArrayStyle, op, A, B) = layout_broadcasted(op, A, B)
 
-for op in (:*, :/, :+, :-)
-    @eval layout_broadcasted(::ZerosLayout, _, ::typeof($op), a, b) = broadcasted(DefaultArrayStyle(Base.Broadcast.combine_styles(a,b)), $op, a, b)
-end
-
-for op in (:*, :\, :+, :-)
-    @eval layout_broadcasted(_, ::ZerosLayout, ::typeof($op), a, b) = broadcasted(DefaultArrayStyle(Base.Broadcast.combine_styles(a,b)), $op, a, b)
-end
+# which operations a `Zeros` absorbs is FillArrays' business, so pass every one of them along
+_simplify_zeros(op, a, b) = FillArrays.simplify_broadcasted(Base.Broadcast.combine_styles(a, b), op, a, b)
+layout_broadcasted(::ZerosLayout, _, op, a, b) = _simplify_zeros(op, a, b)
+layout_broadcasted(_, ::ZerosLayout, op, a, b) = _simplify_zeros(op, a, b)
+layout_broadcasted(::ZerosLayout, ::ZerosLayout, op, a, b) = _simplify_zeros(op, a, b)
 
 """
     BroadcastLayout{F}()
@@ -185,23 +183,24 @@ for op in (-, +, *, \)
     @eval broadcasted(::AbstractLazyArrayStyle{1}, ::typeof($op), x::Real, r::AbstractRange) = broadcast(DefaultArrayStyle{1}(), $op, x, r)
 end
 
-broadcasted(::AbstractLazyArrayStyle{N}, op, r::AbstractFill{T,N}) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, r)
-broadcasted(::AbstractLazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Number) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, r, x)
-broadcasted(::AbstractLazyArrayStyle{N}, op, x::Number, r::AbstractFill{T,N}) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, x, r)
-broadcasted(::AbstractLazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Ref) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, r, x)
-broadcasted(::AbstractLazyArrayStyle{N}, op, x::Ref, r::AbstractFill{T,N}) where {T,N} = broadcast(DefaultArrayStyle{N}(), op, x, r)
-broadcasted(::AbstractLazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} = broadcast(DefaultArrayStyle{N}(), op, r1, r2)
-# The forwards above only cover the one- and two-argument forms, but `x .^ k` lowers to the
-# three-argument `literal_pow` broadcast, so forward that explicitly to retain the FillArrays
-# simplification. This has to be op-specific: FillArrays has no generic three-argument fill rule,
-# so a generic forward would materialize densely instead.
-broadcasted(::AbstractLazyArrayStyle{N}, op::typeof(Base.literal_pow), x::Base.RefValue{typeof(^)},
+# `FillArrays` decides which of these simplify to a fill; whatever it can't simplify comes back
+# carrying our style, and so stays lazy.
+broadcasted(S::AbstractLazyArrayStyle{N}, op, r::AbstractFill{T,N}) where {T,N} =
+    FillArrays.simplify_broadcasted(S, op, r)
+broadcasted(S::AbstractLazyArrayStyle{N}, op, r::AbstractFill{T,N}, x::Union{Number,Ref}) where {T,N} =
+    FillArrays.simplify_broadcasted(S, op, r, x)
+broadcasted(S::AbstractLazyArrayStyle{N}, op, x::Union{Number,Ref}, r::AbstractFill{T,N}) where {T,N} =
+    FillArrays.simplify_broadcasted(S, op, x, r)
+broadcasted(S::AbstractLazyArrayStyle{N}, op, r1::AbstractFill{T,N}, r2::AbstractFill{V,N}) where {T,V,N} =
+    FillArrays.simplify_broadcasted(S, op, r1, r2)
+# `x .^ k` lowers to a three-argument `literal_pow`, which none of the shapes above match
+broadcasted(S::AbstractLazyArrayStyle{N}, op::typeof(Base.literal_pow), x::Base.RefValue{typeof(^)},
         r::AbstractFill{T,N}, y::Base.RefValue{<:Val}) where {T,N} =
-    broadcast(DefaultArrayStyle{N}(), op, x, r, y)
-broadcasted(::AbstractLazyArrayStyle{1}, ::typeof(*), a::AbstractFill, b::AbstractRange) = broadcast(DefaultArrayStyle{1}(), *, a, b)
-broadcasted(::AbstractLazyArrayStyle{1}, ::typeof(*), a::AbstractRange, b::AbstractFill) = broadcast(DefaultArrayStyle{1}(), *, a, b)
-broadcasted(::AbstractLazyArrayStyle{1}, ::typeof(*), a::Zeros{<:Any,1}, b::AbstractRange) = broadcast(DefaultArrayStyle{1}(), *, a, b)
-broadcasted(::AbstractLazyArrayStyle{1}, ::typeof(*), a::AbstractRange, b::Zeros{<:Any,1}) = broadcast(DefaultArrayStyle{1}(), *, a, b)
+    FillArrays.simplify_broadcasted(S, op, x, r, y)
+broadcasted(S::AbstractLazyArrayStyle{1}, op, a::AbstractFill{<:Any,1}, b::AbstractRange) =
+    FillArrays.simplify_broadcasted(S, op, a, b)
+broadcasted(S::AbstractLazyArrayStyle{1}, op, a::AbstractRange, b::AbstractFill{<:Any,1}) =
+    FillArrays.simplify_broadcasted(S, op, a, b)
 
 
 ###
