@@ -394,13 +394,8 @@ end
 
 
 
-for op in (:*, :/, :+, :-)
-    @eval layout_broadcasted(::CachedLayout, ::ZerosLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = broadcast(DefaultArrayStyle{1}(), $op, a, b)
-end
-
-for op in (:*, :\, :+, :-)
-    @eval layout_broadcasted(::ZerosLayout, ::CachedLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = broadcast(DefaultArrayStyle{1}(), $op, a, b)
-end
+layout_broadcasted(::CachedLayout, ::ZerosLayout, op, a::AbstractVector, b::AbstractVector) = _simplify_zeros(op, a, b)
+layout_broadcasted(::ZerosLayout, ::CachedLayout, op, a::AbstractVector, b::AbstractVector) = _simplify_zeros(op, a, b)
 
 function _bc_resizecacheddata!(::AbstractCachedLayout, a) 
     resizedata!(a, size(a)...)

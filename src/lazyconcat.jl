@@ -499,12 +499,13 @@ layout_broadcasted(::AbstractLazyLayout, ::ApplyLayout{typeof(vcat)}, op, A::Abs
 layout_broadcasted(::ApplyLayout{typeof(vcat)}, lay::CachedLayout, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(UnknownLayout(), lay, op, A, B)
 layout_broadcasted(lay::CachedLayout, ::ApplyLayout{typeof(vcat)}, op, A::AbstractVector, B::AbstractVector) = layout_broadcasted(lay, UnknownLayout(), op, A, B)
 
-for op in (:*, :/, :+, :-)
-    @eval layout_broadcasted(::ZerosLayout, ::ApplyLayout{typeof(vcat)}, ::typeof($op), a::AbstractVector, b::AbstractVector) = layout_broadcasted(ZerosLayout(), UnknownLayout(), $op, a, b)
-end
-for op in (:*, :\, :+, :-)
-    @eval layout_broadcasted(::ApplyLayout{typeof(vcat)}, ::ZerosLayout, ::typeof($op), a::AbstractVector, b::AbstractVector) = layout_broadcasted(UnknownLayout(), ZerosLayout(), $op, a, b)
-end
+# Only to disambiguate the two layouts against each other. A `Zeros` that absorbs the other
+# argument wins, and anything FillArrays leaves as a `Broadcasted` keeps the `vcat` structure.
+_zeros_or_vcat(r, fallback) = r isa Broadcasted ? fallback() : r
+layout_broadcasted(::ZerosLayout, lay::ApplyLayout{typeof(vcat)}, op, a::AbstractVector, b::AbstractVector) =
+    _zeros_or_vcat(_simplify_zeros(op, a, b), () -> layout_broadcasted(UnknownLayout(), lay, op, a, b))
+layout_broadcasted(lay::ApplyLayout{typeof(vcat)}, ::ZerosLayout, op, a::AbstractVector, b::AbstractVector) =
+    _zeros_or_vcat(_simplify_zeros(op, a, b), () -> layout_broadcasted(lay, UnknownLayout(), op, a, b))
 
 
 
