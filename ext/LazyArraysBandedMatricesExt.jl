@@ -11,7 +11,8 @@ import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cac
                    PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul, _broadcast_mul_simplifiable,
-                   triangularlayout, AbstractCachedMatrix, cache_layout, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout
+                   triangularlayout, AbstractCachedMatrix, cache_layout, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout,
+                   padrows
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
                         AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
@@ -590,11 +591,19 @@ simplifiable(::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = Val(false)
 copy(M::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = simplify(M)
 
 
-
 copy(L::Ldiv{<:BandedLazyLayouts}) = lazymaterialize(\, L.A, L.B)
 copy(L::Ldiv{<:BandedLazyLayouts,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 copy(L::Ldiv{<:BandedLazyLayouts, ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
-copy(L::Ldiv{<:BandedLazyLayouts, Blay}) where Blay<:Union{AbstractStridedLayout,PaddedColumns} = copy(Ldiv{UnknownLayout,Blay}(L.A, L.B))
+function copy(L::Ldiv{<:BandedLazyLayouts, Blay}) where Blay<:Union{AbstractStridedLayout,PaddedColumns}
+    (; A, B) = L
+    if iszero(bandwidth(A,1)) # upper triangular so finite-dimensional
+        p = paddeddata(B)
+        n = size(p,1)
+        padrows(A[1:n,1:n] \ p, axes(A,1))
+    else # use factorize
+        copy(Ldiv{UnknownLayout,Blay}(L.A, L.B))
+    end
+end
 
 ## The following needs more thought but for now it fixes a bug downstream.
 copy(L::Ldiv{<:BandedLazyLayouts, <:DiagonalLayout}) = lazymaterialize(\, L.A, L.B)
