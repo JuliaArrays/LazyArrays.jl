@@ -841,3 +841,26 @@ function materialize!(L::MatRmulMat{<:Union{AbstractStridedLayout,AbstractPadded
     rmul!(view(p_A,:, oneto(m)), Q̃)
     A
 end
+
+
+
+####
+# Ldiv
+###
+
+const UnitOrUpperTriangularLayout{Lay} = Union{UnitUpperTriangularLayout{Lay}, UpperTriangularLayout{Lay}}
+
+_triangular(::UnitUpperTriangularLayout, A) = UnitUpperTriangular(A)
+_triangular(::UpperTriangularLayout, A) = UpperTriangular(A)
+
+similar(L::Ldiv{Alay, <:PaddedColumns}) where Alay <: UnitOrUpperTriangularLayout = padrows(similar(paddeddata(L.B)), axes(L.A,1))
+
+materialize!(L::MatLdivVec{<:UnitOrUpperTriangularLayout, <:PaddedColumns}) = _ldiv_upper_padded!(L.A, L.B)
+materialize!(L::MatLdivMat{<:UnitOrUpperTriangularLayout, <:PaddedColumns}) = _ldiv_upper_padded!(L.A, L.B)
+
+function _ldiv_upper_padded!(A, B)
+    p = paddeddata(B)
+    n = size(p,1)
+    ldiv!(_triangular(MemoryLayout(A), view(triangulardata(A), 1:n, 1:n)), p)
+    B
+end

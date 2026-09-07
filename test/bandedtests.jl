@@ -990,6 +990,23 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test D*B ≈ B*D ≈ B
         @test D*M ≈ M*D ≈ B^2
     end 
+
+    @testset "Upper Banded Lazy \\ Padded" begin
+        n = 100
+        A =  BroadcastMatrix(*, 3, ApplyArray(*, brand(n,n,0,2), brand(n,n,0,2)))
+        b = Vcat(randn(3), Zeros(n-3))
+        B = Vcat(randn(3,4), Zeros(n-3,4))
+        @test @inferred(UpperTriangular(A) \ b) isa Vcat
+        @test @inferred(UpperTriangular(A) \ B) isa Vcat
+        @test @inferred(UnitUpperTriangular(A) \ b) isa Vcat
+        @test @inferred(UnitUpperTriangular(A) \ B) isa Vcat
+        @test A \ b isa Vcat
+        @test A \ B isa Vcat
+        @test UpperTriangular(A) \ b ≈ A \ b ≈ A \ Vector(b) ≈ UpperTriangular(A) \ Vector(b) ≈ Matrix(A) \ b
+        @test UpperTriangular(A) \ B ≈ A \ B ≈ A \ Matrix(B) ≈ UpperTriangular(A) \ Matrix(B) ≈ Matrix(A) \ B
+        @test UnitUpperTriangular(A) \ b ≈ UnitUpperTriangular(A) \ Vector(b) ≈ Matrix(UnitUpperTriangular(A)) \ b
+        @test UnitUpperTriangular(A) \ B ≈ UnitUpperTriangular(A) \ Matrix(B) ≈ Matrix(UnitUpperTriangular(A)) \ B
+    end
 end
 
 end # module
