@@ -853,7 +853,10 @@ const UnitOrUpperTriangularLayout{Lay} = Union{UnitUpperTriangularLayout{Lay}, U
 _triangular(::UnitUpperTriangularLayout, A) = UnitUpperTriangular(A)
 _triangular(::UpperTriangularLayout, A) = UpperTriangular(A)
 
-similar(L::Ldiv{Alay, <:PaddedColumns}) where Alay <: UnitOrUpperTriangularLayout = padrows(similar(paddeddata(L.B)), axes(L.A,1))
+padrowssimilar(b::CachedVector{T}, ax) where T = CachedArray(similar(paddeddata(b)), Zeros{T}((ax,)), (size(paddeddata(b),1),))
+padrowssimilar(b, ax) = padrows(similar(paddeddata(b)), ax)
+
+similar(L::Ldiv{Alay, <:PaddedColumns}) where Alay <: UnitOrUpperTriangularLayout = padrowssimilar(L.B, axes(L.A,1))
 
 materialize!(L::MatLdivVec{<:UnitOrUpperTriangularLayout, <:PaddedColumns}) = _ldiv_upper_padded!(L.A, L.B)
 materialize!(L::MatLdivMat{<:UnitOrUpperTriangularLayout, <:PaddedColumns}) = _ldiv_upper_padded!(L.A, L.B)
