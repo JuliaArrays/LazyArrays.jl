@@ -124,8 +124,8 @@ function rowsupport(lay::Union{PaddedColumns{Lay}, PaddedLayout{Lay}}, A, k) whe
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
 end
 
-_vcat_checkbounds(p::Number, m...) = any(iszero,m) || all(isone, m) || Base.throw(p, m)
-_vcat_checkbounds(p, m) = any(iszero,m) || Base.checkbounds(p, m)
+_vcat_checkbounds(p::Number, m...) = any(iszero,m) || all(isone, m) || Base.throw_boundserror(p, m)
+_vcat_checkbounds(p, m...) = any(iszero,m) || Base.checkbounds(p, m...)
 
 function _vcat_resizedata!(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows}}, B, m...)
     _vcat_checkbounds(paddeddata(B), m...)
