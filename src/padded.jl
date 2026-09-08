@@ -124,12 +124,15 @@ function rowsupport(lay::Union{PaddedColumns{Lay}, PaddedLayout{Lay}}, A, k) whe
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
 end
 
+_checkbounds(p::Number, m) = m ≤ 1 || Base.throw(p, m)
+_checkbounds(p, m) = Base.checkbounds(p, m)
+
 function _vcat_resizedata!(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows}}, B, m...)
-    any(iszero,m) || Base.checkbounds(B, m...)
+    any(iszero,m) || _checkbounds(paddeddata(B), m...)
     B
 end
 function _vcat_resizedata!(::Union{DualLayout{<:PaddedRows}, AbstractPaddedLayout}, B::Vcat{<:Any, 1}, m) # ambiguity
-    iszero(m) || Base.checkbounds(B, m)
+    iszero(m) || _checkbounds(paddeddata(B), m)
     B
 end
 
