@@ -4,17 +4,18 @@ using BandedMatrices, LazyArrays, LinearAlgebra
 using LazyArrays.ArrayLayouts, LazyArrays.FillArrays, LazyArrays.LazyArrays
 import ArrayLayouts: colsupport, rowsupport, materialize!, MatMulVecAdd, MatMulMatAdd, DenseColumnMajor,
                     OnesLayout, AbstractFillLayout, mulreduce, inv_layout, _fill_lmul!, copyto!_layout, _copy_oftype,
-                    layout_getindex, transtype
+                    layout_getindex, transtype, UpperTriangularLayout, UnitUpperTriangularLayout
 import LazyArrays: sublayout, symmetriclayout, hermitianlayout, applylayout, cachedlayout, transposelayout,
                    LazyArrayStyle, AbstractLazyArrayStyle, ApplyArrayBroadcastStyle, AbstractInvLayout, AbstractLazyLayout, LazyLayouts,
                    AbstractPaddedLayout, PaddedLayout, AbstractLazyBandedLayout, LazyBandedLayout, PaddedRows,
                    PaddedColumns, CachedArray, CachedMatrix, LazyLayout, BroadcastLayout, ApplyLayout,
                    paddeddata, resizedata!, broadcastlayout, _broadcastarray2broadcasted, _broadcast_sub_arguments,
                    arguments, call, applybroadcaststyle, simplify, simplifiable, islazy_layout, lazymaterialize, _broadcast_mul_mul, _broadcast_mul_simplifiable,
-                   triangularlayout, AbstractCachedMatrix, cache_layout, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout
+                   triangularlayout, AbstractCachedMatrix, cache_layout, _mulbanded_copyto!, ApplyBandedLayout, BroadcastBandedLayout,
+                   padrows, UnitOrUpperTriangularLayout
 import Base: BroadcastStyle, similar, copy, broadcasted, getindex, OneTo, oneto, tail, sign, abs
 import BandedMatrices: bandedbroadcaststyle, bandwidths, isbanded, bandedcolumns, bandeddata, BandedStyle,
-                        AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix, 
+                        AbstractBandedLayout, AbstractBandedMatrix, BandedColumns, BandedRows, BandedSubBandedMatrix,
                         _bnds, prodbandwidths, banded_rowsupport, banded_colsupport, _BandedMatrix, _banded_broadcast!,
                         resize
 import LinearAlgebra: AdjOrTrans, UpperOrLowerTriangular, kron
@@ -114,9 +115,9 @@ end
 # it's activated in InfiniteLinearAlgebra
 ###
 
-# sublayout(::AbstractBandedLayout, ::Type{<:Tuple{KR,Integer}}) where {KR<:AbstractUnitRange{Int}} = 
+# sublayout(::AbstractBandedLayout, ::Type{<:Tuple{KR,Integer}}) where {KR<:AbstractUnitRange{Int}} =
 #     sublayout(PaddedLayout{UnknownLayout}(), Tuple{KR})
-# sublayout(::AbstractBandedLayout, ::Type{<:Tuple{Integer,JR}}) where {JR<:AbstractUnitRange{Int}} = 
+# sublayout(::AbstractBandedLayout, ::Type{<:Tuple{Integer,JR}}) where {JR<:AbstractUnitRange{Int}} =
 #     sublayout(PaddedLayout{UnknownLayout}(), Tuple{JR})
 
 # function sub_paddeddata(::BandedColumns, S::SubArray{T,1,<:AbstractMatrix,<:Tuple{AbstractUnitRange{Int},Integer}}) where T
@@ -297,9 +298,9 @@ copy(M::Mul{BroadcastBandedLayout{typeof(*)}, <:Union{PaddedColumns,PaddedLayout
 # copyto!
 ###
 
-_BandedMatrix(::ApplyBandedLayout{typeof(*)}, V::AbstractMatrix{T}) where T = 
+_BandedMatrix(::ApplyBandedLayout{typeof(*)}, V::AbstractMatrix{T}) where T =
     copyto!(BandedMatrix{T}(undef, axes(V), bandwidths(V)), V)
-_BandedMatrix(::BroadcastBandedLayout, V::AbstractMatrix{T}) where T = 
+_BandedMatrix(::BroadcastBandedLayout, V::AbstractMatrix{T}) where T =
     copyto!(BandedMatrix{T}(undef, axes(V), bandwidths(V)), _broadcastarray2broadcasted(V))
 
 _broadcast_BandedMatrix(a::AbstractMatrix) = BandedMatrix(a)
@@ -364,11 +365,11 @@ applylayout(::Type{typeof(hcat)}, ::ZerosLayout, ::Lay) where Lay<:BandedLayouts
 const DualPaddedOrZerosRow = DualLayout{<:Union{PaddedRows,ZerosLayout}}
 const DualPaddedOrZerosColumn = Union{PaddedColumns,ZerosLayout}
 
-applylayout(::Type{typeof(hvcat)}, _, 
+applylayout(::Type{typeof(hvcat)}, _,
             ::ScalarLayout, ::DualPaddedOrZerosRow,
             ::DualPaddedOrZerosColumn, ::AbstractBandedLayout) = ApplyBandedLayout{typeof(hvcat)}()
 
-applylayout(::Type{typeof(hvcat)}, _, 
+applylayout(::Type{typeof(hvcat)}, _,
             ::ScalarLayout, ::ScalarLayout, ::DualPaddedOrZerosRow,
             ::ScalarLayout, ::ScalarLayout, ::DualPaddedOrZerosRow,
             ::DualPaddedOrZerosColumn, ::DualPaddedOrZerosColumn, ::AbstractBandedLayout) = ApplyBandedLayout{typeof(hvcat)}()
@@ -590,11 +591,30 @@ simplifiable(::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = Val(false)
 copy(M::Mul{<:AbstractInvLayout, <:BandedLazyLayouts}) = simplify(M)
 
 
-
 copy(L::Ldiv{<:BandedLazyLayouts}) = lazymaterialize(\, L.A, L.B)
 copy(L::Ldiv{<:BandedLazyLayouts,<:AbstractLazyLayout}) = lazymaterialize(\, L.A, L.B)
 copy(L::Ldiv{<:BandedLazyLayouts, ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
-copy(L::Ldiv{<:BandedLazyLayouts, Blay}) where Blay<:Union{AbstractStridedLayout,PaddedColumns} = copy(Ldiv{UnknownLayout,Blay}(L.A, L.B))
+
+
+const  UnitOrUpperBandedTriangularLayout = Union{UnitOrUpperTriangularLayout{<:AbstractLazyBandedLayout},
+    UnitOrUpperTriangularLayout{<:BandedColumns{<:AbstractLazyLayout}},
+    UnitOrUpperTriangularLayout{<:BandedRows{<:AbstractLazyLayout}}}
+
+# special case triangular layout
+_lazy_notbanded_upper(::UnitUpperTriangularLayout) = UnitUpperTriangularLayout{LazyLayout}
+_lazy_notbanded_upper(::UpperTriangularLayout) = UpperTriangularLayout{LazyLayout}
+
+copy(L::Ldiv{Alay, Blay}) where {Alay<:UnitOrUpperBandedTriangularLayout, Blay<:Union{AbstractStridedLayout,PaddedColumns}} =
+    copy(Ldiv{_lazy_notbanded_upper(Alay()), Blay}(L.A, L.B))
+
+function copy(L::Ldiv{<:BandedLazyLayouts, Blay}) where Blay<:Union{AbstractStridedLayout,PaddedColumns}
+    if bandwidth(L.A,1) == 0 # upper triangular
+        UpperTriangular(L.A) \ L.B # not type-stable
+    else
+        copy(Ldiv{UnknownLayout,Blay}(L.A, L.B))
+    end
+end
+
 
 ## The following needs more thought but for now it fixes a bug downstream.
 copy(L::Ldiv{<:BandedLazyLayouts, <:DiagonalLayout}) = lazymaterialize(\, L.A, L.B)
@@ -670,7 +690,7 @@ function getindex(bc::BroadcastArray{<:Any,2,<:Any,<:Tuple{AbstractMatrix,Number
     bc.f.(A[b],c)
 end
 
-# issue 325 
+# issue 325
 getindex(A::AbstractCachedMatrix, b::Band) = layout_getindex(A, b)
 
 triangularlayout(::Type{Tri}, ::AbstractLazyBandedLayout) where Tri = Tri{LazyBandedLayout}()

@@ -124,12 +124,15 @@ function rowsupport(lay::Union{PaddedColumns{Lay}, PaddedLayout{Lay}}, A, k) whe
     isempty(k̃) ? convert(typeof(rs), Base.OneTo(0)) : rs
 end
 
+_vcat_checkbounds(p::Number, m...) = any(iszero,m) || all(isone, m) || Base.throw_boundserror(p, m)
+_vcat_checkbounds(p, m...) = any(iszero,m) || Base.checkbounds(p, m...)
+
 function _vcat_resizedata!(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows}}, B, m...)
-    any(iszero,m) || Base.checkbounds(paddeddata(B), m...)
+    _vcat_checkbounds(paddeddata(B), m...)
     B
 end
 function _vcat_resizedata!(::Union{DualLayout{<:PaddedRows}, AbstractPaddedLayout}, B::Vcat{<:Any, 1}, m) # ambiguity
-    iszero(m) || Base.checkbounds(paddeddata(B), m)
+    _vcat_checkbounds(paddeddata(B), m)
     B
 end
 
@@ -739,25 +742,33 @@ end
 # qr!
 ####
 
+#####
+# pad
+#####
+
 _colon2axes(::Tuple{}, bx::Tuple{}) = ()
 _colon2axes(ax::Tuple, bx::Tuple{Colon, Vararg{Any}}) = (first(ax), _colon2axes(tail(ax), tail(bx))...)
 _colon2axes(ax::Tuple, bx::Tuple{Integer, Vararg{Any}}) = (oneto(first(bx)), _colon2axes(tail(ax), tail(bx))...)
 _colon2axes(ax::Tuple, bx::Tuple) = (first(bx), _colon2axes(tail(ax), tail(bx))...)
-pad(c, ax...) = PaddedArray(c, _colon2axes(axes(c), ax))
-pad(c, ax::Colon...) = c
 
 for (Trans, trans) in ((:Transpose, :transpose), (:Adjoint, :adjoint))
     @eval begin
         pad(c::$Trans, ax, bx) = $trans(pad(parent(c), bx, ax))
         pad(c::$Trans, a::AbstractUnitRange, ::Colon) = $trans(pad(parent(c), :, a))
         pad(c::$Trans, a::Integer, ::Colon) = $trans(pad(parent(c), :, a))
+        pad(c::$Trans, a::OneTo, ::Colon) = $trans(pad(parent(c), :, a))
     end
 end
 
 pad(c::AbstractVector{T}, n::Integer) where T = Vcat(c, Zeros{T}(n-length(c)))
-pad(c::AbstractVector{T}, ax::AbstractUnitRange) where T = pad(c, length(ax))
+pad(c::AbstractVector{T}, ax::OneTo) where T = pad(c, length(ax))
 pad(A::AbstractMatrix{T}, n::Integer, ::Colon) where T = Vcat(A, Zeros{T}(n-size(A,1), size(A,2)))
-pad(A::AbstractMatrix{T}, a::AbstractUnitRange, ::Colon) where T = pad(A, length(a), :)
+pad(A::AbstractMatrix{T}, a::OneTo, ::Colon) where T = pad(A, length(a), :)
+pad(c, ax::Colon...) = c
+pad(c, ax...) = PaddedArray(c, _colon2axes(axes(c), ax))
+
+padrows(a::AbstractVector, n) = pad(a, n)
+padrows(a::AbstractMatrix, n) = pad(a, n, :)
 
 
 
@@ -775,10 +786,10 @@ rowsupport(::QRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(padd
 colsupport(::AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q'.factors), k)
 rowsupport(::AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q'.factors), k)
 
-similar(M::Lmul{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
+similar(M::Lmul{<:AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
 
 
-function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,PaddedColumns}})
+function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, <:Union{AbstractStridedLayout,PaddedColumns}})
     Q,b = L.A',L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -789,7 +800,7 @@ function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:
     b
 end
 
-function materialize!(L::MatLmulMat{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
+function materialize!(L::MatLmulMat{<:AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
     Q,b = L.A',L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -802,7 +813,7 @@ end
 
 
 
-function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,PaddedColumns}})
+function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:AbstractPaddedLayout}, <:Union{AbstractStridedLayout,PaddedColumns}})
     Q,b = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -813,7 +824,7 @@ function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:PaddedColumns}, <:Uni
     b
 end
 
-function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
+function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:AbstractPaddedLayout}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
     Q,b = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -824,7 +835,7 @@ function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:PaddedColumns}, <:Uni
     b
 end
 
-function materialize!(L::MatRmulMat{<:Union{AbstractStridedLayout,AbstractPaddedLayout}, <:QRCompactWYQLayout{<:PaddedColumns}})
+function materialize!(L::MatRmulMat{<:Union{AbstractStridedLayout,AbstractPaddedLayout}, <:QRCompactWYQLayout{<:AbstractPaddedLayout}})
     A,Q = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -833,4 +844,30 @@ function materialize!(L::MatRmulMat{<:Union{AbstractStridedLayout,AbstractPadded
     p_A = paddeddata(A)
     rmul!(view(p_A,:, oneto(m)), Q̃)
     A
+end
+
+
+
+####
+# Ldiv
+###
+
+const UnitOrUpperTriangularLayout{Lay} = Union{UnitUpperTriangularLayout{Lay}, UpperTriangularLayout{Lay}}
+
+_triangular(::UnitUpperTriangularLayout, A) = UnitUpperTriangular(A)
+_triangular(::UpperTriangularLayout, A) = UpperTriangular(A)
+
+padrowssimilar(b::CachedVector{T}, ax) where T = CachedArray(similar(paddeddata(b)), Zeros{T}((ax,)), (size(paddeddata(b),1),))
+padrowssimilar(b, ax) = padrows(similar(paddeddata(b)), ax)
+
+similar(L::Ldiv{Alay, <:PaddedColumns}) where Alay <: UnitOrUpperTriangularLayout = padrowssimilar(L.B, axes(L.A,1))
+
+materialize!(L::MatLdivVec{<:UnitOrUpperTriangularLayout, <:PaddedColumns}) = _ldiv_upper_padded!(L.A, L.B)
+materialize!(L::MatLdivMat{<:UnitOrUpperTriangularLayout, <:PaddedColumns}) = _ldiv_upper_padded!(L.A, L.B)
+
+function _ldiv_upper_padded!(A, B)
+    p = paddeddata(B)
+    n = size(p,1)
+    ldiv!(_triangular(MemoryLayout(A), view(triangulardata(A), 1:n, 1:n)), p)
+    B
 end
