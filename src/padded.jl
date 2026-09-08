@@ -786,10 +786,10 @@ rowsupport(::QRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(padd
 colsupport(::AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q'.factors), k)
 rowsupport(::AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, Q, k) = colsupport(paddeddata(Q'.factors), k)
 
-similar(M::Lmul{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
+similar(M::Lmul{<:AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, <:PaddedColumns}, ::Type{T}, ax) where T = CachedArray(Zeros{T}(ax))
 
 
-function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,PaddedColumns}})
+function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, <:Union{AbstractStridedLayout,PaddedColumns}})
     Q,b = L.A',L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -800,7 +800,7 @@ function materialize!(L::MatLmulVec{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:
     b
 end
 
-function materialize!(L::MatLmulMat{<:AdjQRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
+function materialize!(L::MatLmulMat{<:AdjQRCompactWYQLayout{<:AbstractPaddedLayout}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
     Q,b = L.A',L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -813,7 +813,7 @@ end
 
 
 
-function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,PaddedColumns}})
+function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:AbstractPaddedLayout}, <:Union{AbstractStridedLayout,PaddedColumns}})
     Q,b = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -824,7 +824,7 @@ function materialize!(L::MatLmulVec{<:QRCompactWYQLayout{<:PaddedColumns}, <:Uni
     b
 end
 
-function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:PaddedColumns}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
+function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:AbstractPaddedLayout}, <:Union{AbstractStridedLayout,AbstractPaddedLayout}})
     Q,b = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
@@ -835,7 +835,7 @@ function materialize!(L::MatLmulMat{<:QRCompactWYQLayout{<:PaddedColumns}, <:Uni
     b
 end
 
-function materialize!(L::MatRmulMat{<:Union{AbstractStridedLayout,AbstractPaddedLayout}, <:QRCompactWYQLayout{<:PaddedColumns}})
+function materialize!(L::MatRmulMat{<:Union{AbstractStridedLayout,AbstractPaddedLayout}, <:QRCompactWYQLayout{<:AbstractPaddedLayout}})
     A,Q = L.A,L.B
     F = paddeddata(Q.factors)
     m = size(F,1)
