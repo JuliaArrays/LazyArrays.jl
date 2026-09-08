@@ -125,11 +125,11 @@ function rowsupport(lay::Union{PaddedColumns{Lay}, PaddedLayout{Lay}}, A, k) whe
 end
 
 function _vcat_resizedata!(::Union{AbstractPaddedLayout, DualLayout{<:PaddedRows}}, B, m...)
-    any(iszero,m) || Base.checkbounds(paddeddata(B), m...)
+    any(iszero,m) || Base.checkbounds(B, m...)
     B
 end
 function _vcat_resizedata!(::Union{DualLayout{<:PaddedRows}, AbstractPaddedLayout}, B::Vcat{<:Any, 1}, m) # ambiguity
-    iszero(m) || Base.checkbounds(paddeddata(B), m)
+    iszero(m) || Base.checkbounds(B, m)
     B
 end
 
