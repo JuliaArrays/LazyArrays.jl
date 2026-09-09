@@ -867,7 +867,12 @@ materialize!(L::MatLdivMat{<:UnitOrUpperTriangularLayout, <:PaddedColumns}) = _l
 
 function _ldiv_upper_padded!(A, B)
     p = paddeddata(B)
-    n = size(p,1)
-    ldiv!(_triangular(MemoryLayout(A), view(triangulardata(A), 1:n, 1:n)), p)
+    kr = axes(p,1)
+    Aₙ = _triangular(MemoryLayout(A), view(triangulardata(A), kr, kr))
+    if MemoryLayout(p) isa AbstractPaddedLayout
+        materialize!(Ldiv{typeof(MemoryLayout(Aₙ)),UnknownLayout}(Aₙ, p))
+    else
+        ldiv!(Aₙ, p)
+    end
     B
 end
