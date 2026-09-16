@@ -1015,6 +1015,16 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test uuc.datasize == c.datasize
         @test uc ≈ UpperTriangular(A) \ Vector(c) ≈ Matrix(A) \ c
         @test uuc ≈ UnitUpperTriangular(A) \ Vector(c) ≈ Matrix(UnitUpperTriangular(A)) \ c
+
+        @testset "paddeddata is itself padded" begin
+            # this previously triggered infinite recursion in _ldiv_upper_padded!
+            b2 = Vcat(Vcat(randn(2), Zeros(1)), Zeros(n-3))
+            B2 = Vcat(Vcat(randn(2,4), Zeros(1,4)), Zeros(n-3,4))
+            @test MemoryLayout(LazyArrays.paddeddata(b2)) isa LazyArrays.AbstractPaddedLayout
+            @test UpperTriangular(A) \ b2 ≈ Matrix(A) \ Vector(b2)
+            @test UpperTriangular(A) \ B2 ≈ Matrix(A) \ Matrix(B2)
+            @test UnitUpperTriangular(A) \ b2 ≈ Matrix(UnitUpperTriangular(A)) \ Vector(b2)
+        end
     end
 end
 
