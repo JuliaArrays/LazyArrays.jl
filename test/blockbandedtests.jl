@@ -8,7 +8,7 @@ import BlockArrays: blockcolsupport, blockrowsupport
 import LazyArrays: arguments, colsupport, rowsupport, resizedata!, paddeddata, islazy, LazyLayout,
                     PaddedLayout, PaddedColumns, paddeddata, ApplyLayout, LazyArrayStyle, BroadcastLayout,
                     simplifiable
-import BlockBandedMatrices: _BandedBlockBandedMatrix, BandedBlockBandedColumns
+import BlockBandedMatrices: _BandedBlockBandedMatrix, BandedBlockBandedColumns, BandedBlockBandedRows
 
 LazyArraysBlockBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBlockBandedMatricesExt)
 ApplyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.ApplyBlockBandedLayout
@@ -291,6 +291,15 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
 
         A = _BandedBlockBandedMatrix(BroadcastArray(exp,randn(9,10)), rows,cols, (l,u), (λ,μ))
         @test MemoryLayout(A) isa BandedBlockBandedColumns{LazyLayout}
+
+        # the data of an adjoint (transpose) is still lazy, including for complex entries
+        @test MemoryLayout(A') isa BandedBlockBandedRows{LazyLayout}
+        @test MemoryLayout(transpose(A)) isa BandedBlockBandedRows{LazyLayout}
+
+        C = _BandedBlockBandedMatrix(BroadcastArray(exp,randn(ComplexF64,9,10)), rows,cols, (l,u), (λ,μ))
+        @test MemoryLayout(C) isa BandedBlockBandedColumns{LazyLayout}
+        @test MemoryLayout(C') isa BandedBlockBandedRows{LazyLayout}
+        @test MemoryLayout(transpose(C)) isa BandedBlockBandedRows{LazyLayout}
     end
 
     @testset "lazy blockbanded * lazy banded" begin
