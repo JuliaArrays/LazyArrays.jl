@@ -2,6 +2,7 @@ module PaddedTests
 
 using LazyArrays, FillArrays, ArrayLayouts, Base64, Test
 using StaticArrays
+using ..InfiniteArrays: OneToInf
 import LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, LayoutVector, MemoryLayout, paddeddata, ApplyLayout, sub_materialize, CachedVector, simplifiable, pad
 import ArrayLayouts: OnesLayout
 import Base: setindex
@@ -365,6 +366,50 @@ paddeddata(a::PaddedPadded) = a
         a = Vcat(1, Zeros(3))
         c = cache(Zeros(4)); c[1] = 1
         @test norm(a) ≡ LinearAlgebra.normInf(c) ≡ LinearAlgebra.norm2(c) ≡ LinearAlgebra.norm1(c) ≡ LinearAlgebra.normp(c,2) ≡ 1.0
+    end
+
+    @testset "mapreduce" begin
+        a = Vcat(1, Zeros(3))
+        c = cache(Zeros(4)); c[1] = 1
+        @test sum(a) ≡ sum(c) ≡ 1.0
+        @test sum(PaddedPadded()) == 5
+        @test maximum(PaddedPadded()) == 1
+
+        C = PaddedArray([0.0 2; -3 0], 5, 3)
+        @test length(paddeddata(C)) < length(C)
+        M = Matrix(C)
+        for f in (identity, abs, abs2, x -> x+1), op in (+, *, max, min)
+            @test mapreduce(f, op, C) ≡ mapreduce(f, op, M)
+        end
+        @test sum(C) ≡ -1.0
+        @test sum(C; init=1.0) ≡ 0.0
+        @test sum(x -> x+1, C) ≡ 14.0
+        @test maximum(C) ≡ 2.0
+        @test minimum(C) ≡ -3.0
+        @test extrema(C) ≡ (-3.0, 2.0)
+        @test iszero(prod(C))
+        @test sum(C; dims=1) == [-3 2 0]
+        @test sum(view(C, 1:3, 1:2)) ≡ -1.0
+
+        # no padded data
+        E = cache(Zeros{Int8}(5,3))
+        @test sum(E) ≡ sum(Matrix(E)) ≡ 0
+        @test maximum(E) ≡ Int8(0)
+        @test sum(abs2, E) ≡ 0
+        @test sum(E; init=2) ≡ 2
+
+        for ax in ((OneToInf(), Base.OneTo(2)), (Base.OneTo(2), OneToInf()))
+            Z = cache(Zeros(ax))
+            @test sum(Z) ≡ 0.0
+            @test maximum(Z) ≡ minimum(Z) ≡ 0.0
+            Z[1,1] = 2; Z[2,2] = -3
+            @test sum(Z) ≡ -1.0
+            @test sum(abs, Z) ≡ 5.0
+            @test maximum(Z) ≡ 2.0
+            @test minimum(Z) ≡ -3.0
+            @test maximum(abs, Z) ≡ 3.0
+            @test extrema(Z) ≡ (-3.0, 2.0)
+        end
     end
 
     @testset "padded columns" begin

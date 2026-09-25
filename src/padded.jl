@@ -215,6 +215,35 @@ function ArrayLayouts._norm(::AbstractPaddedLayout, A, p)
     end
 end
 
+_padded_isneutral(::Union{typeof(+),typeof(add_sum)}, z) = iszero(z)
+_padded_isneutral(::Union{typeof(*),typeof(Base.mul_prod)}, z) = isone(z)
+_padded_isneutral(_, _) = false
+_padded_isidempotent(::Union{typeof(max),typeof(min),typeof(&),typeof(|),typeof(Base._extrema_rf)}) = true
+_padded_isidempotent(_) = false
+
+function _mapreduce_paddeddata(f, op, dat; kw...)
+    if MemoryLayout(dat) isa AbstractPaddedLayout
+        Base.invoke(mapreduce, Tuple{Any,Any,AbstractArray}, f, op, dat; kw...)
+    else
+        mapreduce(f, op, dat; kw...)
+    end
+end
+
+# reduce over the data, then account for the zero padding: it can be dropped if f(0) is
+# the identity of op, and it only needs to be included once if op is idempotent
+function ArrayLayouts.mapreduce_layout(::AbstractPaddedLayout, f, op, A, ::Colon; kw...)
+    dat = paddeddata(A)
+    length(dat) == length(A) && return _mapreduce_paddeddata(f, op, dat; kw...)
+    z = f(zero(eltype(A)))
+    if _padded_isneutral(op, z)
+        isempty(dat) && isempty(kw) ? op(z, z) : _mapreduce_paddeddata(f, op, dat; kw...)
+    elseif _padded_isidempotent(op)
+        isempty(dat) && isempty(kw) ? op(z, z) : op(_mapreduce_paddeddata(f, op, dat; kw...), z)
+    else
+        Base.invoke(mapreduce, Tuple{Any,Any,AbstractArray}, f, op, A; kw...)
+    end
+end
+
 
 # special case handle broadcasting with padded and cached arrays
 function _paddedpadded_broadcasted(op, A::AbstractVector, B::AbstractVector)
