@@ -375,9 +375,10 @@ paddeddata(a::PaddedPadded) = a
         @test sum(PaddedPadded()) == 5
         @test maximum(PaddedPadded()) == 1
 
-        C = cache(Zeros(5,3)); C[1,2] = 2; C[2,1] = -3
+        C = PaddedArray([0.0 2; -3 0], 5, 3)
+        @test length(paddeddata(C)) < length(C)
         M = Matrix(C)
-        for f in (identity, abs, abs2), op in (+, *, max, min)
+        for f in (identity, abs, abs2, x -> x+1), op in (+, *, max, min)
             @test mapreduce(f, op, C) ≡ mapreduce(f, op, M)
         end
         @test sum(C) ≡ -1.0
