@@ -444,6 +444,22 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test last(a) == 25
     end
 
+    @testset "eltype conversion is lazy" begin
+        a = BroadcastArray(exp, 1:3)
+        for b in (convert(AbstractArray{ComplexF64}, a), convert(AbstractVector{ComplexF64}, a),
+                  AbstractArray{ComplexF64}(a), AbstractVector{ComplexF64}(a))
+            @test b isa BroadcastVector{ComplexF64}
+            @test b == exp.(1:3)
+        end
+        @test convert(AbstractArray{Float64}, a) === a
+
+        # infinite arrays used to hang as they were materialized
+        c = BroadcastArray(float, InfiniteArrays.OneToInf())
+        d = FillArrays.elconvert(ComplexF64, c)
+        @test d isa BroadcastVector{ComplexF64}
+        @test d[1:3] == [1, 2, 3]
+    end
+
     @testset "BroadcastArray(*) * MulArray" begin
         A = BroadcastArray(*, 1:3, randn(3,4))
         B = ApplyArray(*, randn(4,3), randn(3,4))

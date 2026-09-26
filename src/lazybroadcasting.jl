@@ -90,6 +90,17 @@ BroadcastArray(b::BroadcastArray) = b
 BroadcastVector(A::BroadcastVector) = A
 BroadcastMatrix(A::BroadcastMatrix) = A
 
+# changing the eltype stays lazy, as the array may be infinite
+convert(::Type{AbstractArray{T}}, A::BroadcastArray{T}) where T = A
+convert(::Type{AbstractArray{T}}, A::BroadcastArray{<:Any,N}) where {T,N} = BroadcastArray{T,N}(A.f, A.args...)
+convert(::Type{AbstractArray{T,N}}, A::BroadcastArray{T,N}) where {T,N} = A
+convert(::Type{AbstractArray{T,N}}, A::BroadcastArray{<:Any,N}) where {T,N} = BroadcastArray{T,N}(A.f, A.args...)
+
+AbstractArray{T}(A::BroadcastArray{T}) where T = copy(A)
+AbstractArray{T}(A::BroadcastArray{<:Any,N}) where {T,N} = BroadcastArray{T,N}(A.f, map(copy,A.args)...)
+AbstractArray{T,N}(A::BroadcastArray{T,N}) where {T,N} = copy(A)
+AbstractArray{T,N}(A::BroadcastArray{<:Any,N}) where {T,N} = BroadcastArray{T,N}(A.f, map(copy,A.args)...)
+
 @inline __broadcastarray2broadcasted() = ()
 @inline __broadcastarray2broadcasted(a, b...) = tuple(_broadcastarray2broadcasted(a), __broadcastarray2broadcasted(b...)...)
 @inline _broadcastarray2broadcasted(lay::BroadcastLayout, a) = broadcasted(call(lay, a), __broadcastarray2broadcasted(arguments(lay, a)...)...)
