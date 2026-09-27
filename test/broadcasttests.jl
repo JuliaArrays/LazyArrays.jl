@@ -451,7 +451,8 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
             @test b isa BroadcastVector{ComplexF64}
             @test b == exp.(1:3)
         end
-        @test convert(AbstractArray{Float64}, a) === a
+        @test convert(AbstractArray{Float64}, a) === convert(AbstractVector{Float64}, a) === a
+        @test AbstractArray{Float64}(a) === AbstractVector{Float64}(a) === a
 
         # infinite arrays used to hang as they were materialized
         c = BroadcastArray(float, InfiniteArrays.OneToInf())
