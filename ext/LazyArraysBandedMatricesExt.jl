@@ -298,11 +298,9 @@ copy(M::Mul{BroadcastBandedLayout{typeof(*)}, <:Union{PaddedColumns,PaddedLayout
 # copyto!
 ###
 
-# BandedMatrix does not support general axes (e.g. blocked), so convert to OneTo
-_banded_axes(V) = map(ax -> Base.oneto(length(ax)), axes(V))
 
 _BandedMatrix(::ApplyBandedLayout{typeof(*)}, V::AbstractMatrix{T}) where T =
-    copyto!(BandedMatrix{T}(undef, _banded_axes(V), bandwidths(V)), V)
+    copyto!(BandedMatrix{T}(undef, axes(V), bandwidths(V)), V)
 _BandedMatrix(::BroadcastBandedLayout, V::AbstractMatrix{T}) where T =
     copyto!(BandedMatrix{T}(undef, axes(V), bandwidths(V)), _broadcastarray2broadcasted(V))
 
@@ -324,6 +322,10 @@ _mulbanded_copyto!(dest::AbstractArray{T}, a, b, c, d...) where T = _mulbanded_c
 
 _mulbanded_BandedMatrix(A, _) = A
 _mulbanded_BandedMatrix(A, ::NTuple{2,OneTo{Int}}) = BandedMatrix(A)
+# other finite axes (e.g. blocked axes) are also converted, infinite axes are left lazy
+_mulbanded_BandedMatrix(A, ax::NTuple{2,AbstractUnitRange{Int}}) = _mulbanded_BandedMatrix_length(A, map(length, ax))
+_mulbanded_BandedMatrix_length(A, ::NTuple{2,Int}) = BandedMatrix(A)
+_mulbanded_BandedMatrix_length(A, _) = A
 _mulbanded_BandedMatrix(A) = _mulbanded_BandedMatrix(A, axes(A))
 
 copyto!_layout(::AbstractBandedLayout, srclay::ApplyBandedLayout{typeof(*)}, dest::AbstractMatrix, src::AbstractMatrix) =

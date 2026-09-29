@@ -107,9 +107,8 @@ function _mul_blockrange_getindex(_, A, kr, jr)
     *(map(getindex, args, (kr, kjr...), (kjr..., jr))...)
 end
 
-# products of banded matrices are materialized as a BandedMatrix, as when indexing by unit ranges
-_blockrange_indices(ax, kr) = (k = ax[kr]; first(k):last(k))
-_mul_blockrange_getindex(::ApplyBandedLayout{typeof(*)}, A, kr, jr) = A[_blockrange_indices(axes(A,1), kr), _blockrange_indices(axes(A,2), jr)]
+# products of banded matrices are materialized via their layout, e.g., as a BandedMatrix with blocked axes
+_mul_blockrange_getindex(::ApplyBandedLayout{typeof(*)}, A, kr, jr) = ArrayLayouts.layout_getindex(A, kr, jr)
 
 call(lay::BroadcastLayout, a::BlockedArray) = call(lay, a.blocks)
 
