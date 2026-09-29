@@ -8,7 +8,7 @@ using LazyArrays.LinearAlgebra
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     AbstractLazyArrayStyle, LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
                     AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle, _argsindices, _vcat_firstinds, __view_hcat,
-                    ApplyLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
+                    ApplyLayout, ApplyBandedLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
 import ArrayLayouts: sub_materialize
 import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!
 import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout, blockvec, sortedunion
@@ -99,11 +99,17 @@ BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{Bl
 BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{BlockSlice{<:Any,<:AbstractBlockedUnitRange},BlockSlice{<:Any,<:AbstractBlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
 BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{Any,BlockSlice{<:Any,<:AbstractBlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
 
-function getindex(A::ApplyMatrix{<:Any,typeof(*)}, kr::BlockRange{1}, jr::BlockRange{1})
+getindex(A::ApplyMatrix{<:Any,typeof(*)}, kr::BlockRange{1}, jr::BlockRange{1}) = _mul_blockrange_getindex(MemoryLayout(A), A, kr, jr)
+
+function _mul_blockrange_getindex(_, A, kr, jr)
     args = A.args
     kjr = intersect.(LazyArrays._mul_args_rows(kr, args...), LazyArrays._mul_args_cols(jr, reverse(args)...))
     *(map(getindex, args, (kr, kjr...), (kjr..., jr))...)
 end
+
+# products of banded matrices are materialized as a BandedMatrix, as when indexing by unit ranges
+_blockrange_indices(ax, kr) = (k = ax[kr]; first(k):last(k))
+_mul_blockrange_getindex(::ApplyBandedLayout{typeof(*)}, A, kr, jr) = A[_blockrange_indices(axes(A,1), kr), _blockrange_indices(axes(A,2), jr)]
 
 call(lay::BroadcastLayout, a::BlockedArray) = call(lay, a.blocks)
 

@@ -298,8 +298,11 @@ copy(M::Mul{BroadcastBandedLayout{typeof(*)}, <:Union{PaddedColumns,PaddedLayout
 # copyto!
 ###
 
+# BandedMatrix does not support general axes (e.g. blocked), so convert to OneTo
+_banded_axes(V) = map(ax -> Base.oneto(length(ax)), axes(V))
+
 _BandedMatrix(::ApplyBandedLayout{typeof(*)}, V::AbstractMatrix{T}) where T =
-    copyto!(BandedMatrix{T}(undef, axes(V), bandwidths(V)), V)
+    copyto!(BandedMatrix{T}(undef, _banded_axes(V), bandwidths(V)), V)
 _BandedMatrix(::BroadcastBandedLayout, V::AbstractMatrix{T}) where T =
     copyto!(BandedMatrix{T}(undef, axes(V), bandwidths(V)), _broadcastarray2broadcasted(V))
 
