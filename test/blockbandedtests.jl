@@ -320,6 +320,20 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test Matrix(M) ≈ Matrix(A)'*Matrix(B)*Matrix(A)
         @test Matrix(A'*B*A) ≈ Matrix(A)'*Matrix(B)*Matrix(A)
     end
+
+    @testset "block indexing of products with incompatible inner blocks" begin
+        B = BlockedArray(randn(6,6), 1:3, 1:3)
+        C = BlockedArray(randn(6,6), [2,1,3], [3,3])
+        # unblocked inner axes are given the blocks of the neighbouring factor
+        M = ApplyArray(*, B, randn(6,6), B)
+        @test M[Block.(1:2), Block.(2:3)] ≈ Matrix(M)[1:3, 2:6]
+        M = ApplyArray(*, B, Diagonal(randn(6)), B)
+        @test M[Block.(1:2), Block.(2:3)] ≈ Matrix(M)[1:3, 2:6]
+        # different blocks are combined
+        M = ApplyArray(*, B, C)
+        @test M[Block.(2:3), Block.(1:2)] ≈ Matrix(M)[2:6, 1:6]
+        @test M[Block.(1:1), Block.(2:2)] ≈ Matrix(M)[1:1, 4:6]
+    end
 end
 
 end # module
