@@ -102,7 +102,7 @@ end
 @inline copy(A::Applied) = _default_materialize(materializeargs(A), A)
 
 @inline copyto!(dest, M::Applied) = copyto!(dest, materialize(M))
-@inline copyto!(dest::AbstractArray, M::Applied) = copyto!(dest, materialize(M))
+@inline copyto!(dest::AbstractArray, M::Applied) = _copyto_materialized!(dest, materialize(M), M)
 
 @inline broadcastable(M::Applied) = M
 
@@ -369,6 +369,11 @@ end
 # avoid infinite-loop
 _base_copyto!(dest::AbstractArray{T,N}, src::AbstractArray{T,N}) where {T,N} = Base.invoke(copyto!, NTuple{2,AbstractArray{T,N}}, dest, src)
 _base_copyto!(dest::AbstractArray, src::AbstractArray) = Base.invoke(copyto!, NTuple{2,AbstractArray}, dest, src)
+
+# if materialize returns a lazy array equivalent to M (e.g. products of matrices with lazy layouts)
+# then calling copyto! again would loop forever, so we fall back to entrywise copying
+@inline _copyto_materialized!(dest, A::ApplyArray{<:Any,<:Any,F,Args}, ::Applied{<:Any,F,Args}) where {F,Args} = _base_copyto!(dest, A)
+@inline _copyto_materialized!(dest, A, _) = copyto!(dest, A)
 
 ##
 # triu/tril
