@@ -310,6 +310,16 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test A*D == A*C*C
         @test D*A == C*C*A
     end
+
+    @testset "copyto! of lazy banded * blockbanded * lazy banded" begin
+        # materializing the product returns the same lazy product, which used to cause a StackOverflowError
+        A = BandedMatrices._BandedMatrix(BroadcastArray(exp, randn(3,10)), 10, 1, 1)
+        B = BandedBlockBandedMatrix(randn(10,10), 1:4, 1:4, (1,1), (1,1))
+        M = ApplyArray(*, A', B, A)
+        @test typeof(A'*B*A) == typeof(M)
+        @test Matrix(M) ≈ Matrix(A)'*Matrix(B)*Matrix(A)
+        @test Matrix(A'*B*A) ≈ Matrix(A)'*Matrix(B)*Matrix(A)
+    end
 end
 
 end # module
