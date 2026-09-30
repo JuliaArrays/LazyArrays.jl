@@ -217,6 +217,28 @@ getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, j::Integer) = L[k,:][j]
 
 inv_layout(::LazyLayouts, _, A) = ApplyArray(inv, A)
 
+# the transpose of an inverse is the inverse of the transpose, which preserves structure, e.g., triangularity
+for adj in (:adjoint, :transpose)
+    @eval $adj(A::InvMatrix) = ApplyMatrix(inv, $adj(parent(A)))
+end
+
+# a principal block of the inverse of a triangular matrix is the inverse of the principal block of the matrix,
+# so we can compute a block of the inverse without solving with (possibly infinite) columns
+struct InvTriangularBlockLayout <: AbstractLazyLayout end
+sublayout(::InvLayout{<:TriangularLayout}, ::Type{<:NTuple{2,AbstractUnitRange{Int}}}) = InvTriangularBlockLayout()
+
+for (UPLO, UNIT, Tri) in (('U', 'N', :UpperTriangular), ('U', 'U', :UnitUpperTriangular),
+                          ('L', 'N', :LowerTriangular), ('L', 'U', :UnitLowerTriangular))
+    @eval _principalblock(::TriangularLayout{$UPLO,$UNIT}, A, n) = $Tri(triangulardata(A)[oneto(n),oneto(n)])
+end
+
+function sub_materialize(::InvTriangularBlockLayout, V::AbstractMatrix, ::NTuple{2,OneTo{Int}})
+    kr, jr = parentindices(V)
+    A = parent(parent(V))
+    n = max(last(kr), last(jr))
+    inv(_principalblock(MemoryLayout(A), A, n))[kr, jr]
+end
+
 function colsupport(lay::AbstractInvLayout{TriLay}, A, j) where {S,TriLay<:TriangularLayout{S}}
     isempty(j) && return 1:0
     B, = arguments(lay, A)

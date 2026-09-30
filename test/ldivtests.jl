@@ -1,8 +1,8 @@
 module LdivRdivTests
 
 using LazyArrays, LinearAlgebra, FillArrays, Test, ArrayLayouts 
-import ArrayLayouts: rowsupport, colsupport
-import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout, simplifiable
+import ArrayLayouts: rowsupport, colsupport, TriangularLayout
+import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout, simplifiable, InvLayout, InvTriangularBlockLayout
 import Base.Broadcast: materialize
 
 @testset "Ldiv" begin
@@ -220,6 +220,35 @@ end
     @test rowsupport(invU, ()) == 1:0 
     @test colsupport(invL, ()) == 1:0 
     @test rowsupport(invL, ()) == 1:0
+end
+
+@testset "transpose/blocks of triangular inv" begin
+    U = UpperTriangular(ApplyArray(inv, rand(5, 5) + 5I))
+    L = LowerTriangular(ApplyArray(inv, rand(5, 5) + 5I))
+    for (A, lay) in ((U, TriangularLayout{'L','N',LazyLayout}), (L, TriangularLayout{'U','N',LazyLayout}),
+                     (UnitUpperTriangular(U.data), TriangularLayout{'L','U',LazyLayout}))
+        Ai = inv(A)
+        @test transpose(Ai) isa InvMatrix
+        @test MemoryLayout(transpose(Ai)) isa InvLayout{lay}
+        @test transpose(Ai) ≈ transpose(inv(Matrix(A)))
+        @test Ai' ≈ inv(Matrix(A))'
+        @test rowsupport(transpose(Ai), 3) == colsupport(Ai, 3)
+        @test colsupport(transpose(Ai), 3) == rowsupport(Ai, 3)
+
+        @test MemoryLayout(view(Ai, 1:3, 2:4)) isa InvTriangularBlockLayout
+        @test Ai[1:3, 2:4] isa Matrix
+        @test Ai[1:3, 2:4] ≈ inv(Matrix(A))[1:3, 2:4]
+        @test Ai[2:3, 1:1] ≈ inv(Matrix(A))[2:3, 1:1]
+        @test transpose(Ai)[2:4, 1:3] ≈ transpose(inv(Matrix(A)))[2:4, 1:3]
+    end
+    C = UpperTriangular(ApplyArray(inv, rand(ComplexF64, 5, 5) + 5I))
+    @test inv(C)' isa InvMatrix
+    @test inv(C)' ≈ inv(Matrix(C))'
+
+    # a row of a product with a triangular inverse only depends on finitely many entries
+    x = randn(5)
+    M = ApplyArray(*, transpose(x), inv(U))
+    @test M[1, 1:3] ≈ (transpose(x) * inv(Matrix(U)))[1, 1:3]
 end
 
 @testset "Inv \\ Lazy" begin
