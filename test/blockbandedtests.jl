@@ -4,12 +4,15 @@ using LazyArrays, BlockBandedMatrices, BlockArrays, Test
 using LinearAlgebra
 using ArrayLayouts
 using BandedMatrices
+using Infinities
+using ..InfiniteArrays: OneToInf
 import BlockArrays: blockcolsupport, blockrowsupport
 import LazyArrays: arguments, colsupport, rowsupport, resizedata!, paddeddata, islazy, LazyLayout,
                     PaddedLayout, PaddedColumns, paddeddata, ApplyLayout, LazyArrayStyle, BroadcastLayout,
                     simplifiable
 import BlockBandedMatrices: _BandedBlockBandedMatrix, BandedBlockBandedColumns, BandedBlockBandedRows
 
+LazyArraysBlockArraysExt = Base.get_extension(LazyArrays, :LazyArraysBlockArraysExt)
 LazyArraysBlockBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBlockBandedMatricesExt)
 ApplyBlockBandedLayout = LazyArraysBlockBandedMatricesExt.ApplyBlockBandedLayout
 ApplyBandedBlockBandedLayout = LazyArraysBlockBandedMatricesExt.ApplyBandedBlockBandedLayout
@@ -342,10 +345,15 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test M[Block.(1:2), Block.(2:3)] ≈ Matrix(M)[1:3, 2:6]
         M = ApplyArray(*, B, Diagonal(randn(6)), B)
         @test M[Block.(1:2), Block.(2:3)] ≈ Matrix(M)[1:3, 2:6]
+        # unblocked on both sides are left unchanged
+        M = ApplyArray(*, B, randn(6,6), randn(6,6), B)
+        @test M[Block.(1:2), Block.(2:3)] ≈ Matrix(M)[1:3, 2:6]
         # different blocks are combined
         M = ApplyArray(*, B, C)
         @test M[Block.(2:3), Block.(1:2)] ≈ Matrix(M)[2:6, 1:6]
         @test M[Block.(1:1), Block.(2:2)] ≈ Matrix(M)[1:1, 4:6]
+        # different infinite blocks cannot be combined
+        @test_throws ArgumentError LazyArraysBlockArraysExt._mul_innerblockaxis(BlockedOneTo(OneToInf()), BlockedOneTo(2:ℵ₀))
     end
 end
 

@@ -102,7 +102,7 @@ BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{An
 getindex(A::ApplyMatrix{<:Any,typeof(*)}, kr::BlockRange{1}, jr::BlockRange{1}) = _mul_blockrange_getindex(MemoryLayout(A), A, kr, jr)
 
 function _mul_blockrange_getindex(_, A, kr, jr)
-    args = _mul_blockcompatible_args(A.args)
+    args = _mul_blockcompatible_args(_mul_blockcompatible_args(A.args))
     kjr = intersect.(LazyArrays._mul_args_rows(kr, args...), LazyArrays._mul_args_cols(jr, reverse(args)...))
     *(map(getindex, args, (kr, kjr...), (kjr..., jr))...)
 end
@@ -130,6 +130,27 @@ end
 
 # products of banded matrices are materialized via their layout, e.g., as a BandedMatrix with blocked axes
 _mul_blockrange_getindex(::ApplyBandedLayout{typeof(*)}, A, kr, jr) = ArrayLayouts.layout_getindex(A, kr, jr)
+
+# The block supports of consecutive factors only line up if the inner axes have the same blocks,
+# so wrap factors in a BlockedArray where necessary.
+_mul_innerblockaxis(a::AbstractBlockedUnitRange, b::AbstractBlockedUnitRange) = blockisequal(a, b) ? a : _mul_combine_blockaxes(a, b, length(a))
+_mul_innerblockaxis(a::AbstractBlockedUnitRange, _) = a
+_mul_innerblockaxis(_, b::AbstractBlockedUnitRange) = b
+_mul_innerblockaxis(a, _) = a
+_mul_combine_blockaxes(a, b, ::Int) = BlockArrays.combine_blockaxes(a, b)
+_mul_combine_blockaxes(a, b, _) = throw(ArgumentError("Cannot combine different infinite block structures"))
+
+_mul_sameblocks(a, b) = a === b
+_mul_sameblocks(a::AbstractBlockedUnitRange, b::AbstractBlockedUnitRange) = blockisequal(a, b)
+_mul_blockwrap(a, k, j) = _mul_sameblocks(axes(a,1), k) && _mul_sameblocks(axes(a,2), j) ? a : _mul_blockedarray(a, k, j)
+_mul_blockedarray(a, k, j) = BlockedArray(a, (k, j))
+# keep a Diagonal so that it is recognised as block-diagonal
+_mul_blockedarray(a::Diagonal, k, j) = _mul_sameblocks(k, j) ? Diagonal(BlockedVector(a.diag, (k,))) : BlockedArray(a, (k, j))
+
+function _mul_blockcompatible_args(args)
+    inner = map(_mul_innerblockaxis, map(a -> axes(a,2), Base.front(args)), map(a -> axes(a,1), Base.tail(args)))
+    map(_mul_blockwrap, args, (axes(first(args),1), inner...), (inner..., axes(last(args),2)))
+end
 
 call(lay::BroadcastLayout, a::BlockedArray) = call(lay, a.blocks)
 
