@@ -249,6 +249,14 @@ end
     x = randn(5)
     M = ApplyArray(*, transpose(x), inv(U))
     @test M[1, 1:3] ≈ (transpose(x) * inv(Matrix(U)))[1, 1:3]
+
+    # non-triangular inverses are left wrapped
+    A = randn(5,5) + 5I
+    Ai = InvMatrix(A)
+    @test Ai' isa Adjoint{Float64,<:InvMatrix}
+    @test transpose(Ai) isa Transpose{Float64,<:InvMatrix}
+    @test Ai' ≈ inv(A)'
+    @test transpose(Ai) ≈ transpose(inv(A))
 end
 
 @testset "Inv \\ Lazy" begin

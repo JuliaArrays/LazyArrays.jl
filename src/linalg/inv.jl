@@ -217,10 +217,15 @@ getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, j::Integer) = L[k,:][j]
 
 inv_layout(::LazyLayouts, _, A) = ApplyArray(inv, A)
 
-# the transpose of an inverse is the inverse of the transpose, which preserves structure, e.g., triangularity
-for adj in (:adjoint, :transpose)
-    @eval $adj(A::InvMatrix) = ApplyMatrix(inv, $adj(parent(A)))
+# the transpose of an inverse is the inverse of the transpose, which preserves triangularity.
+# Other matrices are left wrapped as solves with the transpose may not be supported, e.g.
+# an infinite banded upper triangular matrix supports back substitution but its transpose
+# does not support forward substitution.
+for (adj, Adj) in ((:adjoint, :Adjoint), (:transpose, :Transpose))
+    @eval $adj(A::InvMatrix) = _inv_adj($adj, $Adj, MemoryLayout(parent(A)), A)
 end
+_inv_adj(adj, _, ::TriangularLayout, A) = ApplyMatrix(inv, adj(parent(A)))
+_inv_adj(_, Adj, _, A) = Adj(A)
 
 # a principal block of the inverse of a triangular matrix is the inverse of the principal block of the matrix,
 # so we can compute a block of the inverse without solving with (possibly infinite) columns
