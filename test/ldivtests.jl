@@ -1,8 +1,8 @@
 module LdivRdivTests
 
 using LazyArrays, LinearAlgebra, FillArrays, Test, ArrayLayouts 
-import ArrayLayouts: rowsupport, colsupport, TriangularLayout
-import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout, simplifiable, InvLayout, InvTriangularBlockLayout
+import ArrayLayouts: rowsupport, colsupport, TriangularLayout, DualLayout
+import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout, simplifiable, InvLayout, InvTriangularBlockLayout, ApplyLayout
 import Base.Broadcast: materialize
 
 @testset "Ldiv" begin
@@ -240,6 +240,10 @@ end
         @test Ai[1:3, 2:4] ≈ inv(Matrix(A))[1:3, 2:4]
         @test Ai[2:3, 1:1] ≈ inv(Matrix(A))[2:3, 1:1]
         @test transpose(Ai)[2:4, 1:3] ≈ transpose(inv(Matrix(A)))[2:4, 1:3]
+        @test [Ai[k,j] for k=1:5, j=1:5] ≈ inv(Matrix(A))
+        v = randn(3)
+        @test view(Ai, 1:3, 2:4) * v ≈ inv(Matrix(A))[1:3, 2:4] * v
+        @test view(transpose(Ai), 1:3, 2:4) * v ≈ transpose(inv(Matrix(A)))[1:3, 2:4] * v
     end
     C = UpperTriangular(ApplyArray(inv, rand(ComplexF64, 5, 5) + 5I))
     @test inv(C)' isa InvMatrix
@@ -249,6 +253,10 @@ end
     x = randn(5)
     M = ApplyArray(*, transpose(x), inv(U))
     @test M[1, 1:3] ≈ (transpose(x) * inv(Matrix(U)))[1, 1:3]
+    @test MemoryLayout(M) isa DualLayout{ApplyLayout{typeof(*)}}
+    @test Base.BroadcastStyle(typeof(M)) == LazyArrays.LazyArrayStyle{2}()
+    @test M / 2 isa ApplyArray{Float64,2,typeof(*)}
+    @test (M / 2)[1, 1:3] ≈ (transpose(x) * inv(Matrix(U)))[1, 1:3] / 2
 end
 
 @testset "Inv \\ Lazy" begin

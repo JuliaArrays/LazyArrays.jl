@@ -206,7 +206,8 @@ function sub_materialize(::InvColumnLayout, v::AbstractVector, _)
 end
 
 @propagate_inbounds getindex(A::PInvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
-@propagate_inbounds getindex(A::InvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
+@propagate_inbounds getindex(A::InvMatrix{T}, k::Integer, j::Integer) where T = _inv_getindex(MemoryLayout(parent(A)), A, k, j)
+_inv_getindex(_, A, k, j) = A[:,j][k]
 
 getindex(L::ApplyMatrix{<:Any,typeof(\)}, ::Colon, j::Integer) = L.args[1] \ L.args[2][:,j]
 getindex(L::ApplyMatrix{<:Any,typeof(\)}, k::Integer, j::Integer) = L[:,j][k]
@@ -237,6 +238,20 @@ function sub_materialize(::InvTriangularBlockLayout, V::AbstractMatrix, ::NTuple
     A = parent(parent(V))
     n = max(last(kr), last(jr))
     inv(_principalblock(MemoryLayout(A), A, n))[kr, jr]
+end
+
+# multiply by the materialized block rather than entrywise
+for MulAddType in (:MatMulVecAdd, :MatMulMatAdd)
+    @eval materialize!(M::$MulAddType{InvTriangularBlockLayout}) = ArrayLayouts.muladd!(M.α, sub_materialize(M.A), M.B, M.β, M.C; Czero=M.Czero)
+end
+
+# columns of the inverse of a lower triangular matrix may be infinite so solve with a principal block instead
+function _inv_getindex(lay::TriangularLayout{'L'}, A, k, j)
+    T = eltype(A)
+    k < j && return zero(T)
+    e = zeros(T, k)
+    e[j] = one(T)
+    (_principalblock(lay, parent(A), k) \ e)[k]
 end
 
 function colsupport(lay::AbstractInvLayout{TriLay}, A, j) where {S,TriLay<:TriangularLayout{S}}
