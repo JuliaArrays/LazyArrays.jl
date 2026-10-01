@@ -240,6 +240,12 @@ end
         @test Ai[1:3, 2:4] ≈ inv(Matrix(A))[1:3, 2:4]
         @test Ai[2:3, 1:1] ≈ inv(Matrix(A))[2:3, 1:1]
         @test transpose(Ai)[2:4, 1:3] ≈ transpose(inv(Matrix(A)))[2:4, 1:3]
+
+        # entries only depend on a principal block
+        for (k,j) in ((1,1), (2,3), (3,2), (5,1), (1,5))
+            @test Ai[k,j] ≈ inv(Matrix(A))[k,j] atol=10eps()
+            @test transpose(Ai)[k,j] ≈ transpose(inv(Matrix(A)))[k,j] atol=10eps()
+        end
     end
     C = UpperTriangular(ApplyArray(inv, rand(ComplexF64, 5, 5) + 5I))
     @test inv(C)' isa InvMatrix
@@ -249,6 +255,23 @@ end
     x = randn(5)
     M = ApplyArray(*, transpose(x), inv(U))
     @test M[1, 1:3] ≈ (transpose(x) * inv(Matrix(U)))[1, 1:3]
+
+    # triangular wrappers of adjoints of lazy matrices are inverted lazily
+    B = ApplyArray(inv, rand(5, 5) + 5I)
+    for Tri in (UpperTriangular, UnitUpperTriangular, LowerTriangular, UnitLowerTriangular), adj in (adjoint, transpose)
+        A = Tri(adj(B))
+        @test inv(A) isa InvMatrix
+        @test inv(A) ≈ inv(Matrix(A))
+        @test inv(A)[4,2] ≈ inv(Matrix(A))[4,2] atol=10eps()
+    end
+
+    # non-triangular inverses are left wrapped
+    A = randn(5,5) + 5I
+    Ai = InvMatrix(A)
+    @test Ai' isa Adjoint{Float64,<:InvMatrix}
+    @test transpose(Ai) isa Transpose{Float64,<:InvMatrix}
+    @test Ai' ≈ inv(A)'
+    @test transpose(Ai) ≈ transpose(inv(A))
 end
 
 @testset "Inv \\ Lazy" begin

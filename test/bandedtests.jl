@@ -3,6 +3,7 @@ using ArrayLayouts, LazyArrays, BandedMatrices, LinearAlgebra, Test
 using BandedMatrices: AbstractBandedLayout, _BandedMatrix, isbanded, BandedStyle, BandedColumns, BandedRows, resize, bandeddata
 using LazyArrays: PaddedLayout, PaddedRows, PaddedColumns, arguments, call, LazyArrayStyle, ApplyLayout, simplifiable, resizedata!, MulStyle, LazyLayout, BroadcastLayout
 using ArrayLayouts: OnesLayout, StridedLayout
+using ..InfiniteArrays: OneToInf
 LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
 BroadcastBandedLayout = LazyArraysBandedMatricesExt.BroadcastBandedLayout
 ApplyBandedLayout = LazyArraysBandedMatricesExt.ApplyBandedLayout
@@ -1033,6 +1034,15 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
             @test ldiv!(UpperTriangular(A), deepcopy(B2)) ≈ Matrix(A) \ Matrix(B2)
             @test ldiv!(UnitUpperTriangular(A), deepcopy(b2)) ≈ Matrix(UnitUpperTriangular(A)) \ Vector(b2)
         end
+    end
+
+    @testset "banded * banded with infinite inner dimension" begin
+        D = Diagonal(Fill(2, (OneToInf(),)))
+        M = ApplyArray(*, view(D, 1:5, :), view(D, :, 1:5))
+        @test MemoryLayout(M) isa ApplyBandedLayout{typeof(*)}
+        # factors with infinite axes are left lazy rather than converted to BandedMatrix
+        @test LazyArraysBandedMatricesExt._mulbanded_BandedMatrix(M.args[1]) === M.args[1]
+        @test BandedMatrix(M) == Diagonal(Fill(4,5))
     end
 end
 

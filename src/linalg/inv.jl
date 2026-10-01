@@ -206,7 +206,8 @@ function sub_materialize(::InvColumnLayout, v::AbstractVector, _)
 end
 
 @propagate_inbounds getindex(A::PInvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
-@propagate_inbounds getindex(A::InvMatrix{T}, k::Integer, j::Integer) where T = A[:,j][k]
+@propagate_inbounds getindex(A::InvMatrix, k::Integer, j::Integer) = inv_getindex(MemoryLayout(parent(A)), A, k, j)
+inv_getindex(_, A, k, j) = A[:,j][k]
 
 getindex(L::ApplyMatrix{<:Any,typeof(\)}, ::Colon, j::Integer) = L.args[1] \ L.args[2][:,j]
 getindex(L::ApplyMatrix{<:Any,typeof(\)}, k::Integer, j::Integer) = L[:,j][k]
@@ -217,10 +218,15 @@ getindex(L::ApplyMatrix{<:Any,typeof(/)}, k::Integer, j::Integer) = L[k,:][j]
 
 inv_layout(::LazyLayouts, _, A) = ApplyArray(inv, A)
 
-# the transpose of an inverse is the inverse of the transpose, which preserves structure, e.g., triangularity
-for adj in (:adjoint, :transpose)
-    @eval $adj(A::InvMatrix) = ApplyMatrix(inv, $adj(parent(A)))
+# the transpose of an inverse is the inverse of the transpose, which preserves triangularity.
+# Other matrices are left wrapped as solves with the transpose may not be supported, e.g.
+# an infinite banded upper triangular matrix supports back substitution but its transpose
+# does not support forward substitution.
+for (adj, Adj) in ((:adjoint, :Adjoint), (:transpose, :Transpose))
+    @eval $adj(A::InvMatrix) = _inv_adj($adj, $Adj, MemoryLayout(parent(A)), A)
 end
+_inv_adj(adj, _, ::TriangularLayout, A) = ApplyMatrix(inv, adj(parent(A)))
+_inv_adj(_, Adj, _, A) = Adj(A)
 
 # a principal block of the inverse of a triangular matrix is the inverse of the principal block of the matrix,
 # so we can compute a block of the inverse without solving with (possibly infinite) columns
@@ -237,6 +243,18 @@ function sub_materialize(::InvTriangularBlockLayout, V::AbstractMatrix, ::NTuple
     A = parent(parent(V))
     n = max(last(kr), last(jr))
     inv(_principalblock(MemoryLayout(A), A, n))[kr, jr]
+end
+
+# similarly an entry only depends on a principal block, which avoids solving with a (possibly infinite) column,
+# e.g. forward substitution down an infinite column of a lower triangular matrix would not terminate
+function inv_getindex(lay::TriangularLayout{UPLO}, A, k, j) where UPLO
+    T = eltype(A)
+    (UPLO == 'U' ? k > j : k < j) && return zero(T)
+    B = parent(A)
+    n = max(k, j)
+    e = zeros(T, n)
+    e[j] = one(T)
+    (_principalblock(lay, B, n) \ e)[k]
 end
 
 function colsupport(lay::AbstractInvLayout{TriLay}, A, j) where {S,TriLay<:TriangularLayout{S}}
