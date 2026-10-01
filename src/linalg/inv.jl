@@ -245,6 +245,11 @@ function sub_materialize(::InvTriangularBlockLayout, V::AbstractMatrix, ::NTuple
     inv(_principalblock(MemoryLayout(A), A, n))[kr, jr]
 end
 
+# multiply by the materialized block rather than entrywise
+for MulAddType in (:MatMulVecAdd, :MatMulMatAdd)
+    @eval materialize!(M::$MulAddType{InvTriangularBlockLayout}) = ArrayLayouts.muladd!(M.α, sub_materialize(M.A), M.B, M.β, M.C; Czero=M.Czero)
+end
+
 # similarly an entry only depends on a principal block, which avoids solving with a (possibly infinite) column,
 # e.g. forward substitution down an infinite column of a lower triangular matrix would not terminate
 function inv_getindex(lay::TriangularLayout{UPLO}, A, k, j) where UPLO
