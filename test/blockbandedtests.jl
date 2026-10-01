@@ -324,6 +324,19 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test Matrix(A'*B*A) ≈ Matrix(A)'*Matrix(B)*Matrix(A)
     end
 
+    @testset "block indexing of banded * banded with blocked axes" begin
+        A = BandedMatrices._BandedMatrix(BlockedMatrix(randn(3,6), [3], 1:3), blockedrange(1:3), 1, 1)
+        M = ApplyArray(*, A, A)
+        @test MemoryLayout(M) isa LazyArrays.ApplyBandedLayout{typeof(*)}
+        B = M[Block.(1:2), Block.(1:3)]
+        @test B isa BandedMatrix
+        @test blockisequal(axes(B), (axes(A,1)[Block.(1:2)], axes(A,2)[Block.(1:3)]))
+        @test B ≈ (Matrix(A)*Matrix(A))[1:3,1:6]
+        @test B[Block(2,3)] ≈ (Matrix(A)*Matrix(A))[2:3,4:6]
+        @test M[Block.(2:3), Block.(1:2)] ≈ (Matrix(A)*Matrix(A))[2:6,1:3]
+        @test BandedMatrix(view(M, Block.(1:2), Block.(1:3))) ≈ (Matrix(A)*Matrix(A))[1:3,1:6]
+    end
+
     @testset "block indexing of products with incompatible inner blocks" begin
         B = BlockedArray(randn(6,6), 1:3, 1:3)
         C = BlockedArray(randn(6,6), [2,1,3], [3,3])

@@ -8,7 +8,7 @@ using LazyArrays.LinearAlgebra
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     AbstractLazyArrayStyle, LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
                     AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle, _argsindices, _vcat_firstinds, __view_hcat,
-                    ApplyLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
+                    ApplyLayout, ApplyBandedLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
 import ArrayLayouts: sub_materialize
 import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!
 import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout, blockvec, sortedunion
@@ -99,7 +99,9 @@ BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{Bl
 BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{BlockSlice{<:Any,<:AbstractBlockedUnitRange},BlockSlice{<:Any,<:AbstractBlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
 BroadcastStyle(M::Type{<:SubArray{<:Any,N,<:ApplyArray,I}}) where {N,I<:Tuple{Any,BlockSlice{<:Any,<:AbstractBlockedUnitRange},Vararg{Any}}} = applybroadcaststyle(M, MemoryLayout(M))
 
-function getindex(A::ApplyMatrix{<:Any,typeof(*)}, kr::BlockRange{1}, jr::BlockRange{1})
+getindex(A::ApplyMatrix{<:Any,typeof(*)}, kr::BlockRange{1}, jr::BlockRange{1}) = _mul_blockrange_getindex(MemoryLayout(A), A, kr, jr)
+
+function _mul_blockrange_getindex(_, A, kr, jr)
     args = _mul_blockcompatible_args(A.args)
     kjr = intersect.(LazyArrays._mul_args_rows(kr, args...), LazyArrays._mul_args_cols(jr, reverse(args)...))
     *(map(getindex, args, (kr, kjr...), (kjr..., jr))...)
@@ -125,6 +127,9 @@ function _mul_blockcompatible_args(args)
     inner = map(_mul_innerblockaxis, map(a -> axes(a,2), Base.front(args)), map(a -> axes(a,1), Base.tail(args)))
     map(_mul_blockwrap, args, (axes(first(args),1), inner...), (inner..., axes(last(args),2)))
 end
+
+# products of banded matrices are materialized via their layout, e.g., as a BandedMatrix with blocked axes
+_mul_blockrange_getindex(::ApplyBandedLayout{typeof(*)}, A, kr, jr) = ArrayLayouts.layout_getindex(A, kr, jr)
 
 call(lay::BroadcastLayout, a::BlockedArray) = call(lay, a.blocks)
 
