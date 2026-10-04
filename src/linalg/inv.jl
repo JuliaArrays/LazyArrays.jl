@@ -90,6 +90,10 @@ simplifiable(::Mul{<:AbstractInvLayout}) = Val(true)
 copy(M::Mul{<:AbstractInvLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 copy(M::Mul{<:AbstractInvLayout, <:AbstractLazyLayout}) = ArrayLayouts.ldiv(pinv(M.A), M.B)
 @inline copy(M::Mul{<:AbstractInvLayout, <:DiagonalLayout{<:AbstractFillLayout}}) = copy(mulreduce(M))
+# lowering to \ would materialize the lazy diagonal, which may be infinite, so we keep the product lazy:
+# entries of an inverse triangular matrix only depend on principal blocks
+simplifiable(::Mul{<:AbstractInvLayout{<:TriangularLayout}, <:DiagonalLayout{<:AbstractLazyLayout}}) = Val(false)
+copy(M::Mul{<:AbstractInvLayout{<:TriangularLayout}, <:DiagonalLayout{<:AbstractLazyLayout}}) = lazymaterialize(M)
 @inline copy(M::Mul{<:AbstractInvLayout, ApplyLayout{typeof(*)}}) = simplify(M)
 copy(L::Ldiv{<:AbstractInvLayout}) = pinv(L.A) * L.B
 copy(L::Ldiv{<:AbstractInvLayout, <:AbstractLazyLayout}) = pinv(L.A) * L.B
