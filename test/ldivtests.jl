@@ -4,6 +4,7 @@ using LazyArrays, LinearAlgebra, FillArrays, Test, ArrayLayouts
 import ArrayLayouts: rowsupport, colsupport, TriangularLayout, DualLayout
 import LazyArrays: InvMatrix, ApplyBroadcastStyle, LdivStyle, Applied, LazyLayout, simplifiable, InvLayout, InvTriangularBlockLayout, ApplyLayout
 import Base.Broadcast: materialize
+using ..InfiniteArrays: OneToInf
 
 @testset "Ldiv" begin
     @testset "Float64 \\ *" begin
@@ -280,6 +281,29 @@ end
     @test transpose(Ai) isa Transpose{Float64,<:InvMatrix}
     @test Ai' ≈ inv(A)'
     @test transpose(Ai) ≈ transpose(inv(A))
+end
+
+@testset "triangular inv * lazy Diagonal" begin
+    # lowering to \ materializes the diagonal, which does not terminate when it is infinite
+    U = UpperTriangular(ApplyArray(inv, rand(5, 5) + 5I))
+    D = Diagonal(BroadcastVector(exp, randn(5)))
+    for Ai in (inv(U), inv(U)')
+        @test simplifiable(*, Ai, D) == Val(false)
+        @test Ai * D isa ApplyArray{Float64,2,typeof(*)}
+        @test Ai * D ≈ Matrix(Ai) * D
+        @test Ai' * D * Ai ≈ Matrix(Ai)' * D * Matrix(Ai)
+    end
+
+    U = UpperTriangular(Ones((OneToInf(), OneToInf())))
+    D = Diagonal(BroadcastVector{Float64}(k -> 2/(2k-1), OneToInf()))
+    Ui = inv(UpperTriangular(ones(5,5)))
+    Ai = ApplyArray(inv, U)
+    for (A, B) in ((Ai, Ui), (Ai', Ui'))
+        @test A * D isa ApplyArray{Float64,2,typeof(*)}
+        @test [(A * D)[k,j] for k=1:5, j=1:5] ≈ B * D[1:5,1:5]
+    end
+    # e.g. a gram matrix R' * D * R with R = inv(U)
+    @test [(Ai' * D * Ai)[k,j] for k=1:5, j=1:5] ≈ Ui' * D[1:5,1:5] * Ui
 end
 
 @testset "Inv \\ Lazy" begin
