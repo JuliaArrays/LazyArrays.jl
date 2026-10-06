@@ -1,6 +1,7 @@
 module LazyArraysBlockArraysTest
 using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, Test
-using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata, ApplyLayout
+using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata, ApplyLayout, CachedArray
+using ..InfiniteArrays: OneToInf
 using BlockArrays: blockcolsupport, blockrowsupport, blockvec
 const BlockVec{T, M<:AbstractMatrix{T}} = ApplyVector{T, typeof(blockvec), <:Tuple{M}}
 
@@ -126,6 +127,37 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test C[Block(2),2] == [5,1]
         @test C[:,Block(2)] == C[Block.(1:3),Block(2)]
         @test C[Block(2),:] == C[Block(2), Block.(1:2)]
+    end
+
+    @testset "Cached array with blocked axes" begin
+        for c in (CachedArray([1.,2,3,4,5], Zeros((blockedrange(1:4),))),
+                  CachedArray([1.,2,3], BlockedVector(collect(1.0:10), 1:4)))
+            b = BlockedVector(Vector(c), 1:4)
+            @test c[Block(3)] == b[Block(3)]
+            @test c[Block(2)[2]] == b[Block(2)[2]]
+            @test c[Block(3)[1:2]] == b[Block(3)[1:2]]
+            @test view(c, Block(3)) == b[Block(3)]
+            @test c[Block.(1:4)] == b
+            @test c[Block.(2:3)] isa BlockedVector
+            @test c[Block.(2:3)] == b[Block.(2:3)]
+            @test blockisequal(axes(c[Block.(2:3)]), axes(b[Block.(2:3)]))
+            @test c[[Block(3),Block(1)]] == b[[Block(3),Block(1)]]
+        end
+
+        c = CachedArray([1.,2,3,4,5], Zeros((BlockedOneTo(ArrayLayouts.RangeCumsum(OneToInf())),)))
+        @test c[Block(3)] == view(c, Block(3)) == [4,5,0]
+        @test c[Block(2)[2]] == 3
+        @test c[Block(3)[2:3]] == [5,0]
+        @test c[Block.(1:20)] isa BlockedVector
+        @test blocklengths(axes(c[Block.(1:20)],1)) == 1:20
+        @test c[Block.(1:20)] == [1:5; zeros(205)]
+
+        C = CachedArray(reshape(collect(1.0:6),2,3), Zeros((blockedrange(1:3), blockedrange([2,2]))))
+        B = BlockedMatrix(Matrix(C), 1:3, [2,2])
+        @test C[Block(1),Block(2)] == C[Block(1,2)] == B[Block(1,2)]
+        @test C[Block.(1:2),Block.(1:2)] == B[Block.(1:2),Block.(1:2)]
+        @test C[Block(2)[1],Block(1)[2]] == C[BlockIndex((2,1),(1,2))] == B[Block(2)[1],Block(1)[2]]
+        @test C[Block(2,1)[1:2,2:2]] == B[Block(2,1)[1:2,2:2]]
     end
 
     @testset "subpadded" begin

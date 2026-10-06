@@ -7,7 +7,7 @@ using LazyArrays.FillArrays
 using LazyArrays.LinearAlgebra
 import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     AbstractLazyArrayStyle, LazyArrayStyle, CachedVector, AbstractPaddedLayout, PaddedLayout, PaddedRows, PaddedColumns, BroadcastLayout,
-                    AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle, _argsindices, _vcat_firstinds, __view_hcat,
+                    AbstractCachedVector, AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle, _argsindices, _vcat_firstinds, __view_hcat,
                     ApplyLayout, ApplyBandedLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
 import ArrayLayouts: sub_materialize
 import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!
@@ -167,6 +167,15 @@ end
 
 @inline getindex(A::AbstractCachedMatrix, kr::AbstractVector, jr::Block) = ArrayLayouts.layout_getindex(A, kr, jr)
 @inline getindex(A::AbstractCachedMatrix, kr::BlockRange{1}, jr::BlockRange{1}) = ArrayLayouts.layout_getindex(A, kr, jr)
+
+# the generic getindex(::AbstractCachedVector, I) treats I as integer indices, so we route block indexing via the layout
+@inline getindex(A::AbstractCachedVector, kr::Block{1}) = ArrayLayouts.layout_getindex(A, kr)
+@inline getindex(A::AbstractCachedVector, kr::AbstractVector{<:Block{1}}) = ArrayLayouts.layout_getindex(A, kr)
+@inline getindex(A::AbstractCachedVector, K::BlockIndexRange{1}) = ArrayLayouts.layout_getindex(A, K)
+@inline getindex(A::AbstractCachedArray{T,N}, K::BlockIndexRange{N}) where {T,N} = ArrayLayouts.layout_getindex(A, K)
+Base.@propagate_inbounds getindex(A::AbstractCachedVector, K::BlockIndex{1}) = A[to_indices(A, (K,))...]
+Base.@propagate_inbounds getindex(A::AbstractCachedArray{T,N}, K::BlockIndex{N}) where {T,N} = A[to_indices(A, (K,))...]
+Base.@propagate_inbounds getindex(A::AbstractCachedMatrix, K::BlockIndex{1}, J::BlockIndex{1}) = A[to_indices(A, (K, J))...]
 
 ###
 # BlockedArray apply
