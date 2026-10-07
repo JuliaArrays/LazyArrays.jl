@@ -221,9 +221,9 @@ end
 
 _mul_getindex(args::Tuple{Number,Vararg{Any}}, k::Int, j::Int) = first(args) * _mul_getindex(tail(args), k, j)
 
-sublayout(::ApplyLayout{typeof(*)}, _...) = ApplyLayout{typeof(*)}()
+sublayout(::ApplyLayout{typeof(*)}, ::Type{<:Tuple{Vararg{Union{AbstractVector,Int}}}}) = ApplyLayout{typeof(*)}()
 # matrix-indexing loses the multiplication structure as we don't support tensor multiplication
-sublayout(::ApplyLayout{typeof(*)}, ::Type{<:Tuple{AbstractMatrix}}) = UnknownLayout()
+# sublayout(::ApplyLayout{typeof(*)}, ::Type{<:Tuple{AbstractMatrix}}) = UnknownLayout()
 sublayout(::ApplyLayout{typeof(*)}, ::Type{<:Tuple{AbstractVector{<:CartesianIndex}}}) = UnknownLayout()
 
 call(::ApplyLayout{typeof(*)}, V::SubArray) = *
