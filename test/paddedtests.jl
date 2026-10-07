@@ -582,5 +582,77 @@ paddeddata(a::PaddedPadded) = a
         @test b == [0 5 2 zeros(1,3)]
         @test c == [0 5 3 zeros(1,3)]
     end
+
+    @testset "equals_layout" begin
+        @testset "PaddedColumns" begin
+            a = Vcat([1,2], Zeros{Int}(5))
+            b = Vcat([1,2,0,0], Zeros{Int}(3))
+            c = Vcat([1,2,0,3], Zeros{Int}(3))
+            @test MemoryLayout(a) isa PaddedColumns
+            @test a == b == a
+            @test a ≠ c && c ≠ a
+            @test b ≠ c && c ≠ b
+            @test Vcat([1,2,3], Zeros{Int}(4)) ≠ a # entry immediately after the shorter data
+            @test a ≠ Vcat([1,2], Zeros{Int}(6))
+            @test Vcat([1,3], Zeros{Int}(5)) ≠ a
+
+            # cached vectors are compared without resizing
+            x = cache(Zeros{Int}(7)); x[1] = 1; x[2] = 2
+            y = cache(Zeros{Int}(7)); y[3] = 0
+            @test MemoryLayout(x) isa PaddedColumns
+            @test x == a == x
+            @test x ≠ y
+            @test LazyArrays.cacheddata(x) == [1,2]
+            @test LazyArrays.cacheddata(y) == [0,0,0]
+
+            @test Vcat(1, 2, Zeros{Int}(5)) == a
+
+            # infinite
+            @test Vcat([1,2], Zeros{Int}(OneToInf())) == Vcat([1,2,0], Zeros{Int}(OneToInf()))
+            @test Vcat([1,2], Zeros{Int}(OneToInf())) ≠ Vcat([1,2,3], Zeros{Int}(OneToInf()))
+
+            # PaddedColumns matrices
+            A = Vcat([1 2; 3 4], Zeros{Int}(3,2))
+            B = Vcat([1 2; 3 4; 0 0], Zeros{Int}(2,2))
+            C = Vcat([1 2; 3 4; 0 5], Zeros{Int}(2,2))
+            @test MemoryLayout(A) isa PaddedColumns
+            @test A == B == A
+            @test A ≠ C && C ≠ A
+        end
+
+        @testset "AbstractPaddedLayout" begin
+            A = PaddedArray([1 2; 3 4], 5, 6)
+            B = PaddedArray([1 2 0; 3 4 0], 5, 6)
+            C = PaddedArray([1 2; 3 4; 0 0], 5, 6)
+            @test MemoryLayout(A) isa PaddedLayout
+            @test A == B == C == A
+            @test A ≠ PaddedArray([1 2 5; 3 4 0], 5, 6) ≠ A # nonzero in extra column
+            @test A ≠ PaddedArray([1 2; 3 4; 5 0], 5, 6) ≠ A # nonzero in extra row
+            @test PaddedArray([1 2 0; 3 4 0], 5, 6) ≠ PaddedArray([1 2; 3 4; 0 5], 5, 6) # nonzero outside both
+            @test A ≠ PaddedArray([1 2; 3 5], 5, 6)
+            @test A ≠ PaddedArray([1 2; 3 4], 5, 7)
+            @test A == [1 2 zeros(Int,1,4); 3 4 zeros(Int,1,4); zeros(Int,3,6)]
+
+            # cached matrices are compared without resizing
+            X = cache(Zeros{Int}(5,6)); X[1,1] = 1; X[1,2] = 2; X[2,1] = 3; X[2,2] = 4
+            Y = cache(Zeros{Int}(5,6)); Y[3,4] = 0
+            @test MemoryLayout(X) isa PaddedLayout
+            @test X == A == X
+            @test X ≠ Y
+            @test size(LazyArrays.cacheddata(X)) == (2,2)
+            @test size(LazyArrays.cacheddata(Y)) == (3,4)
+            Y[1,1] = 1; Y[1,2] = 2; Y[2,1] = 3; Y[2,2] = 4
+            @test X == Y
+            Y[3,4] = 1
+            @test X ≠ Y && Y ≠ X
+
+            # mixed padded layouts
+            R = Hcat([1 2; 3 4; 0 0; 0 0; 0 0], Zeros{Int}(5,4))
+            @test MemoryLayout(R) isa PaddedRows
+            @test A == R == A
+            @test Vcat([1 2 0 0 0 0; 3 4 0 0 0 0], Zeros{Int}(3,6)) == A
+            @test R ≠ PaddedArray([1 2; 3 4; 0 1], 5, 6) ≠ R
+        end
+    end
 end
 end # module

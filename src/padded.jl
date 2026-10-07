@@ -154,19 +154,38 @@ resizedata!(B::Vcat, m...) = _vcat_resizedata!(MemoryLayout(B), B, m...)
 
 cacheddata(B::Vcat) = Vcat(map(maybe_cacheddata, arguments(B))...)
 
-function ==(A::CachedVector{<:Any,<:Any,<:Zeros}, B::CachedVector{<:Any,<:Any,<:Zeros})
-    length(A) == length(B) || return false
-    n = max(A.datasize[1], B.datasize[1])
-    resizedata!(A,n); resizedata!(B,n)
-    view(A.data,OneTo(n)) == view(B.data,OneTo(n))
+# paddeddata may return a scalar, e.g. for Vcat(1, Zeros(5))
+paddeddata_array(A) = _paddeddata_array(paddeddata(A), A)
+_paddeddata_array(dat::Number, A) = fill(dat, ntuple(_ -> 1, ndims(A)))
+_paddeddata_array(dat, _) = dat
+
+checkfirstrowsequal(n, a_data::AbstractVector, b_data::AbstractVector) = view(a_data, OneTo(n)) ==  view(b_data, OneTo(n))
+checkfirstrowsequal(n, a_data::AbstractMatrix, b_data::AbstractMatrix) = view(a_data, OneTo(n), :) == view(b_data, OneTo(n), :)
+
+checklastrowszero(n, a_data::AbstractVector) = all(iszero, @view(a_data[n+1:end]))
+checklastrowszero(n, a_data::AbstractMatrix) = all(iszero, @view(a_data[n+1:end,:]))
+
+function equals_layout(::PaddedColumns, ::PaddedColumns, A, B)
+    axes(A) == axes(B) || return false
+    a_data, b_data = paddeddata_array(A), paddeddata_array(B)
+
+    n = min(size(a_data,1), size(b_data,1))
+
+    checkfirstrowsequal(n, a_data, b_data) || return false
+    checklastrowszero(n, a_data) && checklastrowszero(n, b_data)
 end
 
-function ==(A::CachedArray{<:Any,<:Any,<:Any,<:Zeros}, B::CachedArray{<:Any,<:Any,<:Any,<:Zeros})
-    size(A) == size(B) || return false
-    m = max(A.datasize[1], B.datasize[1])
-    n = max(A.datasize[2], B.datasize[2])
-    resizedata!(A, m, n); resizedata!(B, m, n)
-    view(A.data, OneTo(m), OneTo(n)) == view(B.data, OneTo(m), OneTo(n))
+checkpaddedzero(m, n, data) = all(iszero, view(data, m+1:size(data,1), :)) && all(iszero, view(data, OneTo(m), n+1:size(data,2)))
+
+function equals_layout(::AbstractPaddedLayout, ::AbstractPaddedLayout, A, B)
+    axes(A) == axes(B) || return false
+    a_data, b_data = paddeddata_array(A), paddeddata_array(B)
+
+    m = min(size(a_data,1), size(b_data,1))
+    n = min(size(a_data,2), size(b_data,2))
+
+    view(a_data, OneTo(m), OneTo(n)) == view(b_data, OneTo(m), OneTo(n)) || return false
+    checkpaddedzero(m, n, a_data) && checkpaddedzero(m, n, b_data)
 end
 
 function copyto!_layout(::PaddedColumns, ::PaddedColumns, dest::AbstractVector, src::AbstractVector)
