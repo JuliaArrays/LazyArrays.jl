@@ -197,6 +197,9 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             C = Vcat([1],[2,0])
             @test A == B == C == [1,2,0]
             @test A ≠ [1,2,4]
+            @test A ≠ Vcat([1,2],[4])
+            @test A == Vcat([1.0,2.0],[0.0]) # mixed eltypes
+            @test view(A, 1:3) == B
         end
 
         @testset "cached vcat" begin

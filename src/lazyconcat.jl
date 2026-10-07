@@ -41,7 +41,7 @@ end
 
 Base.IndexStyle(::Type{<:Vcat{T,1}}) where T = Base.IndexLinear()
 
-function ==(a::Vcat{T,N}, b::Vcat{T,N}) where {N,T}
+function equals_layout(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)}, a, b)
     a_args = arguments(vcat, a)
     b_args = arguments(vcat, b)
     if length(a_args) ≠ length(b_args) || any(map(size,a_args) .≠ map(size,b_args))
