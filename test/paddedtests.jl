@@ -311,7 +311,7 @@ paddeddata(a::PaddedPadded) = a
         a = ApplyArray(setindex, Zeros(5,5), 2, 2, 3)
         @test a[2,3] === 2.0
         @test a == setindex!(zeros(5,5),2,2,3)
-        @test_broken 2 in colsupport(a,3)
+        @test 2 ∉ colsupport(a,3)
 
         a = ApplyArray(setindex, Zeros(5,5), [4,5], 2:3, 3)
         @test a == setindex!(zeros(5,5),[4,5], 2:3, 3)

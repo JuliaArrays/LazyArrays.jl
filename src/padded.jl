@@ -154,38 +154,48 @@ resizedata!(B::Vcat, m...) = _vcat_resizedata!(MemoryLayout(B), B, m...)
 
 cacheddata(B::Vcat) = Vcat(map(maybe_cacheddata, arguments(B))...)
 
-# paddeddata may return a scalar, e.g. for Vcat(1, Zeros(5))
-paddeddata_array(A) = _paddeddata_array(paddeddata(A), A)
-_paddeddata_array(dat::Number, A) = fill(dat, ntuple(_ -> 1, ndims(A)))
-_paddeddata_array(dat, _) = dat
 
+checkfirstrowsequal(n, a_data::Number, b_data::Number) = n ≤ 0 || a_data == b_data
+checkfirstrowsequal(n, a_data::Number, b_data::AbstractVecOrMat) = n ≤ 0 || a_data == b_data[1]
+checkfirstrowsequal(n, b_data::AbstractVecOrMat, a_data::Number) = checkfirstrowsequal(n, a_data, b_data)
 checkfirstrowsequal(n, a_data::AbstractVector, b_data::AbstractVector) = view(a_data, OneTo(n)) ==  view(b_data, OneTo(n))
 checkfirstrowsequal(n, a_data::AbstractMatrix, b_data::AbstractMatrix) = view(a_data, OneTo(n), :) == view(b_data, OneTo(n), :)
 
+checklastrowszero(n, a_data::Number) = n ≥ 1 || iszero(a_data)
 checklastrowszero(n, a_data::AbstractVector) = all(iszero, @view(a_data[n+1:end]))
 checklastrowszero(n, a_data::AbstractMatrix) = all(iszero, @view(a_data[n+1:end,:]))
 
-function equals_layout(::PaddedColumns, ::PaddedColumns, A, B)
+function _paddedcolumns_equals_layout(A, B)
     axes(A) == axes(B) || return false
-    a_data, b_data = paddeddata_array(A), paddeddata_array(B)
+    a_data, b_data = paddeddata(A), paddeddata(B)
 
     n = min(size(a_data,1), size(b_data,1))
+    # data may itself be padded with the same size, in which case recursing would not terminate
+    MemoryLayout(a_data) isa PaddedColumns && MemoryLayout(b_data) isa PaddedColumns && return equals_layout(UnknownLayout(), UnknownLayout(), A, B)
 
     checkfirstrowsequal(n, a_data, b_data) || return false
     checklastrowszero(n, a_data) && checklastrowszero(n, b_data)
 end
 
-checkpaddedzero(m, n, data) = all(iszero, view(data, m+1:size(data,1), :)) && all(iszero, view(data, OneTo(m), n+1:size(data,2)))
+equals_layout(::PaddedColumns, ::PaddedColumns, A::AbstractVector, B::AbstractVector) = _paddedcolumns_equals_layout(A, B)
+equals_layout(::PaddedColumns, ::PaddedColumns, A::AbstractMatrix, B::AbstractMatrix) = _paddedcolumns_equals_layout(A, B)
 
-function equals_layout(::AbstractPaddedLayout, ::AbstractPaddedLayout, A, B)
+checktopleftequal((m, n), a_data::Number, b_data::Number) = n ≤ 0 || m ≤ 0 || a_data == b_data
+checktopleftequal((m, n), a_data::AbstractMatrix, b_data::AbstractMatrix) = view(a_data, OneTo(m), OneTo(n)) == view(b_data, OneTo(m), OneTo(n))
+
+checkpaddedzero((m,n), data::Number) = (m ≥ 1 && n ≥ 1) || iszero(data)
+checkpaddedzero((m,n), data::AbstractMatrix) = all(iszero, view(data, m+1:size(data,1), :)) && all(iszero, view(data, OneTo(m), n+1:size(data,2)))
+
+function equals_layout(::AbstractPaddedLayout, ::AbstractPaddedLayout, A::AbstractMatrix, B::AbstractMatrix)
     axes(A) == axes(B) || return false
-    a_data, b_data = paddeddata_array(A), paddeddata_array(B)
+    a_data, b_data = paddeddata(A), paddeddata(B)
 
     m = min(size(a_data,1), size(b_data,1))
     n = min(size(a_data,2), size(b_data,2))
 
-    view(a_data, OneTo(m), OneTo(n)) == view(b_data, OneTo(m), OneTo(n)) || return false
-    checkpaddedzero(m, n, a_data) && checkpaddedzero(m, n, b_data)
+    MemoryLayout(a_data) isa AbstractPaddedLayout && MemoryLayout(b_data) isa AbstractPaddedLayout && return equals_layout(UnknownLayout(), UnknownLayout(), A, B)
+    checktopleftequal((m,n), a_data, b_data) || return false
+    checkpaddedzero((m,n), a_data) && checkpaddedzero((m,n), b_data)
 end
 
 function copyto!_layout(::PaddedColumns, ::PaddedColumns, dest::AbstractVector, src::AbstractVector)
