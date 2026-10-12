@@ -31,6 +31,8 @@ module InfiniteArrays
     end
 
     Base.axes(::AbstractInfUnitRange) = (OneToInf(),)
+    # Base's permutedims reshapes to a 1 × ∞ matrix, which is not supported, so stay lazy as in InfiniteArrays.jl
+    Base.permutedims(r::AbstractInfUnitRange) = transpose(r)
 
     struct InfUnitRange{T<:Real} <: AbstractInfUnitRange{T}
         start::T
