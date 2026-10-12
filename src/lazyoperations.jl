@@ -499,3 +499,12 @@ unsafe_convert(::Type{Ptr{T}}, A::ApplyMatrix{T,typeof(rot180)}) where T =
 applylayout(::Type{typeof(rot180)}, ::ApplyLayout{typeof(*)}) = ApplyLayout{typeof(*)}()
 call(::ApplyLayout{typeof(*)}, A::ApplyMatrix{<:Any,typeof(rot180)}) = *
 arguments(::ApplyLayout{typeof(*)}, A::ApplyMatrix{<:Any,typeof(rot180)}) = ApplyMatrix.(rot180, arguments(A.args...))
+
+# rot180 maps the k-th diagonal of an m × n matrix to the (n-m-k)-th diagonal with its entries reversed
+applylayout(::Type{typeof(rot180)}, ::OffDiagonalLayout{ML}) where ML =
+    OffDiagonalLayout{typeof(sublayout(ML(), Tuple{StepRange{Int,Int}}))}()
+offdiagonaldata(A::ApplyMatrix{<:Any,typeof(rot180)}) = @view(offdiagonaldata(A.args[1])[end:-1:1])
+function offdiagonalindex(A::ApplyMatrix{<:Any,typeof(rot180)})
+    m, n = size(A)
+    n - m - offdiagonalindex(A.args[1])
+end

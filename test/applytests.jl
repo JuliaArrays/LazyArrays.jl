@@ -110,6 +110,29 @@ using LinearAlgebra
         @test MemoryLayout(R) isa ApplyLayout{typeof(*)}
         @test arguments(R) == (rot180(A), rot180(B))
         @test R ≈ rot180(A*B)
+
+        @testset "OffDiagonal" begin
+            for A in (FillArrays.OffDiagonal([1.,2,3], 1), FillArrays.OffDiagonal([1.,2,3], -2, 5, 4),
+                      FillArrays.OffDiagonal(Fill(2.0,3), 2, 3, 5), FillArrays.OffDiagonal(Float64[], 4, 2, 3),
+                      view(FillArrays.OffDiagonal([1.,2,3,4], 1), 2:5, 1:4))
+                R = ApplyArray(rot180, A)
+                for (R, M) in ((R, rot180(Matrix(A))), (ApplyArray(rot180, R), Matrix(A)))
+                    @test R == M
+                    @test MemoryLayout(R) == OffDiagonalLayout{typeof(MemoryLayout(ArrayLayouts.offdiagonaldata(R)))}()
+                    @test FillArrays.OffDiagonal(ArrayLayouts.offdiagonaldata(R), ArrayLayouts.offdiagonalindex(R), size(R)...) == M
+                    for j in axes(R,2)
+                        @test findall(!iszero, M[:,j]) ⊆ colsupport(R, j)
+                    end
+                    for k in axes(R,1)
+                        @test findall(!iszero, M[k,:]) ⊆ rowsupport(R, k)
+                    end
+                end
+            end
+            R = ApplyArray(rot180, FillArrays.OffDiagonal(Fill(2.0,3), 2, 3, 5))
+            @test MemoryLayout(R) isa OffDiagonalLayout{FillLayout}
+            @test ArrayLayouts.offdiagonaldata(R) ≡ Fill(2.0,3)
+            @test ArrayLayouts.offdiagonalindex(R) == 0
+        end
     end
 
     @testset "scalar * Matrix" begin

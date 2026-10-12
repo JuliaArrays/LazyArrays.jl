@@ -42,7 +42,8 @@ import ArrayLayouts: AbstractQLayout, Dot, Dotu, Ldiv, Lmul, MatMulMatAdd, MatMu
                      diagonaldata, subdiagonaldata, supdiagonaldata, MemoryLayout, MatLmulVec, MatLmulMat,
                      AdjQRCompactWYQLayout, QRCompactWYQLayout, MatLmulMat, MatRmulMat, indextype,
                      MatLdivVec, MatLdivMat,
-                     UpperTriangularLayout, UnitUpperTriangularLayout, equals_layout
+                     UpperTriangularLayout, UnitUpperTriangularLayout, equals_layout,
+                     OffDiagonalLayout, offdiagonaldata, offdiagonalindex
 
 import FillArrays: AbstractFill, AbstractZeros, getindex_value
 
