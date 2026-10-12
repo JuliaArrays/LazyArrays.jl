@@ -63,6 +63,14 @@ LinearAlgebra.lmul!(β::Number, A::PseudoBandedMatrix) = (lmul!(β, A.data); A)
         @test length((A*x).args[1]) == length(x.args[1]) + bandwidth(A,1) == 2
         @test A*x == A*Vector(x)
 
+        # scalar padded data
+        B = brand(5,5,1,1)
+        x = Vcat(2.0, Zeros(4))
+        @test B*x ≈ B*Vector(x)
+        @test transpose(x)*B ≈ transpose(Vector(x))*B
+        @test x'*B ≈ Vector(x)'*B
+        @test transpose(x)*B*x ≈ transpose(Vector(x))*B*Vector(x)
+
         A = _BandedMatrix(randn(3,10), 10, 1,1)
         x = Vcat(randn(10), Zeros(0))
         @test A*x isa Vcat{Float64,1,<:Tuple{<:Vector,<:Zeros}}

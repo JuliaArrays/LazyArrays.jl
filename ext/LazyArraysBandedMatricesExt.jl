@@ -151,12 +151,17 @@ function similar(M::MulAdd{<:DualLayout{<:PaddedRows}, <:BandedLayouts}, ::Type{
     trans(Vcat(Vector{T}(undef, n), Zeros{T}(size(A,1)-n)))
 end
 
+# the padded data of e.g. Vcat(1.0, Zeros(5)) is a scalar, which muladd! does not support
+_paddeddata_array(x) = _paddeddata_array(paddeddata(x), size(x))
+_paddeddata_array(dat, _) = dat
+_paddeddata_array(dat::Number, sz) = LazyArrays.makearray(dat, sz)
+
 function materialize!(M::MatMulVecAdd{<:BandedLayouts,<:AbstractPaddedLayout,<:AbstractPaddedLayout})
     α,A,x,β,y = M.α,M.A,M.B,M.β,M.C
     length(y) == size(A,1) || throw(DimensionMismatch())
     length(x) == size(A,2) || throw(DimensionMismatch())
 
-    x̃ = paddeddata(x)
+    x̃ = _paddeddata_array(x)
     resizedata!(y, min(length(M),length(x̃)+bandwidth(A,1)))
     ỹ = paddeddata(y)
 
@@ -169,7 +174,7 @@ function materialize!(M::MatMulMatAdd{<:BandedLayouts,<:Union{PaddedColumns,Padd
     size(y) == (size(A,1),size(x,2)) || throw(DimensionMismatch())
     size(x,1) == size(A,2) || throw(DimensionMismatch())
 
-    x̃ = paddeddata(x)
+    x̃ = _paddeddata_array(x)
     resizedata!(y, min(size(M,1),size(x̃,1)+bandwidth(A,1)), min(size(M,2),size(x̃,2)))
     ỹ = paddeddata(y)
 
@@ -190,7 +195,7 @@ function materialize!(M::MatMulMatAdd{<:DualLayout{<:PaddedRows}, <:BandedLayout
     size(Y) == (size(A,1),size(X,2)) || throw(DimensionMismatch())
     size(X,1) == size(A,2) || throw(DimensionMismatch())
 
-    Ã = paddeddata(A)
+    Ã = _paddeddata_array(A)
     resizedata!(Y, 1, min(size(M,2),size(Ã,2)+bandwidth(X,2)))
     Ỹ = paddeddata(Y)
     muladd!(α, Ã, view(X, axes(Ã,2), axes(Ỹ,2)), β, Ỹ)
