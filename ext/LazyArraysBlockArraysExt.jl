@@ -226,7 +226,7 @@ function _split2blocks(KR, A, C...)
     if Int(last(KR)) ≤ M
         (KR, _split2blocks(Block.(1:0), C...)...)
     else
-        (KR[1]:Block(M), _split2blocks(Block(1):(last(KR)-Block(M)), C...)...)
+        (KR[1]:Block(M), _split2blocks(Block(max(1, Int(first(KR))-M)):(last(KR)-Block(M)), C...)...)
     end
 end
 
