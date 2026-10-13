@@ -1,11 +1,23 @@
 module LazyArraysBlockArraysTest
 using LazyArrays, ArrayLayouts, BlockArrays, FillArrays, Test
-using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata, ApplyLayout, CachedArray
+using LazyArrays: LazyArrayStyle, PaddedLayout, PaddedColumns, PaddedRows, paddeddata, ApplyLayout, CachedArray, arguments
 using ..InfiniteArrays: OneToInf
 using BlockArrays: blockcolsupport, blockrowsupport, blockvec
 const BlockVec{T, M<:AbstractMatrix{T}} = ApplyVector{T, typeof(blockvec), <:Tuple{M}}
 
 struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
+
+# a concatenation with blocked axes that is not a BlockedArray
+struct BlockedConcat{T,N,AA<:AbstractArray{T,N},Ax} <: AbstractArray{T,N}
+    A::AA
+    axes::Ax
+end
+Base.size(B::BlockedConcat) = size(B.A)
+Base.axes(B::BlockedConcat) = B.axes
+Base.getindex(B::BlockedConcat{T,N}, k::Vararg{Int,N}) where {T,N} = B.A[k...]
+ArrayLayouts.MemoryLayout(::Type{<:BlockedConcat{T,N,AA}}) where {T,N,AA} = MemoryLayout(AA)
+LazyArrays.arguments(lay::ApplyLayout{typeof(vcat)}, B::BlockedConcat) = arguments(lay, B.A)
+LazyArrays.arguments(lay::ApplyLayout{typeof(hcat)}, B::BlockedConcat) = arguments(lay, B.A)
 
 @testset "Lazy BlockArrays" begin
     @testset "LazyBlock" begin
@@ -170,9 +182,34 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test ApplyArray(view(a, Block.(1:2))) == [1:3; Ones(3)]
         @test ApplyArray(view(a, Block.(2:3))) == [Ones(3); 4; 4]
         
-        # TODO: fix assumption vcat matches with block
+        # blocks need not match the arguments of the vcat
         a = BlockedArray(Vcat([1, 2, 3], Ones(3)), 1:3)
-        @test_broken ApplyArray(view(a, Block.(1:2))) == 1:3
+        @test ApplyArray(view(a, Block.(1:2))) == 1:3
+        @test a[Block.(1:2)] == 1:3
+        @test blocklengths(axes(a[Block.(2:3)], 1)) == 2:3
+        @test a[Block.(2:3)] == [2; 3; Ones(3)]
+
+        v = BlockedVector(Vcat([2.0], 1.0:9), [2, 8])
+        @test v[Block.(1:1)] == [2.0, 1.0]
+        @test v[Block.(1:2)] == Vector(v)
+
+        # scalar arguments
+        for v in (BlockedVector(Vcat(2.0, 1.0:9), [1, 9]), BlockedVector(Vcat(2.0, 3.0, 1.0:9), [1, 3, 3, 4]),
+                  BlockedVector(Vcat(2.0, BlockedVector(collect(1.0:9), [2,3,4])), [1,2,3,4]))
+            for KR in (Block.(1:1), Block.(1:2), Block.(2:blocklength(v)), Block.(1:blocklength(v)))
+                @test v[KR] == Vector(v)[axes(v,1)[KR]]
+                @test blocklengths(axes(v[KR], 1)) == blocklengths(axes(v,1))[Int.(KR)]
+                @test ApplyArray(view(v, KR)) == Vector(v)[axes(v,1)[KR]]
+            end
+            R = BlockedMatrix(transpose(v.blocks), [1], blocklengths(axes(v,1)))
+            @test R[Block.(1:1), Block.(1:2)] == Matrix(R)[1:1, axes(v,1)[Block.(1:2)]]
+            @test blocklengths.(axes(R[Block.(1:1), Block.(1:2)])) == ([1], blocklengths(axes(v,1))[1:2])
+        end
+
+        # rows of a vcat in a single block
+        A = BlockedMatrix(Vcat(transpose(Vcat(2.0, 1.0:9)), transpose(Vcat(3.0, 1.0:9))), [2], Fill(1, 10))
+        @test A[Block.(1:1), Block.(1:3)] == Matrix(A)[:, 1:3]
+        @test blocklengths.(axes(A[Block.(1:1), Block.(1:3)])) == ([2], [1, 1, 1])
 
         a = BlockedArray(Vcat(blockedrange(1:3), blockedrange(1:2)), [1:3; 1:2])
         @test ApplyArray(view(a, Block.(1:2))) == 1:3
@@ -184,6 +221,34 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
 
         B = BlockedArray(Vcat([1 2 3; 4 5 6], Ones(3,3), fill(4, 2, 3))', [3], [2,3,2])
         @test ApplyArray(view(B, Block.(1:1), Block(1))) == [1 4; 2 5; 3 6]
+
+        # blocked rows, unblocked columns
+        A = BlockedArray(Vcat(transpose(Vcat(2.0, 1.0:3)), transpose(Vcat(3.0, 1.0:3)), ones(2,4)), (blockedrange([1,3]), Base.OneTo(4)))
+        @test A[Block.(1:1), Block(1)] == [2 1 2 3]
+        @test A[Block.(1:2), Block(1)] == Matrix(A)
+        @test blocklengths(axes(A[Block.(1:2), Block(1)], 1)) == [1, 3]
+    end
+
+    @testset "arguments of concatenation with blocked axes" begin
+        a = BlockedConcat(Vcat([0], BlockedVector(1:3, [1,2]), BlockedVector(4:6, [2,1])), (blockedrange([1,1,2,2,1]),))
+        for KR in (Block.(1:1), Block.(2:3), Block.(1:5), Block.(3:4), Block.(4:5), Block.(5:5), Block.(2:1))
+            @test vcat(arguments(view(a, KR))...) == Vector(a)[axes(a,1)[KR]]
+        end
+
+        A = BlockedConcat(Vcat(BlockedMatrix([0 0 0], [1], [1,2]), BlockedMatrix(ones(3,3), [1,2], [1,2]), BlockedMatrix(fill(2,3,3), [2,1], [1,2])),
+                          (blockedrange([1,1,2,2,1]), blockedrange([1,2])))
+        for KR in (Block.(1:1), Block.(2:3), Block.(1:5), Block.(3:4), Block.(5:5)), J in (Block(1), Block(2))
+            @test vcat(arguments(view(A, KR, J))...) == Matrix(A)[axes(A,1)[KR], axes(A,2)[J]]
+        end
+
+        H = BlockedConcat(Hcat(BlockedMatrix([0; 0; 0;;], [1,2], [1]), BlockedMatrix(ones(3,3), [1,2], [1,2]), BlockedMatrix(fill(2,3,3), [1,2], [2,1])),
+                          (blockedrange([1,2]), blockedrange([1,1,2,2,1])))
+        for K in (Block(1), Block(2)), JR in (Block.(1:1), Block.(2:3), Block.(1:5), Block.(3:4), Block.(5:5))
+            @test hcat(arguments(view(H, K, JR))...) == Matrix(H)[axes(H,1)[K], axes(H,2)[JR]]
+        end
+        for KR in (Block.(1:1), Block.(1:2)), J in (Block(1), Block(3), Block(5))
+            @test hcat(arguments(view(H, KR, J))...) == Matrix(H)[axes(H,1)[KR], axes(H,2)[J]]
+        end
     end
 
     @testset "BlockVec" begin
