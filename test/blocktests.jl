@@ -170,9 +170,34 @@ struct TestLazyStyle{N} <: LazyArrays.AbstractLazyArrayStyle{N} end
         @test ApplyArray(view(a, Block.(1:2))) == [1:3; Ones(3)]
         @test ApplyArray(view(a, Block.(2:3))) == [Ones(3); 4; 4]
         
-        # TODO: fix assumption vcat matches with block
+        # blocks need not match the arguments of the vcat
         a = BlockedArray(Vcat([1, 2, 3], Ones(3)), 1:3)
-        @test_broken ApplyArray(view(a, Block.(1:2))) == 1:3
+        @test ApplyArray(view(a, Block.(1:2))) == 1:3
+        @test a[Block.(1:2)] == 1:3
+        @test blocklengths(axes(a[Block.(2:3)], 1)) == 2:3
+        @test a[Block.(2:3)] == [2; 3; Ones(3)]
+
+        v = BlockedVector(Vcat([2.0], 1.0:9), [2, 8])
+        @test v[Block.(1:1)] == [2.0, 1.0]
+        @test v[Block.(1:2)] == Vector(v)
+
+        # scalar arguments
+        for v in (BlockedVector(Vcat(2.0, 1.0:9), [1, 9]), BlockedVector(Vcat(2.0, 3.0, 1.0:9), [1, 3, 3, 4]),
+                  BlockedVector(Vcat(2.0, BlockedVector(collect(1.0:9), [2,3,4])), [1,2,3,4]))
+            for KR in (Block.(1:1), Block.(1:2), Block.(2:blocklength(v)), Block.(1:blocklength(v)))
+                @test v[KR] == Vector(v)[axes(v,1)[KR]]
+                @test blocklengths(axes(v[KR], 1)) == blocklengths(axes(v,1))[Int.(KR)]
+                @test ApplyArray(view(v, KR)) == Vector(v)[axes(v,1)[KR]]
+            end
+            R = BlockedMatrix(transpose(v.blocks), [1], blocklengths(axes(v,1)))
+            @test R[Block.(1:1), Block.(1:2)] == Matrix(R)[1:1, axes(v,1)[Block.(1:2)]]
+            @test blocklengths.(axes(R[Block.(1:1), Block.(1:2)])) == ([1], blocklengths(axes(v,1))[1:2])
+        end
+
+        # rows of a vcat in a single block
+        A = BlockedMatrix(Vcat(transpose(Vcat(2.0, 1.0:9)), transpose(Vcat(3.0, 1.0:9))), [2], Fill(1, 10))
+        @test A[Block.(1:1), Block.(1:3)] == Matrix(A)[:, 1:3]
+        @test blocklengths.(axes(A[Block.(1:1), Block.(1:3)])) == ([2], [1, 1, 1])
 
         a = BlockedArray(Vcat(blockedrange(1:3), blockedrange(1:2)), [1:3; 1:2])
         @test ApplyArray(view(a, Block.(1:2))) == 1:3

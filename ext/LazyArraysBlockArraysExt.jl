@@ -267,6 +267,34 @@ function arguments(lay::ApplyLayout{typeof(hcat)}, V::SubArray{<:Any,2,<:Any,<:T
     arguments(lay, view(P,kr,J:J))
 end
 
+# The blocks of a BlockedArray need not align with the arguments of the concatenation it wraps,
+# e.g. BlockedVector(Vcat(1.0, x), [2, ...]), so block-indexing the arguments is invalid.
+# Instead we index the wrapped array by the corresponding integers, and restore the blocks when materializing.
+_unblockindex(k::BlockSlice) = first(k):last(k)
+_unblockindex(k) = k
+_unblockedview(V::SubArray{<:Any,N,<:BlockedArray}) where N = view(parent(V).blocks, map(_unblockindex, parentindices(V))...)
+
+for (F, Inds) in ((vcat, Tuple{BlockSlice{<:BlockRange1}}),
+                  (vcat, Tuple{BlockSlice{<:BlockRange1},BlockSlice}),
+                  (hcat, Tuple{BlockSlice,BlockSlice{<:BlockRange1}}),
+                  (hcat, Tuple{BlockSlice{<:BlockRange1},BlockSlice{<:Block1}}))
+    @eval arguments(lay::ApplyLayout{typeof($F)}, V::SubArray{<:Any,$(length(Inds.parameters)),<:BlockedArray,<:$Inds}) =
+        arguments(lay, _unblockedview(V))
+end
+
+for F in (vcat, hcat)
+    @eval begin
+        sub_materialize(::ApplyLayout{typeof($F)}, V::SubArray{<:Any,1,<:BlockedArray}, ax::Tuple{AbstractBlockedUnitRange}) =
+            BlockedArray(sub_materialize(_unblockedview(V)), ax)
+        sub_materialize(::ApplyLayout{typeof($F)}, V::SubArray{<:Any,2,<:BlockedArray}, ax::Tuple{AbstractBlockedUnitRange,AbstractBlockedUnitRange}) =
+            BlockedArray(sub_materialize(_unblockedview(V)), ax)
+        sub_materialize(::ApplyLayout{typeof($F)}, V::SubArray{<:Any,2,<:BlockedArray}, ax::Tuple{AbstractBlockedUnitRange,AbstractUnitRange}) =
+            BlockedArray(sub_materialize(_unblockedview(V)), ax)
+        sub_materialize(::ApplyLayout{typeof($F)}, V::SubArray{<:Any,2,<:BlockedArray}, ax::Tuple{AbstractUnitRange,AbstractBlockedUnitRange}) =
+            BlockedArray(sub_materialize(_unblockedview(V)), ax)
+    end
+end
+
 
 ####
 # BlockVec
