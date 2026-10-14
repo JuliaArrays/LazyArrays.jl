@@ -229,6 +229,25 @@ LazyArrays.arguments(lay::ApplyLayout{typeof(hcat)}, B::BlockedConcat) = argumen
         @test blocklengths(axes(A[Block.(1:2), Block(1)], 1)) == [1, 3]
     end
 
+    @testset "block-indexing a BlockedArray wrapping a broadcast" begin
+        v = BlockedVector(BroadcastVector(*, 2, 1.0:10), [1,2,3,4])
+        w = BlockedVector(2 .* collect(1.0:10), [1,2,3,4])
+        for KR in (Block.(1:3), Block.(2:3), Block(2), Block(2)[1:2], 2:5)
+            @test v[KR] == w[KR]
+            @test blockisequal(axes(v[KR]), axes(w[KR]))
+        end
+        @test v'[:, Block.(1:3)] == w'[:, Block.(1:3)]
+        @test blockisequal(axes(v'[:, Block.(1:3)]), axes(w'[:, Block.(1:3)]))
+
+        A = BlockedMatrix(BroadcastMatrix(+, reshape(1.0:30, 6, 5), 1), [1,2,3], [2,3])
+        B = BlockedMatrix(Matrix(A), [1,2,3], [2,3])
+        for (KR, JR) in ((Block.(1:2), Block.(1:2)), (Block.(1:2), :), (:, Block.(2:2)), (Block.(1:2), 1:3),
+                         (Block.(1:2), Block(1)), (Block.(1:2), 2), (Block(2), Block.(1:2)))
+            @test A[KR, JR] == B[KR, JR]
+            @test blockisequal(axes(A[KR, JR]), axes(B[KR, JR]))
+        end
+    end
+
     @testset "arguments of concatenation with blocked axes" begin
         a = BlockedConcat(Vcat([0], BlockedVector(1:3, [1,2]), BlockedVector(4:6, [2,1])), (blockedrange([1,1,2,2,1]),))
         for KR in (Block.(1:1), Block.(2:3), Block.(1:5), Block.(3:4), Block.(4:5), Block.(5:5), Block.(2:1))
