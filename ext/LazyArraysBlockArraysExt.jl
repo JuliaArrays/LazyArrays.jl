@@ -10,7 +10,7 @@ import LazyArrays: resizedata!, paddeddata, paddeddata_axes, arguments, call,
                     AbstractCachedVector, AbstractCachedMatrix, AbstractCachedArray, setindex, applybroadcaststyle, _argsindices, _vcat_firstinds, __view_hcat,
                     ApplyLayout, ApplyBandedLayout, cache_layout, applied_eltype, applylayout, applied_ndims, broadcast_deblock
 import ArrayLayouts: sub_materialize
-import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!
+import Base: getindex, setindex!, BroadcastStyle, broadcasted, OneTo, axes, size, view, resize!, Slice
 import BlockArrays: AbstractBlockStyle, AbstractBlockedUnitRange, blockcolsupport, blockrowsupport, BlockSlice, BlockIndexRange, AbstractBlockLayout, blockvec, sortedunion
 
 BlockArrays._broadcaststyle(S::AbstractLazyArrayStyle{1}) = S
