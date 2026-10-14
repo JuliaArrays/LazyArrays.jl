@@ -893,7 +893,7 @@ function sub_materialize(lay::ApplyLayout{typeof(vcat)}, V::AbstractMatrix, _)
     ret
 end
 
-sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector, _) = vcat(map(sub_materialize, arguments(vcat, V))...)
+sub_materialize(::ApplyLayout{typeof(vcat)}, V::AbstractVector, _) = Vcat(map(sub_materialize, arguments(vcat, V))...)
 
 function sub_materialize(lay::ApplyLayout{typeof(hcat)}, V, _)
     ret = similar(V)
