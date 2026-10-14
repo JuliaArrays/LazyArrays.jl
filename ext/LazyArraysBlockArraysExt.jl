@@ -271,6 +271,7 @@ end
 # e.g. BlockedVector(Vcat(1.0, x), [2, ...]), so block-indexing the arguments is invalid.
 # Instead we index the wrapped array by the corresponding integers, and restore the blocks when materializing.
 _unblockindex(k::BlockSlice) = first(k):last(k)
+_unblockindex(::Base.Slice) = Colon()
 _unblockindex(k) = k
 _unblockedview(V::SubArray{<:Any,N,<:BlockedArray}) where N = view(parent(V).blocks, map(_unblockindex, parentindices(V))...)
 
@@ -294,6 +295,15 @@ for F in (vcat, hcat)
             BlockedArray(sub_materialize(_unblockedview(V)), ax)
     end
 end
+
+# Similarly, the arguments of a broadcast wrapped in a BlockedArray cannot be indexed by the blocks of the BlockedArray,
+# so we materialize the wrapped broadcast by the corresponding integers and restore the blocks.
+_restoreblocks(A, _) = A
+_restoreblocks(A, ax::Tuple{AbstractBlockedUnitRange}) = BlockedArray(A, ax)
+_restoreblocks(A, ax::Tuple{AbstractBlockedUnitRange,AbstractUnitRange}) = BlockedArray(A, ax)
+_restoreblocks(A, ax::Tuple{AbstractUnitRange,AbstractBlockedUnitRange}) = BlockedArray(A, ax)
+_restoreblocks(A, ax::Tuple{AbstractBlockedUnitRange,AbstractBlockedUnitRange}) = BlockedArray(A, ax)
+sub_materialize(::BroadcastLayout, V::SubArray{<:Any,N,<:BlockedArray}) where N = _restoreblocks(sub_materialize(_unblockedview(V)), axes(V))
 
 
 ####
