@@ -46,4 +46,5 @@ module InfiniteArrays
         checkbounds(v, i)
         convert(T, first(v) + i - 1)
     end
+    Base.getindex(v::AbstractInfUnitRange, kr::AbstractInfUnitRange{<:Integer}) = InfUnitRange(v[first(kr)])
 end

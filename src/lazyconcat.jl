@@ -45,10 +45,30 @@ function equals_layout(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)},
     a_args = arguments(vcat, a)
     b_args = arguments(vcat, b)
     if length(a_args) ≠ length(b_args) || any(map(size,a_args) .≠ map(size,b_args))
-        return Base.invoke(==, NTuple{2,AbstractArray}, a, b)
+        return _vcat_equals(a, b)
     end
     all(a_args .== b_args)
 end
+equals_layout(::ApplyLayout{typeof(vcat)}, _, a, b) = _vcat_equals(a, b)
+equals_layout(_, ::ApplyLayout{typeof(vcat)}, a, b) = _vcat_equals(b, a)
+
+# Compare each argument of the vcat `a` with the corresponding rows of `b`. Slicing `b` keeps
+# its structure, so for example `Vcat(1, 3:2:∞) == 1:2:∞` reduces to `1 == 1` and `3:2:∞ == 3:2:∞`
+# instead of an entrywise comparison that never terminates.
+function _vcat_equals(a, b)
+    axes(a) == axes(b) || return false
+    k = 0
+    for arg in arguments(vcat, a)
+        n = size(arg,1)
+        _vcat_arg_equals(arg, b, (k+1):(k+n)) || return false
+        k += n
+    end
+    true
+end
+_vcat_arg_equals(arg::Number, b::AbstractVector, kr) = arg == b[first(kr)]
+_vcat_arg_equals(arg::Number, b::AbstractMatrix, kr) = arg == b[first(kr), 1] # a scalar in a vcat of matrices is a 1×1 block
+_vcat_arg_equals(arg::AbstractVector, b::AbstractVector, kr) = arg == view(b, kr)
+_vcat_arg_equals(arg::AbstractMatrix, b::AbstractMatrix, kr) = arg == view(b, kr, :)
 
 @propagate_inbounds @inline vcat_getindex(f, idx...) =
     vcat_getindex_recursive(f, idx, f.args...)
