@@ -47,8 +47,10 @@ function equals_layout(::ApplyLayout{typeof(vcat)}, ::ApplyLayout{typeof(vcat)},
     if length(a_args) ≠ length(b_args) || any(map(size,a_args) .≠ map(size,b_args))
         return _vcat_equals(a, b)
     end
-    all(a_args .== b_args)
+    all(map(_vcat_arg_equals, a_args, b_args))
 end
+# empty arguments are skipped since FillArrays compares empty fills by value, e.g. `Fill(1,0) ≠ Fill(2,0)`
+_vcat_arg_equals(x, y) = isempty(x) || x == y
 equals_layout(::ApplyLayout{typeof(vcat)}, _, a, b) = _vcat_equals(a, b)
 equals_layout(_, ::ApplyLayout{typeof(vcat)}, a, b) = _vcat_equals(b, a)
 
@@ -60,7 +62,7 @@ function _vcat_equals(a, b)
     k = 0
     for arg in arguments(vcat, a)
         n = size(arg,1)
-        _vcat_arg_equals(arg, b, (k+1):(k+n)) || return false
+        n == 0 || _vcat_arg_equals(arg, b, (k+1):(k+n)) || return false
         k += n
     end
     true

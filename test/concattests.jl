@@ -215,6 +215,16 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
                 @test Vcat([1 2], [3 4; 5 6]) ≠ [1 2; 3 4; 5 7]
             end
 
+            @testset "empty arguments" begin
+                # FillArrays compares empty fills by value, so empty arguments must be skipped
+                @test Vcat(Fill(1,0), 2:3) == Vcat(Fill(2,0), 2:3)
+                @test Vcat(Fill(1,0), 2:3) ≠ Vcat(Fill(2,0), 3:4)
+                @test Vcat(Fill(√2,0), Fill(2.0,10)) == Fill(2.0,10)
+                @test Fill(2.0,10) == Vcat(Fill(√2,0), Fill(2.0,10))
+                @test Vcat([1], -3, Zeros{Int}(4), 2, Zeros{Int}(0)) == Vcat([1], Fill(-3,1), Zeros{Int}(4), Fill(2,1))
+                @test Vcat([1], -3, Zeros{Int}(4), 2, Zeros{Int}(0)) ≠ Vcat([1], Fill(-3,1), Zeros{Int}(4), Fill(3,1))
+            end
+
             @testset "infinite" begin
                 # these used to compare entrywise, which never terminates
                 @test Vcat(1, 2:ℵ₀) == 1:ℵ₀
