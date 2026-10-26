@@ -2,6 +2,7 @@ module ConcatTests
 
 using LazyArrays, FillArrays, LinearAlgebra, ArrayLayouts, Test, Base64
 using StaticArrays
+using Infinities
 import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddata,
                     MulAdd, Applied, ApplyLayout, DefaultApplyStyle, sub_materialize, resizedata!,
                     CachedVector, ApplyLayout, arguments, BroadcastVector, LazyLayout, cacheddata
@@ -200,6 +201,37 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             @test A ≠ Vcat([1,2],[4])
             @test A == Vcat([1.0,2.0],[0.0]) # mixed eltypes
             @test view(A, 1:3) == B
+            @test [1,2,0] == A
+
+            @testset "different structure" begin
+                @test Vcat(1, 2:5) == 1:5
+                @test 1:5 == Vcat(1, 2:5)
+                @test Vcat(1, 2:5) ≠ 0:4
+                @test Vcat(1, 2:5) ≠ 1:6
+                @test Vcat(1:2, 3:5) == Vcat(1, 2:5)
+                @test Vcat(1:2, 3:5) ≠ Vcat(1, 3:6)
+                @test Vcat([1 2], [3 4; 5 6]) == [1 2; 3 4; 5 6]
+                @test [1 2; 3 4; 5 6] == Vcat([1 2], [3 4; 5 6])
+                @test Vcat([1 2], [3 4; 5 6]) ≠ [1 2; 3 4; 5 7]
+            end
+
+            @testset "empty arguments" begin
+                # FillArrays compares empty fills by value, so empty arguments must be skipped
+                @test Vcat(Fill(1,0), 2:3) == Vcat(Fill(2,0), 2:3)
+                @test Vcat(Fill(1,0), 2:3) ≠ Vcat(Fill(2,0), 3:4)
+                @test Vcat(Fill(√2,0), Fill(2.0,10)) == Fill(2.0,10)
+                @test Fill(2.0,10) == Vcat(Fill(√2,0), Fill(2.0,10))
+                @test Vcat([1], -3, Zeros{Int}(4), 2, Zeros{Int}(0)) == Vcat([1], Fill(-3,1), Zeros{Int}(4), Fill(2,1))
+                @test Vcat([1], -3, Zeros{Int}(4), 2, Zeros{Int}(0)) ≠ Vcat([1], Fill(-3,1), Zeros{Int}(4), Fill(3,1))
+            end
+
+            @testset "infinite" begin
+                # these used to compare entrywise, which never terminates
+                @test Vcat(1, 2:ℵ₀) == 1:ℵ₀
+                @test 1:ℵ₀ == Vcat(1, 2:ℵ₀)
+                @test Vcat(1, 3:ℵ₀) ≠ 1:ℵ₀
+                @test Vcat(1, 2, 3:ℵ₀) == Vcat(1, 2:ℵ₀)
+            end
         end
 
         @testset "cached vcat" begin
