@@ -60,12 +60,12 @@ equals_layout(_, ::ApplyLayout{typeof(vcat)}, a, b) = _vcat_equals(b, a)
 function _vcat_equals(a, b)
     axes(a) == axes(b) || return false
     k = 0
-    for arg in arguments(vcat, a)
+    all(arguments(vcat, a)) do arg
         n = size(arg,1)
-        n == 0 || _vcat_arg_equals(arg, b, (k+1):(k+n)) || return false
+        kr = (k+1):(k+n)
         k += n
+        n == 0 || _vcat_arg_equals(arg, b, kr)
     end
-    true
 end
 _vcat_arg_equals(arg::Number, b::AbstractVector, kr) = arg == b[first(kr)]
 _vcat_arg_equals(arg::Number, b::AbstractMatrix, kr) = arg == b[first(kr), 1] # a scalar in a vcat of matrices is a 1×1 block
