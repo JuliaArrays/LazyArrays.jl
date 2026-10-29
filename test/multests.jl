@@ -1153,8 +1153,24 @@ end
         # following needed for ContinuumArrays.jl
         g = [1 1; 2 2]
         V = view(A,g)
-        @test MemoryLayout(V) isa UnknownLayout
+        @test !(MemoryLayout(V) isa ApplyLayout{typeof(*)})
         @test A[g] == layout_getindex(A, g) == [A[1] A[1]; A[2] A[2]]
+    end
+
+    @testset "matrix and range sub-indexing" begin
+        # matrix-indexing in one slot, combined with another index, also loses
+        # the multiplication structure, e.g. as needed for QuasiArrays.jl/DeRhamOrthogonalPolynomials.jl
+        A = ApplyArray(*, randn(5,5), randn(5,5))
+        M = Matrix(A)
+        g = [1 2; 3 4]
+        r = 2:3
+        V = view(A, g, r)
+        @test !(MemoryLayout(V) isa ApplyLayout{typeof(*)})
+        @test A[g,r] == layout_getindex(A, g, r) == M[g,r]
+
+        V = view(A, r, g)
+        @test !(MemoryLayout(V) isa ApplyLayout{typeof(*)})
+        @test A[r,g] == layout_getindex(A, r, g) == M[r,g]
     end
 
     @testset "permutedims" begin
