@@ -265,7 +265,7 @@ _vec_mul_arguments(V) = _vec_mul_arguments(indextype(parent(V)), arguments(paren
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,2}) = _mat_mul_arguments(V)
 arguments(::ApplyLayout{typeof(*)}, V::SubArray{<:Any,1}) = _vec_mul_arguments(V)
 
-@inline sub_materialize(lay::ApplyLayout{typeof(*)}, V) = *(map(sub_materialize, arguments(lay, V))...)
+@inline sub_materialize(lay::ApplyLayout{typeof(*)}, V) = converteltype(eltype(V), *(map(sub_materialize, arguments(lay, V))...))
 
 
 ##
