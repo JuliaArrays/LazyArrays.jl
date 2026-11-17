@@ -21,10 +21,10 @@ Vcat() = Vcat{Any}()
 @inline function applied_instantiate(::typeof(vcat), args...)
     iargs = map(instantiate, args)
     if !isempty(iargs)
-        m = size(iargs[1],2)
-        for k=2:length(iargs)
-            size(iargs[k],2) == m || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), args)))"))
-        end
+        m = size(first(iargs),2)
+        # map over the tuple rather than indexing it in a loop, which is type-unstable when the arguments have
+        # different types and so allocates
+        all(map(a -> size(a,2) == m, tail(iargs))) || throw(ArgumentError("number of columns of each array must match (got $(map(x->size(x,2), args)))"))
     end
     vcat, iargs
 end
