@@ -14,8 +14,12 @@ import LazyArrays: MemoryLayout, DenseColumnMajor, materialize!, call, paddeddat
             v = [1.0]
             # measure inside a function specialized on the arguments to avoid the dynamic dispatch of the loop
             vcallocated(args) = (Vcat(args...); @allocated Vcat(args...))
-            for args in ((0.0, 1.0, b), (0.0, v, 2, b), (1.0, 2, 3.0, v, 5, 6.0, 7, b))
-                @test vcallocated(args) == 0
+            # code coverage instrumentation stops the construction being optimized away, so even Vcat(0.0, b)
+            # allocates and we can only test this without coverage
+            if Base.JLOptions().code_coverage == 0
+                for args in ((0.0, 1.0, b), (0.0, v, 2, b), (1.0, 2, 3.0, v, 5, 6.0, 7, b))
+                    @test vcallocated(args) == 0
+                end
             end
             @test_throws ArgumentError Vcat(randn(2,3), randn(2,3), randn(2,4))
         end
